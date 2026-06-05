@@ -14,10 +14,13 @@ class GamesRepository {
   Future<List<GameModel>> getGames() {
     return _apiClient.get<List<GameModel>>(
       '/games',
-      decoder: (rawData) => _decodeList(rawData, GameModel.fromJson),
+      decoder: (rawData) => _decodeList(rawData, GameModel.fromSlotJson),
     );
   }
 
+  // Returns the current live session (PLAYING/CHECKING) as a GameModel,
+  // or the next upcoming slot (NEXT) as a GameModel, or null if nothing queued.
+  // Backend response: { type: 'session' | 'slot', data: {...} } | null
   Future<GameModel?> getCurrentLiveGame() {
     return _apiClient.get<GameModel?>(
       '/games/current/live',
@@ -30,20 +33,40 @@ class GamesRepository {
           throw StateError('Invalid current live game response.');
         }
 
-        return GameModel.fromJson(rawData);
+        final type = rawData['type'] as String?;
+        final data = rawData['data'];
+        if (data is! Map<String, dynamic>) {
+          throw StateError('Invalid current live game data.');
+        }
+
+        if (type == 'session') {
+          return GameModel.fromSessionJson(data);
+        }
+        return GameModel.fromSlotJson(data);
       },
     );
   }
 
-  Future<GameModel> getGameDetail(String gameId) {
+  Future<GameModel> getSlotDetail(String slotId) {
     return _apiClient.get<GameModel>(
-      '/games/$gameId',
+      '/games/slots/$slotId',
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid game detail response.');
+          throw StateError('Invalid slot detail response.');
         }
+        return GameModel.fromSlotJson(rawData);
+      },
+    );
+  }
 
-        return GameModel.fromJson(rawData);
+  Future<GameModel> getSessionDetail(String sessionId) {
+    return _apiClient.get<GameModel>(
+      '/games/sessions/$sessionId',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid session detail response.');
+        }
+        return GameModel.fromSessionJson(rawData);
       },
     );
   }
@@ -55,12 +78,13 @@ class GamesRepository {
     );
   }
 
+  // Register a cartela on an active session (status must be PLAYING).
   Future<GameCartelaModel> registerCartela({
-    required String gameId,
+    required String sessionId,
     required String cartelaId,
   }) {
     return _apiClient.post<GameCartelaModel>(
-      '/games/$gameId/register-cartela',
+      '/games/sessions/$sessionId/register-cartela',
       data: {'cartelaId': cartelaId},
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {
@@ -72,16 +96,16 @@ class GamesRepository {
     );
   }
 
-  Future<List<GameCartelaModel>> getMyGameCartelas(String gameId) {
+  Future<List<GameCartelaModel>> getMyGameCartelas(String sessionId) {
     return _apiClient.get<List<GameCartelaModel>>(
-      '/games/$gameId/my-cartelas',
+      '/games/sessions/$sessionId/my-cartelas',
       decoder: (rawData) => _decodeList(rawData, GameCartelaModel.fromJson),
     );
   }
 
-  Future<CalledNumbersSnapshot> getCalledNumbers(String gameId) {
+  Future<CalledNumbersSnapshot> getCalledNumbers(String sessionId) {
     return _apiClient.get<CalledNumbersSnapshot>(
-      '/games/$gameId/called-numbers',
+      '/games/sessions/$sessionId/called-numbers',
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {
           throw StateError('Invalid called numbers response.');
@@ -93,11 +117,11 @@ class GamesRepository {
   }
 
   Future<BingoClaimResult> claimBingo({
-    required String gameId,
+    required String sessionId,
     required String gameCartelaId,
   }) {
     return _apiClient.post<BingoClaimResult>(
-      '/games/$gameId/bingo',
+      '/games/sessions/$sessionId/bingo',
       data: {'gameCartelaId': gameCartelaId},
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {

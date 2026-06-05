@@ -1,7 +1,7 @@
 class CalledNumberModel {
   CalledNumberModel({
     required this.id,
-    required this.gameId,
+    required this.sessionId,
     required this.letter,
     required this.number,
     required this.order,
@@ -9,7 +9,7 @@ class CalledNumberModel {
   });
 
   final String id;
-  final String gameId;
+  final String sessionId;
   final String letter;
   final int number;
   final int order;
@@ -18,7 +18,8 @@ class CalledNumberModel {
   factory CalledNumberModel.fromJson(Map<String, dynamic> json) {
     return CalledNumberModel(
       id: json['id'] as String,
-      gameId: json['gameId'] as String,
+      // Backend sends gameSessionId in the new architecture.
+      sessionId: (json['gameSessionId'] as String?) ?? (json['gameId'] as String?) ?? '',
       letter: json['letter'] as String,
       number: (json['number'] as num).toInt(),
       order: (json['order'] as num).toInt(),

@@ -44,6 +44,10 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
   GamesRepository get _gamesRepository => ref.read(gamesRepositoryProvider);
   SocketService get _socketService => ref.read(socketServiceProvider);
+  // Session ID used for API calls and socket event filtering.
+  // null when the current game is a NEXT slot (no session yet).
+  String? get _activeSessionId => _game?.sessionId ?? _joinedGameId;
+  // Kept for places that still need any game/slot id.
   String? get _activeGameId => _game?.id ?? widget.gameId ?? _joinedGameId;
 
   @override
@@ -90,23 +94,26 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
               banner,
             ],
             const SizedBox(height: 16),
-            if (_game!.status == GameStatus.next)
-              _CartelaRegistrationPanel(
-                gameId: _game!.id,
-                entryFee: _game!.entryFee,
-                registeredCartelas: _myCartelas,
-                onRegistered: _handleCartelasRegistered,
-              )
-            else
+            if (_game!.status != GameStatus.next)
               _CalledNumbersBoard(calledNumbers: _calledNumbers),
             const SizedBox(height: 20),
-            Text(
-              _game!.status == GameStatus.next
-                  ? 'My registered cartelas'
-                  : 'My registered cartelas',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'My registered cartelas',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (_canRegisterCartelas)
+                  IconButton.filledTonal(
+                    onPressed: _showRegistrationBottomSheet,
+                    icon: const Icon(Icons.add_rounded),
+                    tooltip: 'Register new cartela',
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -165,16 +172,18 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     }
 
     if (_myCartelas.isEmpty) {
-      return game.status == GameStatus.next
-          ? 'Choose one or more cartela numbers before the round starts.'
+      return game.status == GameStatus.playing
+          ? 'Register a cartela now — the game is live and registration is open.'
           : 'You do not have any registered cartelas for this game yet.';
     }
 
     return switch (game.status) {
       GameStatus.next =>
-        'These cartelas are ready for the round. You can still add more while registration is open.',
-      GameStatus.playing || GameStatus.checking =>
-        'Mark numbers on your cartelas below as they are called live.',
+        'The round has not started yet. Cartela registration opens when the admin starts the game.',
+      GameStatus.playing =>
+        'Mark numbers on your cartelas below as they are called live. You can still register more.',
+      GameStatus.checking =>
+        'A bingo claim is being reviewed. Hold on — do not mark new numbers yet.',
       GameStatus.finished =>
         'This round is finished. Cartelas are shown for reference only.',
       GameStatus.cancelled => 'This round was cancelled.',
@@ -213,29 +222,41 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         return;
       }
 
-      _switchJoinedGame(game.id);
+      // Only join a socket room for active sessions (not for NEXT slots which
+      // have no session yet — they arrive via games:public broadcasts).
+      _switchJoinedGame(game.sessionId);
 
-      final results = await Future.wait<dynamic>([
-        _gamesRepository.getCalledNumbers(game.id),
-        _gamesRepository.getMyGameCartelas(game.id),
-      ]);
+      List<CalledNumberModel> calledNumbers = const [];
+      List<GameCartelaModel> myCartelas = const [];
+
+      if (game.sessionId != null) {
+        final results = await Future.wait<dynamic>([
+          _gamesRepository.getCalledNumbers(game.sessionId!),
+          _gamesRepository.getMyGameCartelas(game.sessionId!),
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        final snapshot = results[0] as dynamic;
+        myCartelas =
+            List<GameCartelaModel>.from(results[1] as List<GameCartelaModel>)
+              ..sort((left, right) {
+                return left.cartela.number.compareTo(right.cartela.number);
+              });
+        calledNumbers = List<CalledNumberModel>.from(
+          snapshot.calledNumbers as List<CalledNumberModel>,
+        )..sort((left, right) => left.order.compareTo(right.order));
+      }
 
       if (!mounted) {
         return;
       }
 
-      final calledNumbers = results[0] as dynamic;
-      final myCartelas =
-          List<GameCartelaModel>.from(results[1] as List<GameCartelaModel>)
-            ..sort((left, right) {
-              return left.cartela.number.compareTo(right.cartela.number);
-            });
-
       setState(() {
         _game = game;
-        _calledNumbers = List<CalledNumberModel>.from(
-          calledNumbers.calledNumbers as List<CalledNumberModel>,
-        )..sort((left, right) => left.order.compareTo(right.order));
+        _calledNumbers = calledNumbers;
         _myCartelas = myCartelas;
         _processedCalledNumberIds
           ..clear()
@@ -262,18 +283,24 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   }
 
   Future<GameModel?> _loadGame() async {
+    // If a specific game/session was passed in via the widget, load it directly.
     final gameId = widget.gameId;
     if (gameId != null) {
-      return _gamesRepository.getGameDetail(gameId);
+      // Try as a session first; fall back to slot if not found.
+      try {
+        return await _gamesRepository.getSessionDetail(gameId);
+      } catch (_) {
+        return _gamesRepository.getSlotDetail(gameId);
+      }
     }
 
     return ref.read(gamesRepositoryProvider).getCurrentLiveGame();
   }
 
-  Future<void> _refreshGameData(String gameId) async {
+  Future<void> _refreshGameData(String sessionId) async {
     final results = await Future.wait<dynamic>([
-      _gamesRepository.getCalledNumbers(gameId),
-      _gamesRepository.getMyGameCartelas(gameId),
+      _gamesRepository.getCalledNumbers(sessionId),
+      _gamesRepository.getMyGameCartelas(sessionId),
     ]);
 
     if (!mounted) {
@@ -306,9 +333,9 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     ref.invalidate(currentLiveGameProvider);
     await _loadInitialState();
     ref.invalidate(myWalletProvider);
-    final gameId = _game?.id ?? widget.gameId;
-    if (gameId != null) {
-      ref.invalidate(myGameCartelasProvider(gameId));
+    final sid = _game?.sessionId;
+    if (sid != null) {
+      ref.invalidate(myGameCartelasProvider(sid));
     }
   }
 
@@ -331,6 +358,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
   void _registerSocketListeners() {
     _socketService.on('game:status_changed', _onGameStatusChanged);
+    _socketService.on('slot:status_changed', _onSlotStatusChanged);
     _socketService.on('game:number_called', _onNumberCalled);
     _socketService.on('game:bingo_claimed', _onBingoClaimed);
     _socketService.on('game:bingo_valid', _onBingoValid);
@@ -341,6 +369,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
   void _removeSocketListeners() {
     _socketService.off('game:status_changed', _onGameStatusChanged);
+    _socketService.off('slot:status_changed', _onSlotStatusChanged);
     _socketService.off('game:number_called', _onNumberCalled);
     _socketService.off('game:bingo_claimed', _onBingoClaimed);
     _socketService.off('game:bingo_valid', _onBingoValid);
@@ -349,31 +378,36 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     _socketService.off('wallet:updated', _onWalletUpdated);
   }
 
+  // Called when a session status changes (PLAYING / CHECKING / FINISHED / CANCELLED).
+  // Payload is a full serialized session object from the backend.
   void _onGameStatusChanged(dynamic payload) {
     if (!mounted || payload is! Map<String, dynamic>) {
       return;
     }
 
-    final incomingGame = GameModel.fromJson(payload);
+    final incomingGame = GameModel.fromSessionJson(payload);
+
     if (!_isTrackableLiveStatus(incomingGame.status)) {
-      if (_game?.id == incomingGame.id) {
+      // Session finished or cancelled — clear if it was our current session.
+      if (_game?.sessionId == incomingGame.sessionId) {
         setState(() {
-          _game = null;
-          _calledNumbers = const [];
-          _myCartelas = const [];
+          _game = _game!.copyWith(status: incomingGame.status);
         });
-        _switchJoinedGame(null);
       }
       return;
     }
 
-    final activeGameId = _activeGameId;
-    if (activeGameId != null && incomingGame.id != activeGameId) {
+    final activeSessionId = _activeSessionId;
+
+    // If we have no active session (watching a NEXT slot) and a new session
+    // just started, reload so we pick up the live session and join its room.
+    if (activeSessionId == null) {
+      unawaited(_loadInitialState());
       return;
     }
 
-    if (_game == null || _game!.id != incomingGame.id) {
-      unawaited(_loadInitialState());
+    // Ignore events for a different session.
+    if (incomingGame.sessionId != activeSessionId) {
       return;
     }
 
@@ -383,7 +417,32 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     });
 
     if (previousStatus != incomingGame.status) {
-      unawaited(_refreshGameData(incomingGame.id));
+      unawaited(_refreshGameData(incomingGame.sessionId!));
+    }
+  }
+
+  // Called when a slot status changes (NEXT / CANCELLED).
+  // When the current NEXT slot is cancelled, clear the display.
+  void _onSlotStatusChanged(dynamic payload) {
+    if (!mounted || payload is! Map<String, dynamic>) {
+      return;
+    }
+
+    final slotId = payload['id'] as String?;
+    if (slotId == null) return;
+
+    // If we're watching this slot and it was cancelled, clear the display.
+    final statusStr = payload['status'] as String?;
+    if (statusStr != null &&
+        statusStr.toUpperCase() == 'CANCELLED' &&
+        _game?.id == slotId &&
+        _game?.sessionId == null) {
+      setState(() {
+        _game = null;
+        _calledNumbers = const [];
+        _myCartelas = const [];
+        _emptyMessage = 'This game slot was cancelled.';
+      });
     }
   }
 
@@ -398,7 +457,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['gameId'] != _activeGameId) {
+    if (payload['gameSessionId'] != _activeSessionId) {
       return;
     }
 
@@ -419,7 +478,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['gameId'] != _activeGameId) {
+    if (payload['sessionId'] != _activeSessionId) {
       return;
     }
 
@@ -455,7 +514,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['gameId'] != _activeGameId) {
+    if (payload['sessionId'] != _activeSessionId) {
       return;
     }
 
@@ -507,7 +566,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['gameId'] != _activeGameId) {
+    if (payload['sessionId'] != _activeSessionId) {
       return;
     }
 
@@ -556,7 +615,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['gameId'] != _activeGameId || _game == null) {
+    if (payload['sessionId'] != _activeSessionId || _game == null) {
       return;
     }
 
@@ -623,8 +682,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   }
 
   Future<void> _claimBingo(GameCartelaModel gameCartela) async {
-    final gameId = _activeGameId;
-    if (gameId == null || _claimingCartelaIds.contains(gameCartela.id)) {
+    final sessionId = _activeSessionId;
+    if (sessionId == null || _claimingCartelaIds.contains(gameCartela.id)) {
       return;
     }
 
@@ -634,7 +693,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
     try {
       final result = await _gamesRepository.claimBingo(
-        gameId: gameId,
+        sessionId: sessionId,
         gameCartelaId: gameCartela.id,
       );
 
@@ -677,6 +736,42 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     }
   }
 
+  void _showRegistrationBottomSheet() {
+    final game = _game;
+    if (game == null) {
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 1.0,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.only(bottom: 24),
+              child: _CartelaRegistrationPanel(
+                sessionId: game.sessionId ?? game.id,
+                entryFee: game.entryFee,
+                registeredCartelas: _myCartelas,
+                onRegistered: (registered) {
+                  Navigator.of(context).pop();
+                  _handleCartelasRegistered(registered);
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _handleCartelasRegistered(List<GameCartelaModel> registeredCartelas) {
     if (!mounted || registeredCartelas.isEmpty) {
       return;
@@ -703,7 +798,10 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
     ref.invalidate(currentLiveGameProvider);
     ref.invalidate(myWalletProvider);
-    ref.invalidate(myGameCartelasProvider(game.id));
+    final sid = game.sessionId;
+    if (sid != null) {
+      ref.invalidate(myGameCartelasProvider(sid));
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -747,9 +845,9 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return _LiveStatusBanner(
         color: Theme.of(context).colorScheme.primaryContainer,
         foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        title: 'Registration open',
+        title: 'Up next',
         message:
-            'Players can select one or more cartelas while this round is NEXT. When admin starts the round, your registered cartelas will be ready to mark.',
+            'This game is queued and will start soon. Registration opens once the admin starts the round.',
       );
     }
 
@@ -757,9 +855,9 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return _LiveStatusBanner(
         color: Theme.of(context).colorScheme.secondaryContainer,
         foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-        title: 'Game in progress',
+        title: 'Game in progress — registration open',
         message:
-            'Numbers are being called live from the backend. Open your registered cartelas and mark them as the round continues.',
+            'Numbers are being called live. Register your cartelas and mark them as numbers are announced.',
       );
     }
 
@@ -1448,13 +1546,13 @@ class _InlineRegisteredCartelaCardState
 
 class _CartelaRegistrationPanel extends ConsumerStatefulWidget {
   const _CartelaRegistrationPanel({
-    required this.gameId,
+    required this.sessionId,
     required this.entryFee,
     required this.registeredCartelas,
     required this.onRegistered,
   });
 
-  final String gameId;
+  final String sessionId;
   final String entryFee;
   final List<GameCartelaModel> registeredCartelas;
   final ValueChanged<List<GameCartelaModel>> onRegistered;
@@ -1628,7 +1726,7 @@ class _CartelaRegistrationPanelState
               entryFee: widget.entryFee,
               walletBalance: walletBalance,
               isRegistered: option.isRegistered,
-              gameId: widget.gameId,
+              sessionId: widget.sessionId,
             );
           },
         );
@@ -1673,14 +1771,14 @@ class _CartelaPreviewRegistrationSheet extends ConsumerStatefulWidget {
     required this.entryFee,
     required this.walletBalance,
     required this.isRegistered,
-    required this.gameId,
+    required this.sessionId,
   });
 
   final CartelaModel cartela;
   final String entryFee;
   final String? walletBalance;
   final bool isRegistered;
-  final String gameId;
+  final String sessionId;
 
   @override
   ConsumerState<_CartelaPreviewRegistrationSheet> createState() =>
@@ -1761,7 +1859,7 @@ class _CartelaPreviewRegistrationSheetState
       final registeredCartela = await ref
           .read(gamesRepositoryProvider)
           .registerCartela(
-            gameId: widget.gameId,
+            sessionId: widget.sessionId,
             cartelaId: widget.cartela.id,
           );
 

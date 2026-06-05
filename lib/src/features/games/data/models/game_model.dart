@@ -57,14 +57,16 @@ enum GameStatus {
     }
   }
 
+  // Registration is only allowed on PLAYING sessions in the new backend.
   bool get allowsRegistration {
-    return this == GameStatus.next;
+    return this == GameStatus.playing;
   }
 }
 
 class GameModel {
   GameModel({
     required this.id,
+    this.sessionId,
     required this.code,
     required this.name,
     required this.gameRule,
@@ -81,7 +83,10 @@ class GameModel {
     required this.registeredCartelasCount,
   });
 
+  // For sessions: id == sessionId (the live session id used for all API calls).
+  // For NEXT slots: id == slotId, sessionId == null (no session exists yet).
   final String id;
+  final String? sessionId;
   final String code;
   final String name;
   final GameRuleModel? gameRule;
@@ -97,32 +102,70 @@ class GameModel {
   final DateTime updatedAt;
   final int registeredCartelasCount;
 
-  factory GameModel.fromJson(Map<String, dynamic> json) {
+  // Build from a session payload (status: PLAYING / CHECKING / FINISHED).
+  // Session payload shape: { id, playCode, name, gameType, entryFee, prizeAmount,
+  //   status, startedAt, finishedAt, winnerCartelaId, createdAt, updatedAt,
+  //   gameSlot: { gameRule?, ... }, registeredCartelasCount }
+  factory GameModel.fromSessionJson(Map<String, dynamic> json) {
+    final slot = json['gameSlot'] as Map<String, dynamic>?;
+    final gameRule = slot?['gameRule'] is Map<String, dynamic>
+        ? GameRuleModel.fromJson(slot!['gameRule'] as Map<String, dynamic>)
+        : null;
+    final sessionId = json['id'] as String;
     return GameModel(
-      id: json['id'] as String,
-      code: json['code'] as String,
-      name: json['name'] as String,
-      gameRule: json['gameRule'] is Map<String, dynamic>
-          ? GameRuleModel.fromJson(json['gameRule'] as Map<String, dynamic>)
-          : null,
+      id: sessionId,
+      sessionId: sessionId,
+      code: (json['playCode'] as String?) ?? '',
+      name: (json['name'] as String?) ?? (slot?['name'] as String?) ?? '',
+      gameRule: gameRule,
       gameType: (json['gameType'] as String?) ?? '',
-      entryFee: json['entryFee'] as String,
-      prizeAmount: json['prizeAmount'] as String,
+      entryFee: json['entryFee']?.toString() ?? '0',
+      prizeAmount: json['prizeAmount']?.toString() ?? '0',
       status: GameStatus.fromApi(json['status'] as String),
-      playOrder: (json['playOrder'] as num?)?.toInt(),
+      playOrder: null,
       startedAt: _parseDate(json['startedAt']),
       finishedAt: _parseDate(json['finishedAt']),
       winnerCartelaId: json['winnerCartelaId'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(json['updatedAt']) ?? DateTime.now(),
       registeredCartelasCount:
           (json['registeredCartelasCount'] as num?)?.toInt() ?? 0,
     );
   }
 
+  // Build from a slot payload (status: NEXT).
+  // Slot payload shape: { id, staticCode, name, gameType, gameRule?,
+  //   status, sortOrder, createdAt, updatedAt }
+  factory GameModel.fromSlotJson(Map<String, dynamic> json) {
+    final gameRule = json['gameRule'] is Map<String, dynamic>
+        ? GameRuleModel.fromJson(json['gameRule'] as Map<String, dynamic>)
+        : null;
+    return GameModel(
+      id: json['id'] as String,
+      sessionId: null,
+      code: (json['staticCode'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      gameRule: gameRule,
+      gameType: (json['gameType'] as String?) ?? '',
+      entryFee: '0',
+      prizeAmount: '0',
+      status: GameStatus.fromApi(json['status'] as String),
+      playOrder: (json['sortOrder'] as num?)?.toInt(),
+      startedAt: null,
+      finishedAt: null,
+      winnerCartelaId: null,
+      createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(json['updatedAt']) ?? DateTime.now(),
+      registeredCartelasCount: 0,
+    );
+  }
+
   GameModel copyWith({
+    String? sessionId,
     GameStatus? status,
     int? playOrder,
+    String? entryFee,
+    String? prizeAmount,
     DateTime? startedAt,
     DateTime? finishedAt,
     String? winnerCartelaId,
@@ -130,12 +173,13 @@ class GameModel {
   }) {
     return GameModel(
       id: id,
+      sessionId: sessionId ?? this.sessionId,
       code: code,
       name: name,
       gameRule: gameRule,
       gameType: gameType,
-      entryFee: entryFee,
-      prizeAmount: prizeAmount,
+      entryFee: entryFee ?? this.entryFee,
+      prizeAmount: prizeAmount ?? this.prizeAmount,
       status: status ?? this.status,
       playOrder: playOrder ?? this.playOrder,
       startedAt: startedAt ?? this.startedAt,

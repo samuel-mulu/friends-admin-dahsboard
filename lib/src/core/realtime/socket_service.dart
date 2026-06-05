@@ -31,13 +31,17 @@ class SocketService {
     _socket = null;
   }
 
-  void joinGame(String gameId) {
-    _socket?.emit('game:join', {'gameId': gameId});
+  void joinSession(String sessionId) {
+    _socket?.emit('game:join', {'sessionId': sessionId});
   }
 
-  void leaveGame(String gameId) {
-    _socket?.emit('game:leave', {'gameId': gameId});
+  void leaveSession(String sessionId) {
+    _socket?.emit('game:leave', {'sessionId': sessionId});
   }
+
+  // Kept for backwards compatibility — delegates to joinSession/leaveSession.
+  void joinGame(String sessionId) => joinSession(sessionId);
+  void leaveGame(String sessionId) => leaveSession(sessionId);
 
   void on(String event, void Function(dynamic data) listener) {
     _socket?.on(event, listener);
