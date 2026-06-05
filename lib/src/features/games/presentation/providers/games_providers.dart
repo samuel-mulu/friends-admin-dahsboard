@@ -4,15 +4,8 @@ import '../../data/models/cartela_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 
-final gamesListProvider = FutureProvider<List<GameModel>>((ref) async {
-  return ref.watch(gamesRepositoryProvider).getGames();
-});
-
-final gameDetailProvider = FutureProvider.family<GameModel, String>((
-  ref,
-  gameId,
-) async {
-  return ref.watch(gamesRepositoryProvider).getGameDetail(gameId);
+final currentLiveGameProvider = FutureProvider<GameModel?>((ref) async {
+  return ref.watch(gamesRepositoryProvider).getCurrentLiveGame();
 });
 
 final cartelasProvider = FutureProvider<List<CartelaModel>>((ref) async {

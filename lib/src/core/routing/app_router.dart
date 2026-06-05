@@ -5,11 +5,7 @@ import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
-import '../../features/games/presentation/screens/cartela_picker_screen.dart';
-import '../../features/games/presentation/screens/game_detail_screen.dart';
-import '../../features/games/presentation/screens/games_list_screen.dart';
 import '../../features/games/presentation/screens/live_game_screen.dart';
-import '../../features/games/presentation/screens/my_game_cartelas_screen.dart';
 import '../../features/home/presentation/screens/dashboard_screen.dart';
 import '../../features/home/presentation/screens/home_shell_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -56,33 +52,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/games',
-                builder: (context, state) => const GamesListScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (context, state) =>
-                        GameDetailScreen(gameId: state.pathParameters['id']!),
-                    routes: [
-                      GoRoute(
-                        path: 'live',
-                        builder: (context, state) =>
-                            LiveGameScreen(gameId: state.pathParameters['id']!),
-                      ),
-                      GoRoute(
-                        path: 'cartelas',
-                        builder: (context, state) => CartelaPickerScreen(
-                          gameId: state.pathParameters['id']!,
-                        ),
-                      ),
-                      GoRoute(
-                        path: 'my-cartelas',
-                        builder: (context, state) => MyGameCartelasScreen(
-                          gameId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                builder: (context, state) => const LiveGameScreen(),
               ),
             ],
           ),

@@ -19,10 +19,10 @@ class GameSummaryCard extends StatelessWidget {
 
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -52,21 +52,22 @@ class GameSummaryCard extends StatelessWidget {
                   _GameStatusChip(status: game.status),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _InfoPill(label: 'Type', value: game.gameType),
+                  _InfoPill(label: 'Rule', value: game.ruleName),
+                  if (game.playOrder != null)
+                    _InfoPill(
+                      label: 'Order',
+                      value: '${game.playOrder}',
+                    ),
                   _InfoPill(label: 'Entry', value: '${game.entryFee} ETB'),
                   _InfoPill(label: 'Prize', value: '${game.prizeAmount} ETB'),
-                  _InfoPill(
-                    label: 'Starts',
-                    value: _formatDateTime(game.startsAt),
-                  ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Text(
@@ -84,19 +85,6 @@ class GameSummaryCard extends StatelessWidget {
     );
   }
 
-  static String _formatDateTime(DateTime? value) {
-    if (value == null) {
-      return 'TBD';
-    }
-
-    final local = value.toLocal();
-    final date =
-        '${local.year}-${_twoDigits(local.month)}-${_twoDigits(local.day)}';
-    final time = '${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
-    return '$date $time';
-  }
-
-  static String _twoDigits(int value) => value.toString().padLeft(2, '0');
 }
 
 class _GameStatusChip extends StatelessWidget {

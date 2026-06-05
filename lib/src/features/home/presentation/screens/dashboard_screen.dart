@@ -31,13 +31,13 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Browse games, register your cartelas, and keep an eye on your wallet from one place.',
+                  'Open the live game, register your cartelas there, and keep an eye on your wallet from one place.',
                   style: theme.textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => context.go('/games'),
-                  child: const Text('Browse games'),
+                  child: const Text('Open live game'),
                 ),
               ],
             ),

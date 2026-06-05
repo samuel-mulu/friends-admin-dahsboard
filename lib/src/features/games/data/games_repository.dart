@@ -18,6 +18,23 @@ class GamesRepository {
     );
   }
 
+  Future<GameModel?> getCurrentLiveGame() {
+    return _apiClient.get<GameModel?>(
+      '/games/current/live',
+      decoder: (rawData) {
+        if (rawData == null) {
+          return null;
+        }
+
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid current live game response.');
+        }
+
+        return GameModel.fromJson(rawData);
+      },
+    );
+  }
+
   Future<GameModel> getGameDetail(String gameId) {
     return _apiClient.get<GameModel>(
       '/games/$gameId',

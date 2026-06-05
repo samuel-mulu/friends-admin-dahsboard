@@ -18,7 +18,7 @@ class WalletBalanceCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             CircleAvatar(
@@ -26,7 +26,7 @@ class WalletBalanceCard extends StatelessWidget {
               backgroundColor: theme.colorScheme.primaryContainer,
               child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

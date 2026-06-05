@@ -70,7 +70,7 @@ class BingoClaimResult {
   });
 
   final BingoClaimModel claim;
-  final double progress;
+  final double? progress;
   final bool isWinner;
   final GameStatus gameStatus;
   final GameCartelaStatus gameCartelaStatus;
@@ -78,7 +78,7 @@ class BingoClaimResult {
   factory BingoClaimResult.fromJson(Map<String, dynamic> json) {
     return BingoClaimResult(
       claim: BingoClaimModel.fromJson(json['claim'] as Map<String, dynamic>),
-      progress: (json['progress'] as num?)?.toDouble() ?? 0,
+      progress: (json['progress'] as num?)?.toDouble(),
       isWinner: json['isWinner'] as bool? ?? false,
       gameStatus: GameStatus.fromApi(json['gameStatus'] as String),
       gameCartelaStatus: GameCartelaStatus.fromApi(

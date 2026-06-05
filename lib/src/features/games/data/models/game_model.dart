@@ -1,3 +1,23 @@
+class GameRuleModel {
+  GameRuleModel({
+    required this.id,
+    required this.key,
+    required this.name,
+  });
+
+  final String id;
+  final String key;
+  final String name;
+
+  factory GameRuleModel.fromJson(Map<String, dynamic> json) {
+    return GameRuleModel(
+      id: json['id'] as String,
+      key: json['key'] as String,
+      name: json['name'] as String,
+    );
+  }
+}
+
 enum GameStatus {
   next,
   checking,
@@ -38,7 +58,7 @@ enum GameStatus {
   }
 
   bool get allowsRegistration {
-    return this == GameStatus.next || this == GameStatus.checking;
+    return this == GameStatus.next;
   }
 }
 
@@ -47,11 +67,12 @@ class GameModel {
     required this.id,
     required this.code,
     required this.name,
+    required this.gameRule,
     required this.gameType,
     required this.entryFee,
     required this.prizeAmount,
     required this.status,
-    required this.startsAt,
+    required this.playOrder,
     required this.startedAt,
     required this.finishedAt,
     required this.winnerCartelaId,
@@ -63,11 +84,12 @@ class GameModel {
   final String id;
   final String code;
   final String name;
+  final GameRuleModel? gameRule;
   final String gameType;
   final String entryFee;
   final String prizeAmount;
   final GameStatus status;
-  final DateTime? startsAt;
+  final int? playOrder;
   final DateTime? startedAt;
   final DateTime? finishedAt;
   final String? winnerCartelaId;
@@ -80,11 +102,14 @@ class GameModel {
       id: json['id'] as String,
       code: json['code'] as String,
       name: json['name'] as String,
-      gameType: json['gameType'] as String,
+      gameRule: json['gameRule'] is Map<String, dynamic>
+          ? GameRuleModel.fromJson(json['gameRule'] as Map<String, dynamic>)
+          : null,
+      gameType: (json['gameType'] as String?) ?? '',
       entryFee: json['entryFee'] as String,
       prizeAmount: json['prizeAmount'] as String,
       status: GameStatus.fromApi(json['status'] as String),
-      startsAt: _parseDate(json['startsAt']),
+      playOrder: (json['playOrder'] as num?)?.toInt(),
       startedAt: _parseDate(json['startedAt']),
       finishedAt: _parseDate(json['finishedAt']),
       winnerCartelaId: json['winnerCartelaId'] as String?,
@@ -97,7 +122,7 @@ class GameModel {
 
   GameModel copyWith({
     GameStatus? status,
-    DateTime? startsAt,
+    int? playOrder,
     DateTime? startedAt,
     DateTime? finishedAt,
     String? winnerCartelaId,
@@ -107,11 +132,12 @@ class GameModel {
       id: id,
       code: code,
       name: name,
+      gameRule: gameRule,
       gameType: gameType,
       entryFee: entryFee,
       prizeAmount: prizeAmount,
       status: status ?? this.status,
-      startsAt: startsAt ?? this.startsAt,
+      playOrder: playOrder ?? this.playOrder,
       startedAt: startedAt ?? this.startedAt,
       finishedAt: finishedAt ?? this.finishedAt,
       winnerCartelaId: winnerCartelaId ?? this.winnerCartelaId,
@@ -129,4 +155,8 @@ class GameModel {
 
     return DateTime.tryParse(value);
   }
+
+  String get ruleName => gameRule?.name ?? name;
+
+  String get ruleKey => gameRule?.key ?? gameType;
 }

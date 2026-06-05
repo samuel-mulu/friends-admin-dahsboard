@@ -22,7 +22,7 @@ class CartelaPreviewCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
@@ -33,7 +33,7 @@ class CartelaPreviewCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -49,7 +49,7 @@ class CartelaPreviewCard extends StatelessWidget {
                   ...[trailing].whereType<Widget>(),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               _CartelaGrid(columns: cartela.columns),
             ],
           ),
