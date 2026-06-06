@@ -47,8 +47,6 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   // Session ID used for API calls and socket event filtering.
   // null when the current game is a NEXT slot (no session yet).
   String? get _activeSessionId => _game?.sessionId ?? _joinedGameId;
-  // Kept for places that still need any game/slot id.
-  String? get _activeGameId => _game?.id ?? widget.gameId ?? _joinedGameId;
 
   @override
   void initState() {
@@ -69,7 +67,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     final body = RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(12),
         children: [
           if (_isLoading)
             const Padding(
@@ -87,8 +85,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
             )
           else ...[
             _LiveGameHeader(game: _game!),
-            const SizedBox(height: 16),
-            _GameFactsWrap(game: _game!),
+            const SizedBox(height: 10),
+            _GameCompactInfo(game: _game!),
             if (_buildLiveStatusBanner() case final banner?) ...[
               const SizedBox(height: 16),
               banner,
@@ -97,31 +95,21 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
             if (_game!.status != GameStatus.next)
               _CalledNumbersBoard(calledNumbers: _calledNumbers),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'My registered cartelas',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (_canRegisterCartelas)
-                  IconButton.filledTonal(
-                    onPressed: _showRegistrationBottomSheet,
-                    icon: const Icon(Icons.add_rounded),
-                    tooltip: 'Register new cartela',
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
             Text(
               _subtitleForRegisteredCartelas(),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
-            if (_myCartelas.isEmpty)
+            // When game is NEXT and registration is allowed, show inline
+            // cartela number picker directly in the live game screen.
+            if (_canRegisterCartelas && _game?.status == GameStatus.next)
+              _InlineCartelaPickerGrid(
+                slotId: _game!.id,
+                entryFee: _game!.entryFee,
+                registeredCartelas: _myCartelas,
+                onRegistered: _handleCartelasRegistered,
+              )
+            else if (_myCartelas.isEmpty)
               _LiveInfoCard(
                 title: 'No registered cartelas',
                 message: _canRegisterCartelas
@@ -171,15 +159,17 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return 'You do not have any registered cartelas for this game yet.';
     }
 
+    if (game.status == GameStatus.next) {
+      return _myCartelas.isEmpty
+          ? 'Tap a cartela number below to register it. The round starts when the admin confirms.'
+          : '${_myCartelas.length} cartela${_myCartelas.length == 1 ? '' : 's'} registered. Tap more numbers below to add.';
+    }
+
     if (_myCartelas.isEmpty) {
-      return game.status == GameStatus.playing
-          ? 'Register a cartela now — the game is live and registration is open.'
-          : 'You do not have any registered cartelas for this game yet.';
+      return 'You do not have any registered cartelas for this game yet.';
     }
 
     return switch (game.status) {
-      GameStatus.next =>
-        'The round has not started yet. Cartela registration opens when the admin starts the game.',
       GameStatus.playing =>
         'Mark numbers on your cartelas below as they are called live. You can still register more.',
       GameStatus.checking =>
@@ -187,6 +177,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       GameStatus.finished =>
         'This round is finished. Cartelas are shown for reference only.',
       GameStatus.cancelled => 'This round was cancelled.',
+      _ => 'You do not have any registered cartelas for this game yet.',
     };
   }
 
@@ -323,8 +314,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         ..clear()
         ..addAll(_calledNumbers.map((item) => item.id));
       _manualMarkedCells.removeWhere(
-        (cartelaId, _) =>
-            !myCartelas.any((cartela) => cartela.id == cartelaId),
+        (cartelaId, _) => !myCartelas.any((cartela) => cartela.id == cartelaId),
       );
     });
   }
@@ -364,7 +354,10 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     _socketService.on('game:bingo_valid', _onBingoValid);
     _socketService.on('game:bingo_invalid', _onBingoInvalid);
     _socketService.on('game:finished', _onGameFinished);
+    _socketService.on('session:prize_updated', _onSessionPrizeUpdated);
     _socketService.on('wallet:updated', _onWalletUpdated);
+    _socketService.on('game:operation_updated', _onGameOperationUpdated);
+    _socketService.on('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
   }
 
   void _removeSocketListeners() {
@@ -375,7 +368,10 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     _socketService.off('game:bingo_valid', _onBingoValid);
     _socketService.off('game:bingo_invalid', _onBingoInvalid);
     _socketService.off('game:finished', _onGameFinished);
+    _socketService.off('session:prize_updated', _onSessionPrizeUpdated);
     _socketService.off('wallet:updated', _onWalletUpdated);
+    _socketService.off('game:operation_updated', _onGameOperationUpdated);
+    _socketService.off('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
   }
 
   // Called when a session status changes (PLAYING / CHECKING / FINISHED / CANCELLED).
@@ -422,7 +418,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   }
 
   // Called when a slot status changes (NEXT / CANCELLED).
-  // When the current NEXT slot is cancelled, clear the display.
+  // When the current NEXT slot is cancelled, reload to show the next game
+  // in the queue so the player always has a game to look at.
   void _onSlotStatusChanged(dynamic payload) {
     if (!mounted || payload is! Map<String, dynamic>) {
       return;
@@ -431,18 +428,12 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     final slotId = payload['id'] as String?;
     if (slotId == null) return;
 
-    // If we're watching this slot and it was cancelled, clear the display.
     final statusStr = payload['status'] as String?;
     if (statusStr != null &&
         statusStr.toUpperCase() == 'CANCELLED' &&
-        _game?.id == slotId &&
-        _game?.sessionId == null) {
-      setState(() {
-        _game = null;
-        _calledNumbers = const [];
-        _myCartelas = const [];
-        _emptyMessage = 'This game slot was cancelled.';
-      });
+        _game?.id == slotId) {
+      // Reload to pick up the next game in the queue
+      unawaited(_loadInitialState());
     }
   }
 
@@ -615,21 +606,31 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return;
     }
 
-    if (payload['sessionId'] != _activeSessionId || _game == null) {
+    // The backend now sends a normalized slot payload for game:finished.
+    // The payload has slot-level fields: id (slot ID), sessionId, status (slot
+    // status = NEXT), finishedAt, winnerCartelaId from the latest session.
+    final payloadSessionId = payload['sessionId'] as String?;
+    if (payloadSessionId != _activeSessionId || _game == null) {
       return;
     }
+
+    final winnerCartelaId = payload['winnerCartelaId'] as String?;
+    final finishedAtRaw = payload['finishedAt'];
+    final finishedAt = finishedAtRaw is String
+        ? DateTime.tryParse(finishedAtRaw)
+        : finishedAtRaw is DateTime
+            ? finishedAtRaw
+            : DateTime.now();
 
     setState(() {
       _game = _game!.copyWith(
         status: GameStatus.finished,
-        finishedAt: payload['finishedAt'] is String
-            ? DateTime.tryParse(payload['finishedAt'] as String)
-            : DateTime.now(),
-        winnerCartelaId: payload['winnerCartelaId'] as String?,
+        finishedAt: finishedAt,
+        winnerCartelaId: winnerCartelaId,
       );
       _myCartelas = _myCartelas
           .map((cartela) {
-            if (cartela.id == _game!.winnerCartelaId) {
+            if (cartela.id == winnerCartelaId) {
               return cartela.copyWith(
                 status: GameCartelaStatus.winner,
                 isWinner: true,
@@ -640,6 +641,22 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
             return cartela;
           })
           .toList(growable: false);
+    });
+  }
+
+  void _onSessionPrizeUpdated(dynamic payload) {
+    if (!mounted || payload is! Map<String, dynamic>) {
+      return;
+    }
+
+    final sessionId = payload['sessionId'] as String?;
+    if (sessionId == null || sessionId != _activeSessionId) {
+      return;
+    }
+
+    ref.invalidate(currentLiveGameProvider);
+    setState(() {
+      _game = GameModel.fromSessionJson(payload);
     });
   }
 
@@ -660,6 +677,62 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         ),
       );
     }
+  }
+
+  void _onGameOperationUpdated(dynamic payload) {
+    if (!mounted || payload is! Map<String, dynamic>) {
+      return;
+    }
+
+    // The backend now sends a normalized slot payload for game:operation_updated.
+    // The payload has: id (slot ID), sessionId, status (slot status), etc.
+    // Support both the old {slotId, sessionId} wrapper and the new normalized
+    // slot payload for backward compatibility.
+    final slotId =
+        payload['slotId'] as String? ?? payload['id'] as String?;
+    final sessionId = payload['sessionId'] as String?;
+
+    if (slotId == null) {
+      return;
+    }
+
+    if (_game?.id != slotId && _game?.sessionId != sessionId) {
+      return;
+    }
+
+    ref.invalidate(currentLiveGameProvider);
+
+    // If the current game is finished or cancelled, reload to get the next
+    // game in the queue so the player always sees a live/upcoming game.
+    final currentStatus = _game?.status;
+    if (currentStatus == GameStatus.finished ||
+        currentStatus == GameStatus.cancelled) {
+      unawaited(_loadInitialState());
+    } else if (sessionId != null && sessionId == _activeSessionId) {
+      unawaited(_refreshGameData(sessionId));
+    } else {
+      unawaited(_loadInitialState());
+    }
+  }
+
+  void _onSlotEntryFeeUpdated(dynamic payload) {
+    if (!mounted || payload is! Map<String, dynamic>) {
+      return;
+    }
+
+    final slotId = payload['id'] as String?;
+    if (slotId == null || _game?.id != slotId) {
+      return;
+    }
+
+    final entryFee = payload['entryFee'] as String?;
+    if (entryFee != null && _game != null) {
+      setState(() {
+        _game = _game!.copyWith(entryFee: entryFee);
+      });
+    }
+
+    ref.invalidate(currentLiveGameProvider);
   }
 
   bool _canClaimBingoForCartela(GameCartelaModel gameCartela) {
@@ -757,8 +830,11 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
               controller: scrollController,
               padding: const EdgeInsets.only(bottom: 24),
               child: _CartelaRegistrationPanel(
-                sessionId: game.sessionId ?? game.id,
+                slotId: game.id,
+                sessionId: game.sessionId,
+                gameStatus: game.status,
                 entryFee: game.entryFee,
+                prizePerCartela: game.prizePerCartela,
                 registeredCartelas: _myCartelas,
                 onRegistered: (registered) {
                   Navigator.of(context).pop();
@@ -790,10 +866,6 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
           )..sort((left, right) {
             return left.cartela.number.compareTo(right.cartela.number);
           });
-      _game = _game?.copyWith(
-        registeredCartelasCount:
-            (_game?.registeredCartelasCount ?? 0) + registeredCartelas.length,
-      );
     });
 
     ref.invalidate(currentLiveGameProvider);
@@ -845,9 +917,9 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       return _LiveStatusBanner(
         color: Theme.of(context).colorScheme.primaryContainer,
         foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        title: 'Up next',
+        title: 'Up next — registration open',
         message:
-            'This game is queued and will start soon. Registration opens once the admin starts the round.',
+            'This game is queued. You can register cartelas now — the round will start automatically when the admin confirms.',
       );
     }
 
@@ -956,7 +1028,7 @@ class _LiveGameHeader extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Code ${game.code}',
+                game.codeLabel,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -983,66 +1055,89 @@ class _LiveGameHeader extends StatelessWidget {
   }
 }
 
-class _GameFactsWrap extends StatelessWidget {
-  const _GameFactsWrap({required this.game});
+class _GameCompactInfo extends StatelessWidget {
+  const _GameCompactInfo({required this.game});
 
   final GameModel game;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        _FactCard(label: 'Rule', value: game.ruleName),
-        _FactCard(label: 'Order', value: game.playOrder?.toString() ?? '-'),
-        _FactCard(label: 'Entry', value: '${game.entryFee} ETB'),
-        _FactCard(label: 'Prize', value: '${game.prizeAmount} ETB'),
-        _FactCard(
-          label: 'Registered',
-          value: '${game.registeredCartelasCount}',
-        ),
-      ],
-    );
-  }
-}
-
-class _FactCard extends StatelessWidget {
-  const _FactCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Container(
-      width: 110,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
       ),
+      child: Row(
+        children: [
+          _CompactInfoChip(label: 'Rule', value: game.ruleName, theme: theme),
+          _CompactDivider(theme: theme),
+          _CompactInfoChip(label: 'Entry', value: '${game.entryFee} ETB', theme: theme),
+          _CompactDivider(theme: theme),
+          _CompactInfoChip(label: 'Prize', value: '${game.prizeAmount} ETB', theme: theme),
+          _CompactDivider(theme: theme),
+          _CompactInfoChip(label: 'Reg', value: '${game.registeredCartelasCount}', theme: theme),
+          _CompactDivider(theme: theme),
+          _CompactInfoChip(label: 'Called', value: '${game.calledNumbersCount}', theme: theme),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactInfoChip extends StatelessWidget {
+  const _CompactInfoChip({
+    required this.label,
+    required this.value,
+    required this.theme,
+  });
+
+  final String label;
+  final String value;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: theme.textTheme.labelMedium?.copyWith(
+            style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 9,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           Text(
             value,
-            style: theme.textTheme.titleSmall?.copyWith(
+            style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              fontSize: 11,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CompactDivider extends StatelessWidget {
+  const _CompactDivider({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
     );
   }
 }
@@ -1267,26 +1362,31 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: cartelas
-          .map(
-            (gameCartela) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _InlineRegisteredCartelaCard(
-                gameCartela: gameCartela,
-                canClaimBingo: canClaimBingoFor(gameCartela),
-                isClaiming: claimingCartelaIds.contains(gameCartela.id),
-                pendingReview: pendingClaimCartelaIds.contains(gameCartela.id),
-                markedCells:
-                    manualMarkedCells[gameCartela.id] ?? const <String>{},
-                onMarkedCellsChanged: (markedCells) {
-                  onMarkedCellsChanged(gameCartela.id, markedCells);
-                },
-                onClaimBingo: () => onClaimBingo(gameCartela),
-              ),
-            ),
-          )
-          .toList(growable: false),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: cartelas.length,
+      itemBuilder: (context, index) {
+        final gameCartela = cartelas[index];
+        return _InlineRegisteredCartelaCard(
+          gameCartela: gameCartela,
+          canClaimBingo: canClaimBingoFor(gameCartela),
+          isClaiming: claimingCartelaIds.contains(gameCartela.id),
+          pendingReview: pendingClaimCartelaIds.contains(gameCartela.id),
+          markedCells:
+              manualMarkedCells[gameCartela.id] ?? const <String>{},
+          onMarkedCellsChanged: (markedCells) {
+            onMarkedCellsChanged(gameCartela.id, markedCells);
+          },
+          onClaimBingo: () => onClaimBingo(gameCartela),
+        );
+      },
     );
   }
 }
@@ -1312,64 +1412,61 @@ class _RegisteredCartelaListTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '#${gameCartela.cartela.number}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '#${gameCartela.cartela.number}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cartela ${gameCartela.cartela.number}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cartela ${gameCartela.cartela.number}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      statusLabel,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColors.background,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: statusColors.foreground,
-                    fontWeight: FontWeight.w700,
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    statusLabel,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: statusColors.background,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                statusLabel,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: statusColors.foreground,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -1546,14 +1643,20 @@ class _InlineRegisteredCartelaCardState
 
 class _CartelaRegistrationPanel extends ConsumerStatefulWidget {
   const _CartelaRegistrationPanel({
+    required this.slotId,
     required this.sessionId,
+    required this.gameStatus,
     required this.entryFee,
+    required this.prizePerCartela,
     required this.registeredCartelas,
     required this.onRegistered,
   });
 
-  final String sessionId;
+  final String slotId;
+  final String? sessionId;
+  final GameStatus gameStatus;
   final String entryFee;
+  final String prizePerCartela;
   final List<GameCartelaModel> registeredCartelas;
   final ValueChanged<List<GameCartelaModel>> onRegistered;
 
@@ -1594,10 +1697,11 @@ class _CartelaRegistrationPanelState
     final wallet = walletAsync is AsyncData<WalletModel>
         ? walletAsync.value
         : null;
-    final registeredNumbers = widget.registeredCartelas
-        .map((cartela) => cartela.cartela.number)
-        .toList(growable: false)
-      ..sort();
+    final registeredNumbers =
+        widget.registeredCartelas
+            .map((cartela) => cartela.cartela.number)
+            .toList(growable: false)
+          ..sort();
     final theme = Theme.of(context);
     final listHeight = MediaQuery.sizeOf(context).height.clamp(520, 900) * 0.42;
 
@@ -1622,6 +1726,7 @@ class _CartelaRegistrationPanelState
             _RegistrationSummaryCard(
               registeredNumbers: registeredNumbers,
               entryFee: widget.entryFee,
+              prizePerCartela: widget.prizePerCartela,
               walletBalance: wallet?.balance,
             ),
             const SizedBox(height: 14),
@@ -1674,11 +1779,11 @@ class _CartelaRegistrationPanelState
                         child: GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 1.45,
-                          ),
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 8,
+                                crossAxisSpacing: 8,
+                                childAspectRatio: 1.45,
+                              ),
                           itemCount: options.length,
                           itemBuilder: (context, index) {
                             final option = options[index];
@@ -1715,21 +1820,22 @@ class _CartelaRegistrationPanelState
         ? walletAsync.value.balance
         : null;
 
-    final registeredCartela =
-        await showModalBottomSheet<GameCartelaModel?>(
-          context: context,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (context) {
-            return _CartelaPreviewRegistrationSheet(
-              cartela: option.cartela,
-              entryFee: widget.entryFee,
-              walletBalance: walletBalance,
-              isRegistered: option.isRegistered,
-              sessionId: widget.sessionId,
-            );
-          },
+    final registeredCartela = await showModalBottomSheet<GameCartelaModel?>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CartelaPreviewRegistrationSheet(
+          cartela: option.cartela,
+          entryFee: widget.entryFee,
+          prizePerCartela: widget.prizePerCartela,
+          walletBalance: walletBalance,
+          isRegistered: option.isRegistered,
+          slotId: widget.slotId,
+          sessionId: widget.sessionId,
         );
+      },
+    );
 
     if (!mounted || registeredCartela == null) {
       return;
@@ -1769,16 +1875,20 @@ class _CartelaPreviewRegistrationSheet extends ConsumerStatefulWidget {
   const _CartelaPreviewRegistrationSheet({
     required this.cartela,
     required this.entryFee,
+    required this.prizePerCartela,
     required this.walletBalance,
     required this.isRegistered,
-    required this.sessionId,
+    required this.slotId,
+    this.sessionId,
   });
 
   final CartelaModel cartela;
   final String entryFee;
+  final String prizePerCartela;
   final String? walletBalance;
   final bool isRegistered;
-  final String sessionId;
+  final String slotId;
+  final String? sessionId;
 
   @override
   ConsumerState<_CartelaPreviewRegistrationSheet> createState() =>
@@ -1856,10 +1966,12 @@ class _CartelaPreviewRegistrationSheetState
     });
 
     try {
+      // Use the slot-based endpoint which handles both NEXT and PLAYING slots.
+      // For NEXT slots, the backend auto-creates a session if needed.
       final registeredCartela = await ref
           .read(gamesRepositoryProvider)
-          .registerCartela(
-            sessionId: widget.sessionId,
+          .registerCartelaForSlot(
+            slotId: widget.slotId,
             cartelaId: widget.cartela.id,
           );
 
@@ -1952,6 +2064,15 @@ class _CartelaPreviewRegistrationSheetState
               'Entry fee: ${formatMoney(widget.entryFee)}',
               style: theme.textTheme.bodyMedium,
             ),
+            if (!widget.isRegistered) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Entry fee ${formatMoney(widget.entryFee)} will be deducted. Prize pool increases by ${formatMoney(widget.prizePerCartela)} per cartela.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             if (widget.walletBalance != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -2193,11 +2314,13 @@ class _RegistrationSummaryCard extends StatelessWidget {
   const _RegistrationSummaryCard({
     required this.registeredNumbers,
     required this.entryFee,
+    required this.prizePerCartela,
     required this.walletBalance,
   });
 
   final List<int> registeredNumbers;
   final String entryFee;
+  final String prizePerCartela;
   final String? walletBalance;
 
   @override
@@ -2206,8 +2329,8 @@ class _RegistrationSummaryCard extends StatelessWidget {
     final availableBalance = walletBalance == null
         ? null
         : _parseMoney(walletBalance!);
-    final hasEnoughBalance = availableBalance == null ||
-        availableBalance >= _parseMoney(entryFee);
+    final hasEnoughBalance =
+        availableBalance == null || availableBalance >= _parseMoney(entryFee);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2248,6 +2371,13 @@ class _RegistrationSummaryCard extends StatelessWidget {
           Text(
             'Entry fee: ${formatMoney(entryFee)} each',
             style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Entry fee ${formatMoney(entryFee)} will be deducted. Prize pool increases by ${formatMoney(prizePerCartela)} per cartela.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           if (walletBalance != null) ...[
             const SizedBox(height: 4),
@@ -2298,7 +2428,7 @@ class _CartelaNumberChip extends StatelessWidget {
       color: background,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: onTap,
+        onTap: isRegistered ? null : onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           alignment: Alignment.center,
@@ -2333,6 +2463,159 @@ class _CartelaNumberChip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Inline cartela number picker grid shown during NEXT status.
+/// Displays all available cartela numbers in a compact grid. Tapping a
+/// number opens a small confirmation dialog to register it.
+class _InlineCartelaPickerGrid extends ConsumerStatefulWidget {
+  const _InlineCartelaPickerGrid({
+    required this.slotId,
+    required this.entryFee,
+    required this.registeredCartelas,
+    required this.onRegistered,
+  });
+
+  final String slotId;
+  final String entryFee;
+  final List<GameCartelaModel> registeredCartelas;
+  final ValueChanged<List<GameCartelaModel>> onRegistered;
+
+  @override
+  ConsumerState<_InlineCartelaPickerGrid> createState() =>
+      _InlineCartelaPickerGridState();
+}
+
+class _InlineCartelaPickerGridState
+    extends ConsumerState<_InlineCartelaPickerGrid> {
+  @override
+  Widget build(BuildContext context) {
+    final cartelasAsync = ref.watch(cartelasProvider);
+    final walletAsync = ref.watch(myWalletProvider);
+    final wallet =
+        walletAsync is AsyncData<WalletModel> ? walletAsync.value : null;
+    final registeredIds = widget.registeredCartelas
+        .map((gc) => gc.cartela.id)
+        .toSet();
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Register cartela',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                if (wallet?.balance != null)
+                  Text(
+                    'Balance: ${formatMoney(wallet!.balance)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Tap a number to register. Entry fee: ${formatMoney(widget.entryFee)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 320,
+              child: cartelasAsync.when(
+                data: (cartelas) {
+                  if (cartelas.isEmpty) {
+                    return const Center(
+                      child: Text('No cartelas available.'),
+                    );
+                  }
+                  return GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 6,
+                      mainAxisSpacing: 6,
+                      crossAxisSpacing: 6,
+                      childAspectRatio: 0.9,
+                    ),
+                    itemCount: cartelas.length,
+                    itemBuilder: (context, index) {
+                      final cartela = cartelas[index];
+                      final isRegistered =
+                          registeredIds.contains(cartela.id);
+                      return _CartelaNumberChip(
+                        number: cartela.number,
+                        isRegistered: isRegistered,
+                        onTap: () => _onCartelaTapped(cartela, isRegistered),
+                      );
+                    },
+                  );
+                },
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Text(
+                    'Could not load cartelas: ${e.toString()}',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onCartelaTapped(
+    CartelaModel cartela,
+    bool isRegistered,
+  ) async {
+    if (isRegistered) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cartela #${cartela.number} is already registered.'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    // Open preview modal with 10s auto-close. Player confirms registration.
+    final walletAsync = ref.read(myWalletProvider);
+    final walletBalance =
+        walletAsync is AsyncData<WalletModel> ? walletAsync.value.balance : null;
+
+    final registeredCartela = await showModalBottomSheet<GameCartelaModel?>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CartelaPreviewRegistrationSheet(
+          cartela: cartela,
+          entryFee: widget.entryFee,
+          prizePerCartela: '8',
+          walletBalance: walletBalance,
+          isRegistered: false,
+          slotId: widget.slotId,
+          sessionId: null,
+        );
+      },
+    );
+
+    if (registeredCartela != null) {
+      widget.onRegistered([registeredCartela]);
+    }
   }
 }
 

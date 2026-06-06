@@ -9,7 +9,7 @@ class AppConfig {
   factory AppConfig.fromEnvironment() {
     const defaultApiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:3000',
+      defaultValue: 'http://10.0.2.2:3002',
     );
     const socketUrlOverride = String.fromEnvironment('SOCKET_URL');
     const legacySocketBaseUrlOverride = String.fromEnvironment(

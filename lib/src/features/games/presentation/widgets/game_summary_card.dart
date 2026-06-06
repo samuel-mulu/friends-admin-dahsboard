@@ -41,7 +41,10 @@ class GameSummaryCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          game.code,
+                          game.status != GameStatus.next &&
+                                  game.playCode != null
+                              ? 'Play ${game.playCode} • Slot ${game.staticCode}'
+                              : 'Slot ${game.staticCode}',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -59,19 +62,20 @@ class GameSummaryCard extends StatelessWidget {
                 children: [
                   _InfoPill(label: 'Rule', value: game.ruleName),
                   if (game.playOrder != null)
-                    _InfoPill(
-                      label: 'Order',
-                      value: '${game.playOrder}',
-                    ),
+                    _InfoPill(label: 'Order', value: '${game.playOrder}'),
                   _InfoPill(label: 'Entry', value: '${game.entryFee} ETB'),
                   _InfoPill(label: 'Prize', value: '${game.prizeAmount} ETB'),
+                  _InfoPill(
+                    label: 'Called',
+                    value: '${game.calledNumbersCount}',
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Text(
-                    '${game.registeredCartelasCount} registered',
+                    '${game.registeredCartelasCount} registered • ${game.registrationOpen ? 'Registration open' : 'Registration closed'}',
                     style: theme.textTheme.bodyMedium,
                   ),
                   const Spacer(),
@@ -84,7 +88,6 @@ class GameSummaryCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _GameStatusChip extends StatelessWidget {

@@ -1,9 +1,5 @@
 class GameRuleModel {
-  GameRuleModel({
-    required this.id,
-    required this.key,
-    required this.name,
-  });
+  GameRuleModel({required this.id, required this.key, required this.name});
 
   final String id;
   final String key;
@@ -57,22 +53,24 @@ enum GameStatus {
     }
   }
 
-  // Registration is only allowed on PLAYING sessions in the new backend.
-  bool get allowsRegistration {
-    return this == GameStatus.playing;
-  }
+  bool get allowsRegistration =>
+      this == GameStatus.playing || this == GameStatus.next;
 }
 
 class GameModel {
   GameModel({
     required this.id,
-    this.sessionId,
-    required this.code,
+    required this.sessionId,
+    required this.staticCode,
+    required this.playCode,
     required this.name,
     required this.gameRule,
     required this.gameType,
     required this.entryFee,
+    required this.prizePerCartela,
+    required this.companyFeePerCartela,
     required this.prizeAmount,
+    required this.companyRevenue,
     required this.status,
     required this.playOrder,
     required this.startedAt,
@@ -81,18 +79,22 @@ class GameModel {
     required this.createdAt,
     required this.updatedAt,
     required this.registeredCartelasCount,
+    required this.calledNumbersCount,
+    required this.registrationOpen,
   });
 
-  // For sessions: id == sessionId (the live session id used for all API calls).
-  // For NEXT slots: id == slotId, sessionId == null (no session exists yet).
   final String id;
   final String? sessionId;
-  final String code;
+  final String staticCode;
+  final String? playCode;
   final String name;
   final GameRuleModel? gameRule;
   final String gameType;
   final String entryFee;
+  final String prizePerCartela;
+  final String companyFeePerCartela;
   final String prizeAmount;
+  final String companyRevenue;
   final GameStatus status;
   final int? playOrder;
   final DateTime? startedAt;
@@ -101,85 +103,114 @@ class GameModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int registeredCartelasCount;
+  final int calledNumbersCount;
+  final bool registrationOpen;
 
-  // Build from a session payload (status: PLAYING / CHECKING / FINISHED).
-  // Session payload shape: { id, playCode, name, gameType, entryFee, prizeAmount,
-  //   status, startedAt, finishedAt, winnerCartelaId, createdAt, updatedAt,
-  //   gameSlot: { gameRule?, ... }, registeredCartelasCount }
-  factory GameModel.fromSessionJson(Map<String, dynamic> json) {
-    final slot = json['gameSlot'] as Map<String, dynamic>?;
-    final gameRule = slot?['gameRule'] is Map<String, dynamic>
-        ? GameRuleModel.fromJson(slot!['gameRule'] as Map<String, dynamic>)
+  factory GameModel.fromLiveJson(Map<String, dynamic> json) {
+    final gameRule = json['gameRule'] is Map<String, dynamic>
+        ? GameRuleModel.fromJson(json['gameRule'] as Map<String, dynamic>)
+        : (json['gameSlot'] is Map<String, dynamic> &&
+              (json['gameSlot'] as Map<String, dynamic>)['gameRule']
+                  is Map<String, dynamic>)
+        ? GameRuleModel.fromJson(
+            (json['gameSlot'] as Map<String, dynamic>)['gameRule']
+                as Map<String, dynamic>,
+          )
         : null;
-    final sessionId = json['id'] as String;
+    final gameSlot = json['gameSlot'] as Map<String, dynamic>?;
+    final status = GameStatus.fromApi(json['status'] as String);
+    final isSessionPayload =
+        json['playCode'] is String &&
+        (json['playCode'] as String).trim().isNotEmpty &&
+        gameSlot != null;
+
     return GameModel(
-      id: sessionId,
-      sessionId: sessionId,
-      code: (json['playCode'] as String?) ?? '',
-      name: (json['name'] as String?) ?? (slot?['name'] as String?) ?? '',
+      id: json['id'] as String,
+      sessionId: isSessionPayload
+          ? (json['sessionId'] as String?) ?? json['id'] as String
+          : null,
+      staticCode:
+          (json['staticCode'] as String?) ??
+          (gameSlot?['staticCode'] as String?) ??
+          '',
+      playCode: (json['playCode'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : json['playCode'] as String?,
+      name: (json['name'] as String?) ?? (gameSlot?['name'] as String?) ?? '',
       gameRule: gameRule,
-      gameType: (json['gameType'] as String?) ?? '',
+      gameType:
+          (json['gameType'] as String?) ??
+          (gameSlot?['gameType'] as String?) ??
+          '',
       entryFee: json['entryFee']?.toString() ?? '0',
+      prizePerCartela: json['prizePerCartela']?.toString() ?? '0',
+      companyFeePerCartela: json['companyFeePerCartela']?.toString() ?? '0',
       prizeAmount: json['prizeAmount']?.toString() ?? '0',
-      status: GameStatus.fromApi(json['status'] as String),
-      playOrder: null,
+      companyRevenue: json['companyRevenue']?.toString() ?? '0',
+      status: status,
+      playOrder:
+          (json['playOrder'] as num?)?.toInt() ??
+          (json['sortOrder'] as num?)?.toInt(),
       startedAt: _parseDate(json['startedAt']),
       finishedAt: _parseDate(json['finishedAt']),
       winnerCartelaId: json['winnerCartelaId'] as String?,
       createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
       updatedAt: _parseDate(json['updatedAt']) ?? DateTime.now(),
       registeredCartelasCount:
-          (json['registeredCartelasCount'] as num?)?.toInt() ?? 0,
+          (json['registeredCartelasCount'] as num?)?.toInt() ??
+          (json['registrationCount'] as num?)?.toInt() ??
+          0,
+      calledNumbersCount:
+          (json['calledNumbersCount'] as num?)?.toInt() ??
+          (json['calledNumberCount'] as num?)?.toInt() ??
+          0,
+      registrationOpen:
+          json['registrationOpen'] as bool? ?? (status == GameStatus.playing),
     );
   }
 
-  // Build from a slot payload (status: NEXT).
-  // Slot payload shape: { id, staticCode, name, gameType, gameRule?,
-  //   status, sortOrder, createdAt, updatedAt }
+  factory GameModel.fromSessionJson(Map<String, dynamic> json) {
+    return GameModel.fromLiveJson({
+      ...json,
+      'sessionId': (json['sessionId'] as String?) ?? json['id'],
+    });
+  }
+
   factory GameModel.fromSlotJson(Map<String, dynamic> json) {
-    final gameRule = json['gameRule'] is Map<String, dynamic>
-        ? GameRuleModel.fromJson(json['gameRule'] as Map<String, dynamic>)
-        : null;
-    return GameModel(
-      id: json['id'] as String,
-      sessionId: null,
-      code: (json['staticCode'] as String?) ?? '',
-      name: (json['name'] as String?) ?? '',
-      gameRule: gameRule,
-      gameType: (json['gameType'] as String?) ?? '',
-      entryFee: '0',
-      prizeAmount: '0',
-      status: GameStatus.fromApi(json['status'] as String),
-      playOrder: (json['sortOrder'] as num?)?.toInt(),
-      startedAt: null,
-      finishedAt: null,
-      winnerCartelaId: null,
-      createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(json['updatedAt']) ?? DateTime.now(),
-      registeredCartelasCount: 0,
-    );
+    return GameModel.fromLiveJson(json);
   }
 
   GameModel copyWith({
     String? sessionId,
+    String? staticCode,
+    String? playCode,
     GameStatus? status,
     int? playOrder,
     String? entryFee,
+    String? prizePerCartela,
+    String? companyFeePerCartela,
     String? prizeAmount,
+    String? companyRevenue,
     DateTime? startedAt,
     DateTime? finishedAt,
     String? winnerCartelaId,
     int? registeredCartelasCount,
+    int? calledNumbersCount,
+    bool? registrationOpen,
   }) {
     return GameModel(
       id: id,
       sessionId: sessionId ?? this.sessionId,
-      code: code,
+      staticCode: staticCode ?? this.staticCode,
+      playCode: playCode ?? this.playCode,
       name: name,
       gameRule: gameRule,
       gameType: gameType,
       entryFee: entryFee ?? this.entryFee,
+      prizePerCartela: prizePerCartela ?? this.prizePerCartela,
+      companyFeePerCartela: companyFeePerCartela ?? this.companyFeePerCartela,
       prizeAmount: prizeAmount ?? this.prizeAmount,
+      companyRevenue: companyRevenue ?? this.companyRevenue,
       status: status ?? this.status,
       playOrder: playOrder ?? this.playOrder,
       startedAt: startedAt ?? this.startedAt,
@@ -189,6 +220,8 @@ class GameModel {
       updatedAt: updatedAt,
       registeredCartelasCount:
           registeredCartelasCount ?? this.registeredCartelasCount,
+      calledNumbersCount: calledNumbersCount ?? this.calledNumbersCount,
+      registrationOpen: registrationOpen ?? this.registrationOpen,
     );
   }
 
@@ -200,7 +233,18 @@ class GameModel {
     return DateTime.tryParse(value);
   }
 
+  String get code =>
+      status == GameStatus.next ? staticCode : (playCode ?? staticCode);
+
   String get ruleName => gameRule?.name ?? name;
 
   String get ruleKey => gameRule?.key ?? gameType;
+
+  String get codeLabel {
+    if (status != GameStatus.next && playCode != null && playCode!.isNotEmpty) {
+      return '$playCode / $staticCode';
+    }
+
+    return staticCode;
+  }
 }

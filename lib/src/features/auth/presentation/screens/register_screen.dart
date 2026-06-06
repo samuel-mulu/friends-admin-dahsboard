@@ -19,6 +19,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _otpController = TextEditingController();
   bool _otpRequested = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -63,6 +65,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               decoration: const InputDecoration(
                 labelText: 'Full name',
                 hintText: 'Samuel Mulu',
+                prefixIcon: Icon(Icons.person_rounded),
               ),
               validator: (value) {
                 if ((value?.trim().length ?? 0) < 3) {
@@ -79,28 +82,49 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               decoration: const InputDecoration(
                 labelText: 'Phone number',
                 hintText: '0912345678',
+                prefixIcon: Icon(Icons.phone_rounded),
               ),
               validator: _validatePhoneNumber,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _obscurePassword,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Password',
                 hintText: 'Minimum 8 characters',
+                prefixIcon: const Icon(Icons.lock_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
               ),
               validator: _validatePassword,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _confirmPasswordController,
-              obscureText: true,
+              obscureText: _obscureConfirmPassword,
               textInputAction: _otpRequested
                   ? TextInputAction.next
                   : TextInputAction.done,
-              decoration: const InputDecoration(labelText: 'Confirm password'),
+              decoration: InputDecoration(
+                labelText: 'Confirm password',
+                prefixIcon: const Icon(Icons.lock_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                ),
+              ),
               validator: (value) {
                 if (value != _passwordController.text) {
                   return 'Passwords do not match.';
@@ -133,6 +157,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 decoration: const InputDecoration(
                   labelText: 'OTP',
                   hintText: '1234',
+                  prefixIcon: Icon(Icons.pin_rounded),
                 ),
                 validator: (value) {
                   if (!_otpRequested) {

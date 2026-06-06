@@ -67,7 +67,8 @@ class GameCartelaModel {
   factory GameCartelaModel.fromJson(Map<String, dynamic> json) {
     return GameCartelaModel(
       id: json['id'] as String,
-      gameId: json['gameId'] as String,
+      // Backend returns "gameSessionId"; older payloads may use "gameId".
+      gameId: (json['gameId'] ?? json['gameSessionId'] ?? '') as String,
       userId: json['userId'] as String,
       cartelaId: json['cartelaId'] as String,
       status: GameCartelaStatus.fromApi(json['status'] as String),

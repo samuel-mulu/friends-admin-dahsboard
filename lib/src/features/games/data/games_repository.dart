@@ -18,9 +18,6 @@ class GamesRepository {
     );
   }
 
-  // Returns the current live session (PLAYING/CHECKING) as a GameModel,
-  // or the next upcoming slot (NEXT) as a GameModel, or null if nothing queued.
-  // Backend response: { type: 'session' | 'slot', data: {...} } | null
   Future<GameModel?> getCurrentLiveGame() {
     return _apiClient.get<GameModel?>(
       '/games/current/live',
@@ -33,16 +30,7 @@ class GamesRepository {
           throw StateError('Invalid current live game response.');
         }
 
-        final type = rawData['type'] as String?;
-        final data = rawData['data'];
-        if (data is! Map<String, dynamic>) {
-          throw StateError('Invalid current live game data.');
-        }
-
-        if (type == 'session') {
-          return GameModel.fromSessionJson(data);
-        }
-        return GameModel.fromSlotJson(data);
+        return GameModel.fromLiveJson(rawData);
       },
     );
   }
@@ -85,6 +73,25 @@ class GamesRepository {
   }) {
     return _apiClient.post<GameCartelaModel>(
       '/games/sessions/$sessionId/register-cartela',
+      data: {'cartelaId': cartelaId},
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid cartela registration response.');
+        }
+
+        return GameCartelaModel.fromJson(rawData);
+      },
+    );
+  }
+
+  // Register a cartela for a slot (works for both NEXT and PLAYING slots).
+  // For NEXT slots, the backend auto-creates a session if needed.
+  Future<GameCartelaModel> registerCartelaForSlot({
+    required String slotId,
+    required String cartelaId,
+  }) {
+    return _apiClient.post<GameCartelaModel>(
+      '/games/slots/$slotId/register-cartela',
       data: {'cartelaId': cartelaId},
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {

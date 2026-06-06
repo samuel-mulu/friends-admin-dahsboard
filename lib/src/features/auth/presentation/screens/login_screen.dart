@@ -18,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _didShowInitialMessage = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -73,17 +74,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: const InputDecoration(
                 labelText: 'Phone number',
                 hintText: '0912345678',
+                prefixIcon: Icon(Icons.phone_rounded),
               ),
               validator: _validatePhoneNumber,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Password',
                 hintText: 'Enter your password',
+                prefixIcon: const Icon(Icons.lock_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
               ),
               validator: _validatePassword,
               onFieldSubmitted: (_) => _submit(),
