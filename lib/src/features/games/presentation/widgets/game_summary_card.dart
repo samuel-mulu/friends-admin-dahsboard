@@ -41,8 +41,7 @@ class GameSummaryCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          game.status != GameStatus.next &&
-                                  game.playCode != null
+                          game.playCode != null
                               ? 'Play ${game.playCode} • Slot ${game.staticCode}'
                               : 'Slot ${game.staticCode}',
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -52,7 +51,7 @@ class GameSummaryCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _GameStatusChip(status: game.status),
+                  _PlayerGameStatusChip(status: game.playerStatus),
                 ],
               ),
               const SizedBox(height: 12),
@@ -90,32 +89,36 @@ class GameSummaryCard extends StatelessWidget {
   }
 }
 
-class _GameStatusChip extends StatelessWidget {
-  const _GameStatusChip({required this.status});
+class _PlayerGameStatusChip extends StatelessWidget {
+  const _PlayerGameStatusChip({required this.status});
 
-  final GameStatus status;
+  final PlayerGameStatus status;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = switch (status) {
-      GameStatus.next => (
+      PlayerGameStatus.registrationOpen => (
         background: theme.colorScheme.primaryContainer,
         foreground: theme.colorScheme.onPrimaryContainer,
       ),
-      GameStatus.checking => (
+      PlayerGameStatus.checking => (
         background: theme.colorScheme.tertiaryContainer,
         foreground: theme.colorScheme.onTertiaryContainer,
       ),
-      GameStatus.playing => (
+      PlayerGameStatus.playing => (
         background: theme.colorScheme.secondaryContainer,
         foreground: theme.colorScheme.onSecondaryContainer,
       ),
-      GameStatus.finished => (
+      PlayerGameStatus.winnerWindow => (
+        background: theme.colorScheme.tertiaryContainer,
+        foreground: theme.colorScheme.onTertiaryContainer,
+      ),
+      PlayerGameStatus.finished => (
         background: theme.colorScheme.surfaceContainerHighest,
         foreground: theme.colorScheme.onSurface,
       ),
-      GameStatus.cancelled => (
+      PlayerGameStatus.cancelled => (
         background: theme.colorScheme.errorContainer,
         foreground: theme.colorScheme.onErrorContainer,
       ),

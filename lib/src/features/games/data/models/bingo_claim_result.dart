@@ -46,7 +46,7 @@ class BingoClaimModel {
   factory BingoClaimModel.fromJson(Map<String, dynamic> json) {
     return BingoClaimModel(
       id: json['id'] as String,
-      gameId: json['gameId'] as String,
+      gameId: (json['gameId'] ?? json['gameSessionId']) as String,
       userId: json['userId'] as String,
       gameCartelaId: json['gameCartelaId'] as String,
       status: BingoClaimStatus.fromApi(json['status'] as String),

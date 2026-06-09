@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/paginated_response.dart';
+import '../../../core/network/pagination_meta.dart';
 import 'models/bingo_claim_result.dart';
 import 'models/cartela_model.dart';
+import 'models/cartela_reservation_model.dart';
 import 'models/called_numbers_snapshot.dart';
 import 'models/game_cartela_model.dart';
 import 'models/game_model.dart';
@@ -18,19 +21,19 @@ class GamesRepository {
     );
   }
 
-  Future<GameModel?> getCurrentLiveGame() {
-    return _apiClient.get<GameModel?>(
-      '/games/current/live',
+  /// CANONICAL SOURCE OF TRUTH for current game operations.
+  /// Backend decides which game is live/checking/registration/queue.
+  /// Frontend MUST NOT apply additional filtering/sorting.
+  /// Returns the current game based on backend priority: PLAYING > CHECKING > READY > NEXT
+  Future<GameOperationsCurrentResponse> getCurrentGameOperations() {
+    return _apiClient.get<GameOperationsCurrentResponse>(
+      '/games/operations/current',
       decoder: (rawData) {
-        if (rawData == null) {
-          return null;
-        }
-
         if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid current live game response.');
+          throw StateError('Invalid game operations response.');
         }
 
-        return GameModel.fromLiveJson(rawData);
+        return GameOperationsCurrentResponse.fromJson(rawData);
       },
     );
   }
@@ -103,6 +106,58 @@ class GamesRepository {
     );
   }
 
+  Future<CartelaReservationModel> reserveCartelaForSlot({
+    required String slotId,
+    required String cartelaId,
+  }) {
+    return _apiClient.post<CartelaReservationModel>(
+      '/games/slots/$slotId/cartelas/$cartelaId/reserve',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid cartela reservation response.');
+        }
+
+        return CartelaReservationModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<CartelaReservationModel> reserveCartela({
+    required String sessionId,
+    required String cartelaId,
+  }) {
+    return _apiClient.post<CartelaReservationModel>(
+      '/games/sessions/$sessionId/cartelas/$cartelaId/reserve',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid cartela reservation response.');
+        }
+
+        return CartelaReservationModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<GameCartelaModel> confirmReservation(String reservationId) {
+    return _apiClient.post<GameCartelaModel>(
+      '/games/reservations/$reservationId/confirm',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid cartela confirmation response.');
+        }
+
+        return GameCartelaModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<void> cancelReservation(String reservationId) {
+    return _apiClient.post<void>(
+      '/games/reservations/$reservationId/cancel',
+      decoder: (_) {},
+    );
+  }
+
   Future<List<GameCartelaModel>> getMyGameCartelas(String sessionId) {
     return _apiClient.get<List<GameCartelaModel>>(
       '/games/sessions/$sessionId/my-cartelas',
@@ -123,6 +178,23 @@ class GamesRepository {
     );
   }
 
+  Future<PaginatedResponse<GameModel>> getGameHistory({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final envelope = await _apiClient.getEnvelope<List<GameModel>>(
+      '/games/history',
+      queryParameters: {'page': page, 'pageSize': pageSize},
+      decoder: (rawData) =>
+          _decodeList(rawData, GameModel.fromSessionJson),
+    );
+
+    return PaginatedResponse(
+      items: envelope.data,
+      pagination: _decodePagination(envelope.meta),
+    );
+  }
+
   Future<BingoClaimResult> claimBingo({
     required String sessionId,
     required String gameCartelaId,
@@ -137,6 +209,19 @@ class GamesRepository {
 
         return BingoClaimResult.fromJson(rawData);
       },
+    );
+  }
+
+  PaginationMeta _decodePagination(Map<String, dynamic>? meta) {
+    final pagination = meta?['pagination'];
+    if (pagination is Map<String, dynamic>) {
+      return PaginationMeta.fromJson(pagination);
+    }
+    return PaginationMeta(
+      page: 1,
+      pageSize: 20,
+      totalItems: 0,
+      totalPages: 0,
     );
   }
 

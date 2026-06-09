@@ -5,6 +5,7 @@ import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/games/presentation/screens/game_history_screen.dart';
 import '../../features/games/presentation/screens/live_game_screen.dart';
 import '../../features/home/presentation/screens/dashboard_screen.dart';
 import '../../features/home/presentation/screens/home_shell_screen.dart';
@@ -53,6 +54,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/games',
                 builder: (context, state) => const LiveGameScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'history',
+                    builder: (context, state) => const GameHistoryScreen(),
+                  ),
+                ],
               ),
             ],
           ),

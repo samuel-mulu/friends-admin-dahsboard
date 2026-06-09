@@ -4,9 +4,10 @@ import '../../data/models/cartela_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 
-final currentLiveGameProvider = FutureProvider<GameModel?>((ref) async {
-  return ref.watch(gamesRepositoryProvider).getCurrentLiveGame();
-});
+final currentGameOperationsProvider =
+    FutureProvider<GameOperationsCurrentResponse>((ref) async {
+      return ref.watch(gamesRepositoryProvider).getCurrentGameOperations();
+    });
 
 final cartelasProvider = FutureProvider<List<CartelaModel>>((ref) async {
   return ref.watch(gamesRepositoryProvider).getCartelas();

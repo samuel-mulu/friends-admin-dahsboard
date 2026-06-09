@@ -50,6 +50,10 @@ class ApiException implements Exception {
     return 'Something went wrong.';
   }
 
+  bool get isConnectivityFailure =>
+      statusCode == null &&
+      message == 'Could not reach the server. Please try again.';
+
   @override
   String toString() {
     return 'ApiException(statusCode: $statusCode, message: $message)';
