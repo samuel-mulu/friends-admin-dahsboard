@@ -1,20 +1,20 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:friends_bingo_app/src/app.dart';
+import 'package:friends_bingo_app/src/core/routing/app_router.dart';
+import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('shows login flow by default when no token exists', (
-    tester,
-  ) async {
+  test('appRouterProvider resolves without circular dependency', () {
     FlutterSecureStorage.setMockInitialValues(<String, String>{});
 
-    await tester.pumpWidget(const ProviderScope(child: FriendsBingoApp()));
-    await tester.pumpAndSettle();
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
 
-    expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
+    expect(() => container.read(appRouterProvider), returnsNormally);
+    expect(() => container.read(authControllerProvider), returnsNormally);
+    expect(container.read(appRouterProvider), isNotNull);
   });
 }

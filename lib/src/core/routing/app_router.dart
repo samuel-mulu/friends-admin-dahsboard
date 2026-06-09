@@ -17,15 +17,72 @@ import '../../features/wallet/presentation/screens/wallet_transactions_screen.da
 import '../../features/wallet/presentation/screens/wallet_screen.dart';
 import '../../features/wallet/presentation/screens/withdraw_history_screen.dart';
 import '../../features/wallet/presentation/screens/withdraw_screen.dart';
+import 'auth_route_guard.dart';
+import 'go_router_refresh.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _gamesBranchNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'gamesBranch');
+final _homeBranchNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'homeBranch');
+final _walletBranchNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'walletBranch');
+final _profileBranchNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'profileBranch');
+
+String? _authRedirect(Ref ref, GoRouterState state) {
+  final authState = ref.read(authControllerProvider);
+  final isInitializing = authState.isInitializing;
+  final isAuthenticated = authState.session != null;
+  final location = state.matchedLocation;
+
+  if (isInitializing) {
+    return location == '/loading' ? null : '/loading';
+  }
+
+  if (!isAuthenticated) {
+    if (kAuthLocations.contains(location) || kGuestLocations.contains(location)) {
+      return null;
+    }
+
+    if (isProtectedLocation(location)) {
+      return loginPathWithRedirect(location);
+    }
+
+    return '/games';
+  }
+
+  if (location == '/loading') {
+    return redirectAfterAuth(state);
+  }
+
+  return null;
+}
+
+String redirectAfterAuth(GoRouterState state) {
+  final redirect = state.uri.queryParameters['redirect'];
+  if (redirect != null &&
+      redirect.startsWith('/') &&
+      !kAuthLocations.contains(redirect)) {
+    return redirect;
+  }
+
+  return '/games';
+}
+
+void navigateAfterAuthentication(GoRouter router) {
+  final location = router.state.matchedLocation;
+  if (!kAuthLocations.contains(location)) {
+    return;
+  }
+
+  router.go(redirectAfterAuth(router.state));
+}
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  final refresh = ref.watch(goRouterRefreshProvider);
 
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/loading',
+    refreshListenable: refresh,
+    redirect: (context, state) => _authRedirect(ref, state),
     routes: [
       GoRoute(
         path: '/loading',
@@ -50,6 +107,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
         branches: [
           StatefulShellBranch(
+            navigatorKey: _gamesBranchNavigatorKey,
             routes: [
               GoRoute(
                 path: '/games',
@@ -64,6 +122,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _homeBranchNavigatorKey,
             routes: [
               GoRoute(
                 path: '/home',
@@ -72,6 +131,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _walletBranchNavigatorKey,
             routes: [
               GoRoute(
                 path: '/wallet',
@@ -103,6 +163,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _profileBranchNavigatorKey,
             routes: [
               GoRoute(
                 path: '/profile',
@@ -113,26 +174,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
-    redirect: (context, state) {
-      final isInitializing = authState.isInitializing;
-      final isAuthenticated = authState.session != null;
-      final location = state.matchedLocation;
-      const authLocations = {'/login', '/register', '/forgot-password'};
-      final isAuthLocation = authLocations.contains(location);
-
-      if (isInitializing) {
-        return location == '/loading' ? null : '/loading';
-      }
-
-      if (!isAuthenticated) {
-        return isAuthLocation ? null : '/login';
-      }
-
-      if (location == '/loading' || isAuthLocation) {
-        return '/games';
-      }
-
-      return null;
-    },
   );
+
+  ref.onDispose(router.dispose);
+  return router;
 });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/friends_bingo_wordmark.dart';
@@ -20,8 +21,10 @@ class AppSettingsDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final user = ref.watch(authControllerProvider).session?.user;
-    final walletAsync = ref.watch(myWalletProvider);
+    final session = ref.watch(authControllerProvider).session;
+    final isGuest = session == null;
+    final user = session?.user;
+    final walletAsync = isGuest ? null : ref.watch(myWalletProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -50,7 +53,16 @@ class AppSettingsDrawer extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const FriendsBingoWordmark(compact: true),
-                  if (user != null) ...[
+                  if (isGuest) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'Sign in to play and register cartelas',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.35,
+                      ),
+                    ),
+                  ] else if (user != null) ...[
                     const SizedBox(height: 10),
                     Text(
                       user.fullName,
@@ -70,41 +82,72 @@ class AppSettingsDrawer extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: walletAsync.when(
-                data: (wallet) => Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppBranding.panelBackground(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppBranding.gold.withValues(alpha: 0.4),
+              child: isGuest
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppBranding.panelBackground(context),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppBranding.gold.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Join the game',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Create an account to register cartelas and manage your wallet.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : walletAsync!.when(
+                      data: (wallet) => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppBranding.panelBackground(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppBranding.gold.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Balance',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              formatMoney(wallet.balance),
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppBranding.balanceAccent(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      loading: () => const LinearProgressIndicator(minHeight: 2),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Balance',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        formatMoney(wallet.balance),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppBranding.balanceAccent(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                loading: () => const LinearProgressIndicator(minHeight: 2),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -121,13 +164,23 @@ class AppSettingsDrawer extends ConsumerWidget {
                     icon: Icons.account_balance_wallet_outlined,
                     label: 'Wallet',
                     selected: navigationShell.currentIndex == 2,
-                    onTap: () => _navigate(context, 2),
+                    onTap: () => _openProtected(
+                      context,
+                      ref,
+                      branchIndex: 2,
+                      redirectPath: '/wallet',
+                    ),
                   ),
                   _DrawerNavTile(
                     icon: Icons.person_outline,
                     label: 'Profile',
                     selected: navigationShell.currentIndex == 3,
-                    onTap: () => _navigate(context, 3),
+                    onTap: () => _openProtected(
+                      context,
+                      ref,
+                      branchIndex: 3,
+                      redirectPath: '/profile',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Padding(
@@ -143,7 +196,11 @@ class AppSettingsDrawer extends ConsumerWidget {
                   _DrawerNavTile(
                     icon: Icons.receipt_long_outlined,
                     label: 'Transaction history',
-                    onTap: () => _openRoute(context, '/wallet/transactions'),
+                    onTap: () => _openProtectedRoute(
+                      context,
+                      ref,
+                      '/wallet/transactions',
+                    ),
                   ),
                   _DrawerNavTile(
                     icon: Icons.history_rounded,
@@ -213,22 +270,42 @@ class AppSettingsDrawer extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(16),
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.error,
-                  foregroundColor: theme.colorScheme.onError,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  await ref.read(authControllerProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go('/login');
-                  }
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-              ),
+              child: isGuest
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.go(loginPathWithRedirect('/games'));
+                          },
+                          child: const Text('Sign in'),
+                        ),
+                        const SizedBox(height: 10),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.go('/register');
+                          },
+                          child: const Text('Sign up'),
+                        ),
+                      ],
+                    )
+                  : FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
+                        final router = GoRouter.of(context);
+                        Navigator.of(context).pop();
+                        await ref.read(authControllerProvider.notifier).logout();
+                        router.go('/games');
+                      },
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Logout'),
+                    ),
             ),
           ],
         ),
@@ -241,6 +318,44 @@ class AppSettingsDrawer extends ConsumerWidget {
     navigationShell.goBranch(
       branchIndex,
       initialLocation: branchIndex == navigationShell.currentIndex,
+    );
+  }
+
+  void _openProtected(
+    BuildContext context,
+    WidgetRef ref, {
+    required int branchIndex,
+    required String redirectPath,
+  }) {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    requireAuthNavigate(
+      ref,
+      router,
+      redirectPath: redirectPath,
+      onAuthenticated: () {
+        navigationShell.goBranch(
+          branchIndex,
+          initialLocation: branchIndex == navigationShell.currentIndex,
+        );
+      },
+    );
+  }
+
+  void _openProtectedRoute(
+    BuildContext context,
+    WidgetRef ref,
+    String location,
+  ) {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    requireAuthNavigate(
+      ref,
+      router,
+      redirectPath: location,
+      onAuthenticated: () {
+        router.go(location);
+      },
     );
   }
 

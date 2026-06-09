@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../controllers/auth_controller.dart';
+import '../providers/auth_flow_provider.dart';
+import '../widgets/auth_error_listener.dart';
+import '../widgets/auth_form_field.dart';
+import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_screen_scaffold.dart';
+import '../widgets/auth_validators.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({this.initialMessage, super.key});
@@ -35,92 +41,89 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(widget.initialMessage!)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.initialMessage!)),
+        );
       });
     }
 
-    ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      final nextMessage = next.errorMessage;
-      if (nextMessage != null && nextMessage != previous?.errorMessage) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(nextMessage)));
-        ref.read(authControllerProvider.notifier).clearError();
-      }
-    });
+    final isSubmitting = ref.watch(
+      authControllerProvider.select((state) => state.isSubmitting),
+    );
 
-    final authState = ref.watch(authControllerProvider);
-
-    return AuthScreenScaffold(
-      title: 'Welcome back',
-      subtitle: 'Login with your phone number to continue to Friends Bingo.',
-      footer: TextButton(
-        onPressed: authState.isSubmitting
-            ? null
-            : () => context.go('/register'),
-        child: const Text('Create a new account'),
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Phone number',
-                hintText: '0912345678',
-                prefixIcon: Icon(Icons.phone_rounded),
+    return AuthErrorListener(
+      child: AuthScreenScaffold(
+        title: 'Welcome back',
+        footer: TextButton(
+          onPressed: isSubmitting
+              ? null
+              : () {
+                  ref.read(registrationDraftProvider.notifier).clear();
+                  ref.read(registerStepProvider.notifier).showDetails();
+                  context.go('/register');
+                },
+          child: const Text('Create a new account'),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AuthFormField(
+                controller: _phoneController,
+                label: 'Phone number',
+                hint: '0912345678',
+                prefixIcon: Icons.phone_rounded,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                validator: validatePhoneNumber,
               ),
-              validator: _validatePhoneNumber,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: 'Enter your password',
-                prefixIcon: const Icon(Icons.lock_rounded),
+              const SizedBox(height: 18),
+              AuthFormField(
+                controller: _passwordController,
+                label: 'Password',
+                hint: 'Enter your password',
+                prefixIcon: Icons.lock_rounded,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                validator: validatePassword,
+                onFieldSubmitted: (_) => _submit(),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
                         ? Icons.visibility_off_rounded
                         : Icons.visibility_rounded,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              validator: _validatePassword,
-              onFieldSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: authState.isSubmitting
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                onPressed: isSubmitting
                     ? null
-                    : () => context.go('/forgot-password'),
-                child: const Text('Forgot password?'),
+                    : () {
+                        ref.read(passwordResetPhoneProvider.notifier).clear();
+                        ref
+                            .read(forgotPasswordStepProvider.notifier)
+                            .showPhone();
+                        context.go('/forgot-password');
+                      },
+                  child: const Text('Forgot password?'),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: authState.isSubmitting ? null : _submit,
-              child: authState.isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Login'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              AuthPrimaryButton(
+                label: 'Sign in',
+                isLoading: isSubmitting,
+                onPressed: _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,29 +134,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await ref
-        .read(authControllerProvider.notifier)
-        .login(
-          phoneNumber: _phoneController.text.trim(),
-          password: _passwordController.text,
-        );
-  }
-
-  String? _validatePhoneNumber(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return 'Phone number is required.';
-    }
-    if (!RegExp(r'^\d{10,15}$').hasMatch(trimmed)) {
-      return 'Enter a valid phone number.';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if ((value ?? '').length < 8) {
-      return 'Password must be at least 8 characters.';
-    }
-    return null;
+    final authNotifier = ref.read(authControllerProvider.notifier);
+    await authNotifier.login(
+      phoneNumber: _phoneController.text.trim(),
+      password: _passwordController.text,
+    );
   }
 }
+

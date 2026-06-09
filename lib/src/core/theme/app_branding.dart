@@ -44,13 +44,24 @@ abstract final class AppBranding {
     final theme = Theme.of(context);
     if (marked) {
       return theme.brightness == Brightness.dark
-          ? casinoPurple.withValues(alpha: 0.55)
-          : casinoPurple.withValues(alpha: 0.18);
+          ? gold.withValues(alpha: 0.34)
+          : casinoPurple.withValues(alpha: 0.22);
     }
     return theme.brightness == Brightness.dark
         ? const Color(0xFF2A2340)
         : theme.colorScheme.surface;
   }
+
+  static Color cellBorder(BuildContext context, {required bool marked}) {
+    final theme = Theme.of(context);
+    if (marked) {
+      return gold;
+    }
+    return theme.colorScheme.outlineVariant
+        .withValues(alpha: theme.brightness == Brightness.dark ? 0.35 : 0.5);
+  }
+
+  static double cellBorderWidth({required bool marked}) => marked ? 2 : 1;
 
   static Color cellForeground(BuildContext context, {required bool marked}) {
     final theme = Theme.of(context);

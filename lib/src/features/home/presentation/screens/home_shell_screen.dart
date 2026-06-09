@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/realtime/wallet_realtime_sync.dart';
-import '../../../../core/widgets/friends_bingo_wordmark.dart';
 import '../../../settings/presentation/widgets/app_settings_drawer.dart';
+import '../widgets/app_shell_app_bar.dart';
 
 class HomeShellScreen extends ConsumerWidget {
   const HomeShellScreen({required this.navigationShell, super.key});
@@ -14,10 +14,7 @@ class HomeShellScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const FriendsBingoWordmark(compact: true),
-        centerTitle: false,
-      ),
+      appBar: const AppShellAppBar(),
       drawer: AppSettingsDrawer(navigationShell: navigationShell),
       body: WalletRealtimeSync(child: navigationShell),
     );

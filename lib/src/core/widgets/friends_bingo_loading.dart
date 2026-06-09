@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_branding.dart';
-
-/// Shared loading experience for splash, live game, and modals.
+/// Compact loading indicator for modals, lists, and inline states.
 class FriendsBingoLoading extends StatelessWidget {
   const FriendsBingoLoading({
     this.message,
@@ -21,45 +19,29 @@ class FriendsBingoLoading extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            AppBranding.brandName,
-            style: AppBranding.wordmarkGold(size: compact ? 22 : 28),
-          ),
-          SizedBox(height: compact ? 12 : 20),
           SizedBox(
-            width: compact ? 28 : 36,
-            height: compact ? 28 : 36,
+            width: compact ? 28 : 32,
+            height: compact ? 28 : 32,
             child: CircularProgressIndicator(
               strokeWidth: compact ? 2.5 : 3,
-              color: AppBranding.gold,
+              color: theme.colorScheme.primary,
             ),
           ),
           if (message != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              message!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            SizedBox(height: compact ? 10 : 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                message!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ],
       ),
-    );
-  }
-}
-
-/// Full-screen branded loading (splash, initial game load).
-class FriendsBingoLoadingScreen extends StatelessWidget {
-  const FriendsBingoLoadingScreen({this.message, super.key});
-
-  final String? message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: FriendsBingoLoading(message: message ?? 'Getting ready...'),
     );
   }
 }

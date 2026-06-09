@@ -40,29 +40,48 @@ class LiveCartelaCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppBranding.casinoPurpleDeep,
-                  AppBranding.casinoPurple,
-                ],
-              ),
+            decoration: BoxDecoration(
+              gradient: isBlocked
+                  ? LinearGradient(
+                      colors: [
+                        theme.colorScheme.error.withValues(alpha: 0.92),
+                        theme.colorScheme.error,
+                      ],
+                    )
+                  : const LinearGradient(
+                      colors: [
+                        AppBranding.casinoPurpleDeep,
+                        AppBranding.casinoPurple,
+                      ],
+                    ),
             ),
             child: Row(
               children: [
                 Text(
                   '${gameCartela.cartela.number}',
-                  style: AppBranding.wordmarkGold(size: 18),
+                  style: isBlocked
+                      ? theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onError,
+                          fontWeight: FontWeight.w900,
+                        )
+                      : AppBranding.wordmarkGold(size: 18),
                 ),
                 Expanded(
                   child: Center(
-                    child: !isBlocked
-                        ? _BingoButton(
+                    child: isBlocked
+                        ? Text(
+                            'BLOCKED',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: theme.colorScheme.onError,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          )
+                        : _BingoButton(
                             canClaim: canClaimBingo,
                             isClaiming: isClaiming,
                             onPressed: onClaimBingo,
-                          )
-                        : const SizedBox.shrink(),
+                          ),
                   ),
                 ),
                 if (winnerWindowSeconds != null && !isBlocked)
@@ -79,60 +98,45 @@ class LiveCartelaCard extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _MarkedCartelaGrid(
-                  columns: gameCartela.cartela.columns,
-                  manualMarkedNumbers: manualMarkedNumbers,
-                  onMarkedNumberToggled: onMarkedNumberToggled,
-                ),
-                if (pendingReview) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Under review',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.tertiary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 9,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(3, 3, 3, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MarkedCartelaGrid(
+                      columns: gameCartela.cartela.columns,
+                      manualMarkedNumbers: manualMarkedNumbers,
+                      onMarkedNumberToggled: onMarkedNumberToggled,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                ],
-                if (isBlocked) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.error.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                  if (pendingReview) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'Under review',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 9,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    child: Text(
-                      'Blocked',
+                  ],
+                  if (isWinner) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'Winner',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.error,
+                        color: AppBranding.balanceAccent(context),
                         fontWeight: FontWeight.w800,
                         fontSize: 9,
                       ),
                     ),
-                  ),
+                  ],
                 ],
-                if (isWinner) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Winner',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppBranding.balanceAccent(context),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 9,
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ],
@@ -220,64 +224,108 @@ class _MarkedCartelaGrid extends StatelessWidget {
           }),
         ),
         const SizedBox(height: 2),
-        ...List.generate(5, (rowIndex) {
-          return Row(
-            children: List.generate(bingoColumnHeaders.length, (columnIndex) {
-              final value = columns[columnIndex].length > rowIndex
-                  ? columns[columnIndex][rowIndex]
-                  : '';
-              final header = bingoColumnHeaders[columnIndex];
-              final isMarked = isManuallyMarkedCell(
-                manualMarkedNumbers: manualMarkedNumbers,
-                header: header,
-                value: value,
-              );
-              final isFree = value == 'FREE';
-
+        Expanded(
+          child: Column(
+            children: List.generate(5, (rowIndex) {
               return Expanded(
-                child: GestureDetector(
-                  onTap:
-                      isFree ? null : () => onMarkedNumberToggled(header, value),
-                  child: Container(
-                    margin: const EdgeInsets.all(1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isFree
-                          ? AppBranding.gold.withValues(alpha: isDark ? 0.25 : 0.35)
-                          : AppBranding.cellBackground(
-                              context,
-                              marked: isMarked,
-                            ),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: isMarked || isFree
-                            ? AppBranding.gold.withValues(alpha: 0.55)
-                            : theme.colorScheme.outlineVariant
-                                .withValues(alpha: isDark ? 0.35 : 0.5),
+                child: Row(
+                  children:
+                      List.generate(bingoColumnHeaders.length, (columnIndex) {
+                    final value = columns[columnIndex].length > rowIndex
+                        ? columns[columnIndex][rowIndex]
+                        : '';
+                    final header = bingoColumnHeaders[columnIndex];
+                    final isMarked = isManuallyMarkedCell(
+                      manualMarkedNumbers: manualMarkedNumbers,
+                      header: header,
+                      value: value,
+                    );
+                    final isFree = value == 'FREE';
+
+                    return Expanded(
+                      child: _CartelaGridCell(
+                        value: value,
+                        isMarked: isMarked,
+                        isFree: isFree,
+                        onTap: isFree
+                            ? null
+                            : () => onMarkedNumberToggled(header, value),
                       ),
-                    ),
-                    child: Text(
-                      value,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight:
-                            isMarked || isFree ? FontWeight.w800 : FontWeight.w600,
-                        color: isFree
-                            ? AppBranding.casinoPurpleDeep
-                            : AppBranding.cellForeground(
-                                context,
-                                marked: isMarked,
-                              ),
-                      ),
-                    ),
-                  ),
+                    );
+                  }),
                 ),
               );
             }),
-          );
-        }),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _CartelaGridCell extends StatelessWidget {
+  const _CartelaGridCell({
+    required this.value,
+    required this.isMarked,
+    required this.isFree,
+    required this.onTap,
+  });
+
+  final String value;
+  final bool isMarked;
+  final bool isFree;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.all(0.5),
+      child: GestureDetector(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isFree
+                ? AppBranding.gold.withValues(alpha: isDark ? 0.38 : 0.45)
+                : AppBranding.cellBackground(context, marked: isMarked),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isFree
+                  ? AppBranding.gold
+                  : AppBranding.cellBorder(context, marked: isMarked),
+              width: isFree
+                  ? 1.5
+                  : AppBranding.cellBorderWidth(marked: isMarked),
+            ),
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        isMarked || isFree ? FontWeight.w900 : FontWeight.w600,
+                    color: isFree
+                        ? AppBranding.casinoPurpleDeep
+                        : AppBranding.cellForeground(
+                            context,
+                            marked: isMarked,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

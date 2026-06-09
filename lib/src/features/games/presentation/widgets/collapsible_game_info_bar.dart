@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_branding.dart';
 import '../../data/models/game_model.dart';
 import 'game_compact_info_bar.dart';
 
@@ -20,55 +19,35 @@ class _CollapsibleGameInfoBarState extends State<CollapsibleGameInfoBar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Material(
-          color: AppBranding.statPillBackground(context),
-          borderRadius: BorderRadius.circular(10),
-          child: InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.analytics_outlined,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Game stats',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (!_expanded)
-                    Text(
-                      '${widget.game.entryFee} · ${widget.game.prizeAmount}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
+        Expanded(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? GameCompactInfoBar(game: widget.game)
+                : const SizedBox(width: double.infinity, height: 0),
+          ),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+          tooltip: _expanded ? 'Hide game stats' : 'Show game stats',
+          onPressed: () => setState(() => _expanded = !_expanded),
+          icon: AnimatedRotation(
+            turns: _expanded ? 0.5 : 0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),
-        if (_expanded) ...[
-          const SizedBox(height: 6),
-          GameCompactInfoBar(game: widget.game),
-        ],
       ],
     );
   }

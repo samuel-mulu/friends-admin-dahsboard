@@ -12,6 +12,7 @@ import '../../data/games_repository.dart';
 import '../../data/models/cartela_model.dart';
 import '../../data/models/cartela_reservation_model.dart';
 import '../../data/models/game_cartela_model.dart';
+import '../../domain/cartela_availability.dart';
 
 class CartelaRegistrationSheet extends ConsumerStatefulWidget {
   const CartelaRegistrationSheet({
@@ -38,24 +39,22 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
 
 class _CartelaRegistrationSheetState
     extends ConsumerState<CartelaRegistrationSheet> {
-  static const _holdSeconds = 10;
-
   Timer? _autoCloseTimer;
-  int _secondsRemaining = _holdSeconds;
+  late final DateTime _holdStartedAt;
+  int _secondsRemaining = kCartelaReservationHoldSeconds;
   bool _isSubmitting = false;
   bool _registered = false;
   bool _released = false;
 
   String? _reservationId;
   String? _resolvedSessionId;
-  DateTime? _expiresAt;
   String? _reserveError;
 
   @override
   void initState() {
     super.initState();
+    _holdStartedAt = DateTime.now();
     _resolvedSessionId = widget.sessionId;
-    _expiresAt = DateTime.now().add(const Duration(seconds: _holdSeconds));
     _startCountdown();
     unawaited(_trackReservation(widget.reservationFuture));
   }
@@ -76,7 +75,6 @@ class _CartelaRegistrationSheetState
   void _applyReservation(CartelaReservationModel reservation) {
     _reservationId = reservation.id;
     _resolvedSessionId = reservation.gameSessionId;
-    _expiresAt = reservation.expiresAt;
     _reserveError = null;
   }
 
@@ -123,13 +121,8 @@ class _CartelaRegistrationSheetState
   }
 
   int _remainingSeconds() {
-    final expiresAt = _expiresAt;
-    if (expiresAt == null) {
-      return 0;
-    }
-
-    final seconds = expiresAt.difference(DateTime.now()).inSeconds;
-    return seconds > 0 ? seconds : 0;
+    return cartelaReservationSecondsRemaining(holdStartedAt: _holdStartedAt) ??
+        0;
   }
 
   void _startCountdown() {

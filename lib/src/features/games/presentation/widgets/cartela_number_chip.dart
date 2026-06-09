@@ -10,7 +10,7 @@ class CartelaNumberChip extends StatelessWidget {
     required this.availability,
     required this.onTap,
     this.isRegistering = false,
-    this.reservationExpiresAt,
+    this.reservationSecondsRemaining,
     super.key,
   });
 
@@ -18,7 +18,7 @@ class CartelaNumberChip extends StatelessWidget {
   final CartelaAvailability availability;
   final VoidCallback onTap;
   final bool isRegistering;
-  final DateTime? reservationExpiresAt;
+  final int? reservationSecondsRemaining;
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +38,9 @@ class CartelaNumberChip extends StatelessWidget {
         AppBranding.gold,
       ),
       CartelaAvailability.taken => (
-        theme.colorScheme.surfaceContainerHighest,
-        theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.5 : 0.4),
-        theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+        isDark ? const Color(0xFF322A42) : const Color(0xFFD4CEDE),
+        isDark ? const Color(0xFFB8B0C8) : const Color(0xFF4A425C),
+        isDark ? const Color(0xFF8A7E9E) : const Color(0xFF7A708E),
       ),
       CartelaAvailability.reservedByMe => (
         AppBranding.casinoPurple.withValues(alpha: 0.75),
@@ -48,11 +48,17 @@ class CartelaNumberChip extends StatelessWidget {
         AppBranding.gold.withValues(alpha: 0.8),
       ),
       CartelaAvailability.reservedByOther => (
-        theme.colorScheme.surfaceContainerHigh,
-        theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.45 : 0.35),
-        theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        isDark ? const Color(0xFF2E2840) : const Color(0xFFE0DAEA),
+        isDark ? const Color(0xFF9890A8) : const Color(0xFF5E5670),
+        isDark ? const Color(0xFF6E6680) : const Color(0xFF9088A0),
       ),
     };
+
+    final borderWidth =
+        availability == CartelaAvailability.taken ||
+            availability == CartelaAvailability.reservedByOther
+        ? 1.5
+        : 1.0;
 
     final label = _chipLabel();
 
@@ -63,7 +69,7 @@ class CartelaNumberChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor, width: 1),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: isRegistering
             ? SizedBox(
@@ -95,12 +101,9 @@ class CartelaNumberChip extends StatelessWidget {
     }
 
     if (availability == CartelaAvailability.reservedByMe) {
-      final expiresAt = reservationExpiresAt;
-      if (expiresAt != null) {
-        final seconds = expiresAt.difference(DateTime.now()).inSeconds;
-        if (seconds > 0) {
-          return '${seconds}s';
-        }
+      final seconds = reservationSecondsRemaining;
+      if (seconds != null && seconds > 0) {
+        return '${seconds}s';
       }
       return 'Confirming…';
     }
