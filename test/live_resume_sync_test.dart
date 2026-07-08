@@ -329,5 +329,16 @@ void main() {
       expect(controller.processedCalledNumberIds, contains('cn-3'));
       expect(controller.isSyncingCalledNumbers, isFalse);
     });
+
+    test('keeps local strip when resume HTTP is behind same session', () {
+      final host = _FakeResumeHost();
+      final controller = LiveCalledNumbersController(host);
+      controller.calledNumbers = [_called(1), _called(2), _called(3), _called(4)];
+      controller.processedCalledNumberOrders.addAll({1, 2, 3, 4});
+
+      controller.replaceFromResumeSnapshot([_called(1), _called(2), _called(3)]);
+
+      expect(controller.calledNumbers.map((n) => n.order), [1, 2, 3, 4]);
+    });
   });
 }

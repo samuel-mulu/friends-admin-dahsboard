@@ -10,6 +10,7 @@ import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../utils/bingo_claim_eligibility.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
+import '../utils/live_called_number_monotonic.dart';
 import '../utils/live_called_number_sync.dart';
 import 'live_game_host.dart';
 
@@ -221,7 +222,11 @@ class LiveCalledNumbersController {
     required List<CalledNumberModel> incoming,
     required bool sessionChanged,
   }) {
-    calledNumbers = normalizeCalledNumbers(incoming);
+    calledNumbers = _applyMonotonicSnapshot(
+      incoming: incoming,
+      preferIncomingIfNewerSocket: false,
+      forceAcceptIncoming: sessionChanged,
+    );
     deferredCalledNumbers = pruneDeferredCalledNumbers(
       committed: calledNumbers,
       deferred: sessionChanged ? const [] : deferredCalledNumbers,
@@ -259,15 +264,62 @@ class LiveCalledNumbersController {
     markCalledNumbersPanelDirty();
   }
 
-  /// Full backend snapshot on resume/reconnect — never merge stale local/socket balls.
+  /// Full backend snapshot on resume/reconnect — keep socket-ahead balls
+  /// when HTTP is shorter for the same session.
   void replaceFromResumeSnapshot(List<CalledNumberModel> incoming) {
     bufferedCalledNumbers = const [];
     deferredCalledNumbers = const [];
     socketBufferedCalledNumbers = const [];
-    calledNumbers = normalizeCalledNumbers(incoming);
+    calledNumbers = _applyMonotonicSnapshot(
+      incoming: incoming,
+      preferIncomingIfNewerSocket: true,
+    );
     rebuildCalledNumberTracking();
     isSyncingCalledNumbers = false;
     markCalledNumbersPanelDirty();
+  }
+
+  List<CalledNumberModel> _applyMonotonicSnapshot({
+    required List<CalledNumberModel> incoming,
+    required bool preferIncomingIfNewerSocket,
+    bool forceAcceptIncoming = false,
+  }) {
+    final normalizedIncoming = normalizeCalledNumbers(incoming);
+    if (forceAcceptIncoming) {
+      return normalizedIncoming;
+    }
+
+    final local = calledNumbers;
+    final localSessionId =
+        local.isNotEmpty ? local.first.sessionId : host.game?.sessionId;
+    final incomingSessionId = normalizedIncoming.isNotEmpty
+        ? normalizedIncoming.first.sessionId
+        : host.game?.sessionId;
+
+    final merge = mergeCalledNumbersMonotonic(
+      sessionId: incomingSessionId,
+      localSessionId: localSessionId,
+      localOrders: local.map((item) => item.order).toList(growable: false),
+      incomingOrders: normalizedIncoming
+          .map((item) => item.order)
+          .toList(growable: false),
+      preferIncomingIfNewerSocket: preferIncomingIfNewerSocket,
+      socketMaxOrder:
+          preferIncomingIfNewerSocket ? highestKnownCalledOrder : null,
+    );
+
+    if (!merge.rejectedRollback) {
+      return normalizedIncoming;
+    }
+
+    final byOrder = <int, CalledNumberModel>{
+      for (final item in normalizedIncoming) item.order: item,
+      for (final item in local) item.order: item,
+    };
+    return normalizeCalledNumbers([
+      for (final order in merge.orders)
+        if (byOrder[order] != null) byOrder[order]!,
+    ]);
   }
 
   /// Clears reconcile buffers before resume stagger without committing yet.
