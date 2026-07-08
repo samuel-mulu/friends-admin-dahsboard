@@ -2034,13 +2034,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _cancelCanonicalRefetchDebounce() {
-    _canonicalRefetchDebounceTimer?.cancel();
-    _canonicalRefetchDebounceTimer = null;
-    _canonicalRefetchIncludeWallet = false;
-    _canonicalRefetchIncludeRegistrationState = false;
-    _canonicalRefetchIncludeCalledNumbers = false;
-    _canonicalRefetchIncludeMyCartelas = false;
-    _canonicalRefetchRegistrationSessionId = null;
+    _realtime.cancelCanonicalRefetchDebounce();
   }
 
   void _scheduleCanonicalRefetch({
@@ -2050,57 +2044,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     bool includeMyCartelas = false,
     String reason = 'screen_schedule',
   }) {
-    if (!mounted) {
-      return;
-    }
-    // reason is reserved for controller-owned scheduling (Plan 1/3); ignore for now.
-    assert(reason.isNotEmpty);
-
-    if (wallet) {
-      _canonicalRefetchIncludeWallet = true;
-    }
-    if (registrationSessionId != null) {
-      _canonicalRefetchIncludeRegistrationState = true;
-      _canonicalRefetchRegistrationSessionId = registrationSessionId;
-    }
-    if (includeCalledNumbers) {
-      _canonicalRefetchIncludeCalledNumbers = true;
-    }
-    if (includeMyCartelas) {
-      _canonicalRefetchIncludeMyCartelas = true;
-    }
-
-    _canonicalRefetchDebounceTimer?.cancel();
-    _canonicalRefetchDebounceTimer = Timer(_canonicalRefetchDebounce, () {
-      if (!mounted) {
-        return;
-      }
-
-      final includeWallet = _canonicalRefetchIncludeWallet;
-      final includeRegistrationState =
-          _canonicalRefetchIncludeRegistrationState;
-      final includeCalledNumbers = _canonicalRefetchIncludeCalledNumbers;
-      final includeMyCartelas = _canonicalRefetchIncludeMyCartelas;
-      final sessionId = _canonicalRefetchRegistrationSessionId;
-      _canonicalRefetchIncludeWallet = false;
-      _canonicalRefetchIncludeRegistrationState = false;
-      _canonicalRefetchIncludeCalledNumbers = false;
-      _canonicalRefetchIncludeMyCartelas = false;
-      _canonicalRefetchRegistrationSessionId = null;
-      _canonicalRefetchDebounceTimer = null;
-
-      if (includeRegistrationState && sessionId != null) {
-        ref.invalidate(registrationStateProvider(sessionId));
-      }
-
-      unawaited(
-        _refetchCanonical(
-          wallet: includeWallet,
-          includeCalledNumbers: includeCalledNumbers,
-          includeMyCartelas: includeMyCartelas,
-        ),
-      );
-    });
+    _realtime.scheduleCanonicalRefetch(
+      reason: reason,
+      wallet: wallet,
+      registrationSessionId: registrationSessionId,
+      includeCalledNumbers: includeCalledNumbers,
+      includeMyCartelas: includeMyCartelas,
+    );
   }
 
   Future<void> _refetchCanonicalImmediate({
@@ -2108,15 +2058,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     String? registrationSessionId,
     bool includeCalledNumbers = true,
     bool includeMyCartelas = false,
-  }) async {
-    _cancelCanonicalRefetchDebounce();
-
-    if (registrationSessionId != null) {
-      ref.invalidate(registrationStateProvider(registrationSessionId));
-    }
-
-    await _refetchCanonical(
+    String reason = 'screen_immediate',
+  }) {
+    return _realtime.refetchCanonicalImmediate(
+      reason: reason,
       wallet: wallet,
+      registrationSessionId: registrationSessionId,
       includeCalledNumbers: includeCalledNumbers,
       includeMyCartelas: includeMyCartelas,
     );
@@ -2126,71 +2073,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     bool wallet = false,
     bool includeCalledNumbers = false,
     bool includeMyCartelas = false,
-  }) async {
-    if (!mounted) {
-      return;
-    }
-
-    _pendingRefetchWallet = _pendingRefetchWallet || wallet;
-    _pendingRefetchIncludeCalledNumbers =
-        _pendingRefetchIncludeCalledNumbers || includeCalledNumbers;
-    _pendingRefetchIncludeMyCartelas =
-        _pendingRefetchIncludeMyCartelas || includeMyCartelas;
-
-    if (_refetchCanonicalLoop != null) {
-      return _refetchCanonicalLoop!;
-    }
-
-    _refetchCanonicalLoop = _drainRefetchCanonicalQueue();
-    try {
-      await _refetchCanonicalLoop!;
-    } finally {
-      _refetchCanonicalLoop = null;
-    }
-  }
-
-  Future<void> _drainRefetchCanonicalQueue() async {
-    while (mounted) {
-      final wallet = _pendingRefetchWallet;
-      final includeCalledNumbers = _pendingRefetchIncludeCalledNumbers;
-      final includeMyCartelas = _pendingRefetchIncludeMyCartelas;
-      _pendingRefetchWallet = false;
-      _pendingRefetchIncludeCalledNumbers = false;
-      _pendingRefetchIncludeMyCartelas = false;
-
-      LiveRealtimeDebug.refetch(
-        'canonical',
-        status: _game?.status.name,
-        calledCount: _game?.calledNumbersCount,
-      );
-
-      if (wallet) {
-        ref.invalidate(myWalletProvider);
-      }
-
-      setState(() => _realtime.canonicalRefetchInFlight = true);
-
-      try {
-        await _loadInitialState(
-          showLoading: false,
-          includeCalledNumbers: includeCalledNumbers,
-          includeMyCartelas: includeMyCartelas,
-        );
-        LiveRealtimeDebug.log(
-          'refetch loaded local=${_cn.calledNumbers.length} opsCalled=${_game?.calledNumbersCount ?? 0} includeCalledNumbers=$includeCalledNumbers',
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _realtime.canonicalRefetchInFlight = false);
-        }
-      }
-
-      if (!_pendingRefetchWallet &&
-          !_pendingRefetchIncludeCalledNumbers &&
-          !_pendingRefetchIncludeMyCartelas) {
-        break;
-      }
-    }
+    String reason = 'screen_refetch',
+  }) {
+    return _realtime.refetchCanonical(
+      reason: reason,
+      wallet: wallet,
+      includeCalledNumbers: includeCalledNumbers,
+      includeMyCartelas: includeMyCartelas,
+    );
   }
 
   Future<void> _refreshMyCartelasSilently() async {

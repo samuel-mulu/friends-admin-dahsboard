@@ -46,14 +46,14 @@ flowchart TD
 
 ## Definition of done (all plans)
 
-- [ ] No screen-local `_scheduleCanonicalRefetch` / `_refetchCanonical` pipeline remains *(Plan 1 optional leftover — dual timers may still exist)*
+- [x] No screen-local `_scheduleCanonicalRefetch` / `_refetchCanonical` pipeline remains
 - [x] Every live socket handler normalizes before map access
 - [x] Terminal CANCELLED / FINISHED / NO_WINNER go through one owner
 - [x] Winner patterns sticky until session change / complete replacement
 - [x] `app_resume` / `socket_reconnect` delayed or ignored during terminal
 - [x] Same-session recovery cannot roll called numbers backward
 - [x] BINGO lock ticks do not rebuild the full cartela list
-- [x] Required regression tests from the gap audit are green *(pre-existing `live_called_number_sync` out-of-order assertion still red; unrelated)*
+- [x] Required regression tests from the gap audit are green
 - [x] Backend untouched (`FriendsBingo` git clean for this work) *(only unrelated `package.json` dirty)*
 
 ## Source docs

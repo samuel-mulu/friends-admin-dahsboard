@@ -69,7 +69,8 @@ void main() {
         incoming: _calledNumber(id: 'cn-7', order: 7, number: 33),
       );
 
-      expect(deferredFirst.requiresCanonicalSync, isTrue);
+      expect(deferredFirst.requiresCalledNumbersSync, isTrue);
+      expect(deferredFirst.requiresCanonicalSync, isFalse);
       expect(deferredFirst.committed.map((item) => item.order).toList(), [
         1,
         2,

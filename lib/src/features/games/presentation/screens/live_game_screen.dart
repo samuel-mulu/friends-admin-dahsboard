@@ -228,17 +228,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _awaitingLiveRoom = true;
   DateTime? _liveRoomSplashStartedAt;
   int _loadGeneration = 0;
-  Timer? _canonicalRefetchDebounceTimer;
-  bool _canonicalRefetchIncludeWallet = false;
-  bool _canonicalRefetchIncludeRegistrationState = false;
-  bool _canonicalRefetchIncludeCalledNumbers = false;
-  bool _canonicalRefetchIncludeMyCartelas = false;
-  String? _canonicalRefetchRegistrationSessionId;
   LivePresentationPhase? _lastDebugPhase;
-  bool _pendingRefetchWallet = false;
-  bool _pendingRefetchIncludeCalledNumbers = false;
-  bool _pendingRefetchIncludeMyCartelas = false;
-  Future<void>? _refetchCanonicalLoop;
   bool _isSyncingLiveGame = false;
   Timer? _invalidSocketPayloadRefetchTimer;
   String? _lastInvalidSocketPayloadLogKey;
@@ -412,9 +402,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       ),
     );
   }
-
-  Duration get _canonicalRefetchDebounce =>
-      _effectiveTimingConfig.canonicalRefetchDebounce;
 
   int get _cartelaHoldSeconds => _effectiveTimingConfig.cartelaHoldSeconds;
 
@@ -667,8 +654,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   @override
   void dispose() {
     _loadGeneration++;
-    _pendingRefetchWallet = false;
-    _pendingRefetchIncludeCalledNumbers = false;
     WidgetsBinding.instance.removeObserver(this);
     _liveRoomSplashTicker?.cancel();
     _review.stopSessionWinnerResultsPolling();
@@ -676,8 +661,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     controllers.transition.readyTransitionLockTimeoutTimer?.cancel();
     _stopPreparingPhasePolling();
     controllers.transition.clearReadyTransitionLock();
-    controllers.dispose();
     _cancelCanonicalRefetchDebounce();
+    controllers.dispose();
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
     _removeSocketListeners();
