@@ -108,22 +108,21 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
     return Theme(
       data: GameCategoryTheme.bigGameTheme(context),
       child: bigGameAsync.when(
-      loading: () => const _BigGameLoadingView(),
-      error: (error, _) => _BigGameErrorView(
-        message: error.toString(),
-        onRetry: _handleRefresh,
-      ),
-      data: (game) {
-        if (game == null) {
-          return _BigGameEmptyView(onRefresh: _handleRefresh);
-        }
+        loading: () => const _BigGameLoadingView(),
+        error: (error, _) => _BigGameErrorView(
+          message: error.toString(),
+          onRetry: _handleRefresh,
+        ),
+        data: (game) {
+          if (game == null) {
+            return _BigGameEmptyView(onRefresh: _handleRefresh);
+          }
 
-        final phase = resolveBigGamePhase(game, now: _now(clock));
-        return RefreshIndicator(
-          onRefresh: _handleRefresh,
-          child: switch (phase) {
-            BigGamePhase.beforeRegistrationOpens =>
-              _BigGameScheduledView(
+          final phase = resolveBigGamePhase(game, now: _now(clock));
+          return RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: switch (phase) {
+              BigGamePhase.beforeRegistrationOpens => _BigGameScheduledView(
                 game: game,
                 clock: clock,
                 countdownTracker: _countdownTracker,
@@ -131,33 +130,33 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 title: context.l10n.bigGameScheduledTitle,
                 countdownLabel: context.l10n.bigGameRegistrationOpensIn,
               ),
-            BigGamePhase.registrationOpen => _BigGameLiveEmbed(
-              game: game,
-              clock: clock,
-              countdownTracker: _countdownTracker,
-              headerTitle: context.l10n.bigGameRegistrationOpenTitle,
-              countdownLabel: context.l10n.bigGamePlayStartsIn,
-              countdownTarget: game.scheduledStartAt,
-              showBanner: true,
-            ),
-            BigGamePhase.waitingToPlay => _BigGameWaitingView(
-              game: game,
-              onRefresh: _handleRefresh,
-            ),
-            BigGamePhase.live ||
-            BigGamePhase.finishedReview ||
-            BigGamePhase.cancelled => _BigGameLiveEmbed(
-              game: game,
-              clock: clock,
-              countdownTracker: _countdownTracker,
-              headerTitle: context.l10n.drawerBigGame,
-              showCountdown: false,
-            ),
-            BigGamePhase.none => _BigGameEmptyView(onRefresh: _handleRefresh),
-          },
-        );
-      },
-    ),
+              BigGamePhase.registrationOpen => _BigGameLiveEmbed(
+                game: game,
+                clock: clock,
+                countdownTracker: _countdownTracker,
+                headerTitle: context.l10n.bigGameRegistrationOpenTitle,
+                countdownLabel: context.l10n.bigGamePlayStartsIn,
+                countdownTarget: game.scheduledStartAt,
+                showBanner: true,
+              ),
+              BigGamePhase.waitingToPlay => _BigGameWaitingView(
+                game: game,
+                onRefresh: _handleRefresh,
+              ),
+              BigGamePhase.live ||
+              BigGamePhase.finishedReview ||
+              BigGamePhase.cancelled => _BigGameLiveEmbed(
+                game: game,
+                clock: clock,
+                countdownTracker: _countdownTracker,
+                headerTitle: context.l10n.drawerBigGame,
+                showCountdown: false,
+              ),
+              BigGamePhase.none => _BigGameEmptyView(onRefresh: _handleRefresh),
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -239,9 +238,7 @@ class _BigGameEmptyView extends StatelessWidget {
                         Text(
                           l10n.bigGameNoScheduledTitle,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -264,10 +261,7 @@ class _BigGameEmptyView extends StatelessWidget {
 }
 
 class _BigGameErrorView extends StatelessWidget {
-  const _BigGameErrorView({
-    required this.message,
-    required this.onRetry,
-  });
+  const _BigGameErrorView({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -334,10 +328,7 @@ class _BigGameScheduledView extends StatelessWidget {
                 children: [
                   _BigGameHeader(title: title),
                   const SizedBox(height: AppSpacing.md),
-                  _BigGameCountdownRow(
-                    label: countdownLabel,
-                    value: countdown,
-                  ),
+                  _BigGameCountdownRow(label: countdownLabel, value: countdown),
                   const SizedBox(height: AppSpacing.lg),
                   _BigGameMetadataSection(game: game),
                 ],
@@ -351,10 +342,7 @@ class _BigGameScheduledView extends StatelessWidget {
 }
 
 class _BigGameWaitingView extends StatelessWidget {
-  const _BigGameWaitingView({
-    required this.game,
-    required this.onRefresh,
-  });
+  const _BigGameWaitingView({required this.game, required this.onRefresh});
 
   final GameModel game;
   final Future<void> Function() onRefresh;
@@ -362,7 +350,8 @@ class _BigGameWaitingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final myCartelas = game.registeredCartelasSummary
+    final myCartelas =
+        game.registeredCartelasSummary
             ?.where((item) => item.isMine)
             .map((item) => item.cartelaNumber)
             .toList(growable: false) ??
@@ -428,9 +417,8 @@ class _BigGameLiveEmbed extends StatelessWidget {
     this.countdownLabel,
     this.countdownTarget,
     this.showCountdown = true,
-    this.metadataCompact = true,
     this.showBanner = true,
-  });
+  }) : metadataCompact = true;
 
   final GameModel game;
   final ServerClockService clock;
@@ -478,10 +466,7 @@ class _BigGameLiveEmbed extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: AppSpacing.sm),
-                  _BigGameMetadataSection(
-                    game: game,
-                    compact: metadataCompact,
-                  ),
+                  _BigGameMetadataSection(game: game, compact: metadataCompact),
                 ],
               ),
             ),
@@ -501,10 +486,7 @@ class _BigGameLiveEmbed extends StatelessWidget {
 }
 
 class _BigGamePremiumCard extends StatelessWidget {
-  const _BigGamePremiumCard({
-    required this.child,
-    this.compact = false,
-  });
+  const _BigGamePremiumCard({required this.child, this.compact = false});
 
   final Widget child;
   final bool compact;
@@ -542,10 +524,7 @@ class _BigGamePremiumCard extends StatelessWidget {
 }
 
 class _BigGameHeader extends StatelessWidget {
-  const _BigGameHeader({
-    required this.title,
-    this.compact = false,
-  });
+  const _BigGameHeader({required this.title, this.compact = false});
 
   final String title;
   final bool compact;
@@ -564,8 +543,11 @@ class _BigGameHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: (compact ? theme.textTheme.titleSmall : theme.textTheme.titleMedium)
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style:
+                (compact
+                        ? theme.textTheme.titleSmall
+                        : theme.textTheme.titleMedium)
+                    ?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
       ],
@@ -574,10 +556,7 @@ class _BigGameHeader extends StatelessWidget {
 }
 
 class _BigGameCountdownRow extends StatelessWidget {
-  const _BigGameCountdownRow({
-    required this.label,
-    required this.value,
-  });
+  const _BigGameCountdownRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -607,7 +586,9 @@ class _BigGameCountdownRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppBranding.gold.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: AppBranding.gold.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: AppBranding.gold.withValues(alpha: 0.5),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(
@@ -628,10 +609,7 @@ class _BigGameCountdownRow extends StatelessWidget {
 }
 
 class _BigGameMetadataSection extends StatelessWidget {
-  const _BigGameMetadataSection({
-    required this.game,
-    this.compact = false,
-  });
+  const _BigGameMetadataSection({required this.game, this.compact = false});
 
   final GameModel game;
   final bool compact;
@@ -702,9 +680,9 @@ class _MetadataRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );

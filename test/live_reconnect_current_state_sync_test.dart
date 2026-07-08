@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,7 +42,9 @@ void main() {
 
   testWidgets('quick background return skips full resume sync', (tester) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -74,7 +74,9 @@ void main() {
 
   testWidgets('long background return runs full resume sync', (tester) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -114,7 +116,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -155,7 +159,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -247,7 +253,10 @@ void main() {
       greaterThan(calledNumbersCallsBeforeResume),
     );
     expect(repository.calledNumbersSessionIds, contains(_liveSessionId));
-    expect(repository.calledNumbersSessionIds, isNot(contains(_readySessionId)));
+    expect(
+      repository.calledNumbersSessionIds,
+      isNot(contains(_readySessionId)),
+    );
     expect(find.text('I-18'), findsNothing);
   });
 
@@ -255,7 +264,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -302,7 +313,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -341,7 +354,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -381,7 +396,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -409,7 +426,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -437,7 +456,9 @@ void main() {
 
   testWidgets('manual refresh triggers same full sync path', (tester) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -466,8 +487,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    expect(repository.operationsCalls, greaterThan(operationsCallsBeforeRefresh));
-    expect(repository.calledNumbersCalls, greaterThan(calledNumbersCallsBeforeRefresh));
+    expect(
+      repository.operationsCalls,
+      greaterThan(operationsCallsBeforeRefresh),
+    );
+    expect(
+      repository.calledNumbersCalls,
+      greaterThan(calledNumbersCallsBeforeRefresh),
+    );
     expect(find.text('I-18'), findsOneWidget);
   });
 
@@ -475,7 +502,9 @@ void main() {
     tester,
   ) async {
     final repository = _SyncTestGamesRepository()
-      ..operationsResponse = _operations(liveGame: _playingGame(calledNumbersCount: 1))
+      ..operationsResponse = _operations(
+        liveGame: _playingGame(calledNumbersCount: 1),
+      )
       ..calledNumbersBySession[_sessionId] = [_calledNumber(order: 1)]
       ..myCartelasBySession[_sessionId] = [_gameCartela()];
     final socket = _SyncTestSocketService();
@@ -539,7 +568,9 @@ Future<void> _pumpLiveScreen(
       overrides: [
         gamesRepositoryProvider.overrideWithValue(repository),
         socketServiceProvider.overrideWithValue(socket),
-        authControllerProvider.overrideWith(() => _PlayerAuthController(_playerSession())),
+        authControllerProvider.overrideWith(
+          () => _PlayerAuthController(_playerSession()),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -592,10 +623,7 @@ GameModel _readyGame() {
   });
 }
 
-GameModel _playingGame({
-  int calledNumbersCount = 0,
-  DateTime? nextAutoCallAt,
-}) {
+GameModel _playingGame({int calledNumbersCount = 0, DateTime? nextAutoCallAt}) {
   return GameModel.fromOperationJson({
     'slotId': 'slot-2',
     'sessionId': _sessionId,

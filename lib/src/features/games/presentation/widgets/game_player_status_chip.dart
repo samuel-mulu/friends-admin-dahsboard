@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
@@ -81,32 +80,45 @@ class GamePlayerStatusChip extends StatelessWidget {
     );
   }
 
-  _StatusPalette _paletteFor(_GamePlayerStatusChipKind status, ThemeData theme) {
+  _StatusPalette _paletteFor(
+    _GamePlayerStatusChipKind status,
+    ThemeData theme,
+  ) {
     final isDark = theme.brightness == Brightness.dark;
     return switch (status) {
       _GamePlayerStatusChipKind.registrationOpen => _StatusPalette(
-        background: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.25 : 0.12),
+        background: const Color(
+          0xFF2563EB,
+        ).withValues(alpha: isDark ? 0.25 : 0.12),
         border: const Color(0xFF2563EB).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       ),
       _GamePlayerStatusChipKind.preparing ||
       _GamePlayerStatusChipKind.waiting => _StatusPalette(
-        background: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.22 : 0.14),
+        background: const Color(
+          0xFFF59E0B,
+        ).withValues(alpha: isDark ? 0.22 : 0.14),
         border: const Color(0xFFF59E0B).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
       ),
       _GamePlayerStatusChipKind.playing => _StatusPalette(
-        background: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.22 : 0.12),
+        background: const Color(
+          0xFF16A34A,
+        ).withValues(alpha: isDark ? 0.22 : 0.12),
         border: const Color(0xFF16A34A).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
       ),
       _GamePlayerStatusChipKind.winnerWindow => _StatusPalette(
-        background: const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.25 : 0.12),
+        background: const Color(
+          0xFF7C3AED,
+        ).withValues(alpha: isDark ? 0.25 : 0.12),
         border: const Color(0xFF7C3AED).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9),
       ),
       _GamePlayerStatusChipKind.checking => _StatusPalette(
-        background: const Color(0xFFEA580C).withValues(alpha: isDark ? 0.22 : 0.12),
+        background: const Color(
+          0xFFEA580C,
+        ).withValues(alpha: isDark ? 0.22 : 0.12),
         border: const Color(0xFFEA580C).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C),
       ),
@@ -116,7 +128,9 @@ class GamePlayerStatusChip extends StatelessWidget {
         foreground: theme.colorScheme.onSurfaceVariant,
       ),
       _GamePlayerStatusChipKind.cancelled => _StatusPalette(
-        background: const Color(0xFFDC2626).withValues(alpha: isDark ? 0.22 : 0.1),
+        background: const Color(
+          0xFFDC2626,
+        ).withValues(alpha: isDark ? 0.22 : 0.1),
         border: const Color(0xFFDC2626).withValues(alpha: 0.4),
         foreground: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
       ),

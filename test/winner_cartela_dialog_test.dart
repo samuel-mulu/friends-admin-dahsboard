@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/l10n/app_localizations.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/winning_ball_cell.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/winner_cartela_dialog.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/winner_cartela_number_strip.dart';
 
@@ -16,10 +15,7 @@ void main() {
     );
   }
 
-  SessionWinnerResultModel winner({
-    required int number,
-    String id = 'gc',
-  }) {
+  SessionWinnerResultModel winner({required int number, String id = 'gc'}) {
     return SessionWinnerResultModel(
       gameCartelaId: '$id-$number',
       cartelaId: 'c-$number',
@@ -41,10 +37,7 @@ void main() {
         ),
       ],
       winningBallCellIndex: 0,
-      lastCalledNumber: SessionWinnerLastCalledNumber(
-        letter: 'B',
-        number: 1,
-      ),
+      lastCalledNumber: SessionWinnerLastCalledNumber(letter: 'B', number: 1),
     );
   }
 
@@ -165,10 +158,7 @@ void main() {
           highlightCellIndexes: {0, 1, 5, 6},
         ),
       ],
-      lastCalledNumber: SessionWinnerLastCalledNumber(
-        letter: 'I',
-        number: 24,
-      ),
+      lastCalledNumber: SessionWinnerLastCalledNumber(letter: 'I', number: 24),
     );
 
     await tester.pumpWidget(

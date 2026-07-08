@@ -2,7 +2,6 @@ import 'dart:async';
 
 import '../../data/models/game_model.dart';
 import '../utils/live_presentation_phase.dart';
-import '../utils/live_primary_game_selection.dart';
 import '../utils/live_ready_transition_lock.dart' as transition_lock;
 import 'live_game_host.dart';
 
@@ -45,12 +44,15 @@ class LiveTransitionController {
       startedAt: host.countdownNow(),
     );
 
-    readyTransitionLockTimeoutTimer = Timer(transition_lock.kReadyTransitionLockTimeout, () {
-      if (!host.mounted || readyTransitionLock == null) {
-        return;
-      }
-      expireReadyTransitionLockIfNeeded();
-    });
+    readyTransitionLockTimeoutTimer = Timer(
+      transition_lock.kReadyTransitionLockTimeout,
+      () {
+        if (!host.mounted || readyTransitionLock == null) {
+          return;
+        }
+        expireReadyTransitionLockIfNeeded();
+      },
+    );
   }
 
   void clearReadyTransitionLock() {
@@ -75,8 +77,10 @@ class LiveTransitionController {
       pinnedGame: mergedGame ?? host.game,
       now: host.countdownNow(),
     )) {
-      final timedOut =
-          transition_lock.readyTransitionLockExpired(lock, host.countdownNow());
+      final timedOut = transition_lock.readyTransitionLockExpired(
+        lock,
+        host.countdownNow(),
+      );
       clearReadyTransitionLock();
       if (timedOut && !lockTimeoutRefetchScheduled) {
         lockTimeoutRefetchScheduled = true;
@@ -120,7 +124,10 @@ class LiveTransitionController {
   void expireReadyTransitionLockIfNeeded() {
     final lock = readyTransitionLock;
     if (lock == null ||
-        !transition_lock.readyTransitionLockExpired(lock, host.countdownNow())) {
+        !transition_lock.readyTransitionLockExpired(
+          lock,
+          host.countdownNow(),
+        )) {
       return;
     }
 
@@ -148,7 +155,9 @@ class LiveTransitionController {
   void handleRegistrationCountdownClosed() {
     final game = host.game;
     final countdown = host.controllers.countdown;
-    if (!host.mounted || game == null || countdown.registrationCountdownClosed) {
+    if (!host.mounted ||
+        game == null ||
+        countdown.registrationCountdownClosed) {
       return;
     }
 
@@ -277,7 +286,9 @@ class LiveTransitionController {
         current.sessionId != null &&
         current.sessionId == readyTransitionLock!.sessionId) {
       countdown.registrationCountdownClosed = true;
-      countdown.registrationCountdownScopeKey = registrationScopeKeyFor(current);
+      countdown.registrationCountdownScopeKey = registrationScopeKeyFor(
+        current,
+      );
       return;
     }
 
@@ -288,7 +299,9 @@ class LiveTransitionController {
             host.countdownNow().add(const Duration(seconds: 5)),
           )) {
         countdown.registrationCountdownClosed = false;
-        countdown.registrationCountdownScopeKey = registrationScopeKeyFor(current);
+        countdown.registrationCountdownScopeKey = registrationScopeKeyFor(
+          current,
+        );
         return;
       }
 
@@ -319,7 +332,9 @@ class LiveTransitionController {
       }
     } else if (!countdown.registrationCountdownClosed) {
       final scheduledStartAt = current.scheduledStartAt;
-      final reopenThreshold = host.countdownNow().add(const Duration(seconds: 5));
+      final reopenThreshold = host.countdownNow().add(
+        const Duration(seconds: 5),
+      );
       if (scheduledStartAt != null &&
           scheduledStartAt.isAfter(reopenThreshold)) {
         countdown.registrationCountdownClosed = false;

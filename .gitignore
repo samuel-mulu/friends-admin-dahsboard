@@ -12,6 +12,11 @@
 .swiftpm/
 migrate_working_dir/
 
+# Local dart-define / env overrides (never commit)
+.env
+.env.*
+!.env.example
+
 # IntelliJ related
 *.iml
 *.ipr

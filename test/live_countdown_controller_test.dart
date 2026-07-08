@@ -58,10 +58,7 @@ LiveCountdownTickContext _tickContext({
 }
 
 class _CountdownHarness extends ConsumerStatefulWidget {
-  const _CountdownHarness({
-    required this.onReady,
-    this.staleGuard,
-  });
+  const _CountdownHarness({required this.onReady, this.staleGuard});
 
   final void Function(_CountdownHarnessState state) onReady;
   final NextBallStaleGuard? staleGuard;
@@ -72,6 +69,7 @@ class _CountdownHarness extends ConsumerStatefulWidget {
 
 class _CountdownHarnessState extends ConsumerState<_CountdownHarness>
     implements LiveGameHost {
+  @override
   late final LiveGameControllers controllers;
 
   @override
@@ -207,9 +205,7 @@ void main() {
     late _CountdownHarnessState state;
     await tester.pumpWidget(
       ProviderScope(
-        child: _CountdownHarness(
-          onReady: (ready) => state = ready,
-        ),
+        child: _CountdownHarness(onReady: (ready) => state = ready),
       ),
     );
     await tester.pump();
@@ -285,37 +281,38 @@ void main() {
     host.controllers.dispose();
   });
 
-  testWidgets('authoritative null target stops ticker and blocks stale target', (
-    tester,
-  ) async {
-    final host = await pumpHarness(tester);
-    final countdown = host.controllers.countdown;
-    final game = host.game!;
-    final staleTarget = game.nextAutoCallAt;
+  testWidgets(
+    'authoritative null target stops ticker and blocks stale target',
+    (tester) async {
+      final host = await pumpHarness(tester);
+      final countdown = host.controllers.countdown;
+      final game = host.game!;
+      final staleTarget = game.nextAutoCallAt;
 
-    countdown.syncNextBallTicker(
-      () => _tickContext(game: game),
-      onDisplayChanged: () {},
-    );
+      countdown.syncNextBallTicker(
+        () => _tickContext(game: game),
+        onDisplayChanged: () {},
+      );
 
-    countdown.onNextBallScheduleChanged(
-      game: game,
-      nextAutoCallAt: null,
-      scheduleChanged: true,
-    );
-    host.game = game.copyWith(nextAutoCallAt: staleTarget);
-    countdown.syncNextBallTicker(
-      () => _tickContext(game: host.game!),
-      onDisplayChanged: () {},
-    );
+      countdown.onNextBallScheduleChanged(
+        game: game,
+        nextAutoCallAt: null,
+        scheduleChanged: true,
+      );
+      host.game = game.copyWith(nextAutoCallAt: staleTarget);
+      countdown.syncNextBallTicker(
+        () => _tickContext(game: host.game!),
+        onDisplayChanged: () {},
+      );
 
-    expect(countdown.nextBallCountdownTicker?.isActive ?? false, isFalse);
-    expect(countdown.activeNextBallTickerCount, 0);
-    expect(countdown.nextBallCountdownSeconds, isNull);
-    expect(countdown.effectiveNextAutoCallAt(host.game), isNull);
+      expect(countdown.nextBallCountdownTicker?.isActive ?? false, isFalse);
+      expect(countdown.activeNextBallTickerCount, 0);
+      expect(countdown.nextBallCountdownSeconds, isNull);
+      expect(countdown.effectiveNextAutoCallAt(host.game), isNull);
 
-    host.controllers.dispose();
-  });
+      host.controllers.dispose();
+    },
+  );
 
   testWidgets('nextBallPlayPhase tracks preCallLocked and calling', (
     tester,

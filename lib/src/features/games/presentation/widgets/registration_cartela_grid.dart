@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/time/server_clock_provider.dart';
@@ -39,8 +40,8 @@ class RegistrationGridScope extends InheritedWidget {
   final ValueListenable<int> selectModeEnabledListenable;
 
   static RegistrationGridScope of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<RegistrationGridScope>();
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<RegistrationGridScope>();
     assert(scope != null, 'RegistrationGridScope not found in context');
     return scope!;
   }
@@ -107,13 +108,15 @@ class RegistrationCartelaGrid extends ConsumerStatefulWidget {
       _RegistrationCartelaGridState();
 }
 
-class _RegistrationCartelaGridState extends ConsumerState<RegistrationCartelaGrid> {
+class _RegistrationCartelaGridState
+    extends ConsumerState<RegistrationCartelaGrid> {
   static const _loadMoreThreshold = 240.0;
   static const _reservationExpiryInterval = Duration(milliseconds: 250);
 
   late ScrollController _scrollController;
   var _ownsScrollController = false;
-  final RegistrationCartelaGridIndex _gridIndex = RegistrationCartelaGridIndex();
+  final RegistrationCartelaGridIndex _gridIndex =
+      RegistrationCartelaGridIndex();
   Timer? _selectionReservationTimer;
 
   @override
@@ -287,7 +290,8 @@ class _RegistrationCartelaGridState extends ConsumerState<RegistrationCartelaGri
       child: LayoutBuilder(
         builder: (context, constraints) {
           final visibleCount = _gridIndex.length;
-          final fitsWithoutScrolling = isShuffled &&
+          final fitsWithoutScrolling =
+              isShuffled &&
               RegistrationCartelaGridLayout.fitsWithoutScrolling(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
@@ -302,13 +306,15 @@ class _RegistrationCartelaGridState extends ConsumerState<RegistrationCartelaGri
               : RegistrationCartelaGridLayout.childAspectRatio;
 
           return GridView.builder(
+            scrollCacheExtent: ScrollCacheExtent.pixels(
+              fitsWithoutScrolling ? 0 : 1200,
+            ),
             controller: _scrollController,
             primary: false,
             physics: fitsWithoutScrolling
                 ? const NeverScrollableScrollPhysics()
                 : const ClampingScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 8),
-            cacheExtent: fitsWithoutScrolling ? 0 : 1200,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: RegistrationCartelaGridLayout.crossAxisCount,
               mainAxisSpacing: RegistrationCartelaGridLayout.mainAxisSpacing,
@@ -406,7 +412,9 @@ class _RegistrationCartelaGridCellState
       summary: summary,
       isTrackedMine: scope.isTrackedMine(widget.cartela.id),
       isSelecting: isSelecting,
-      isReservePending: session.pendingBulkReserveIds.contains(widget.cartela.id),
+      isReservePending: session.pendingBulkReserveIds.contains(
+        widget.cartela.id,
+      ),
       isRegistering: session.registeringCartelaIds.contains(widget.cartela.id),
       localHoldExpiresAt: localReservation?.expiresAt,
       cartelaHoldSeconds: scope.cartelaHoldSeconds,
@@ -435,7 +443,10 @@ class _RegistrationCartelaGridCellState
     final summary = sessionId == null
         ? null
         : ref.watch(
-            registrationCartelaGridSummaryProvider((sessionId, widget.cartela.id)),
+            registrationCartelaGridSummaryProvider((
+              sessionId,
+              widget.cartela.id,
+            )),
           );
     final clock = ref.watch(serverClockProvider);
 
@@ -457,9 +468,7 @@ class _RegistrationCartelaGridCellState
           widget.cartela.id,
         );
         final selectBlocked =
-            selectModeEnabled &&
-            !isSelected &&
-            !_canAddMoreSelections(scope);
+            selectModeEnabled && !isSelected && !_canAddMoreSelections(scope);
 
         return RepaintBoundary(
           child: CartelaNumberChip(

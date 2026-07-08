@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' show FontFeature;
 
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -64,11 +63,15 @@ class _CalledNumbersStripState extends State<CalledNumbersStrip> {
 
   @override
   Widget build(BuildContext context) {
-    final orderedNumbers = widget.calledNumbers.reversed.toList(growable: false);
+    final orderedNumbers = widget.calledNumbers.reversed.toList(
+      growable: false,
+    );
     final latest = orderedNumbers.isEmpty ? null : orderedNumbers.first;
-    final calledNumberSet =
-        widget.calledNumbers.map((item) => item.number).toSet();
-    final showClaimRows = widget.checkingCartelaNumbers.isNotEmpty ||
+    final calledNumberSet = widget.calledNumbers
+        .map((item) => item.number)
+        .toSet();
+    final showClaimRows =
+        widget.checkingCartelaNumbers.isNotEmpty ||
         widget.winnerCartelaNumbers.isNotEmpty ||
         widget.blockedCartelaNumbers.isNotEmpty;
 
@@ -240,15 +243,16 @@ class _CollapsedCallHeader extends StatelessWidget {
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) {
-                    final offsetAnimation = Tween<Offset>(
-                      begin: const Offset(0.08, 0),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
+                    final offsetAnimation =
+                        Tween<Offset>(
+                          begin: const Offset(0.08, 0),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        );
 
                     return FadeTransition(
                       opacity: animation,
@@ -284,23 +288,23 @@ class _CollapsedCallHeader extends StatelessWidget {
                         ),
                       )
                     : recentCalls.isEmpty
-                        ? const SizedBox.shrink()
-                        : SizedBox(
-                            height: _recentBallSize,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: recentCalls.length,
-                              separatorBuilder: (context, index) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                return _CalledBall(
-                                  calledNumber: recentCalls[index],
-                                  size: _recentBallSize,
-                                );
-                              },
-                            ),
-                          ),
+                    ? const SizedBox.shrink()
+                    : SizedBox(
+                        height: _recentBallSize,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: recentCalls.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return _CalledBall(
+                              calledNumber: recentCalls[index],
+                              size: _recentBallSize,
+                            );
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
@@ -362,8 +366,8 @@ class _ExpandedBoardHeader extends StatelessWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             onPressed: onHideBoard,
-          icon: const Icon(Icons.unfold_less_rounded, size: 18),
-        ),
+            icon: const Icon(Icons.unfold_less_rounded, size: 18),
+          ),
       ],
     );
   }
@@ -453,7 +457,8 @@ class _CalledNumbersBoard extends StatelessWidget {
                     row: row,
                     rowHeight: rowHeight,
                     width: letterColumnWidth,
-                    isLatest: normalizedLatestLetter == row.letter &&
+                    isLatest:
+                        normalizedLatestLetter == row.letter &&
                         latestNumber != null,
                     latestNumber: latestNumber,
                   ),
@@ -608,8 +613,8 @@ class _BoardCell extends StatelessWidget {
     final textColor = isLatestCalled
         ? AppBranding.casinoPurpleDeep
         : (isCalled
-            ? Colors.white
-            : theme.colorScheme.onSurface.withValues(alpha: 0.82));
+              ? Colors.white
+              : theme.colorScheme.onSurface.withValues(alpha: 0.82));
 
     final cell = AnimatedContainer(
       duration: const Duration(milliseconds: 280),
@@ -792,20 +797,20 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
     final backgroundColor = isChecking
         ? AppBranding.gold.withValues(alpha: 0.22)
         : isWinner
-            ? Colors.green.withValues(alpha: 0.22)
-            : theme.colorScheme.error.withValues(alpha: 0.18);
+        ? Colors.green.withValues(alpha: 0.22)
+        : theme.colorScheme.error.withValues(alpha: 0.18);
 
     final borderColor = isChecking
         ? AppBranding.gold
         : isWinner
-            ? Colors.green.shade600
-            : theme.colorScheme.error.withValues(alpha: 0.7);
+        ? Colors.green.shade600
+        : theme.colorScheme.error.withValues(alpha: 0.7);
 
     final textColor = isChecking
         ? AppBranding.goldDark
         : isWinner
-            ? Colors.green.shade700
-            : theme.colorScheme.error;
+        ? Colors.green.shade700
+        : theme.colorScheme.error;
 
     Widget chip = Container(
       width: _claimCartelaChipWidth(widget.number),
@@ -839,10 +844,7 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
       chip = AnimatedBuilder(
         animation: _pulse,
         builder: (context, child) {
-          return Opacity(
-            opacity: _pulse.value,
-            child: child,
-          );
+          return Opacity(opacity: _pulse.value, child: child);
         },
         child: chip,
       );
@@ -914,11 +916,7 @@ class _CalledBall extends StatelessWidget {
       gradient: RadialGradient(
         center: const Alignment(-0.35, -0.35),
         radius: 1.05,
-        colors: [
-          highlight,
-          baseColor,
-          shadowTone,
-        ],
+        colors: [highlight, baseColor, shadowTone],
         stops: const [0.0, 0.58, 1.0],
       ),
       border: Border.all(
@@ -988,7 +986,9 @@ class _CalledBall extends StatelessWidget {
                         : (size >= 42 ? 15 : 12),
                     height: 1,
                     letterSpacing: isLatest ? -0.3 : 0,
-                    color: isLatest ? AppBranding.casinoPurpleDeep : Colors.white,
+                    color: isLatest
+                        ? AppBranding.casinoPurpleDeep
+                        : Colors.white,
                     shadows: const [
                       Shadow(
                         color: Color(0x66000000),

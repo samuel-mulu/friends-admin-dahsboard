@@ -69,7 +69,8 @@ class GameAnnouncementBanner extends ConsumerWidget {
         : phase == BigGamePhase.registrationOpen
         ? bigGame.scheduledStartAt
         : null;
-    final showCountdown = target != null &&
+    final showCountdown =
+        target != null &&
         phase != BigGamePhase.live &&
         phase != BigGamePhase.waitingToPlay;
 
@@ -103,7 +104,7 @@ class GameAnnouncementBanner extends ConsumerWidget {
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    if (showCountdown && target != null) ...[
+                    if (showCountdown) ...[
                       const SizedBox(height: 4),
                       GameCountdownRow(
                         label: l10n.announcementBigGameStartsIn,

@@ -34,7 +34,7 @@ void main() {
           BulkCartelaReviewSheet(
             selectedCartelas: [_cartela(12), _cartela(34), _cartela(56)],
             entryFee: '10',
-            onRegister: (_, __) async =>
+            onRegister: (_, _) async =>
                 const BulkRegisterResult(successes: [], failures: []),
           ),
         ),
@@ -56,7 +56,7 @@ void main() {
             selectedCartelas: [_cartela(12), _cartela(34)],
             entryFee: '10',
             onCartelaRemoved: (cartela) => removed = cartela,
-            onRegister: (_, __) async =>
+            onRegister: (_, _) async =>
                 const BulkRegisterResult(successes: [], failures: []),
           ),
         ),
@@ -82,7 +82,7 @@ void main() {
           BulkCartelaReviewSheet(
             selectedCartelas: [_cartela(34)],
             entryFee: '10',
-            onRegister: (_, __) async =>
+            onRegister: (_, _) async =>
                 const BulkRegisterResult(successes: [], failures: []),
           ),
         ),
@@ -111,7 +111,7 @@ void main() {
           BulkCartelaReviewSheet(
             selectedCartelas: [_cartela(12), _cartela(34)],
             entryFee: '10',
-            onRegister: (_, __) async {
+            onRegister: (_, _) async {
               registerCalled = true;
               return const BulkRegisterResult(successes: [], failures: []);
             },
@@ -136,7 +136,7 @@ void main() {
           BulkCartelaReviewSheet(
             selectedCartelas: [_cartela(12), _cartela(34)],
             entryFee: '10',
-            onRegister: (_, __) => completer.future,
+            onRegister: (_, _) => completer.future,
           ),
         ),
       );
@@ -161,7 +161,7 @@ void main() {
           BulkCartelaReviewSheet(
             selectedCartelas: [_cartela(12), _cartela(34), _cartela(56)],
             entryFee: '10',
-            onRegister: (_, __) => completer.future,
+            onRegister: (_, _) => completer.future,
           ),
         ),
       );
@@ -186,7 +186,7 @@ void main() {
             isBonus: true,
             fixedPrizeAmount: '5000.00',
             maxCartelasPerPlayer: 5,
-            onRegister: (_, __) async =>
+            onRegister: (_, _) async =>
                 const BulkRegisterResult(successes: [], failures: []),
           ),
         ),
@@ -211,7 +211,7 @@ void main() {
             isBigGotd: true,
             fixedPrizeAmount: '5000.00',
             maxCartelasPerPlayer: 5,
-            onRegister: (_, __) async =>
+            onRegister: (_, _) async =>
                 const BulkRegisterResult(successes: [], failures: []),
           ),
         ),

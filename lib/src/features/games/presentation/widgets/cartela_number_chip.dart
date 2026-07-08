@@ -130,9 +130,9 @@ class _ChipStyle {
       // In select mode we want a clear "filled" selected state (not just border),
       // matching the reserved-by-me affordance so it's easy to see at a glance.
       final selectedBackground = selectModeEnabled
-          ? AppBranding.cartelaChipSelectedBackground(context).withValues(
-              alpha: isDark ? 1 : 0.28,
-            )
+          ? AppBranding.cartelaChipSelectedBackground(
+              context,
+            ).withValues(alpha: isDark ? 1 : 0.28)
           : AppBranding.cartelaChipSelectedBackground(context);
       return _ChipStyle(
         background: selectedBackground,
@@ -290,7 +290,8 @@ class _ChipContent extends StatelessWidget {
       large: showLargeNumber,
     );
 
-    if (availability == CartelaAvailability.reservedByMe && !selectModeEnabled) {
+    if (availability == CartelaAvailability.reservedByMe &&
+        !selectModeEnabled) {
       final seconds = reservationSecondsRemaining;
       if (seconds != null && seconds > 0) {
         content = Stack(
@@ -342,8 +343,7 @@ class _NumberLabel extends StatelessWidget {
     required this.label,
     required this.color,
     required this.large,
-    this.dimmed = false,
-  });
+  }) : dimmed = false;
 
   final String label;
   final Color color;

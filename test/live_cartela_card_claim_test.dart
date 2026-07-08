@@ -60,13 +60,14 @@ void main() {
                     ? GameCartelaStatus.winner
                     : GameCartelaStatus.registered,
               ),
-              canClaimBingo: canClaimBingo && !isClaiming && !isWinner && !isBlocked,
+              canClaimBingo:
+                  canClaimBingo && !isClaiming && !isWinner && !isBlocked,
               isClaiming: isClaiming,
               pendingReview: false,
               showFinishedOutcome: showFinishedOutcome,
               freezeCartelaMarks: freezeCartelaMarks,
               manualMarkedNumbers: const {},
-              onMarkedNumberToggled: (_, __, ___) {},
+              onMarkedNumberToggled: (_, _, _) {},
               onClaimBingo: () {},
               showMarkColorPicker: false,
               blockedReasonCode: blockedReasonCode,

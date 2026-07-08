@@ -9,67 +9,55 @@ import 'package:friends_bingo_app/src/features/games/domain/resolved_cartela_ava
 void main() {
   group('RegistrationCartelaChange', () {
     test('resolves reserved owner for current user', () {
-      final change = RegistrationCartelaChange.fromSocketJson(
-        {
-          'cartelaId': 'cartela-1',
-          'cartelaNumber': 12,
-          'owner': 'RESERVED_OTHER',
-          'actorUserId': 'user-me',
-          'expiresAt': '2026-06-24T12:00:10.000Z',
-        },
-        currentUserId: 'user-me',
-      );
+      final change = RegistrationCartelaChange.fromSocketJson({
+        'cartelaId': 'cartela-1',
+        'cartelaNumber': 12,
+        'owner': 'RESERVED_OTHER',
+        'actorUserId': 'user-me',
+        'expiresAt': '2026-06-24T12:00:10.000Z',
+      }, currentUserId: 'user-me');
 
       expect(change.owner, 'RESERVED_ME');
       expect(change.toSummary()?.status, 'RESERVED');
     });
 
     test('resolves registered owner for other user', () {
-      final change = RegistrationCartelaChange.fromSocketJson(
-        {
-          'cartelaId': 'cartela-2',
-          'cartelaNumber': 8,
-          'owner': 'OTHER',
-          'actorUserId': 'user-other',
-        },
-        currentUserId: 'user-me',
-      );
+      final change = RegistrationCartelaChange.fromSocketJson({
+        'cartelaId': 'cartela-2',
+        'cartelaNumber': 8,
+        'owner': 'OTHER',
+        'actorUserId': 'user-other',
+      }, currentUserId: 'user-me');
 
       expect(change.owner, 'OTHER');
       expect(change.toSummary()?.status, 'REGISTERED');
     });
 
     test('available change removes summary', () {
-      final change = RegistrationCartelaChange.fromSocketJson(
-        {
-          'cartelaId': 'cartela-3',
-          'cartelaNumber': 3,
-          'owner': 'AVAILABLE',
-        },
-        currentUserId: 'user-me',
-      );
+      final change = RegistrationCartelaChange.fromSocketJson({
+        'cartelaId': 'cartela-3',
+        'cartelaNumber': 3,
+        'owner': 'AVAILABLE',
+      }, currentUserId: 'user-me');
 
       expect(change.toSummary(), isNull);
     });
 
     test('parses multiple batched socket changes', () {
-      final changes = parseRegistrationCartelaChanges(
-        [
-          {
-            'cartelaId': 'cartela-1',
-            'cartelaNumber': 12,
-            'owner': 'RESERVED_OTHER',
-            'actorUserId': 'user-other',
-          },
-          {
-            'cartelaId': 'cartela-2',
-            'cartelaNumber': 34,
-            'owner': 'OTHER',
-            'actorUserId': 'user-other',
-          },
-        ],
-        currentUserId: 'user-me',
-      );
+      final changes = parseRegistrationCartelaChanges([
+        {
+          'cartelaId': 'cartela-1',
+          'cartelaNumber': 12,
+          'owner': 'RESERVED_OTHER',
+          'actorUserId': 'user-other',
+        },
+        {
+          'cartelaId': 'cartela-2',
+          'cartelaNumber': 34,
+          'owner': 'OTHER',
+          'actorUserId': 'user-other',
+        },
+      ], currentUserId: 'user-me');
 
       expect(changes, hasLength(2));
       expect(changes[0].owner, 'RESERVED_OTHER');
@@ -164,8 +152,8 @@ void main() {
             status: 'REGISTERED',
           ),
         ],
-        reservedCartelasSummary: const [],
-        myCartelaIds: const ['a'],
+        reservedCartelasSummary: [],
+        myCartelaIds: ['a'],
       );
 
       final merged = mergeRegistrationStateWithPatches(
@@ -181,7 +169,7 @@ void main() {
     test('registered patch overrides reserved base summary', () {
       const snapshot = RegistrationStateResponse(
         sessionId: 'session-1',
-        registeredCartelasSummary: const [],
+        registeredCartelasSummary: [],
         reservedCartelasSummary: [
           RegisteredCartelaSummary(
             cartelaId: 'a',
@@ -190,7 +178,7 @@ void main() {
             status: 'RESERVED',
           ),
         ],
-        myCartelaIds: const [],
+        myCartelaIds: [],
       );
 
       final merged = mergeRegistrationStateWithPatches(
@@ -213,7 +201,7 @@ void main() {
     test('available removal clears reserved cartela', () {
       const snapshot = RegistrationStateResponse(
         sessionId: 'session-1',
-        registeredCartelasSummary: const [],
+        registeredCartelasSummary: [],
         reservedCartelasSummary: [
           RegisteredCartelaSummary(
             cartelaId: 'a',
@@ -222,7 +210,7 @@ void main() {
             status: 'RESERVED',
           ),
         ],
-        myCartelaIds: const [],
+        myCartelaIds: [],
       );
 
       final merged = mergeRegistrationStateWithPatches(
@@ -238,16 +226,10 @@ void main() {
 
   group('parseAndValidateRegistrationCartelaChanges', () {
     test('flags malformed payloads', () {
-      final parsed = parseAndValidateRegistrationCartelaChanges(
-        [
-          {'cartelaNumber': 1, 'owner': 'OTHER'},
-          {
-            'cartelaId': 'cartela-1',
-            'cartelaNumber': 2,
-            'owner': 'OTHER',
-          },
-        ],
-      );
+      final parsed = parseAndValidateRegistrationCartelaChanges([
+        {'cartelaNumber': 1, 'owner': 'OTHER'},
+        {'cartelaId': 'cartela-1', 'cartelaNumber': 2, 'owner': 'OTHER'},
+      ]);
 
       expect(parsed.hasMalformed, isTrue);
       expect(parsed.valid, hasLength(1));

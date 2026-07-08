@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_presentation_phase.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_ready_transition_lock.dart';
@@ -87,10 +86,7 @@ void main() {
         expect(state.primaryGame?.sessionId, 'live-session');
         expect(state.secondaryRegistrationGame?.sessionId, 'ready-session');
         expect(state.hideRegistrationCountdown, isTrue);
-        expect(
-          state.helperKey,
-          isNot(LiveUiHelperKey.liveMissedRound),
-        );
+        expect(state.helperKey, isNot(LiveUiHelperKey.liveMissedRound));
         expect(state.useRegistrationOpenLayout, isFalse);
       },
     );
@@ -125,7 +121,10 @@ void main() {
       final ready = _readyGame(sessionId: 'ready-session');
       final state = resolveLiveUiMode(
         ResolveLiveUiModeInput(
-          operations: _operations(checkingGame: checking, registrationGame: ready),
+          operations: _operations(
+            checkingGame: checking,
+            registrationGame: ready,
+          ),
           ownsLiveSessionCartelas: true,
           hasPrimarySessionCartelas: true,
           now: now,
@@ -145,7 +144,10 @@ void main() {
       final ready = _readyGame(sessionId: 'ready-session');
       final state = resolveLiveUiMode(
         ResolveLiveUiModeInput(
-          operations: _operations(liveGame: winnerWindow, registrationGame: ready),
+          operations: _operations(
+            liveGame: winnerWindow,
+            registrationGame: ready,
+          ),
           ownsLiveSessionCartelas: true,
           hasPrimarySessionCartelas: true,
           now: now,
@@ -165,9 +167,7 @@ void main() {
       final ready = _readyGame(sessionId: 'ready-session');
       final state = resolveLiveUiMode(
         ResolveLiveUiModeInput(
-          operations: _operations(
-            registrationGame: ready,
-          ),
+          operations: _operations(registrationGame: ready),
           pinnedPrimaryGame: finished,
           ownsLiveSessionCartelas: true,
           hasPrimarySessionCartelas: true,
@@ -271,23 +271,50 @@ void main() {
       );
     }
 
+    test('new READY registrationOpenGame beats active handoff lock', () {
+      final ready = _readyGame(
+        sessionId: 'ready-session',
+        scheduledStartAt: now.add(const Duration(seconds: 108)),
+      );
+      final closed = _readyGame(
+        sessionId: 'closed-session',
+      ).copyWith(canRegister: false);
+      final state = resolveLiveUiMode(
+        ResolveLiveUiModeInput(
+          operations: _operations(registrationGame: ready),
+          ownsLiveSessionCartelas: false,
+          hasPrimarySessionCartelas: false,
+          holds: LiveSessionHolds(readyTransitionLock: handoffLock(closed)),
+          now: now,
+          preparingStaleAfter: staleAfter,
+        ),
+      );
+
+      expect(state.mode, LiveUiMode.registrationCountdown);
+      expect(state.primaryGame?.sessionId, 'ready-session');
+      expect(state.hideRegistrationCountdown, isFalse);
+      expect(state.countdownKind, LiveUiCountdownKind.registration);
+      expect(
+        state.helperKey,
+        isNot(LiveUiHelperKey.postGameSummaryOpeningNext),
+      );
+    });
+
     test(
-      'new READY registrationOpenGame beats active handoff lock',
+      'same session reopened with future scheduledStartAt beats handoff',
       () {
-        final ready = _readyGame(
-          sessionId: 'ready-session',
+        final reopened = _readyGame(
+          sessionId: 'closed-session',
           scheduledStartAt: now.add(const Duration(seconds: 108)),
-        );
-        final closed = _readyGame(sessionId: 'closed-session').copyWith(
-          canRegister: false,
         );
         final state = resolveLiveUiMode(
           ResolveLiveUiModeInput(
-            operations: _operations(registrationGame: ready),
+            operations: _operations(registrationGame: reopened),
             ownsLiveSessionCartelas: false,
             hasPrimarySessionCartelas: false,
             holds: LiveSessionHolds(
-              readyTransitionLock: handoffLock(closed),
+              readyTransitionLock: handoffLock(reopened),
+              registrationCountdownClosed: true,
             ),
             now: now,
             preparingStaleAfter: staleAfter,
@@ -295,36 +322,10 @@ void main() {
         );
 
         expect(state.mode, LiveUiMode.registrationCountdown);
-        expect(state.primaryGame?.sessionId, 'ready-session');
-        expect(state.hideRegistrationCountdown, isFalse);
-        expect(state.countdownKind, LiveUiCountdownKind.registration);
-        expect(state.helperKey, isNot(LiveUiHelperKey.postGameSummaryOpeningNext));
-      },
-    );
-
-    test('same session reopened with future scheduledStartAt beats handoff', () {
-      final reopened = _readyGame(
-        sessionId: 'closed-session',
-        scheduledStartAt: now.add(const Duration(seconds: 108)),
-      );
-      final state = resolveLiveUiMode(
-        ResolveLiveUiModeInput(
-          operations: _operations(registrationGame: reopened),
-          ownsLiveSessionCartelas: false,
-          hasPrimarySessionCartelas: false,
-          holds: LiveSessionHolds(
-            readyTransitionLock: handoffLock(reopened),
-            registrationCountdownClosed: true,
-          ),
-          now: now,
-          preparingStaleAfter: staleAfter,
-        ),
-      );
-
-        expect(state.mode, LiveUiMode.registrationCountdown);
         expect(state.presentationPhase, LivePresentationPhase.registrationOpen);
         expect(state.hideRegistrationCountdown, isFalse);
-    });
+      },
+    );
 
     test('no registrationOpenGame keeps handoffOpeningNext', () {
       final staleReady = _readyGame(sessionId: 'closed-session').copyWith(
@@ -350,9 +351,9 @@ void main() {
     });
 
     test('handoff lock timeout allows empty state', () {
-      final staleReady = _readyGame(sessionId: 'closed-session').copyWith(
-        canRegister: false,
-      );
+      final staleReady = _readyGame(
+        sessionId: 'closed-session',
+      ).copyWith(canRegister: false);
       final expiredLock = startReadyTransitionLock(
         game: staleReady,
         reason: ReadyTransitionReason.noPlayersHandoff,
@@ -363,9 +364,7 @@ void main() {
           operations: null,
           ownsLiveSessionCartelas: false,
           hasPrimarySessionCartelas: false,
-          holds: LiveSessionHolds(
-            readyTransitionLock: expiredLock,
-          ),
+          holds: LiveSessionHolds(readyTransitionLock: expiredLock),
           now: now,
           preparingStaleAfter: staleAfter,
         ),

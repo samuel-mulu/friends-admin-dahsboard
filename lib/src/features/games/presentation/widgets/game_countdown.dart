@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -86,10 +85,7 @@ class _GameCountdownState extends State<GameCountdown> {
 }
 
 /// Formats countdown durations (`30d 04h`, `03h 22m`, `14m 10s`, `45s`).
-String formatGameCountdown(
-  DateTime? target, {
-  ServerClockService? clock,
-}) {
+String formatGameCountdown(DateTime? target, {ServerClockService? clock}) {
   if (target == null) {
     return '--';
   }
@@ -138,16 +134,17 @@ class GameCountdownRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         GameCountdown(
           target: target,
           serverClock: serverClock,
           large: large,
-          semanticsLabel: '$label ${formatGameCountdown(target, clock: serverClock)}',
+          semanticsLabel:
+              '$label ${formatGameCountdown(target, clock: serverClock)}',
         ),
       ],
     );

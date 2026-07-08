@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/live_presentation_phase.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_ready_transition_lock.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_ui_mode.dart';
 
@@ -30,10 +29,7 @@ void main() {
     test('activates no-players handoff for zero-player READY', () {
       final ready = _readyGame(sessionId: 'session-a');
       expect(
-        shouldStartReadyTransitionLockNoPlayers(
-          game: ready,
-          zeroPlayers: true,
-        ),
+        shouldStartReadyTransitionLockNoPlayers(game: ready, zeroPlayers: true),
         isTrue,
       );
       expect(
@@ -75,10 +71,7 @@ void main() {
       );
       expect(readyTransitionLockExpired(lock, now), isFalse);
       expect(
-        readyTransitionLockExpired(
-          lock,
-          now.add(kReadyTransitionLockTimeout),
-        ),
+        readyTransitionLockExpired(lock, now.add(kReadyTransitionLockTimeout)),
         isTrue,
       );
       expect(
@@ -194,10 +187,7 @@ void main() {
       expect(
         shouldClearReadyTransitionLock(
           lock: preparingLock,
-          operations: _operations(
-            liveGame: playingA,
-            registrationGame: readyB,
-          ),
+          operations: _operations(liveGame: playingA, registrationGame: readyB),
           pinnedGame: playingA,
           now: now,
         ),
@@ -206,15 +196,10 @@ void main() {
 
       final state = resolveLiveUiMode(
         ResolveLiveUiModeInput(
-          operations: _operations(
-            liveGame: playingA,
-            registrationGame: readyB,
-          ),
+          operations: _operations(liveGame: playingA, registrationGame: readyB),
           ownsLiveSessionCartelas: true,
           hasPrimarySessionCartelas: true,
-          holds: const LiveSessionHolds(
-            registrationCountdownClosed: true,
-          ),
+          holds: const LiveSessionHolds(registrationCountdownClosed: true),
           now: now,
           preparingStaleAfter: staleAfter,
         ),
@@ -297,9 +282,7 @@ void main() {
           operations: _operations(registrationGame: readyB),
           ownsLiveSessionCartelas: false,
           hasPrimarySessionCartelas: false,
-          holds: const LiveSessionHolds(
-            registrationCountdownClosed: false,
-          ),
+          holds: const LiveSessionHolds(registrationCountdownClosed: false),
           now: now,
           preparingStaleAfter: staleAfter,
         ),
@@ -339,10 +322,7 @@ GameOperationsCurrentResponse _operations({
   );
 }
 
-GameModel _readyGame({
-  required String sessionId,
-  DateTime? scheduledStartAt,
-}) {
+GameModel _readyGame({required String sessionId, DateTime? scheduledStartAt}) {
   return _game(
     id: 'slot-$sessionId',
     sessionId: sessionId,

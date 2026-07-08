@@ -268,7 +268,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     if (_game?.status != GameStatus.winnerWindow) {
       return null;
     }
-    return _game?.winnerWindowEndsAt ?? controllers.countdown.winnerWindowEndsAt;
+    return _game?.winnerWindowEndsAt ??
+        controllers.countdown.winnerWindowEndsAt;
   }
 
   bool get _resolverWinnerWindowExpired => isWinnerWindowExpired(
@@ -323,8 +324,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
           pinTerminalSession: _resolverPinsTerminalSession,
           registrationCountdownClosed:
               controllers.countdown.registrationCountdownClosed,
-          readyTransitionLock:
-              controllers.transition.readyTransitionLockActive
+          readyTransitionLock: controllers.transition.readyTransitionLockActive
               ? controllers.transition.readyTransitionLock
               : null,
           canonicalRefetchInFlight:
@@ -939,7 +939,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               },
               statusBanner: statusBanner,
               banner: RegistrationOpenPulse(
-                key: ValueKey('registration-pulse-${game.sessionId ?? game.id}'),
+                key: ValueKey(
+                  'registration-pulse-${game.sessionId ?? game.id}',
+                ),
                 isGuest: _isGuest,
                 ruleName: game.localizedRuleName(ref),
                 titleOverride: showRegistrationHandoffPreparing
@@ -971,7 +973,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                     ? context.l10n.registrationStartsAfterCurrentGame
                     : null,
                 serverClock: _serverClock,
-                countdownTracker: controllers.countdown.registrationCountdownTracker,
+                countdownTracker:
+                    controllers.countdown.registrationCountdownTracker,
                 scopeKey: game.sessionId ?? game.id,
                 embedded: true,
                 showFlair: false,
@@ -1066,10 +1069,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     final registrationStateCount = sessionId == null
         ? null
         : ref
-            .watch(registrationStateProvider(sessionId))
-            .asData
-            ?.value
-            ?.registeredCartelasCount;
+              .watch(registrationStateProvider(sessionId))
+              .asData
+              ?.value
+              .registeredCartelasCount;
 
     return registrationRegDisplayCount(
       game: game,
@@ -1380,8 +1383,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
             winningPatternOverlayByGameCartelaId:
                 _review.winnerCartelaDisplay.overlayByGameCartelaId,
-            winningBallCellIndexByGameCartelaId:
-                _review.winnerCartelaDisplay.winningBallCellIndexByGameCartelaId,
+            winningBallCellIndexByGameCartelaId: _review
+                .winnerCartelaDisplay
+                .winningBallCellIndexByGameCartelaId,
             prizeAmountFor: _prizeAmountForGameCartela,
             onMarkedNumberToggled: _toggleMarkedNumber,
             onClaimBingo: _claimBingo,
@@ -3006,10 +3010,7 @@ class _LiveSyncOverlay extends StatelessWidget {
                         ],
                       ),
                     ),
-                    TextButton(
-                      onPressed: onRetry,
-                      child: const Text('Retry'),
-                    ),
+                    TextButton(onPressed: onRetry, child: const Text('Retry')),
                   ],
                 ),
               ),

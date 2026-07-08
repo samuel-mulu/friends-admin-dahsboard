@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/winning_ball_cell.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/winner_cartela_live_display.dart';
 
 void main() {
@@ -53,36 +52,42 @@ void main() {
     expect(cache.overlayByGameCartelaId['gc-1']?.isEmpty, isFalse);
   });
 
-  test('WinnerCartelaDisplayCache clears stale winning ball when unresolved', () {
-    final cache = WinnerCartelaDisplayCache();
+  test(
+    'WinnerCartelaDisplayCache clears stale winning ball when unresolved',
+    () {
+      final cache = WinnerCartelaDisplayCache();
 
-    cache.storeClaimSnapshot(
-      gameCartelaId: 'gc-1',
-      patterns: patterns,
-      columns: columns,
-      lastCalledNumber: const SessionWinnerLastCalledNumber(
-        letter: 'O',
-        number: 74,
-      ),
-    );
-
-    cache.applySessionResult(
-      SessionWinnerResultModel(
+      cache.storeClaimSnapshot(
         gameCartelaId: 'gc-1',
-        cartelaId: 'c-1',
-        cartelaNumber: 1,
-        amount: '10',
+        patterns: patterns,
         columns: columns,
-        completedPatterns: patterns,
         lastCalledNumber: const SessionWinnerLastCalledNumber(
-          letter: 'I',
-          number: 24,
+          letter: 'O',
+          number: 74,
         ),
-      ),
-    );
+      );
 
-    expect(cache.winningBallCellIndexByGameCartelaId.containsKey('gc-1'), isFalse);
-  });
+      cache.applySessionResult(
+        SessionWinnerResultModel(
+          gameCartelaId: 'gc-1',
+          cartelaId: 'c-1',
+          cartelaNumber: 1,
+          amount: '10',
+          columns: columns,
+          completedPatterns: patterns,
+          lastCalledNumber: const SessionWinnerLastCalledNumber(
+            letter: 'I',
+            number: 24,
+          ),
+        ),
+      );
+
+      expect(
+        cache.winningBallCellIndexByGameCartelaId.containsKey('gc-1'),
+        isFalse,
+      );
+    },
+  );
 
   test('displayWinningBallLabel shows API ball even when not on cartela', () {
     final result = SessionWinnerResultModel(
@@ -102,36 +107,42 @@ void main() {
     expect(result.displayWinningBallLabel, 'I-24');
   });
 
-  test('displayWinningBallLabel prefers API lastCalledNumber when resolved', () {
-    final result = SessionWinnerResultModel(
-      gameCartelaId: 'gc-1',
-      cartelaId: 'c-1',
-      cartelaNumber: 13,
-      amount: '50',
-      columns: columns,
-      completedPatterns: patterns,
-      winningBallCellIndex: 4,
-      lastCalledNumber: const SessionWinnerLastCalledNumber(
-        letter: 'I',
-        number: 19,
-      ),
-    );
+  test(
+    'displayWinningBallLabel prefers API lastCalledNumber when resolved',
+    () {
+      final result = SessionWinnerResultModel(
+        gameCartelaId: 'gc-1',
+        cartelaId: 'c-1',
+        cartelaNumber: 13,
+        amount: '50',
+        columns: columns,
+        completedPatterns: patterns,
+        winningBallCellIndex: 4,
+        lastCalledNumber: const SessionWinnerLastCalledNumber(
+          letter: 'I',
+          number: 19,
+        ),
+      );
 
-    expect(result.resolvedWinningBallCellIndex, 4);
-    expect(result.displayWinningBallLabel, 'I-19');
-  });
+      expect(result.resolvedWinningBallCellIndex, 4);
+      expect(result.displayWinningBallLabel, 'I-19');
+    },
+  );
 
-  test('displayWinningBallLabel falls back to grid column without API ball', () {
-    final result = SessionWinnerResultModel(
-      gameCartelaId: 'gc-1',
-      cartelaId: 'c-1',
-      cartelaNumber: 1,
-      amount: '50',
-      columns: columns,
-      completedPatterns: patterns,
-      winningBallCellIndex: 4,
-    );
+  test(
+    'displayWinningBallLabel falls back to grid column without API ball',
+    () {
+      final result = SessionWinnerResultModel(
+        gameCartelaId: 'gc-1',
+        cartelaId: 'c-1',
+        cartelaNumber: 1,
+        amount: '50',
+        columns: columns,
+        completedPatterns: patterns,
+        winningBallCellIndex: 4,
+      );
 
-    expect(result.displayWinningBallLabel, 'O-74');
-  });
+      expect(result.displayWinningBallLabel, 'O-74');
+    },
+  );
 }

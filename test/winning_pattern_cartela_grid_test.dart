@@ -22,13 +22,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            height: 320,
-            width: 320,
-            child: grid,
-          ),
-        ),
+        home: Scaffold(body: SizedBox(height: 320, width: 320, child: grid)),
       ),
     );
   }
@@ -54,9 +48,9 @@ void main() {
       ),
     );
 
-    final goldTexts = tester.widgetList<Text>(find.byType(Text)).where(
-          (text) => text.style?.color == AppBranding.casinoPurpleDeep,
-        );
+    final goldTexts = tester
+        .widgetList<Text>(find.byType(Text))
+        .where((text) => text.style?.color == AppBranding.casinoPurpleDeep);
 
     expect(goldTexts.any((text) => text.data == '5'), isTrue);
   });
@@ -117,15 +111,18 @@ void main() {
     );
 
     expect(find.byType(DecoratedBox), findsWidgets);
-    final circles = tester.widgetList<DecoratedBox>(
-      find.descendant(
-        of: find.byType(WinningPatternCartelaGrid),
-        matching: find.byType(DecoratedBox),
-      ),
-    ).where(
-      (box) => box.decoration is BoxDecoration &&
-          (box.decoration! as BoxDecoration).shape == BoxShape.circle,
-    );
+    final circles = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(WinningPatternCartelaGrid),
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .where(
+          (box) =>
+              box.decoration is BoxDecoration &&
+              (box.decoration as BoxDecoration).shape == BoxShape.circle,
+        );
 
     expect(circles.length, greaterThanOrEqualTo(25));
   });

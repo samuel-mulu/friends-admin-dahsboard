@@ -63,9 +63,8 @@ class LiveRealtimeController {
   LiveConnectionState get connectionState => _resolveConnectionState();
   bool get showSyncOverlay => _syncOverlayVisible;
   bool get showHeaderSyncSpinner => _syncScheduled || resumeSyncInFlight;
-  String get syncOverlayTitle => _isReconnectStyleSync
-      ? 'Reconnecting...'
-      : 'Syncing latest game...';
+  String get syncOverlayTitle =>
+      _isReconnectStyleSync ? 'Reconnecting...' : 'Syncing latest game...';
   String get syncOverlayMessage => _isReconnectStyleSync
       ? 'Reconnecting to the live round...'
       : 'Syncing latest game state...';
@@ -89,11 +88,7 @@ class LiveRealtimeController {
     required void Function(String sessionId) leave,
     void Function()? onMembershipChanged,
   }) {
-    socketMembership.apply(
-      sessionId,
-      join: join,
-      leave: leave,
-    );
+    socketMembership.apply(sessionId, join: join, leave: leave);
     joinedGameId = socketMembership.joinedSessionId;
     onMembershipChanged?.call();
   }
@@ -284,7 +279,9 @@ class LiveRealtimeController {
 
     if (ResumeSyncGuard.inFlight || resumeSyncInFlight) {
       _collectedResumeReasons.add(reason);
-      LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_coalesced_in_flight');
+      LiveRealtimeDebug.resumeSyncIgnored(
+        reason: '${reason}_coalesced_in_flight',
+      );
       return _resumeSyncCompleter?.future ?? Future<void>.value();
     }
 
@@ -330,8 +327,9 @@ class LiveRealtimeController {
     }
 
     final reason = _formatCollectedSyncReasons();
-    final requireNetworkOperations =
-        _collectedResumeReasons.contains('manual_refresh');
+    final requireNetworkOperations = _collectedResumeReasons.contains(
+      'manual_refresh',
+    );
     _collectedResumeReasons.clear();
     resumeSyncInFlight = true;
     ResumeSyncGuard.inFlight = true;
@@ -339,9 +337,11 @@ class LiveRealtimeController {
     LiveRealtimeDebug.resumeSyncStarted(reason: reason);
     host.controllers.countdown.serverClockSnapOnNextSync = true;
 
-    host.ref.read(currentGameOperationsProvider.notifier).suppressAutoRefreshUntil(
-      DateTime.now().add(_resumeSyncDebounce + const Duration(seconds: 2)),
-    );
+    host.ref
+        .read(currentGameOperationsProvider.notifier)
+        .suppressAutoRefreshUntil(
+          DateTime.now().add(_resumeSyncDebounce + const Duration(seconds: 2)),
+        );
 
     canonicalRefetchInFlight = true;
 
@@ -385,7 +385,7 @@ class LiveRealtimeController {
             host.lastOperations?.registrationOpenGame?.status.name,
       );
       _clearSyncUi(showCurrent: true);
-    } catch (error, stackTrace) {
+    } catch (error) {
       LiveRealtimeDebug.resumeSyncFailed(reason: reason, error: error);
       _handleSyncFailure();
     } finally {
@@ -514,7 +514,8 @@ class LiveRealtimeController {
     }
     final lastSuccessfulSyncAt = _lastSuccessfulSyncAt;
     if (lastSuccessfulSyncAt != null &&
-        DateTime.now().difference(lastSuccessfulSyncAt) < _currentBadgeDuration) {
+        DateTime.now().difference(lastSuccessfulSyncAt) <
+            _currentBadgeDuration) {
       return LiveConnectionState.current;
     }
     return LiveConnectionState.online;
@@ -623,9 +624,7 @@ class LiveRealtimeController {
         registration!.sessionId == sessionId) {
       return true;
     }
-    if (slotId != null &&
-        registration != null &&
-        registration.id == slotId) {
+    if (slotId != null && registration != null && registration.id == slotId) {
       return true;
     }
     return false;
