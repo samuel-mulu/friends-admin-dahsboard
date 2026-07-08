@@ -608,10 +608,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _maybeAutoShowWinnerCartelaDialog() {
-    if (!_showsPostGameSummary || _review.winnerCartelaDialogVisible) {
+    if (_review.winnerCartelaDialogVisible) {
       return;
     }
 
+    final inWinnerWindow = _game?.status == GameStatus.winnerWindow;
+    final summaryOrWindow = _showsPostGameSummary || inWinnerWindow;
     final sessionId = _game?.sessionId;
     if (sessionId == null ||
         _review.winnerCartelaDialogAutoShownForSessionId == sessionId) {
@@ -619,6 +621,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     final results = _sessionWinnerResultsForDisplay;
+    if (!_review.canAutoShowWinnerDialog(
+      summaryOrWinnerWindowVisible: summaryOrWindow,
+      resultsForDisplay: results,
+    )) {
+      return;
+    }
     if (!_review.winnerResultsReadyForDialog(results)) {
       return;
     }
@@ -2828,6 +2836,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
+    _maybeAutoShowWinnerCartelaDialog();
   }
 
   void _onBingoInvalid(dynamic payload) {
@@ -2975,7 +2984,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
-    _scheduleCanonicalRefetch();
+    _maybeAutoShowWinnerCartelaDialog();
+    _scheduleCanonicalRefetch(reason: 'winner_window_enrich');
   }
 
   void _applyWinnerWindowState({DateTime? winnerWindowEndsAt}) {

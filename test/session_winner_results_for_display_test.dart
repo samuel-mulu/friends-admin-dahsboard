@@ -238,6 +238,54 @@ void main() {
     expect(results.single.completedPatterns, isNotEmpty);
   });
 
+  test('sticky claim-only patterns can build display rows without API results', () {
+    final patterns = [
+      CompletedPatternModel(
+        type: 'ROW',
+        key: 'ROW_1',
+        numbers: const [1, 2, 3, 4, 5],
+        highlightCellIndexes: {0, 1, 2, 3, 4},
+      ),
+    ];
+
+    final results = sessionWinnerResultsForDisplay(
+      apiResults: const [],
+      claimPatternsByGameCartelaId: {'gc-1': patterns},
+    );
+
+    expect(results, hasLength(1));
+    expect(results.single.gameCartelaId, 'gc-1');
+    expect(results.single.completedPatterns, isNotEmpty);
+    expect(winnerResultsReadyForDisplay(results), isTrue);
+  });
+
+  test('winnerDialogReadyForImmediateShow accepts sticky payload', () {
+    expect(
+      winnerDialogReadyForImmediateShow(
+        summaryOrWinnerWindowVisible: true,
+        hasStickyWinnerPayload: true,
+        winnerResultsLoaded: false,
+      ),
+      isTrue,
+    );
+    expect(
+      winnerDialogReadyForImmediateShow(
+        summaryOrWinnerWindowVisible: true,
+        hasStickyWinnerPayload: false,
+        winnerResultsLoaded: true,
+      ),
+      isTrue,
+    );
+    expect(
+      winnerDialogReadyForImmediateShow(
+        summaryOrWinnerWindowVisible: false,
+        hasStickyWinnerPayload: true,
+        winnerResultsLoaded: true,
+      ),
+      isFalse,
+    );
+  });
+
   test('winnerResultsReadyForDisplay requires completed patterns', () {
     final withPatterns = SessionWinnerResultModel(
       gameCartelaId: 'gc-1',

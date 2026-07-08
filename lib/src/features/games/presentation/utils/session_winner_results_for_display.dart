@@ -149,6 +149,34 @@ List<SessionWinnerResultModel> sessionWinnerResultsForDisplay({
         }
       }
 
+  // Sticky socket claims can open the winner UI before HTTP winner-results.
+  for (final entry in claimPatternsByGameCartelaId.entries) {
+    if (entry.value.isEmpty) {
+      continue;
+    }
+    final alreadyPresent = deduped.values.any(
+      (result) => result.gameCartelaId == entry.key,
+    );
+    if (alreadyPresent) {
+      continue;
+    }
+
+    final mine = myCartelaByCartelaId[entry.key];
+    final payout = payoutByCartelaId[mine?.cartelaId ?? ''] ??
+        (mine != null ? payoutByNumber[mine.cartela.number] : null);
+    final sticky = SessionWinnerResultModel(
+      gameCartelaId: entry.key,
+      cartelaId: mine?.cartelaId ?? entry.key,
+      cartelaNumber: mine?.cartela.number ?? 0,
+      amount: payout?.amount ?? '0',
+      owner: mine != null ? 'ME' : null,
+      columns: mine?.cartela.columns ?? const <List<String>>[],
+      completedPatterns: entry.value,
+      lastCalledNumber: sessionLastCalledNumber,
+    );
+    deduped[_winnerResultDedupeKey(sticky)] = sticky;
+  }
+
   return deduped.values.toList(growable: false);
 }
 
@@ -164,5 +192,17 @@ bool winnerResultsReadyForDisplay(List<SessionWinnerResultModel> results) {
   }
 
   return results.every(winnerResultReadyForDisplay);
+}
+
+/// Socket claim / winner-window payload is enough to open winner UI immediately.
+bool winnerDialogReadyForImmediateShow({
+  required bool summaryOrWinnerWindowVisible,
+  required bool hasStickyWinnerPayload,
+  required bool winnerResultsLoaded,
+}) {
+  if (!summaryOrWinnerWindowVisible) {
+    return false;
+  }
+  return hasStickyWinnerPayload || winnerResultsLoaded;
 }
 

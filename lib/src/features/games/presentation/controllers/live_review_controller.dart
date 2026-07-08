@@ -81,11 +81,33 @@ class LiveReviewController {
       claimPatternsByGameCartelaId:
           winnerCartelaDisplay.claimPatternsByGameCartelaId,
       sessionLastCalledNumber: sessionLastCalledNumber,
+      myCartelas: host.myCartelas,
+      winnerPayoutsSummary: host.game?.winnerPayoutsSummary,
     );
   }
 
   bool winnerResultsReadyForDialog(List<SessionWinnerResultModel> results) {
     return winner_display.winnerResultsReadyForDisplay(results);
+  }
+
+  bool hasStickyWinnerPayload() {
+    return winnerCartelaDisplay.claimPatternsByGameCartelaId.values.any(
+          (patterns) => patterns.isNotEmpty,
+        ) ||
+        winnerCartelaDisplay.patternCellsByGameCartelaId.values.any(
+          (cells) => cells.isNotEmpty,
+        );
+  }
+
+  bool canAutoShowWinnerDialog({
+    required bool summaryOrWinnerWindowVisible,
+    required List<SessionWinnerResultModel> resultsForDisplay,
+  }) {
+    return winner_display.winnerDialogReadyForImmediateShow(
+      summaryOrWinnerWindowVisible: summaryOrWinnerWindowVisible,
+      hasStickyWinnerPayload: hasStickyWinnerPayload(),
+      winnerResultsLoaded: winnerResultsReadyForDialog(resultsForDisplay),
+    );
   }
 
   void applySessionWinnerResults(List<SessionWinnerResultModel> results) {
