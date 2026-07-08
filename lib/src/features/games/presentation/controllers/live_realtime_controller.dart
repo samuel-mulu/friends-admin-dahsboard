@@ -13,6 +13,7 @@ import '../providers/current_game_operations_provider.dart';
 import '../providers/games_providers.dart';
 import '../utils/live_resume_provider_policy.dart';
 import '../utils/live_resume_terminal_gate.dart';
+import '../utils/live_sync_trigger_action.dart';
 import '../utils/live_socket_session_membership.dart';
 import 'live_game_host.dart';
 
@@ -26,6 +27,13 @@ class LiveRealtimeController {
     milliseconds: 900,
   );
   static const _resumeSyncDebounce = Duration(milliseconds: 700);
+  // On mobile a flaky connection fires repeated socket `connect` events; each
+  // one would otherwise run a full canonical fetch. If canonical truth was
+  // applied very recently, skip the redundant reconnect fetch — the room
+  // rejoin and live socket events (both handled before this runs) already keep
+  // state current. This kills reconnect "sync storms" and the entry-time
+  // double fetch (initial load immediately followed by the first connect).
+  static const _reconnectSyncThrottle = Duration(seconds: 2);
   static const _syncOverlayDelay = Duration(milliseconds: 1500);
   static const _currentBadgeDuration = Duration(seconds: 4);
 
@@ -62,12 +70,15 @@ class LiveRealtimeController {
   ServerClockService get serverClock => host.ref.read(serverClockProvider);
   SocketService get socketService => host.ref.read(socketServiceProvider);
   LiveConnectionState get connectionState => _resolveConnectionState();
-  // Never paint the sync overlay on top of held UI during a terminal
-  // transition (CANCELLED/FINISHED -> READY). The terminal owner holds the
-  // previous UI and applies the next snapshot atomically; a spinner over it
-  // is the "glitch at the change time" we want to avoid.
+  // Never paint the sync overlay on top of held UI during a transition. Both
+  // the terminal owner (CANCELLED/FINISHED -> READY) and the ready-transition
+  // lock (READY -> PLAYING / READY -> READY handoff) hold the previous UI and
+  // apply the next snapshot atomically; a spinner over that swap is the
+  // "glitch at the change time" we want to avoid.
   bool get showSyncOverlay =>
-      _syncOverlayVisible && !host.isTerminalTransitionActive;
+      _syncOverlayVisible &&
+      !host.isTerminalTransitionActive &&
+      !host.controllers.transition.readyTransitionLockActive;
   bool get showHeaderSyncSpinner => _syncScheduled || resumeSyncInFlight;
   String get syncOverlayTitle =>
       _isReconnectStyleSync ? 'Reconnecting...' : 'Syncing latest game...';
@@ -296,6 +307,21 @@ class LiveRealtimeController {
       return;
     }
 
+    // Flaky-mobile reconnect throttle: if the socket is already back and we
+    // applied canonical truth in the last couple of seconds, a reconnect fetch
+    // is redundant. Membership rejoin + live events (run before this) keep us
+    // current. Manual refresh and app_resume are never throttled here.
+    if (trigger == LiveSyncTrigger.socketReconnect &&
+        socketService.isConnected &&
+        !resumeSyncInFlight &&
+        !ResumeSyncGuard.inFlight &&
+        _lastSuccessfulSyncAt != null &&
+        DateTime.now().difference(_lastSuccessfulSyncAt!) <
+            _reconnectSyncThrottle) {
+      LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_recently_synced');
+      return;
+    }
+
     if (ResumeSyncGuard.inFlight || resumeSyncInFlight) {
       _collectedResumeReasons.add(reason);
       LiveRealtimeDebug.resumeSyncIgnored(
@@ -327,8 +353,11 @@ class LiveRealtimeController {
     return _resumeSyncCompleter!.future;
   }
 
-  Future<void> syncAppAfterResume({required String reason}) {
-    return syncLatest(reason: reason);
+  /// Records that canonical backend truth was just applied to the UI. Feeds the
+  /// reconnect throttle so a socket `connect` immediately after an initial load
+  /// or refetch does not trigger a redundant full fetch.
+  void markCanonicalApplied() {
+    _lastSuccessfulSyncAt = DateTime.now();
   }
 
   Future<void> _runCoalescedResumeSync() async {

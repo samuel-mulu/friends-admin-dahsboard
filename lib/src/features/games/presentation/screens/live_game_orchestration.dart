@@ -1975,6 +1975,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _myCartelas = myCartelas;
       _sortMyCartelas();
       _isLoading = false;
+      // Canonical truth is now on screen; feed the reconnect throttle so a
+      // socket `connect` right after this apply does not refetch redundantly.
+      _realtime.markCanonicalApplied();
 
       // A stale refetch may still report winnerWindow while local state already
       // advanced to finished; keep the review hold until we truly leave terminal.
