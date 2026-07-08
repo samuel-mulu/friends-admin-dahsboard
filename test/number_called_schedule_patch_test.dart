@@ -29,8 +29,22 @@ GameModel _baseGame() {
 }
 
 void main() {
-  group('normalizeSocketPayload', () {
-    test('map payload works', () {
+group('normalizeSocketPayload', () {
+    test('operation_updated auto_call_changed works after normalize-only path', () {
+      final payload = <dynamic, dynamic>{
+        'updatedReason': 'auto_call_changed',
+        'sessionId': 'sess-1',
+        'slotId': 'slot-1',
+        'autoCallEnabled': true,
+        'nextAutoCallAt': '2099-01-01T00:00:00.000Z',
+        'autoCallIntervalMs': 3000,
+      };
+      final normalized = normalizeSocketPayload(payload);
+      expect(normalized, isNotNull);
+      expect(normalized!['updatedReason'], 'auto_call_changed');
+    });
+
+      test('map payload works', () {
       final normalized = normalizeSocketPayload({
         'sessionId': 'session-1',
         'order': 2,

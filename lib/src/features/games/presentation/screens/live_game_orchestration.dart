@@ -2023,10 +2023,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     String? registrationSessionId,
     bool includeCalledNumbers = false,
     bool includeMyCartelas = false,
+    String reason = 'screen_schedule',
   }) {
     if (!mounted) {
       return;
     }
+    // reason is reserved for controller-owned scheduling (Plan 1/3); ignore for now.
+    assert(reason.isNotEmpty);
 
     if (wallet) {
       _canonicalRefetchIncludeWallet = true;

@@ -71,6 +71,7 @@ import '../utils/registration_cartela_grid_index.dart';
 import '../utils/next_ball_countdown.dart';
 import '../utils/next_ball_stale_guard.dart';
 import '../utils/number_called_schedule_patch.dart';
+import '../utils/live_sync_trigger_action.dart';
 import '../utils/socket_payload_normalizer.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
 import '../utils/live_resume_sync.dart';

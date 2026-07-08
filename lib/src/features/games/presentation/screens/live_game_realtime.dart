@@ -336,47 +336,6 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       return;
     }
 
-    if (payload is Map<String, dynamic>) {
-      // Legacy guard: API no longer emits operation_updated per ball.
-      final reason = payload['updatedReason'] as String?;
-      if (reason == 'number_called') {
-        return;
-      }
-
-      if (reason == 'auto_call_changed') {
-        final sessionId = payload['sessionId'] as String?;
-        final slotId = payload['slotId'] as String?;
-        if (_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId)) {
-          LiveRealtimeDebug.socket('game:operation_updated', payload);
-          _applyAutoCallScheduleFromPayload(payload);
-        }
-        return;
-      }
-
-      final sessionId = payload['sessionId'] as String?;
-      final slotId = payload['slotId'] as String?;
-      final affectsCurrent = _eventAffectsCurrentGame(
-        sessionId: sessionId,
-        slotId: slotId,
-      );
-      final affectsRegistration = _eventAffectsRegistrationSession(
-        sessionId: sessionId,
-        slotId: slotId,
-      );
-
-      if (!affectsCurrent && !affectsRegistration) {
-        return;
-      }
-
-      if (affectsRegistration && !affectsCurrent) {
-        _scheduleCanonicalRefetch(registrationSessionId: sessionId);
-        return;
-      }
-
-      _scheduleCanonicalRefetch();
-      return;
-    }
-
     final normalizedPayload = _normalizeSocketPayloadForEvent(
       payload,
       eventName: 'game:operation_updated',
@@ -385,17 +344,50 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       return;
     }
 
-    final sessionId = normalizedPayload['sessionId'] as String?;
-    final slotId = normalizedPayload['slotId'] as String?;
-    if (!_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId) &&
-        !_eventAffectsRegistrationSession(
+    final action = resolveLiveSyncTriggerAction(
+      LiveSyncTrigger.operationUpdated,
+      updatedReason: normalizedPayload['updatedReason'] as String?,
+    );
+
+    switch (action) {
+      case LiveSyncAction.ignore:
+        return;
+      case LiveSyncAction.localPatchOnly:
+        final sessionId = normalizedPayload['sessionId'] as String?;
+        final slotId = normalizedPayload['slotId'] as String?;
+        if (_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId)) {
+          LiveRealtimeDebug.socket('game:operation_updated', normalizedPayload);
+          _applyAutoCallScheduleFromPayload(normalizedPayload);
+        }
+        return;
+      case LiveSyncAction.canonicalSnapshotFetch:
+        final sessionId = normalizedPayload['sessionId'] as String?;
+        final slotId = normalizedPayload['slotId'] as String?;
+        final affectsCurrent = _eventAffectsCurrentGame(
           sessionId: sessionId,
           slotId: slotId,
-        )) {
-      return;
+        );
+        final affectsRegistration = _eventAffectsRegistrationSession(
+          sessionId: sessionId,
+          slotId: slotId,
+        );
+        if (!affectsCurrent && !affectsRegistration) {
+          return;
+        }
+        if (affectsRegistration && !affectsCurrent) {
+          _scheduleCanonicalRefetch(
+            reason: 'operation_updated_registration',
+            registrationSessionId: sessionId,
+          );
+          return;
+        }
+        _scheduleCanonicalRefetch(reason: 'operation_updated');
+        return;
+      case LiveSyncAction.calledNumbersFetchOnly:
+      case LiveSyncAction.terminalTransitionSnapshot:
+        // Not used for operation_updated in Plan 2 matrix.
+        return;
     }
-
-    _scheduleCanonicalRefetch();
   }
 
   void _onSlotEntryFeeUpdated(dynamic payload) {
