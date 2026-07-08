@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,6 +38,7 @@ class LiveCartelaCard extends StatelessWidget {
     this.showMarkColorPicker = true,
     this.blockedReasonCode,
     this.blockedServerReason,
+    this.bingoLockListenable,
     super.key,
   });
 
@@ -56,6 +58,8 @@ class LiveCartelaCard extends StatelessWidget {
   final bool showMarkColorPicker;
   final String? blockedReasonCode;
   final String? blockedServerReason;
+  /// When set, BINGO button toggles from this notifier without rebuilding the card body.
+  final ValueListenable<bool>? bingoLockListenable;
   final Set<String> manualMarkedNumbers;
   final String? lastManualMarkedKey;
   final void Function(GameCartelaModel cartela, String header, String value)
@@ -101,7 +105,8 @@ class LiveCartelaCard extends StatelessWidget {
         !isBlocked &&
         !readOnlyOutcome;
 
-    return _GreenClaimPulseWrapper(
+    return RepaintBoundary(
+      child: _GreenClaimPulseWrapper(
       active: showClaimReadyHighlight || (isWinner && !isBlocked),
       child: _OneAwayPulseWrapper(
         active:
@@ -206,11 +211,10 @@ class LiveCartelaCard extends StatelessWidget {
                                 letterSpacing: 0.4,
                               ),
                             )
-                          : _BingoButton(
-                              canClaim: canClaimBingo,
+                          : _buildBingoClaimButton(
+                              canClaimBase: canClaimBingo,
                               showReadyPulse: showClaimReadyHighlight,
                               isClaiming: isClaiming,
-                              onPressed: onClaimBingo,
                             ),
                     ),
                   ),
@@ -325,6 +329,35 @@ class LiveCartelaCard extends StatelessWidget {
         ),
       ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildBingoClaimButton({
+    required bool canClaimBase,
+    required bool showReadyPulse,
+    required bool isClaiming,
+  }) {
+    final lockListenable = bingoLockListenable;
+    if (lockListenable == null) {
+      return _BingoButton(
+        canClaim: canClaimBase,
+        showReadyPulse: showReadyPulse,
+        isClaiming: isClaiming,
+        onPressed: onClaimBingo,
+      );
+    }
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: lockListenable,
+      builder: (context, locked, _) {
+        return _BingoButton(
+          canClaim: canClaimBase && !locked,
+          showReadyPulse: showReadyPulse && !locked,
+          isClaiming: isClaiming,
+          onPressed: onClaimBingo,
+        );
+      },
     );
   }
 }

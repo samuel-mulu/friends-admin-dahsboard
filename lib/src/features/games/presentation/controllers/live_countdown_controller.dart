@@ -42,6 +42,9 @@ class LiveCountdownController {
   DateTime? winnerWindowEndsAt;
   Timer? winnerWindowTicker;
 
+  /// BINGO claim button lock during pre-call / awaiting ball — does not dirty the cartela list.
+  final ValueNotifier<bool> bingoClaimLocked = ValueNotifier<bool>(false);
+
   DateTime? _trackedNextAutoCallAt;
   String? _trackedNextBallSessionScope;
   bool _nextBallScheduleAuthoritativelyNull = false;
@@ -53,9 +56,17 @@ class LiveCountdownController {
   bool _pausedForAppBackground = false;
 
   void dispose() {
+    bingoClaimLocked.dispose();
     _stopNextBallTicker(clearDisplay: false);
     winnerWindowTicker?.cancel();
     winnerWindowTicker = null;
+  }
+
+  void updateBingoClaimLocked(bool value) {
+    if (bingoClaimLocked.value == value) {
+      return;
+    }
+    bingoClaimLocked.value = value;
   }
 
   @visibleForTesting
@@ -435,6 +446,16 @@ class LiveCountdownController {
       callingPhaseBaselineOrder = null;
     }
     nextBallPlayPhase = resolvedPlayPhase;
+    final locked = next_ball_countdown.isBingoClaimCountdownLocked(
+      gameStatus: game.status,
+      autoCallActive: context.autoCallActive,
+      nextAutoCallAt: target,
+      clock: clock,
+      playPhase: resolvedPlayPhase,
+      highestKnownCalledOrder: context.highestKnownCalledOrder,
+      callingPhaseBaselineOrder: callingPhaseBaselineOrder,
+    );
+    updateBingoClaimLocked(locked);
     nextBallStaleGuard.onScheduleOrBallEvent(
       target: target,
       sessionId: game.sessionId ?? game.id,
@@ -645,6 +666,7 @@ class LiveCountdownController {
   }
 
   bool _clearNextBallDisplay() {
+    updateBingoClaimLocked(false);
     if (nextBallCountdownSeconds == null && nextBallZeroForMs == 0) {
       return false;
     }

@@ -1168,6 +1168,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           blockedReasonCodeFor: _blockedReasonCodeForCartela,
           blockedServerReasonFor: _blockedServerReasonForCartela,
           onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
+          bingoLockListenable: _countdown.bingoClaimLocked,
         ),
         if (_shouldShowInlineRegistrationPanel &&
             !_blocksRegistrationPromotion) ...[
@@ -1415,6 +1416,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             blockedReasonCodeFor: _blockedReasonCodeForCartela,
             blockedServerReasonFor: _blockedServerReasonForCartela,
             onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
+            bingoLockListenable: _countdown.bingoClaimLocked,
           ),
           if (_shouldShowInlineRegistrationPanel &&
               !_review.postGameSummaryReviewActive) ...[
@@ -1739,6 +1741,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     required this.blockedReasonCodeFor,
     required this.blockedServerReasonFor,
     this.onReorder,
+    this.bingoLockListenable,
   });
 
   final List<GameCartelaModel> cartelas;
@@ -1765,6 +1768,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
   final String? Function(GameCartelaModel) blockedReasonCodeFor;
   final String? Function(GameCartelaModel) blockedServerReasonFor;
   final void Function(int fromIndex, int toIndex)? onReorder;
+  final ValueListenable<bool>? bingoLockListenable;
 
   Widget _buildCartelaCard({
     required GameCartelaModel gameCartela,
@@ -1809,6 +1813,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
       onClearMarks: () => onClearMarksForCartela(gameCartela),
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
+      bingoLockListenable: bingoLockListenable,
     );
   }
 

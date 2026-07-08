@@ -100,7 +100,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       game: _game,
       gameCartela: gameCartela,
       winnerWindowExpired: _winnerWindowExpired,
-      isCountdownLocked: _isBingoClaimCountdownLocked,
+      // Lock is applied on the BINGO button via bingoClaimLocked listenable.
+      isCountdownLocked: false,
     );
   }
 
