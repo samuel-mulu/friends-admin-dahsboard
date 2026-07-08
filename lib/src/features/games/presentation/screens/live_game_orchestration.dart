@@ -1863,7 +1863,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _review.sessionWinnerResults = const [];
         _review.sessionWinnerResultsLoaded = false;
         _review.sessionWinnerResultsLoading = false;
-        _review.winnerCartelaDisplay.clear();
+        _review.clearFinishedReviewVisualState(
+          reason: WinnerPatternClearReason.sessionChanged,
+        );
         _cn.cartelaSortResults = const {};
         _cn.blockedCartelaFrozenMarks.clear();
         _cn.blockedCartelaFrozenSortResults.clear();

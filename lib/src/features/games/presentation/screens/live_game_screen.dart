@@ -67,6 +67,7 @@ import '../utils/merge_registered_cartelas.dart';
 import '../utils/live_game_event_guard.dart';
 import '../utils/live_game_finish_transition.dart';
 import '../utils/live_terminal_enter_policy.dart';
+import '../utils/winner_pattern_clear_policy.dart';
 import '../utils/live_socket_session_membership.dart';
 import '../utils/registration_cartela_grid_index.dart';
 import '../utils/next_ball_countdown.dart';

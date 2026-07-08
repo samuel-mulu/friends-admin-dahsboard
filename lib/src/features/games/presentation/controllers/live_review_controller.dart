@@ -7,6 +7,7 @@ import '../utils/live_game_finish_transition.dart' as finish_transition;
 import '../utils/live_presentation_phase.dart' as presentation_phase;
 import '../utils/session_winner_results_for_display.dart' as winner_display;
 import '../utils/winner_cartela_live_display.dart';
+import '../utils/winner_pattern_clear_policy.dart';
 import 'live_game_host.dart';
 
 /// Post-game review state and winner-result coordination.
@@ -110,12 +111,20 @@ class LiveReviewController {
     }
   }
 
-  void clearFinishedReviewVisualState() {
+  void clearFinishedReviewVisualState({
+    WinnerPatternClearReason reason =
+        WinnerPatternClearReason.clearSessionScopedReview,
+  }) {
+    if (!shouldClearWinnerPatterns(reason)) {
+      return;
+    }
     winnerCartelaDisplay.clear();
   }
 
   void clearFinishedReviewSessionData() {
-    clearFinishedReviewVisualState();
+    clearFinishedReviewVisualState(
+      reason: WinnerPatternClearReason.clearSessionScopedReview,
+    );
     sessionWinnerResults = const [];
     sessionWinnerResultsLoaded = false;
     sessionWinnerResultsLoading = false;
@@ -128,7 +137,9 @@ class LiveReviewController {
     sessionWinnerCartelaNumbers = const [];
     sessionBlockedCartelaNumbers = const [];
     sessionCheckingCartelaNumbers = const [];
-    winnerCartelaDisplay.clear();
+    clearFinishedReviewVisualState(
+      reason: WinnerPatternClearReason.sessionChanged,
+    );
     winnerCartelaDialogAutoShownForSessionId = null;
   }
 
@@ -368,7 +379,7 @@ class LiveReviewController {
     }
 
     winnerCartelaDialogVisible = false;
-    clearFinishedReviewVisualState();
+    // Do NOT clear winnerCartelaDisplay here — wait for sessionChanged apply.
     finishTransitionTimer?.cancel();
     finishTransitionTimer = null;
     postGameSummaryCountdownTicker?.cancel();
