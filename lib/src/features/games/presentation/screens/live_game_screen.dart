@@ -332,6 +332,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
               : null,
           canonicalRefetchInFlight:
               controllers.realtime.canonicalRefetchInFlight,
+          postGameSummaryAdvancing: _review.postGameSummaryAdvancing,
+          registrationGridReady: true,
         ),
         now: _countdownNow(),
         preparingStaleAfter: _preparingPhaseCap,

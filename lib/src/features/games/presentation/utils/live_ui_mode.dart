@@ -1,6 +1,7 @@
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import 'live_presentation_phase.dart';
+import 'live_ready_atomic_visibility.dart';
 import 'live_ready_transition_lock.dart';
 
 /// Flutter-only presentation modes. These are not backend statuses.
@@ -49,6 +50,8 @@ class LiveSessionHolds {
     this.registrationCountdownClosed = false,
     this.readyTransitionLock,
     this.canonicalRefetchInFlight = false,
+    this.postGameSummaryAdvancing = false,
+    this.registrationGridReady = true,
   });
 
   final bool postGameSummaryReviewActive;
@@ -56,6 +59,8 @@ class LiveSessionHolds {
   final bool registrationCountdownClosed;
   final ReadyTransitionLock? readyTransitionLock;
   final bool canonicalRefetchInFlight;
+  final bool postGameSummaryAdvancing;
+  final bool registrationGridReady;
 }
 
 class ResolveLiveUiModeInput {
@@ -320,6 +325,15 @@ class LiveUiModeResolver {
           presentationPhase == LivePresentationPhase.preparingGame
               ? LiveUiMode.registrationWaitingForCurrentGame
               : LiveUiMode.registrationCountdown;
+      final wantsSurfaces = !_screenBlocked(input) && !input.isGuest;
+      final readyAtomic = resolveReadyAtomicVisibility(
+        hasReadyGame: wantsSurfaces && primary != null,
+        gridReady: input.holds.registrationGridReady &&
+            !input.holds.canonicalRefetchInFlight,
+        holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
+            input.holds.canonicalRefetchInFlight,
+      );
+      final showSurfaces = readyAtomic.showBanner && readyAtomic.showGrid;
 
       return LiveUiModeState(
         mode: mode,
@@ -327,10 +341,10 @@ class LiveUiModeResolver {
         secondaryRegistrationGame: null,
         registrationTarget: primary,
         presentationPhase: presentationPhase,
-        useRegistrationOpenLayout: !_screenBlocked(input),
+        useRegistrationOpenLayout: showSurfaces,
         showsInlinePlayCartelas: false,
         showCalledNumbersStrip: false,
-        showRegistrationGrid: !input.isGuest,
+        showRegistrationGrid: showSurfaces,
         showReview: false,
         hideRegistrationCountdown: true,
         deferNextRoundRegistrationCountdown: false,
@@ -341,7 +355,7 @@ class LiveUiModeResolver {
         usesExpandedNoCartelaRegistrationLayout: false,
         showMissedRoundWrapper: false,
         countdownKind: LiveUiCountdownKind.none,
-        registrationOpenBodyTarget: primary,
+        registrationOpenBodyTarget: showSurfaces ? primary : null,
         hasBlockingLiveGame: hasBlockingLiveGame,
       );
     }
@@ -589,16 +603,28 @@ class LiveUiModeResolver {
               : (registrationTarget ?? primary))
         : null;
 
+    final wantsRegistrationSurfaces =
+        useRegistrationOpenLayout && _showRegistrationGrid(mode, input.isGuest);
+    final readyAtomic = resolveReadyAtomicVisibility(
+      hasReadyGame: wantsRegistrationSurfaces,
+      gridReady: input.holds.registrationGridReady &&
+          !input.holds.canonicalRefetchInFlight,
+      holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
+          input.holds.canonicalRefetchInFlight,
+    );
+    final showRegistrationSurfaces = readyAtomic.showBanner && readyAtomic.showGrid;
+
     return LiveUiModeState(
       mode: mode,
       primaryGame: primary,
       secondaryRegistrationGame: secondaryRegistration,
       registrationTarget: registrationTarget,
       presentationPhase: presentationPhase,
-      useRegistrationOpenLayout: useRegistrationOpenLayout,
+      useRegistrationOpenLayout:
+          useRegistrationOpenLayout && showRegistrationSurfaces,
       showsInlinePlayCartelas: showsInlinePlay,
       showCalledNumbersStrip: showsInlinePlay && !primary.isRegistrationOpen,
-      showRegistrationGrid: _showRegistrationGrid(mode, input.isGuest),
+      showRegistrationGrid: showRegistrationSurfaces,
       showReview: mode == LiveUiMode.reviewFinished ||
           mode == LiveUiMode.reviewNoWinner,
       hideRegistrationCountdown: hideRegistrationCountdown,
@@ -614,9 +640,11 @@ class LiveUiModeResolver {
       ),
       blocksRegistrationPromotion: blocksPromotion,
       usesExpandedNoCartelaRegistrationLayout: false,
-      showMissedRoundWrapper: mode == LiveUiMode.missedRoundRegistration,
+      showMissedRoundWrapper:
+          mode == LiveUiMode.missedRoundRegistration && showRegistrationSurfaces,
       countdownKind: _countdownKind(mode, presentationPhase, input.holds),
-      registrationOpenBodyTarget: registrationOpenBodyTarget,
+      registrationOpenBodyTarget:
+          showRegistrationSurfaces ? registrationOpenBodyTarget : null,
       hasBlockingLiveGame: hasBlockingLiveGame,
     );
   }
