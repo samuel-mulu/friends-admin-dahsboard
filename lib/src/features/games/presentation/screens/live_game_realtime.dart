@@ -1,0 +1,533 @@
+part of 'live_game_screen.dart';
+
+void _socketDebugLog(String message) {
+  if (kDebugMode) {
+    debugPrint('[bulk_debug] $message');
+  }
+}
+
+mixin _LiveGameRealtime on _LiveGameOrchestration {
+  void _registerSocketListeners() {
+    _socketService.on('connect', _onSocketConnected);
+    _socketService.on('disconnect', _onSocketDisconnected);
+    _socketService.on('connect_error', _onSocketConnectError);
+    _socketService.on('game:status_changed', _onGameStatusChanged);
+    _socketService.on('slot:status_changed', _onSlotStatusChanged);
+    _socketService.on('game:number_called', _onNumberCalled);
+    _socketService.on('game:bingo_checking', _onBingoChecking);
+    _socketService.on('game:bingo_claimed', _onBingoClaimed);
+    _socketService.on('game:bingo_valid', _onBingoValid);
+    _socketService.on('game:bingo_invalid', _onBingoInvalid);
+    _socketService.on('game:winner_window_started', _onWinnerWindowEvent);
+    _socketService.on('game:winner_window_joined', _onWinnerWindowEvent);
+    _socketService.on('game:finished', _onGameFinished);
+    _socketService.on('game:cancelled', _onGameCancelled);
+    _socketService.on('session:prize_updated', _onSessionPrizeUpdated);
+    _socketService.on('session:cartelas_updated', _onSessionCartelasUpdated);
+    _socketService.on('my_cartela:registered', _onMyCartelaRegistered);
+    _socketService.on('wallet:updated', _onWalletUpdated);
+    _socketService.on('game:operation_updated', _onGameOperationUpdated);
+    _socketService.on('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
+  }
+
+  void _removeSocketListeners() {
+    _socketService.off('connect', _onSocketConnected);
+    _socketService.off('disconnect', _onSocketDisconnected);
+    _socketService.off('connect_error', _onSocketConnectError);
+    _socketService.off('game:status_changed', _onGameStatusChanged);
+    _socketService.off('slot:status_changed', _onSlotStatusChanged);
+    _socketService.off('game:number_called', _onNumberCalled);
+    _socketService.off('game:bingo_checking', _onBingoChecking);
+    _socketService.off('game:bingo_claimed', _onBingoClaimed);
+    _socketService.off('game:bingo_valid', _onBingoValid);
+    _socketService.off('game:bingo_invalid', _onBingoInvalid);
+    _socketService.off('game:winner_window_started', _onWinnerWindowEvent);
+    _socketService.off('game:winner_window_joined', _onWinnerWindowEvent);
+    _socketService.off('game:finished', _onGameFinished);
+    _socketService.off('game:cancelled', _onGameCancelled);
+    _socketService.off('session:prize_updated', _onSessionPrizeUpdated);
+    _socketService.off('session:cartelas_updated', _onSessionCartelasUpdated);
+    _socketService.off('my_cartela:registered', _onMyCartelaRegistered);
+    _socketService.off('wallet:updated', _onWalletUpdated);
+    _socketService.off('game:operation_updated', _onGameOperationUpdated);
+    _socketService.off('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
+  }
+
+  void _onSocketConnected(dynamic _) {
+    if (!mounted) {
+      return;
+    }
+
+    LiveRealtimeDebug.socket('connect');
+
+    _stopDisconnectedCalledNumbersPolling();
+
+    final joinedGameId = _joinedGameId;
+    if (joinedGameId != null) {
+      _applySocketSessionMembership(joinedGameId);
+    }
+
+    _realtime.onSocketConnectivityChanged();
+    unawaited(_realtime.syncLatest(reason: 'socket_reconnect'));
+    _evaluateLiveRoomSplash();
+  }
+
+  Future<void> _recoverFromAppResume() async {
+    if (!mounted) {
+      return;
+    }
+
+    final resumeDecision = AppBackgroundResumeGate.evaluateFullResumeSync(
+      socketConnectedNow: _socketService.isConnected,
+    );
+
+    _countdown.resumeFromAppBackground();
+    _syncWinnerWindowTicker();
+    _syncNextBallCountdownTicker();
+
+    if (!resumeDecision.shouldRunFullResumeSync) {
+      LiveRealtimeDebug.resumeSyncIgnored(reason: resumeDecision.reason);
+      return;
+    }
+
+    await _realtime.syncLatest(reason: 'app_resume');
+  }
+
+  Future<void> _refresh() async {
+    await _realtime.syncLatest(reason: 'manual_refresh');
+  }
+
+  void _onSocketDisconnected(dynamic _) {
+    LiveRealtimeDebug.socket('disconnect');
+    AppBackgroundResumeGate.onSocketDisconnected();
+    _realtime.onSocketConnectivityChanged();
+    _startDisconnectedCalledNumbersPolling();
+  }
+
+  void _onSocketConnectError(dynamic error) {
+    LiveRealtimeDebug.socket('connect_error', {
+      if (error != null) 'error': error.toString(),
+    });
+    AppBackgroundResumeGate.onSocketDisconnected();
+    _realtime.onSocketConnectivityChanged();
+    _startDisconnectedCalledNumbersPolling();
+  }
+
+  void _startDisconnectedCalledNumbersPolling() {
+    _cn.startDisconnectedPolling(
+      isSocketConnected: () => _socketService.isConnected,
+    );
+  }
+
+  void _stopDisconnectedCalledNumbersPolling() {
+    _cn.stopDisconnectedPolling();
+  }
+
+  void _onGameStatusChanged(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'game:status_changed',
+      includeCalledNumbers: true,
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId =
+        normalizedPayload['sessionId'] as String? ??
+        normalizedPayload['id'] as String?;
+    final slotId =
+        normalizedPayload['gameSlotId'] as String? ??
+        normalizedPayload['slotId'] as String?;
+    final affectsCurrent = _eventAffectsCurrentGame(
+      sessionId: sessionId,
+      slotId: slotId,
+    );
+    final affectsRegistration = _eventAffectsRegistrationSession(
+      sessionId: sessionId,
+      slotId: slotId,
+    );
+    if (!affectsCurrent && !affectsRegistration) {
+      return;
+    }
+
+    LiveRealtimeDebug.socket('game:status_changed', normalizedPayload);
+
+    if (affectsRegistration && !affectsCurrent) {
+      _scheduleCanonicalRefetch(registrationSessionId: sessionId);
+      return;
+    }
+
+    final status = normalizedPayload['status'] as String?;
+    final isTerminal =
+        status == 'FINISHED' || status == 'NO_WINNER' || status == 'CANCELLED';
+
+    if (isTerminal) {
+      unawaited(
+        _refetchCanonicalImmediate(
+          wallet: !_isGuest,
+          registrationSessionId: _game?.sessionId,
+          includeCalledNumbers: true,
+          includeMyCartelas: false,
+        ),
+      );
+      return;
+    }
+
+    _scheduleCanonicalRefetch(
+      registrationSessionId: sessionId,
+      includeCalledNumbers: true,
+    );
+  }
+
+  void _onSlotStatusChanged(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'slot:status_changed',
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final slotId =
+        normalizedPayload['id'] as String? ??
+        normalizedPayload['slotId'] as String?;
+    final sessionId = normalizedPayload['sessionId'] as String?;
+    if (!_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId)) {
+      return;
+    }
+
+    _refetchRegistrationDeadlineImmediately();
+  }
+
+  void _onSessionPrizeUpdated(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'session:prize_updated',
+      preferRegistrationSessionRefetch: true,
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId =
+        normalizedPayload['sessionId'] as String? ??
+        normalizedPayload['id'] as String?;
+    if (!_eventAffectsRegistrationSession(sessionId: sessionId, slotId: null)) {
+      return;
+    }
+
+    _applyRegistrationMetricsPayload(normalizedPayload, sessionId: sessionId);
+  }
+
+  void _onSessionCartelasUpdated(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'session:cartelas_updated',
+      preferRegistrationSessionRefetch: true,
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId = normalizedPayload['sessionId'] as String?;
+    final slotId = normalizedPayload['slotId'] as String?;
+    if (!_eventAffectsRegistrationSession(
+      sessionId: sessionId,
+      slotId: slotId,
+    )) {
+      return;
+    }
+
+    final parsed = parseAndValidateRegistrationCartelaChanges(
+      normalizedPayload['changes'],
+      currentUserId: ref.read(authControllerProvider).session?.user.id,
+    );
+
+    // Debug log #10: Socket cartelas_updated
+    if (parsed.valid.isNotEmpty) {
+      for (final change in parsed.valid) {
+        _socketDebugLog(
+          'socket_cartelas_updated cartela=${change.cartelaNumber} state=${change.owner} session=$sessionId',
+        );
+      }
+    }
+
+    if (sessionId != null && parsed.valid.isNotEmpty) {
+      ref
+          .read(registrationStatePatchProvider.notifier)
+          .applyConfirmedChanges(sessionId, parsed.valid);
+      RegistrationUxMetrics.socketPatchApplied(
+        changeCount: parsed.valid.length,
+      );
+    }
+
+    _applyRegistrationMetricsPayload(normalizedPayload, sessionId: sessionId);
+
+    if (parsed.valid.isEmpty || parsed.hasMalformed) {
+      RegistrationUxMetrics.snapshotRefetchScheduled(
+        reason: parsed.valid.isEmpty ? 'empty_changes' : 'malformed_changes',
+      );
+      _scheduleCanonicalRefetch(registrationSessionId: sessionId);
+    }
+  }
+
+  void _onMyCartelaRegistered(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'my_cartela:registered',
+      wallet: !_isGuest,
+      preferRegistrationSessionRefetch: true,
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId = normalizedPayload['sessionId'] as String?;
+    if (!_eventAffectsRegistrationSession(sessionId: sessionId, slotId: null)) {
+      return;
+    }
+
+    _applyRegistrationMetricsPayload(normalizedPayload, sessionId: sessionId);
+    ref.invalidate(myWalletProvider);
+    if (sessionId != null) {
+      ref.invalidate(registrationStateProvider(sessionId));
+    }
+    if (sessionId != null && sessionId == _game?.sessionId) {
+      unawaited(_refreshMyCartelasSilently());
+    } else if (sessionId != null &&
+        sessionId == _trackedRegistrationSessionId) {
+      unawaited(_refreshNextRegistrationCartelasSilently());
+    }
+  }
+
+  void _refetchRegistrationDeadlineImmediately({bool wallet = false}) {
+    unawaited(
+      _refetchCanonicalImmediate(
+        wallet: wallet,
+        registrationSessionId:
+            _game?.sessionId ?? _trackedRegistrationSessionId,
+      ),
+    );
+  }
+
+  void _onGameOperationUpdated(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    if (payload is Map<String, dynamic>) {
+      // Legacy guard: API no longer emits operation_updated per ball.
+      final reason = payload['updatedReason'] as String?;
+      if (reason == 'number_called') {
+        return;
+      }
+
+      if (reason == 'auto_call_changed') {
+        final sessionId = payload['sessionId'] as String?;
+        final slotId = payload['slotId'] as String?;
+        if (_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId)) {
+          LiveRealtimeDebug.socket('game:operation_updated', payload);
+          _applyAutoCallScheduleFromPayload(payload);
+        }
+        return;
+      }
+
+      final sessionId = payload['sessionId'] as String?;
+      final slotId = payload['slotId'] as String?;
+      final affectsCurrent = _eventAffectsCurrentGame(
+        sessionId: sessionId,
+        slotId: slotId,
+      );
+      final affectsRegistration = _eventAffectsRegistrationSession(
+        sessionId: sessionId,
+        slotId: slotId,
+      );
+
+      if (!affectsCurrent && !affectsRegistration) {
+        return;
+      }
+
+      if (affectsRegistration && !affectsCurrent) {
+        _scheduleCanonicalRefetch(registrationSessionId: sessionId);
+        return;
+      }
+
+      _scheduleCanonicalRefetch();
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'game:operation_updated',
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId = normalizedPayload['sessionId'] as String?;
+    final slotId = normalizedPayload['slotId'] as String?;
+    if (!_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId) &&
+        !_eventAffectsRegistrationSession(
+          sessionId: sessionId,
+          slotId: slotId,
+        )) {
+      return;
+    }
+
+    _scheduleCanonicalRefetch();
+  }
+
+  void _onSlotEntryFeeUpdated(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'slot:entry_fee_updated',
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final slotId = normalizedPayload['id'] as String?;
+    if (!_eventAffectsCurrentGame(slotId: slotId)) {
+      return;
+    }
+
+    _scheduleCanonicalRefetch();
+  }
+
+  /// Phase B2: Apply registration metrics from socket events for immediate UI feedback.
+  ///
+  /// IMPORTANT: These updates are TEMPORARY optimistic UI only.
+  /// The next canonical refresh from operations/current will ALWAYS overwrite
+  /// these values with the backend truth via mergeCanonicalSessionState.
+  ///
+  /// Architecture:
+  /// - Socket patch → immediate visual update (this method)
+  /// - operations/current → permanent truth (overwrites socket values)
+  ///
+  /// Session guard: Only updates the current visible session or the tracked
+  /// READY registration session. This never mutates status, queue order, or
+  /// registration target identity.
+  void _applyRegistrationMetricsPayload(
+    Map<String, dynamic> payload, {
+    String? sessionId,
+  }) {
+    final targetSessionId =
+        sessionId ??
+        payload['sessionId'] as String? ??
+        payload['id'] as String?;
+
+    if (_readyTransitionLockActive) {
+      final lockSessionId = _transition.readyTransitionLock!.sessionId;
+      if (targetSessionId != null &&
+          targetSessionId != lockSessionId &&
+          _game?.sessionId == lockSessionId) {
+        final patchedTrackedRegistrationGame = applySocketRegistrationMetricsPatch(
+          game: _nextUpcomingGame,
+          targetSessionId: targetSessionId,
+          prizeAmount: payload['prizeAmount'] as String?,
+          registeredCartelasCount: _parsePayloadInt(
+            payload['registeredCartelasCount'],
+          ),
+          requireReadyRegistrationTarget: true,
+        );
+        if (patchedTrackedRegistrationGame != _nextUpcomingGame) {
+          setState(() {
+            _nextUpcomingGame = patchedTrackedRegistrationGame;
+          });
+        }
+        return;
+      }
+    }
+
+    final prizeAmount = payload['prizeAmount'] as String?;
+    final registeredCartelasCount = _parsePayloadInt(
+      payload['registeredCartelasCount'],
+    );
+
+    final patchedCurrentGame = applySocketRegistrationMetricsPatch(
+      game: _game,
+      targetSessionId: targetSessionId,
+      prizeAmount: prizeAmount,
+      registeredCartelasCount: registeredCartelasCount,
+    );
+    final patchedTrackedRegistrationGame = applySocketRegistrationMetricsPatch(
+      game: _nextUpcomingGame,
+      targetSessionId: targetSessionId,
+      prizeAmount: prizeAmount,
+      registeredCartelasCount: registeredCartelasCount,
+      requireReadyRegistrationTarget: true,
+    );
+
+    if (patchedCurrentGame == _game &&
+        patchedTrackedRegistrationGame == _nextUpcomingGame) {
+      return;
+    }
+
+    setState(() {
+      _game = patchedCurrentGame;
+      _nextUpcomingGame = patchedTrackedRegistrationGame;
+    });
+  }
+
+  int? _parsePayloadInt(Object? raw) {
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw);
+    }
+    return null;
+  }
+}
+
+({Color background, Color foreground}) _cartelaStatusColors(
+  ThemeData theme,
+  GameCartelaStatus status,
+) {
+  return switch (status) {
+    GameCartelaStatus.registered => (
+      background: theme.colorScheme.surfaceContainerHighest,
+      foreground: theme.colorScheme.onSurface,
+    ),
+    GameCartelaStatus.winner => (
+      background: Colors.amber.shade100,
+      foreground: Colors.amber.shade900,
+    ),
+    GameCartelaStatus.blocked => (
+      background: theme.colorScheme.errorContainer,
+      foreground: theme.colorScheme.onErrorContainer,
+    ),
+    GameCartelaStatus.cancelled => (
+      background: theme.colorScheme.surfaceContainerHighest,
+      foreground: theme.colorScheme.onSurface,
+    ),
+  };
+}

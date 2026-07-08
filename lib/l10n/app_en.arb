@@ -1,0 +1,1961 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Friends Bingo",
+  "@appTitle": { "description": "Application title" },
+
+  "appBarHi": "Hi, ",
+  "@appBarHi": { "description": "Greeting prefix in app bar" },
+
+  "signIn": "Sign in",
+  "@signIn": {},
+
+  "signUp": "Sign up",
+  "@signUp": {},
+
+  "logout": "Logout",
+  "@logout": {},
+
+  "language": "Language",
+  "@language": {},
+
+  "themeLight": "Light",
+  "@themeLight": {},
+
+  "themeDark": "Dark",
+  "@themeDark": {},
+
+  "themeAuto": "Auto",
+  "@themeAuto": {},
+
+  "theme": "Theme",
+  "@theme": {},
+
+  "loginTitle": "Welcome back",
+  "@loginTitle": {},
+
+  "loginPhone": "Phone number",
+  "@loginPhone": {},
+
+  "loginPhoneHint": "091*******",
+  "@loginPhoneHint": {},
+
+  "loginPassword": "Password",
+  "@loginPassword": {},
+
+  "loginPasswordHint": "Enter your password",
+  "@loginPasswordHint": {},
+
+  "loginForgotPassword": "Forgot password?",
+  "@loginForgotPassword": {},
+
+  "loginSignIn": "Sign in",
+  "@loginSignIn": {},
+
+  "loginCreateAccount": "Create a new account",
+  "@loginCreateAccount": {},
+
+  "registerFullName": "Full name",
+  "@registerFullName": {},
+
+  "registerFullNameHint": "Full Name",
+  "@registerFullNameHint": {},
+
+  "registerPassword": "Password",
+  "@registerPassword": {},
+
+  "registerPasswordHint": "Minimum 6 characters",
+  "@registerPasswordHint": {},
+
+  "registerConfirmPassword": "Confirm password",
+  "@registerConfirmPassword": {},
+
+  "registerConfirmPasswordHint": "Re-enter your password",
+  "@registerConfirmPasswordHint": {},
+
+  "registerContinue": "Continue",
+  "@registerContinue": {},
+
+  "registerAlreadyHaveAccount": "Already have an account? Sign in",
+  "@registerAlreadyHaveAccount": {},
+
+  "forgotPasswordTitle": "Reset password",
+  "@forgotPasswordTitle": {},
+
+  "forgotPasswordSubtitle": "Enter your phone number to receive a verification code.",
+  "@forgotPasswordSubtitle": {},
+
+  "forgotPasswordSendCode": "Send verification code",
+  "@forgotPasswordSendCode": {},
+
+  "forgotPasswordBackToSignIn": "Back to sign in",
+  "@forgotPasswordBackToSignIn": {},
+
+  "otpVerifyPhone": "Verify your phone",
+  "@otpVerifyPhone": {},
+
+  "otpSentTo": "Code sent to {phone}.",
+  "@otpSentTo": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+
+  "otpCreateAccount": "Create account",
+  "@otpCreateAccount": {},
+
+  "otpResendCode": "Resend code",
+  "@otpResendCode": {},
+
+  "otpResendInSeconds": "Resend in {seconds}s",
+  "@otpResendInSeconds": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "otpResendInMinutes": "Resend in {minutes} min",
+  "@otpResendInMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+
+  "otpResendInMinutesSeconds": "Resend in {minutes}m {seconds}s",
+  "@otpResendInMinutesSeconds": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+
+  "otpBackToDetails": "Back to details",
+  "@otpBackToDetails": {},
+
+  "otpEnterCode": "Enter the 6-digit verification code.",
+  "@otpEnterCode": {},
+
+  "otpSmsBanner": "Enter the verification code sent to your phone by SMS.",
+  "@otpSmsBanner": {},
+
+  "resetPasswordTitle": "Set a new password",
+  "@resetPasswordTitle": {},
+
+  "resetPasswordSmsSentTo": "Enter the SMS code sent to {phone}.",
+  "@resetPasswordSmsSentTo": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+
+  "resetPasswordNewPassword": "New password",
+  "@resetPasswordNewPassword": {},
+
+  "resetPasswordConfirmNew": "Confirm new password",
+  "@resetPasswordConfirmNew": {},
+
+  "resetPasswordConfirmNewHint": "Re-enter your new password",
+  "@resetPasswordConfirmNewHint": {},
+
+  "resetPasswordUpdate": "Update password",
+  "@resetPasswordUpdate": {},
+
+  "resetPasswordBackToPhone": "Back to phone number",
+  "@resetPasswordBackToPhone": {},
+
+  "validatorPhoneRequired": "Phone number is required.",
+  "@validatorPhoneRequired": {},
+
+  "validatorPhoneInvalid": "Enter a valid phone number.",
+  "@validatorPhoneInvalid": {},
+
+  "validatorPasswordLength": "Password must be at least 6 characters.",
+  "@validatorPasswordLength": {},
+
+  "validatorFullNameLength": "Full name must be at least 3 characters.",
+  "@validatorFullNameLength": {},
+
+  "validatorPasswordMismatch": "Passwords do not match.",
+  "@validatorPasswordMismatch": {},
+
+  "validatorAmountRequired": "Amount is required.",
+  "@validatorAmountRequired": {},
+
+  "validatorAmountInvalid": "Enter a valid amount.",
+  "@validatorAmountInvalid": {},
+
+  "validatorAmountPositive": "Amount must be greater than zero.",
+  "@validatorAmountPositive": {},
+
+  "validatorTransactionRef": "Enter a valid transaction reference.",
+  "@validatorTransactionRef": {},
+
+  "dashboardHello": "Hello, {name}",
+  "@dashboardHello": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "dashboardSubtitle": "Open the live game, register your cartelas there, and keep an eye on your wallet from one place.",
+  "@dashboardSubtitle": {},
+
+  "dashboardOpenLiveGame": "Open live game",
+  "@dashboardOpenLiveGame": {},
+
+  "dashboardRole": "Role",
+  "@dashboardRole": {},
+
+  "dashboardStatus": "Status",
+  "@dashboardStatus": {},
+
+  "dashboardWalletSnapshot": "Wallet snapshot",
+  "@dashboardWalletSnapshot": {},
+
+  "dashboardAvailableBalance": "Available balance: {amount} ETB",
+  "@dashboardAvailableBalance": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "dashboardLockedBalance": "Locked balance: {amount} ETB",
+  "@dashboardLockedBalance": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "dashboardOpenWallet": "Open wallet",
+  "@dashboardOpenWallet": {},
+
+  "dashboardWalletLoading": "Loading wallet...",
+  "@dashboardWalletLoading": {},
+
+  "dashboardWalletUnavailable": "Wallet unavailable right now.",
+  "@dashboardWalletUnavailable": {},
+
+  "dashboardWhatIsNext": "What is next",
+  "@dashboardWhatIsNext": {},
+
+  "dashboardWhatIsNextBody": "Next steps can plug live called numbers, bingo claims, deposits, and withdrawals into this same foundation.",
+  "@dashboardWhatIsNextBody": {},
+
+  "walletAvailableBalance": "Available balance",
+  "@walletAvailableBalance": {},
+
+  "walletLockedBalance": "Locked balance",
+  "@walletLockedBalance": {},
+
+  "walletFreezBalance": "Freez balance",
+  "@walletFreezBalance": {},
+
+  "walletTotalBalance": "Total wallet",
+  "@walletTotalBalance": {},
+
+  "walletTotalEqualsHint": "Available + Locked = Total wallet",
+  "@walletTotalEqualsHint": {},
+
+  "walletDeposit": "Deposit",
+  "@walletDeposit": {},
+
+  "walletWithdraw": "Withdraw",
+  "@walletWithdraw": {},
+
+  "walletTransactionHistory": "Transaction history",
+  "@walletTransactionHistory": {},
+
+  "walletTransactionHistorySubtitle": "Review every wallet ledger movement.",
+  "@walletTransactionHistorySubtitle": {},
+
+  "walletDepositHistory": "Deposit history",
+  "@walletDepositHistory": {},
+
+  "walletDepositHistorySubtitle": "Track verification progress and retry when needed.",
+  "@walletDepositHistorySubtitle": {},
+
+  "walletWithdrawalHistory": "Withdrawal history",
+  "@walletWithdrawalHistory": {},
+
+  "walletWithdrawalHistorySubtitle": "Follow request, approval, and payout statuses.",
+  "@walletWithdrawalHistorySubtitle": {},
+
+  "walletCouldNotLoad": "Could not load wallet details.",
+  "@walletCouldNotLoad": {},
+
+  "walletTryAgain": "Try again",
+  "@walletTryAgain": {},
+
+  "depositScreenTitle": "Deposit",
+  "@depositScreenTitle": {},
+
+  "depositAmount": "Amount",
+  "@depositAmount": {},
+
+  "depositFtNumber": "FT number",
+  "@depositFtNumber": {},
+
+  "depositReceiptId": "Receipt ID",
+  "@depositReceiptId": {},
+
+  "depositReceiptCode": "Receipt code",
+  "@depositReceiptCode": {},
+
+  "depositReceiptCodeInvalid": "Enter a valid receipt code (6-20 letters and numbers).",
+  "@depositReceiptCodeInvalid": {},
+
+  "depositReceiptUrlNotAllowed": "Enter the receipt code only, not the full URL.",
+  "@depositReceiptUrlNotAllowed": {},
+
+  "depositSuccessApproved": "Deposit successful. Wallet updated.",
+  "@depositSuccessApproved": {},
+
+  "depositReceiptDuplicate": "This receipt has already been used.",
+  "@depositReceiptDuplicate": {},
+
+  "depositReceiptInvalid": "Receipt could not be verified.",
+  "@depositReceiptInvalid": {},
+
+  "depositAmountMismatch": "Amount does not match this receipt. Enter the settled amount shown on the receipt.",
+  "@depositAmountMismatch": {},
+
+  "depositAmountMismatchSettled": "This receipt settled amount is {settledAmount} ETB. Enter that amount—not the total paid amount (Telebirr fees are not deposited).",
+  "@depositAmountMismatchSettled": {
+    "placeholders": { "settledAmount": { "type": "String" } }
+  },
+
+  "depositReceiverMismatch": "This receipt was not paid to Friends Bingo.",
+  "@depositReceiverMismatch": {},
+
+  "depositDevHelper": "Development / test helper",
+  "@depositDevHelper": {},
+
+  "depositDevReference": "Development test reference: {ref}",
+  "@depositDevReference": {
+    "placeholders": { "ref": { "type": "String" } }
+  },
+
+  "depositUseTestRef": "Use test reference",
+  "@depositUseTestRef": {},
+
+  "depositSubmit": "Submit deposit",
+  "@depositSubmit": {},
+
+  "depositGuideTitle": "How to deposit",
+  "@depositGuideTitle": {},
+
+  "depositGuideTelebirrStep1": "Open Telebirr and send money to Friends Bingo",
+  "@depositGuideTelebirrStep1": {},
+
+  "depositGuideTelebirrStep2": "Open the receipt and copy the transaction number",
+  "@depositGuideTelebirrStep2": {},
+
+  "depositGuideTelebirrStep3": "Enter the settled amount and receipt code below",
+  "@depositGuideTelebirrStep3": {},
+
+  "depositGuideCbeStep1": "Open CBE mobile banking and transfer to Friends Bingo",
+  "@depositGuideCbeStep1": {},
+
+  "depositGuideCbeStep2": "Copy the FT reference number from the receipt",
+  "@depositGuideCbeStep2": {},
+
+  "depositGuideCbeStep3": "Enter the exact amount and reference below",
+  "@depositGuideCbeStep3": {},
+
+  "depositGuideAwashStep1": "Open Awash mobile banking and send payment",
+  "@depositGuideAwashStep1": {},
+
+  "depositGuideAwashStep2": "Copy the payment reference number",
+  "@depositGuideAwashStep2": {},
+
+  "depositGuideAwashStep3": "Enter the exact amount and reference below",
+  "@depositGuideAwashStep3": {},
+
+  "depositGuideBoaStep1": "Open BOA mobile banking and send payment",
+  "@depositGuideBoaStep1": {},
+
+  "depositGuideBoaStep2": "Copy the payment reference number",
+  "@depositGuideBoaStep2": {},
+
+  "depositGuideBoaStep3": "Enter the exact amount and reference below",
+  "@depositGuideBoaStep3": {},
+
+  "depositVerifying": "Verifying your payment…",
+  "@depositVerifying": {},
+
+  "depositApprovedTitle": "Deposit approved",
+  "@depositApprovedTitle": {},
+
+  "depositRejectedTitle": "Deposit failed",
+  "@depositRejectedTitle": {},
+
+  "depositTryAgain": "You can correct the details and try again.",
+  "@depositTryAgain": {},
+
+  "depositSelectProvider": "Payment method",
+  "@depositSelectProvider": {},
+
+  "depositSendToAccount": "Send to this account",
+  "@depositSendToAccount": {},
+
+  "depositShowInstructions": "Instructions",
+  "@depositShowInstructions": {},
+
+  "depositReceiptReviewLabel": "I have checked the amount and reference number from my transaction",
+  "@depositReceiptReviewLabel": {},
+
+  "depositCopyAccount": "Copy account",
+  "@depositCopyAccount": {},
+
+  "depositAccountCopied": "Account copied",
+  "@depositAccountCopied": {},
+
+  "depositGuideImageMissing": "Screenshot coming soon",
+  "@depositGuideImageMissing": {},
+
+  "depositGuideTapToExpand": "Tap to enlarge",
+  "@depositGuideTapToExpand": {},
+
+  "walletQuickDeposit": "Add funds instantly via mobile money or bank transfer",
+  "@walletQuickDeposit": {},
+
+  "depositLatest": "Latest deposit",
+  "@depositLatest": {},
+
+  "depositSubmittedStatus": "Deposit submitted. Status: {status}.",
+  "@depositSubmittedStatus": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "depositCouldNotSubmit": "Could not submit deposit.",
+  "@depositCouldNotSubmit": {},
+
+  "depositReceiptScan": "Scan receipt",
+  "@depositReceiptScan": {},
+
+  "depositReceiptScanSuccess": "Receipt detected. Please review before submitting.",
+  "@depositReceiptScanSuccess": {},
+
+  "depositReceiptScanPartial": "Some details detected. Please review.",
+  "@depositReceiptScanPartial": {},
+
+  "depositReceiptScanFailure": "Could not read receipt. Please type manually.",
+  "@depositReceiptScanFailure": {},
+
+  "depositProvider": "Provider: {provider}",
+  "@depositProvider": {
+    "placeholders": { "provider": { "type": "String" } }
+  },
+
+  "depositAmountLabel": "Amount: {amount}",
+  "@depositAmountLabel": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "depositReference": "Reference: {ref}",
+  "@depositReference": {
+    "placeholders": { "ref": { "type": "String" } }
+  },
+
+  "depositCreated": "Created: {date}",
+  "@depositCreated": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "depositRejectionReason": "Reason: {reason}",
+  "@depositRejectionReason": {
+    "placeholders": { "reason": { "type": "String" } }
+  },
+
+  "depositHistoryTitle": "Deposit history",
+  "@depositHistoryTitle": {},
+
+  "depositHistoryEmpty": "No deposits yet",
+  "@depositHistoryEmpty": {},
+
+  "depositHistoryEmptyMessage": "Your deposit requests will appear here.",
+  "@depositHistoryEmptyMessage": {},
+
+  "depositHistoryCouldNotLoad": "Could not load deposit history.",
+  "@depositHistoryCouldNotLoad": {},
+
+  "depositRetryVerification": "Retry verification",
+  "@depositRetryVerification": {},
+
+  "depositRetried": "Verification retried. Status: {status}.",
+  "@depositRetried": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "depositRetryFailed": "Could not retry verification.",
+  "@depositRetryFailed": {},
+
+  "depositAmountRow": "Amount: {amount}",
+  "@depositAmountRow": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "depositRefRow": "Ref: {ref}",
+  "@depositRefRow": {
+    "placeholders": { "ref": { "type": "String" } }
+  },
+
+  "depositCreatedRow": "Created: {date}",
+  "@depositCreatedRow": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "depositReasonRow": "Reason: {reason}",
+  "@depositReasonRow": {
+    "placeholders": { "reason": { "type": "String" } }
+  },
+
+  "withdrawScreenTitle": "Withdraw",
+  "@withdrawScreenTitle": {},
+
+  "withdrawAmount": "Amount",
+  "@withdrawAmount": {},
+
+  "withdrawSubmit": "Submit withdrawal",
+  "@withdrawSubmit": {},
+
+  "withdrawLatest": "Latest withdrawal",
+  "@withdrawLatest": {},
+
+  "withdrawSubmittedStatus": "Withdrawal submitted. Status: {status}.",
+  "@withdrawSubmittedStatus": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "withdrawCouldNotSubmit": "Could not submit withdrawal.",
+  "@withdrawCouldNotSubmit": {},
+
+  "withdrawStatusLabel": "Status: {status}",
+  "@withdrawStatusLabel": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "withdrawProviderLabel": "Provider: {provider}",
+  "@withdrawProviderLabel": {
+    "placeholders": { "provider": { "type": "String" } }
+  },
+
+  "withdrawAmountLabel": "Amount: {amount}",
+  "@withdrawAmountLabel": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "withdrawPhoneLabel": "Phone: {phone}",
+  "@withdrawPhoneLabel": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+
+  "withdrawAccountLabel": "Account: {account}",
+  "@withdrawAccountLabel": {
+    "placeholders": { "account": { "type": "String" } }
+  },
+
+  "withdrawCreatedLabel": "Created: {date}",
+  "@withdrawCreatedLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "withdrawNoteLabel": "Note: {note}",
+  "@withdrawNoteLabel": {
+    "placeholders": { "note": { "type": "String" } }
+  },
+
+  "withdrawHistoryTitle": "Withdrawal history",
+  "@withdrawHistoryTitle": {},
+
+  "withdrawHistoryEmpty": "No withdrawals yet",
+  "@withdrawHistoryEmpty": {},
+
+  "withdrawHistoryEmptyMessage": "Your withdrawal requests will appear here.",
+  "@withdrawHistoryEmptyMessage": {},
+
+  "withdrawHistoryCouldNotLoad": "Could not load withdrawal history.",
+  "@withdrawHistoryCouldNotLoad": {},
+
+  "withdrawSelectProvider": "Payout method",
+  "@withdrawSelectProvider": {},
+
+  "withdrawMaxWithdrawableHint": "You can withdraw up to your available balance. The rest stays usable for cartelas.",
+  "@withdrawMaxWithdrawableHint": {},
+
+  "withdrawLockedFundsHint": "Locked funds are reserved for pending withdrawal requests.",
+  "@withdrawLockedFundsHint": {},
+
+  "withdrawAmountLockedHelper": "This amount will be locked until admin processes your request.",
+  "@withdrawAmountLockedHelper": {},
+
+  "withdrawAmountExceedsAvailable": "Amount exceeds your available balance.",
+  "@withdrawAmountExceedsAvailable": {},
+
+  "withdrawPendingTitle": "Withdrawal submitted",
+  "@withdrawPendingTitle": {},
+
+  "withdrawPendingMessage": "Your request is pending admin review. The amount is locked until approved or rejected.",
+  "@withdrawPendingMessage": {},
+
+  "withdrawApprovedTitle": "Withdrawal approved",
+  "@withdrawApprovedTitle": {},
+
+  "withdrawApprovedMessage": "Your payout has been approved and sent.",
+  "@withdrawApprovedMessage": {},
+
+  "withdrawRejectedTitle": "Withdrawal rejected",
+  "@withdrawRejectedTitle": {},
+
+  "withdrawRejectedMessage": "Your withdrawal was rejected. Locked funds were returned to your balance.",
+  "@withdrawRejectedMessage": {},
+
+  "withdrawStatusPendingReview": "Pending review",
+  "@withdrawStatusPendingReview": {},
+
+  "withdrawStatusApproved": "Approved",
+  "@withdrawStatusApproved": {},
+
+  "withdrawStatusRejected": "Rejected",
+  "@withdrawStatusRejected": {},
+
+  "withdrawStatusFailed": "Failed",
+  "@withdrawStatusFailed": {},
+
+  "withdrawStatusRefunded": "Refunded",
+  "@withdrawStatusRefunded": {},
+
+  "walletLockedBalanceHint": "Includes funds reserved for pending withdrawals.",
+  "@walletLockedBalanceHint": {},
+
+  "withdrawRequestsTitle": "Your withdrawal requests",
+  "@withdrawRequestsTitle": {},
+
+  "withdrawTabAll": "All",
+  "@withdrawTabAll": {},
+
+  "withdrawTabPending": "Pending",
+  "@withdrawTabPending": {},
+
+  "withdrawTabCompleted": "Completed",
+  "@withdrawTabCompleted": {},
+
+  "withdrawTabRejected": "Rejected",
+  "@withdrawTabRejected": {},
+
+  "withdrawTableDate": "Date",
+  "@withdrawTableDate": {},
+
+  "withdrawTableAmount": "Amount",
+  "@withdrawTableAmount": {},
+
+  "withdrawTableProvider": "Provider",
+  "@withdrawTableProvider": {},
+
+  "withdrawTableStatus": "Status",
+  "@withdrawTableStatus": {},
+
+  "withdrawPendingEmpty": "No pending withdrawal requests.",
+  "@withdrawPendingEmpty": {},
+
+  "withdrawCompletedEmpty": "No completed withdrawals yet.",
+  "@withdrawCompletedEmpty": {},
+
+  "withdrawRejectedEmpty": "No rejected withdrawals.",
+  "@withdrawRejectedEmpty": {},
+
+  "txHistoryTitle": "Wallet transactions",
+  "@txHistoryTitle": {},
+
+  "txHistoryEmpty": "No transactions yet",
+  "@txHistoryEmpty": {},
+
+  "txHistoryEmptyMessage": "Your wallet ledger will show up here after deposits, entries, and withdrawals.",
+  "@txHistoryEmptyMessage": {},
+
+  "txHistoryShowing": "Showing {count} of {total} transactions",
+  "@txHistoryShowing": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "txHistoryWalletActivity": "Wallet activity",
+  "@txHistoryWalletActivity": {},
+
+  "txWithdrawRequestLockedNote": "Moved to locked balance pending approval.",
+  "@txWithdrawRequestLockedNote": {},
+
+  "txHistoryBalanceAfter": "Bal: {amount}",
+  "@txHistoryBalanceAfter": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "txHistoryCouldNotLoad": "Could not load transaction history.",
+  "@txHistoryCouldNotLoad": {},
+
+  "gameHistoryTitle": "Game history",
+  "@gameHistoryTitle": {},
+
+  "gameHistoryEmpty": "No finished games yet.",
+  "@gameHistoryEmpty": {},
+
+  "gameHistoryCards": "{count} cards",
+  "@gameHistoryCards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gameHistoryLoadingAttended": "Loading your games...",
+  "@gameHistoryLoadingAttended": {},
+
+  "gameHistoryEmptyAttended": "No finished games you joined yet.",
+  "@gameHistoryEmptyAttended": {},
+
+  "gameHistoryDetailTitle": "Game details",
+  "@gameHistoryDetailTitle": {},
+
+  "gameHistoryPrizePool": "Prize pool",
+  "@gameHistoryPrizePool": {},
+
+  "gameHistoryYourWinnings": "You won {amount}",
+  "@gameHistoryYourWinnings": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "gameHistoryYourCartelas": "Your cartelas",
+  "@gameHistoryYourCartelas": {},
+
+  "gameHistorySessionWinners": "Session winners",
+  "@gameHistorySessionWinners": {},
+
+  "gameHistoryMyCartelaCount": "{count} of yours",
+  "@gameHistoryMyCartelaCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gameHistoryLoadMore": "Load more",
+  "@gameHistoryLoadMore": {},
+
+  "gameHistoryRetry": "Try again",
+  "@gameHistoryRetry": {},
+
+  "gameStatsLabel": "Game stats",
+  "@gameStatsLabel": {},
+
+  "gameHideStats": "Hide game stats",
+  "@gameHideStats": {},
+
+  "gameShowStats": "Show game stats",
+  "@gameShowStats": {},
+
+  "gameEntryLabel": "Entry",
+  "@gameEntryLabel": {},
+
+  "gamePrizeLabel": "Prize",
+  "@gamePrizeLabel": {},
+
+  "gameRegLabel": "Reg",
+  "@gameRegLabel": {},
+
+  "gameCalledLabel": "Called",
+  "@gameCalledLabel": {},
+
+  "gameNowPlaying": "NOW PLAYING",
+  "@gameNowPlaying": {},
+
+  "gameNextGame": "Next game",
+  "@gameNextGame": {},
+
+  "liveCalledNumbersLabel": "Called numbers",
+  "@liveCalledNumbersLabel": {},
+
+  "liveNextRoundSectionTitle": "Next round",
+  "@liveNextRoundSectionTitle": {},
+
+  "liveJoinCurrentRoundSectionTitle": "Join current round",
+  "@liveJoinCurrentRoundSectionTitle": {},
+
+  "liveMissedCurrentRoundTitle": "Current round in play",
+  "@liveMissedCurrentRoundTitle": {},
+
+  "liveNextQueuedPlayLabel": "Next queued play",
+  "@liveNextQueuedPlayLabel": {},
+
+  "liveRegisteredCartelasLabel": "Registered cartelas",
+  "@liveRegisteredCartelasLabel": {},
+
+  "liveRegisteredCartelasEmpty": "None yet — pick numbers below.",
+  "@liveRegisteredCartelasEmpty": {},
+
+  "liveMissedRoundHelper": "You missed the current game. Register for the next round.",
+  "@liveMissedRoundHelper": {},
+
+  "liveMissedRoundYouMissedGame": "You missed this round.",
+  "@liveMissedRoundYouMissedGame": {},
+
+  "liveMissedRoundOverviewTitle": "Live & next round",
+  "@liveMissedRoundOverviewTitle": {},
+
+  "liveMissedRoundCollapsedMissed": "Missed · {gameName}",
+  "@liveMissedRoundCollapsedMissed": {
+    "placeholders": { "gameName": { "type": "String" } }
+  },
+
+  "liveMissedRoundCollapsedNextReady": "Next ready · {gameName} · register now",
+  "@liveMissedRoundCollapsedNextReady": {
+    "placeholders": { "gameName": { "type": "String" } }
+  },
+
+  "liveMissedRoundRegisterBridge": "Register cartelas now for the next game and play next round.",
+  "@liveMissedRoundRegisterBridge": {},
+
+  "liveJoinCurrentRoundGameLive": "{gameName} is live now",
+  "@liveJoinCurrentRoundGameLive": {
+    "placeholders": { "gameName": { "type": "String" } }
+  },
+
+  "liveNextGameBannerTitle": "NEXT GAME",
+  "@liveNextGameBannerTitle": {},
+
+  "liveMissedRoundBannerSubtitle": "Soon starts the next game",
+  "@liveMissedRoundBannerSubtitle": {},
+
+  "liveNextGameLabel": "Next game",
+  "@liveNextGameLabel": {},
+
+  "registrationStartsAfterCurrentGame": "Registration open - starts after current game",
+  "@registrationStartsAfterCurrentGame": {},
+
+  "liveJoinCurrentRoundHelper": "Registration is still open for this live round. Taken and reserved cartelas are locked automatically.",
+  "@liveJoinCurrentRoundHelper": {},
+
+  "liveAddMoreCartelasHelper": "Registration is still open. You can add more cartelas while the round is active.",
+  "@liveAddMoreCartelasHelper": {},
+
+  "liveAddMoreCartelasTitle": "Add more cartelas",
+  "@liveAddMoreCartelasTitle": {},
+
+  "liveNextRoundRegistrationTitle": "Next round registration",
+  "@liveNextRoundRegistrationTitle": {},
+
+  "gameRuleDetailTitle": "Game rule",
+  "@gameRuleDetailTitle": {},
+
+  "gameRulePatternSample": "Sample winning pattern",
+  "@gameRulePatternSample": {},
+
+  "gameNextGameHide": "Hide next game",
+  "@gameNextGameHide": {},
+
+  "gameNextGameShow": "Show next game",
+  "@gameNextGameShow": {},
+
+  "leaveLiveGameTitle": "Leave live game?",
+  "@leaveLiveGameTitle": {},
+
+  "leaveLiveGameMessage": "Your game will continue on the server. Your marked cells will be saved on this device.",
+  "@leaveLiveGameMessage": {},
+
+  "leaveLiveGameStay": "Stay",
+  "@leaveLiveGameStay": {},
+
+  "leaveLiveGameLeave": "Leave",
+  "@leaveLiveGameLeave": {},
+
+  "confirmBackTitle": "Go back?",
+  "@confirmBackTitle": {},
+
+  "confirmBackMessage": "Do you want to leave this page?",
+  "@confirmBackMessage": {},
+
+  "confirmBackStay": "Stay",
+  "@confirmBackStay": {},
+
+  "confirmBackLeave": "Leave",
+  "@confirmBackLeave": {},
+
+  "exitAppTitle": "Exit app?",
+  "@exitAppTitle": {},
+
+  "exitAppMessage": "Your game will continue. You can return anytime.",
+  "@exitAppMessage": {},
+
+  "exitAppStay": "Stay",
+  "@exitAppStay": {},
+
+  "exitAppExit": "Exit",
+  "@exitAppExit": {},
+
+  "winningCartelasTitle": "Winning cartelas",
+  "@winningCartelasTitle": {},
+
+  "winningCartelasTapHint": "Tap a cartela to view the full winning pattern.",
+  "@winningCartelasTapHint": {},
+
+  "winningCartelasYou": "You",
+  "@winningCartelasYou": {},
+
+  "winningCartelasPlayer": "Player",
+  "@winningCartelasPlayer": {},
+
+  "winningCartelasPrize": "Prize: {amount} ETB",
+  "@winningCartelasPrize": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+
+  "winningCartelasDetailTitle": "Winning cartela #{number}",
+  "@winningCartelasDetailTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+
+  "winningCartelasSwipeHint": "Swipe or tap a number to see each winner",
+  "@winningCartelasSwipeHint": {},
+
+  "winningCartelasWinningBall": "Winning ball: {ball}",
+  "@winningCartelasWinningBall": {
+    "placeholders": {
+      "ball": {
+        "type": "String"
+      }
+    }
+  },
+
+  "winningCartelasAllWinners": "Winners",
+  "@winningCartelasAllWinners": {},
+
+  "winningCartelasPreviousWinner": "Previous winner",
+  "@winningCartelasPreviousWinner": {},
+
+  "winningCartelasNextWinner": "Next winner",
+  "@winningCartelasNextWinner": {},
+
+  "cartelaOutcomeValid": "Valid",
+  "@cartelaOutcomeValid": {},
+
+  "cartelaOutcomeInvalid": "Invalid",
+  "@cartelaOutcomeInvalid": {},
+
+  "cartelaOutcomeRegistered": "Registered",
+  "@cartelaOutcomeRegistered": {},
+
+  "cartelaOutcomeNoWin": "No win",
+  "@cartelaOutcomeNoWin": {},
+
+  "cartelaBlockedInfoTooltip": "Why is this cartela blocked?",
+  "@cartelaBlockedInfoTooltip": {},
+
+  "cartelaBlockedDialogTitle": "Cartela #{number} blocked",
+  "@cartelaBlockedDialogTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+
+  "cartelaBlockedDialogOk": "Got it",
+  "@cartelaBlockedDialogOk": {},
+
+  "cartelaBlockedReasonLate": "You missed the winning call. This cartela has been blocked.",
+  "@cartelaBlockedReasonLate": {},
+
+  "cartelaBlockedReasonPattern": "Your claim did not match the game rule.",
+  "@cartelaBlockedReasonPattern": {},
+
+  "cartelaBlockedReasonGeneric": "This cartela has been blocked.",
+  "@cartelaBlockedReasonGeneric": {},
+
+  "gameLabel": "Game",
+  "@gameLabel": {},
+
+  "connectionOnline": "Online",
+  "@connectionOnline": {},
+
+  "connectionReconnecting": "Reconnecting",
+  "@connectionReconnecting": {},
+
+  "connectionOffline": "Offline",
+  "@connectionOffline": {},
+
+  "registrationTapHintGuest": "Sign up to register cartelas",
+  "@registrationTapHintGuest": {},
+
+  "registrationTapHintSelect": "Tap numbers to select · Review when ready",
+  "@registrationTapHintSelect": {},
+
+  "registrationTapHintDefault": "Tap a number to preview and register",
+  "@registrationTapHintDefault": {},
+
+  "registrationClear": "Clear",
+  "@registrationClear": {},
+
+  "registrationReview": "Review ({count})",
+  "@registrationReview": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "registrationSecondsLeft": "{seconds}s left",
+  "@registrationSecondsLeft": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "registrationUpTo": "Up to {max}",
+  "@registrationUpTo": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "registrationLeft": " left",
+  "@registrationLeft": {},
+
+  "registrationOpenBanner": "REGISTRATION OPEN",
+  "@registrationOpenBanner": {},
+
+  "registrationOpenLabel": "Registration open",
+  "@registrationOpenLabel": {},
+
+  "registrationClosesIn": "Registration closes in {seconds}s",
+  "@registrationClosesIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+
+  "registrationClosesInDuration": "Registration closes in {duration}",
+  "@registrationClosesInDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+
+  "registrationClosedPreparing": "Starting...",
+  "@registrationClosedPreparing": {},
+
+  "preparingGameNoCartelas": "Cartela registration is closed. The live round will begin shortly.",
+  "@preparingGameNoCartelas": {},
+
+  "preparingGameCartelasRegistered": "{count, plural, =1{1 cartela registered. The live round will begin shortly.} other{{count} cartelas registered. The live round will begin shortly.}}",
+  "@preparingGameCartelasRegistered": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "liveNoGameTitle": "No games in queue",
+  "@liveNoGameTitle": {},
+
+  "liveNoGameMessage": "No game is open right now. Pull down to refresh when the next round starts.",
+  "@liveNoGameMessage": {},
+
+  "gameCheckingTitle": "Checking bingo claim",
+  "@gameCheckingTitle": {},
+
+  "gameCheckingMessage": "A bingo claim is being checked. Hold on — do not mark new numbers yet.",
+  "@gameCheckingMessage": {},
+
+  "calledNumbersDrawnCount": "Drawn: {count}",
+  "@calledNumbersDrawnCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "calledNumbersBallOrder": "#{order}",
+  "@calledNumbersBallOrder": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+
+  "calledNumbersSyncLive": "Live",
+  "@calledNumbersSyncLive": {},
+
+  "calledNumbersSyncCatchingUp": "Catching up…",
+  "@calledNumbersSyncCatchingUp": {},
+
+  "calledNumbersSyncHelp": "Called numbers are synced from the server. A short delay on slow networks is normal.",
+  "@calledNumbersSyncHelp": {},
+
+  "calledNumbersSyncHelpTitle": "Called numbers sync",
+  "@calledNumbersSyncHelpTitle": {},
+
+  "calledNumbersSyncReconnecting": "Reconnecting…",
+  "@calledNumbersSyncReconnecting": {},
+
+  "calledNumbersRefreshTooltip": "Refresh called numbers",
+  "@calledNumbersRefreshTooltip": {},
+
+  "cartelaMarkColorGreen": "Green marks",
+  "@cartelaMarkColorGreen": {},
+  "cartelaMarkColorRed": "Red marks",
+  "@cartelaMarkColorRed": {},
+  "cartelaMarkColorYellow": "Yellow marks",
+  "@cartelaMarkColorYellow": {},
+  "cartelaMarkColorBlue": "Blue marks",
+  "@cartelaMarkColorBlue": {},
+  "cartelaMarkColorMenu": "Mark color",
+  "@cartelaMarkColorMenu": {},
+
+  "cartelaClearMarks": "Clear marks",
+  "@cartelaClearMarks": {},
+
+  "calledNumbersNextBallIn": "Next ball · {seconds}s",
+  "@calledNumbersNextBallIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "calledNumbersNextBallLabel": "Next ball",
+  "@calledNumbersNextBallLabel": {},
+
+  "calledNumbersFirstBallLabel": "First ball",
+  "@calledNumbersFirstBallLabel": {},
+
+  "calledNumbersWaitingFirstBallIn": "Waiting for first ball · {seconds}s",
+  "@calledNumbersWaitingFirstBallIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "calledNumbersCallingNext": "Calling…",
+  "@calledNumbersCallingNext": {},
+
+  "calledNumbersSyncingNextBall": "Syncing next ball…",
+  "@calledNumbersSyncingNextBall": {},
+
+  "calledNumbersDrawLabel": "Draw #{order}",
+  "@calledNumbersDrawLabel": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+
+  "calledNumbersSyncingMissed": "Syncing missed numbers…",
+  "@calledNumbersSyncingMissed": {},
+
+  "calledNumbersWaitingNextBall": "Waiting for next ball…",
+  "@calledNumbersWaitingNextBall": {},
+
+  "calledNumbersAllBallsDrawn": "All balls drawn",
+  "@calledNumbersAllBallsDrawn": {},
+
+  "calledNumbersWillAppear": "Numbers will appear here",
+  "@calledNumbersWillAppear": {},
+
+  "calledNumbersCheckingBingo": "Checking bingo…",
+  "@calledNumbersCheckingBingo": {},
+
+  "calledNumbersClaimHoldNote": "New numbers will appear after your claim is processed.",
+  "@calledNumbersClaimHoldNote": {},
+
+  "registrationSignUpToPlay": "Sign up to play",
+  "@registrationSignUpToPlay": {},
+
+  "bulkReviewTitle": "Review your cartelas",
+  "@bulkReviewTitle": {},
+
+  "bulkRegisteringTitle": "Registering cartelas",
+  "@bulkRegisteringTitle": {},
+
+  "bulkCartelasTotal": "{count} cartelas · {total} total",
+  "@bulkCartelasTotal": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "String" }
+    }
+  },
+
+  "bulkPerCartela": "{fee} per cartela",
+  "@bulkPerCartela": {
+    "placeholders": { "fee": { "type": "String" } }
+  },
+
+  "bulkConfirmNumbers": "Confirm the numbers above, then register them together.",
+  "@bulkConfirmNumbers": {},
+
+  "bulkStarting": "Starting registration...",
+  "@bulkStarting": {},
+
+  "bulkProgress": "Registering {completed} of {total} cartelas...",
+  "@bulkProgress": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "bulkCancel": "Cancel",
+  "@bulkCancel": {},
+
+  "bulkRegister": "Register {count}",
+  "@bulkRegister": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "bulkRegistering": "Registering...",
+  "@bulkRegistering": {},
+
+  "bulkCouldNotRegister": "Could not register selected cartelas. Please try again.",
+  "@bulkCouldNotRegister": {},
+
+  "bulkTakenNumbers": "Could not register selected cartelas. {numbers} already taken.",
+  "@bulkTakenNumbers": {
+    "placeholders": { "numbers": { "type": "String" } }
+  },
+
+  "winnerBannerSyncingTitle": "Syncing live game\u2026",
+  "@winnerBannerSyncingTitle": {},
+
+  "winnerBannerSyncingMessage": "Updating the live round from the server.",
+  "@winnerBannerSyncingMessage": {},
+
+  "winnerBannerWindowOpenTitle": "Winner window open",
+  "@winnerBannerWindowOpenTitle": {},
+
+  "winnerBannerWindowOpenMessage": "Other players can still claim during the winner window.",
+  "@winnerBannerWindowOpenMessage": {},
+
+  "winnerBannerYouWonTitle": "You Won!",
+  "@winnerBannerYouWonTitle": {},
+
+  "winnerBannerWonWithPayout": "Congratulations! You won {amount} ETB. Next registration opens shortly.",
+  "@winnerBannerWonWithPayout": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "winnerBannerWonNoPayout": "Congratulations! Your cartela won. Prize is being updated. Next registration opens shortly.",
+  "@winnerBannerWonNoPayout": {},
+
+  "winnerBannerFinishedTitle": "Game Finished",
+  "@winnerBannerFinishedTitle": {},
+
+  "winnerBannerFinishedMessage": "This game is finished. Better luck next time! Next registration opens shortly.",
+  "@winnerBannerFinishedMessage": {},
+
+  "winnerBannerNoPlayersTitle": "No Players Joined",
+  "@winnerBannerNoPlayersTitle": {},
+
+  "winnerBannerNoPlayersMessage": "No players joined this round. Next round starting\u2026",
+  "@winnerBannerNoPlayersMessage": {},
+
+  "winnerBannerCancelledTitle": "Game Cancelled",
+  "@winnerBannerCancelledTitle": {},
+
+  "winnerBannerCancelledMessage": "This game was cancelled. Entry fees were refunded. Next round starting\u2026",
+  "@winnerBannerCancelledMessage": {},
+
+  "drawerSignInToPlay": "Sign in to play and register cartelas",
+  "@drawerSignInToPlay": {},
+
+  "drawerBalance": "Balance",
+  "@drawerBalance": {},
+
+  "drawerJoinTheGame": "Join the game",
+  "@drawerJoinTheGame": {},
+
+  "drawerJoinTheGameBody": "Create an account to register cartelas and manage your wallet.",
+  "@drawerJoinTheGameBody": {},
+
+  "drawerLiveGame": "Live Game",
+  "@drawerLiveGame": {},
+
+  "drawerWallet": "Wallet",
+  "@drawerWallet": {},
+
+  "drawerProfile": "Profile",
+  "@drawerProfile": {},
+
+  "drawerHistory": "History",
+  "@drawerHistory": {},
+
+  "drawerTransactionHistory": "Transaction history",
+  "@drawerTransactionHistory": {},
+
+  "drawerGameHistory": "Game history",
+  "@drawerGameHistory": {},
+
+  "drawerAppVersion": "App version",
+  "@drawerAppVersion": {},
+
+  "drawerAppVersionUpToDate": "Up to date",
+  "@drawerAppVersionUpToDate": {},
+
+  "drawerAppVersionUpdateAvailable": "Update available",
+  "@drawerAppVersionUpdateAvailable": {},
+
+  "drawerAppVersionUpdateRequired": "Update required",
+  "@drawerAppVersionUpdateRequired": {},
+
+  "drawerAppVersionChecking": "Checking for updates…",
+  "@drawerAppVersionChecking": {},
+
+  "drawerAppVersionCurrent": "Installed: {version}",
+  "@drawerAppVersionCurrent": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "noUpdateAvailableTitle": "No updates",
+  "@noUpdateAvailableTitle": {},
+
+  "noUpdateAvailableBody": "You already have the latest version installed.",
+  "@noUpdateAvailableBody": {},
+
+  "noUpdateAvailableOk": "OK",
+  "@noUpdateAvailableOk": {},
+
+  "updateCheckFailedTitle": "Update check failed",
+  "@updateCheckFailedTitle": {},
+
+  "updateCheckFailedBody": "Could not reach the update server. Check your internet connection and try again.",
+  "@updateCheckFailedBody": {},
+
+  "updateStatusDetail": "Installed build {installedBuild}. Server latest build {serverBuild} ({serverVersion}).",
+  "@updateStatusDetail": {
+    "placeholders": {
+      "installedBuild": { "type": "int" },
+      "serverBuild": { "type": "int" },
+      "serverVersion": { "type": "String" }
+    }
+  },
+
+  "updateAvailableTitle": "Update available",
+  "@updateAvailableTitle": {},
+
+  "updateRequiredTitle": "Update required",
+  "@updateRequiredTitle": {},
+
+  "updateLater": "Later",
+  "@updateLater": {},
+
+  "updateAction": "Update",
+  "@updateAction": {},
+
+  "updateAvailableMessage": "Version {version} is available.",
+  "@updateAvailableMessage": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "updateRequiredMessage": "A newer version ({version}) is required to continue.",
+  "@updateRequiredMessage": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "updateLinkUnavailable": "Update link is unavailable.",
+  "@updateLinkUnavailable": {},
+
+  "guestPromptTitle": "Create an account to register this cartela",
+  "@guestPromptTitle": {},
+
+  "guestPromptMessage": "Sign up or sign in to pick cartela numbers and join the game.",
+  "@guestPromptMessage": {},
+
+  "guestPromoModeLabel": "Guest mode",
+  "@guestPromoModeLabel": {},
+
+  "guestPromoTitle": "Catch the live draw, join the next round",
+  "@guestPromoTitle": {},
+
+  "guestPromoMessage": "Watch numbers land in real time, then sign in or create your account to lock cartelas before the next queued play starts.",
+  "@guestPromoMessage": {},
+
+  "guestPromoFooter": "Fast signup. Next-round access. Live bingo energy.",
+  "@guestPromoFooter": {},
+
+  "guestPromoRowLabel": "Row line",
+  "@guestPromoRowLabel": {},
+
+  "guestPromoRowHelper": "A full row closes first.",
+  "@guestPromoRowHelper": {},
+
+  "guestPromoColumnLabel": "Column line",
+  "@guestPromoColumnLabel": {},
+
+  "guestPromoColumnHelper": "Then a full column lands cleanly.",
+  "@guestPromoColumnHelper": {},
+
+  "guestPromoDiagonalLabel": "Diagonal bingo",
+  "@guestPromoDiagonalLabel": {},
+
+  "guestPromoDiagonalHelper": "Finally the diagonal completes bingo.",
+  "@guestPromoDiagonalHelper": {},
+
+  "guestPromoWinnerLabel": "Winner",
+  "@guestPromoWinnerLabel": {},
+
+  "guestPromoCongratsTitle": "Congratulations!",
+  "@guestPromoCongratsTitle": {},
+
+  "guestPromoCongratsAmountWon": "{amount} won",
+  "@guestPromoCongratsAmountWon": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+
+  "guestPromoCongratsReceived": "You received {amount} by CBE Bank.",
+  "@guestPromoCongratsReceived": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+
+  "guestPromoCongratsWithdraw": "Sign in or sign up to withdraw.",
+  "@guestPromoCongratsWithdraw": {},
+
+  "drawerTheme": "Theme",
+  "@drawerTheme": {},
+
+  "drawerThemeLight": "Light",
+  "@drawerThemeLight": {},
+
+  "drawerThemeDark": "Dark",
+  "@drawerThemeDark": {},
+
+  "drawerThemeAuto": "Auto",
+  "@drawerThemeAuto": {},
+
+  "drawerLogout": "Logout",
+  "@drawerLogout": {},
+
+  "drawerJoinGame": "Join the game",
+  "@drawerJoinGame": {},
+
+  "drawerCreateAccount": "Create an account to register cartelas and manage your wallet.",
+  "@drawerCreateAccount": {},
+
+  "gameStats": "Game stats",
+  "@gameStats": {},
+
+  "gameStatsHide": "Hide game stats",
+  "@gameStatsHide": {},
+
+  "gameStatsShow": "Show game stats",
+  "@gameStatsShow": {},
+
+  "gameInfoEntry": "Entry",
+  "@gameInfoEntry": {},
+
+  "gameInfoPrize": "Prize",
+  "@gameInfoPrize": {},
+
+  "gameInfoReg": "Reg",
+  "@gameInfoReg": {},
+
+  "gameInfoCalled": "Called",
+  "@gameInfoCalled": {},
+
+  "gameInfoGame": "Game",
+  "@gameInfoGame": {},
+
+  "statusOnline": "Online",
+  "@statusOnline": {},
+
+  "statusReconnecting": "Reconnecting",
+  "@statusReconnecting": {},
+
+  "statusOffline": "Offline",
+  "@statusOffline": {},
+
+  "gameHintGuest": "Sign up to register cartelas",
+  "@gameHintGuest": {},
+
+  "gameHintSelectMode": "Tap numbers to select · Review when ready",
+  "@gameHintSelectMode": {},
+
+  "gameHintSingleMode": "Tap to preview · Hold to select multiple",
+  "@gameHintSingleMode": {},
+
+  "gameClear": "Clear",
+  "@gameClear": {},
+
+  "gameReview": "Review ({count})",
+  "@gameReview": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gameSecondsLeft": "{seconds}s left",
+  "@gameSecondsLeft": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "gameUpTo": "Up to {max}",
+  "@gameUpTo": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "gameBalanceLeft": "left",
+  "@gameBalanceLeft": {},
+
+  "gameSyncing": "Syncing live game…",
+  "@gameSyncing": {},
+
+  "gameSyncingMessage": "Updating the live round from the server.",
+  "@gameSyncingMessage": {},
+
+  "gameWinnerWindowOpen": "Winner window open",
+  "@gameWinnerWindowOpen": {},
+
+  "gameWinnerWindowMessage": "Other players can still claim during the winner window.",
+  "@gameWinnerWindowMessage": {},
+
+  "gameResultsLoading": "Loading round results…",
+  "@gameResultsLoading": {},
+
+  "sessionResultsNoWinners": "No winners this round.",
+  "@sessionResultsNoWinners": {},
+  "gameAllNumbersCalled": "All numbers were called.",
+  "@gameAllNumbersCalled": {},
+  "gameNoWinnerNextRoundShortly": "Next game will open shortly.",
+  "@gameNoWinnerNextRoundShortly": {},
+
+  "calledNumbersCheckingCartela": "Checking cartela",
+  "@calledNumbersCheckingCartela": {},
+  "calledNumbersWinnerCartela": "Winner cartela",
+  "@calledNumbersWinnerCartela": {},
+  "calledNumbersBlockedCartela": "Blocked cartela",
+  "@calledNumbersBlockedCartela": {},
+
+  "gameYouWon": "You Won!",
+  "@gameYouWon": {},
+
+  "gameNextRegistration": "Next registration opens shortly.",
+  "@gameNextRegistration": {},
+
+  "gameWonAmount": "Congratulations! You won {amount} ETB.",
+  "@gameWonAmount": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "gameWonPending": "Congratulations! Your cartela won. Prize is being updated.",
+  "@gameWonPending": {},
+
+  "gameFinished": "Game Finished",
+  "@gameFinished": {},
+
+  "gameFinishedMessage": "This game is finished. Better luck next time! Next registration opens shortly.",
+  "@gameFinishedMessage": {},
+
+  "postGameSummaryNextRoundIn": "Continue in {seconds}s",
+  "@postGameSummaryNextRoundIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "postGameSummaryTapToViewWinner": "Tap to view winning cartela",
+  "@postGameSummaryTapToViewWinner": {},
+
+  "postGameSummaryNextGame": "Continue",
+  "@postGameSummaryNextGame": {},
+
+  "postGameSummaryOpeningNextRound": "Opening next round…",
+  "@postGameSummaryOpeningNextRound": {},
+
+  "finishedGamePrizeLine": "For this game the prize is {amount}",
+  "@finishedGamePrizeLine": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "reviewModeWinnerTitle": "Winner",
+  "@reviewModeWinnerTitle": {},
+
+  "reviewModeWinnerCartela": "Cartela #{number}",
+  "@reviewModeWinnerCartela": {
+    "placeholders": { "number": { "type": "int" } }
+  },
+
+  "reviewModeAdditionalWinners": "+{count} more winner(s)",
+  "@reviewModeAdditionalWinners": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gameNoPlayers": "No Players Joined",
+  "@gameNoPlayers": {},
+
+  "gameNoPlayersMessage": "No players joined this round. Next round starting…",
+  "@gameNoPlayersMessage": {},
+
+  "gameCancelled": "Game Cancelled",
+  "@gameCancelled": {},
+
+  "gameCancelledMessage": "This game was cancelled. Entry fees were refunded. Next round starting…",
+  "@gameCancelledMessage": {},
+
+  "bulkConfirmHint": "Tap to preview · X to remove · Register when ready",
+  "@bulkConfirmHint": {},
+
+  "bulkRemoveCartela": "Remove cartela #{number}",
+  "@bulkRemoveCartela": {
+    "placeholders": { "number": { "type": "int" } }
+  },
+
+  "bulkReviewEmpty": "Select at least one cartela to register.",
+  "@bulkReviewEmpty": {},
+
+  "bulkRegisterCount": "Register {count}",
+  "@bulkRegisterCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "bulkRegisterError": "Could not register selected cartelas. Please try again.",
+  "@bulkRegisterError": {},
+
+  "bulkRegisterFailed": "Could not register selected cartelas.",
+  "@bulkRegisterFailed": {},
+
+  "bulkRegisterTaken": "Could not register selected cartelas. {numbers} already taken.",
+  "@bulkRegisterTaken": {
+    "placeholders": { "numbers": { "type": "String" } }
+  },
+
+  "depositHistoryRef": "Ref: {ref}",
+  "@depositHistoryRef": {
+    "placeholders": { "ref": { "type": "String" } }
+  },
+
+  "depositHistoryRetry": "Retry verification",
+  "@depositHistoryRetry": {},
+
+  "depositHistoryRetriedStatus": "Verification retried. Status: {status}.",
+  "@depositHistoryRetriedStatus": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "depositHistoryCouldNotRetry": "Could not retry verification.",
+  "@depositHistoryCouldNotRetry": {},
+
+  "withdrawHistoryPhone": "Phone: {phone}",
+  "@withdrawHistoryPhone": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+
+  "withdrawHistoryAccount": "Account: {account}",
+  "@withdrawHistoryAccount": {
+    "placeholders": { "account": { "type": "String" } }
+  },
+
+  "withdrawHistoryNote": "Note: {note}",
+  "@withdrawHistoryNote": {
+    "placeholders": { "note": { "type": "String" } }
+  },
+
+  "drawerBigGame": "Big Game",
+  "@drawerBigGame": {},
+
+  "bigGameNoScheduledTitle": "No Big Game scheduled yet.",
+  "@bigGameNoScheduledTitle": {},
+
+  "bigGameNoScheduledBody": "Check back soon.",
+  "@bigGameNoScheduledBody": {},
+
+  "bigGameScheduledTitle": "Big Game Scheduled",
+  "@bigGameScheduledTitle": {},
+
+  "bigGameRegistrationOpensIn": "Registration opens in:",
+  "@bigGameRegistrationOpensIn": {},
+
+  "bigGameRegistrationOpenTitle": "Big Game Registration Open",
+  "@bigGameRegistrationOpenTitle": {},
+
+  "bigGamePlayStartsIn": "Play starts in:",
+  "@bigGamePlayStartsIn": {},
+
+  "bigGameFixedPrize": "Fixed Prize",
+  "@bigGameFixedPrize": {},
+
+  "bigGameEntryFee": "Entry Fee",
+  "@bigGameEntryFee": {},
+
+  "bigGamePlayStartTime": "Play Start Time",
+  "@bigGamePlayStartTime": {},
+
+  "bigGameMaxCartelas": "Max Cartelas",
+  "@bigGameMaxCartelas": {},
+
+  "bigGameYourCartelas": "Your Cartelas",
+  "@bigGameYourCartelas": {},
+
+  "bigGameReadyTitle": "Big Game is ready",
+  "@bigGameReadyTitle": {},
+
+  "bigGameWaitingBody": "Waiting for current round to finish.",
+  "@bigGameWaitingBody": {},
+
+  "gameCategoryNormal": "Normal Game",
+  "@gameCategoryNormal": {},
+
+  "gameCategoryBonus": "Bonus Game",
+  "@gameCategoryBonus": {},
+
+  "gameCategoryBigGotd": "Big GOTD",
+  "@gameCategoryBigGotd": {},
+
+  "gameCategoryBigGame": "Big Game",
+  "@gameCategoryBigGame": {},
+
+  "gameBonusFreeEntry": "Free entry",
+  "@gameBonusFreeEntry": {},
+
+  "gameBonusFixedPrize": "Fixed prize: {amount}",
+  "@gameBonusFixedPrize": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "gameBonusMaxCartelas": "Max {count} cartelas",
+  "@gameBonusMaxCartelas": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gameStatusRegistrationOpen": "Registration Open",
+  "@gameStatusRegistrationOpen": {},
+
+  "gameStatusPreparing": "Preparing",
+  "@gameStatusPreparing": {},
+
+  "gameStatusPlaying": "Playing",
+  "@gameStatusPlaying": {},
+
+  "gameStatusWinnerWindow": "Winner Window",
+  "@gameStatusWinnerWindow": {},
+
+  "gameStatusFinished": "Finished",
+  "@gameStatusFinished": {},
+
+  "gameStatusCancelled": "Cancelled",
+  "@gameStatusCancelled": {},
+
+  "gameStatusChecking": "Checking",
+  "@gameStatusChecking": {},
+
+  "gameStatusWaiting": "Waiting",
+  "@gameStatusWaiting": {},
+
+  "gameStatusRegistrationClosed": "Registration Closed",
+  "@gameStatusRegistrationClosed": {},
+
+  "gameTimelineRegistration": "Registration",
+  "@gameTimelineRegistration": {},
+
+  "gameTimelinePreparing": "Preparing",
+  "@gameTimelinePreparing": {},
+
+  "gameTimelinePlaying": "Playing",
+  "@gameTimelinePlaying": {},
+
+  "gameTimelineWinnerWindow": "Winner Window",
+  "@gameTimelineWinnerWindow": {},
+
+  "gameTimelineFinished": "Finished",
+  "@gameTimelineFinished": {},
+
+  "gameTimelineSemantics": "Game stage: {stage}",
+  "@gameTimelineSemantics": {
+    "placeholders": { "stage": { "type": "String" } }
+  },
+
+  "gamesHubTitle": "Games",
+  "@gamesHubTitle": {},
+
+  "gamesHubLiveNow": "Live Now",
+  "@gamesHubLiveNow": {},
+
+  "gamesHubComingNext": "Coming Next",
+  "@gamesHubComingNext": {},
+
+  "gamesHubBonus": "Bonus Game",
+  "@gamesHubBonus": {},
+
+  "gamesHubUpcomingEvent": "Upcoming Event",
+  "@gamesHubUpcomingEvent": {},
+
+  "gamesHubNoLiveTitle": "No live game right now",
+  "@gamesHubNoLiveTitle": {},
+
+  "gamesHubNoLiveBody": "Check back soon for the next round.",
+  "@gamesHubNoLiveBody": {},
+
+  "gamesHubNoBonusTitle": "Bonus Game not available",
+  "@gamesHubNoBonusTitle": {},
+
+  "gamesHubNoBonusBody": "No bonus round is scheduled today.",
+  "@gamesHubNoBonusBody": {},
+
+  "gamesHubStartsAfterCurrent": "Starts after current round",
+  "@gamesHubStartsAfterCurrent": {},
+
+  "gamesHubJoinLive": "Join",
+  "@gamesHubJoinLive": {},
+
+  "gamesHubOpenBonus": "Open Bonus Game",
+  "@gamesHubOpenBonus": {},
+
+  "gamesHubOpenBigGame": "Open",
+  "@gamesHubOpenBigGame": {},
+
+  "gamesHubOpenHistory": "View history",
+  "@gamesHubOpenHistory": {},
+
+  "gamesHubHistoryBody": "Review your past games and cartela results.",
+  "@gamesHubHistoryBody": {},
+
+  "gamesHubRegisteredCartelas": "Your cartelas: {count}",
+  "@gamesHubRegisteredCartelas": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gamesHubBigGameSignInTitle": "Sign in for Big Game",
+  "@gamesHubBigGameSignInTitle": {},
+
+  "gamesHubBigGameSignInBody": "Create an account to register for the Big Game.",
+  "@gamesHubBigGameSignInBody": {},
+
+  "gamesHubLoadErrorTitle": "Could not load games",
+  "@gamesHubLoadErrorTitle": {},
+
+  "announcementBonusTitle": "Bonus Game Today",
+  "@announcementBonusTitle": {},
+
+  "announcementBonusBody": "Starts after current round",
+  "@announcementBonusBody": {},
+
+  "announcementBonusAction": "Play Free",
+  "@announcementBonusAction": {},
+
+  "announcementBigGameTitle": "BIG GAME",
+  "@announcementBigGameTitle": {},
+
+  "announcementBigGamePrize": "Prize {amount} ETB",
+  "@announcementBigGamePrize": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "announcementBigGameStartsIn": "Starts in",
+  "@announcementBigGameStartsIn": {},
+
+  "announcementBigGameAction": "Open",
+  "@announcementBigGameAction": {},
+
+  "announcementBigGameWaiting": "Big Game ready — waiting for current round",
+  "@announcementBigGameWaiting": {},
+
+  "announcementBigGameLive": "Big Game is live now",
+  "@announcementBigGameLive": {},
+
+  "bigGameLivePrompt": "Big Game is in progress — Go to Big Game",
+  "@bigGameLivePrompt": {},
+
+  "bigGameGoAction": "Go to Big Game",
+  "@bigGameGoAction": {},
+
+  "announcementDismiss": "Dismiss announcement",
+  "@announcementDismiss": {},
+
+  "adminMessagesTitle": "Messages",
+  "@adminMessagesTitle": {},
+
+  "adminMessagesEmpty": "No messages",
+  "@adminMessagesEmpty": {},
+
+  "adminMessagesDismiss": "Dismiss message",
+  "@adminMessagesDismiss": {},
+
+  "adminMessagesLoadError": "Could not load messages. Pull to refresh and try again.",
+  "@adminMessagesLoadError": {},
+
+  "adminMessagesPersistentBadge": "Pinned",
+  "@adminMessagesPersistentBadge": {},
+
+  "adminMessagesLoading": "Loading notifications...",
+  "@adminMessagesLoading": {},
+
+  "adminMessagesCount": "{count, plural, =1{1 notification} other{{count} notifications}}",
+  "@adminMessagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "adminMessagesForcedHint": "The app will reopen when the admin removes this notice.",
+  "@adminMessagesForcedHint": {},
+
+  "close": "Close",
+  "@close": {},
+
+  "drawerSendFeedback": "Send feedback",
+  "@drawerSendFeedback": {},
+
+  "drawerMyFeedback": "My feedback",
+  "@drawerMyFeedback": {},
+
+  "supportSendFeedbackTitle": "Send feedback",
+  "@supportSendFeedbackTitle": {},
+
+  "supportSendFeedbackSubtitle": "Share feedback, a complaint, or advice. We read every message.",
+  "@supportSendFeedbackSubtitle": {},
+
+  "supportCategoryLabel": "Category",
+  "@supportCategoryLabel": {},
+
+  "supportCategoryFeedback": "Feedback",
+  "@supportCategoryFeedback": {},
+
+  "supportCategoryComplaint": "Complaint",
+  "@supportCategoryComplaint": {},
+
+  "supportCategoryAdvice": "Advice",
+  "@supportCategoryAdvice": {},
+
+  "supportCategoryOther": "Other",
+  "@supportCategoryOther": {},
+
+  "supportMessageLabel": "Your message",
+  "@supportMessageLabel": {},
+
+  "supportMessageHint": "Tell us what happened or what we can improve",
+  "@supportMessageHint": {},
+
+  "supportSendButton": "Send message",
+  "@supportSendButton": {},
+
+  "supportMessageSent": "We received your message",
+  "@supportMessageSent": {},
+
+  "supportMessageSendFailed": "Could not send your message. Please try again.",
+  "@supportMessageSendFailed": {},
+
+  "supportMyFeedbackTitle": "My feedback",
+  "@supportMyFeedbackTitle": {},
+
+  "supportFeedbackHubTitle": "Feedback",
+  "@supportFeedbackHubTitle": {},
+
+  "supportMyFeedbackCount": "{count, plural, =1{1 message} other{{count} messages}}",
+  "@supportMyFeedbackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "supportMyFeedbackEmpty": "You have not sent any feedback yet.",
+  "@supportMyFeedbackEmpty": {},
+
+  "supportAdminResponse": "Admin response",
+  "@supportAdminResponse": {},
+
+  "supportAdminName": "Friends Bingo",
+  "@supportAdminName": {},
+
+  "supportYouLabel": "You",
+  "@supportYouLabel": {},
+
+  "supportStatusOpen": "Open",
+  "@supportStatusOpen": {},
+
+  "supportStatusReplied": "Replied",
+  "@supportStatusReplied": {},
+
+  "supportStatusClosed": "Closed",
+  "@supportStatusClosed": {}
+}

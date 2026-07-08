@@ -1,0 +1,213 @@
+{
+  "_comment": "Edit displayed rule names here. Keys must match GameRule.key in the API.",
+  "FULL_HOUSE": {
+    "en": "Full house",
+    "am": "ሙሉ ቤት",
+    "ti": "ሙሉእ ገዛ",
+    "om": "Full house"
+  },
+  "MIX_01": {
+    "en": "2 columns 2 rows 1 diagonal",
+    "am": "2 የቆመ 2 የተኛ ከ 1 ዲያጎናል ",
+    "ti": "2 ደው ዝበለ 2 ዝደቀሰ 1 ዲያጎናል",
+    "om": "2 columns 2 rows 1 diagonal"
+  },
+  "MIX_02": {
+    "en": "4 squares",
+    "am": "4 ስኴር የማይገናኙ",
+    "ti": "4 ስኴር ዘይራከቡ",
+    "om": "4 squares"
+  },
+  "MIX_03": {
+    "en": "3 columns 1 diagonal",
+    "am": "3 የቆሙ ከ1 ዲያጎናል መስመር",
+    "ti": "3 ደው ዝበለ ምስ1 ዲያጎናል",
+    "om": "3 columns 1 diagonal"
+  },
+  "MIX_04": {
+    "en": "Big T in all directions with 2 squares all separate",
+    "am": "ትልቅ T በሁሉም አቅጣጫ ከ2 ስኴር ጋር፣ ሁሉም የማይገናኙ",
+    "ti": "ዓባይ T ናብ ኩሉ አንፈት ምስ 2 ስኴር ፣ኩሎም ዘይራከቡ",
+    "om": "Big T in all directions with 2 squares all separate"
+  },
+  "MIX_05": {
+    "en": "5 lines",
+    "am": "5 መስመር",
+    "ti": "5 መስመር",
+    "om": "5 lines"
+  },
+  "MIX_06": {
+    "en": "3 lines non touching free",
+    "am": "3 መስመር ፍሪ የማይነኩ",
+    "ti": "3 መስመር ፍሪ ዘይነክእ",
+    "om": "3 lines non touching free"
+  },
+  "MIX_07": {
+    "en": "Big L in all directions with 1 diagonal",
+    "am": "ትልቅ L በሁሉም አቅጣጫ ከ1 ዲያጎናል መስመር",
+    "ti": "ዓባይ L ናብ ኩሉ አንፈት ምስ 1 ዲያጎናል",
+    "om": "Big L in all directions with 1 diagonal"
+  },
+  "MIX_08": {
+    "en": "2 rows with 1 square",
+    "am": "2 rows with 1 square",
+    "ti": "2 ዝደቀሰ ምስ 1 ስኴር",
+    "om": "2 rows with 1 square"
+  },
+  "MIX_09": {
+    "en": "1 column 1 row 1 diagonal",
+    "am": "1 የቆመ 1 የተኛ ከ1 ዲያጎናል መስመር",
+    "ti": "1 ደው ዝበለ 1 ዝደቀሰ 1 ዲያጎናል",
+    "om": "1 column 1 row 1 diagonal"
+  },
+  "MIX_10": {
+    "en": "7 lines",
+    "am": "7 መስመር",
+    "ti": "7 መስመር",
+    "om": "7 lines"
+  },
+  "MIX_11": {
+    "en": "3 squares",
+    "am": "3 ስኴር የማይገናኙ",
+    "ti": "3 ስኴር ዘይራከቡ",
+    "om": "3 squares"
+  },
+  "MIX_12": {
+    "en": "3 lines only free touches",
+    "am": "3 መስመር ፍሪ የሚነኩ",
+    "ti": "3 ፍሪ ዝነክእ መስመር",
+    "om": "3 lines only free touches"
+  },
+  "BIG_H": {
+    "en": "Big H in all directions",
+    "am": "ትልቅ H በሁሉም አቅጣጫ",
+    "ti": "ዓባይ H ናብ ኩሉ አንፈት",
+    "om": "Big H in all directions"
+  },
+  "MIX_13": {
+    "en": "2 columns and 2 rows",
+    "am": "2 የቆሙ ከ2 የተኙ መስመር",
+    "ti": "2 ደው ዝበለ ምስ 2 ዝደቀሰ",
+    "om": "2 columns and 2 rows"
+  },
+  "HALF_HOUSE_10_DIRECTIONS": {
+    "en": "Half house in 10 directions",
+    "am": "ግማሽ ቤት ወደ 10 አቅጣጫ",
+    "ti": "ፍርቂ ገዛ ናብ 10 አንፈት",
+    "om": "Half house in 10 directions"
+  },
+  "THREE_LINES": {
+    "en": "3 lines",
+    "am": "3 መስመር",
+    "ti": "3 መስመር",
+    "om": "3 lines"
+  },
+  "THREE_ROWS_ONE_DIAGONAL": {
+    "en": "3 rows and 1 diagonal",
+    "am": "3 የተኙ ከ1 ዲያጎናል መስመር",
+    "ti": "3 ዝደቀሰ ምስ1 ዲያጎናል",
+    "om": "3 rows and 1 diagonal"
+  },
+  "TWO_DIAGONALS_ONE_ROW": {
+    "en": "2 diagonals with 1 row",
+    "am": "2 ዲያጎናል ከ1 የተኛ መስመር",
+    "ti": "2 ዲያጎናል ምስ 1 ዝደቀሰ",
+    "om": "2 diagonals with 1 row"
+  },
+  "THREE_PARALLEL_LINES": {
+    "en": "3 parallel lines",
+    "am": "3 የማይገናኙ መስመር",
+    "ti": "3 ዘይራከቡ",
+    "om": "3 parallel lines"
+  },
+  "FOUR_LINES_WITHOUT_DIAGONAL": {
+    "en": "4 lines without diagonal",
+    "am": "4 መስመር ያለ ዲያጎናል",
+    "ti": "4 መስመር ብዘይ ዲያጎናል",
+    "om": "4 lines without diagonal"
+  },
+  "HALF_HOUSE_4_DIRECTIONS": {
+    "en": "Half house only in 4 directions",
+    "am": "ግማሽ ቤት በዲያጎናል ብቻ የሚያልፍ ወደ 4 አቅጣጫ",
+    "ti": "ፍርቂ ገዛ ብዲያጎናል ዝሓልፍ ጥራሕ ናብ 4 አንፈት",
+    "om": "Half house only in 4 directions"
+  },
+  "MIX_14": {
+    "en": "1 line touches free and 2 lines non touching free",
+    "am": "1 መስመር ፍሪ የሚነካ፣ 2 መስመር ፍሪ የማይነኩ",
+    "ti": "1 መስመር ፍሪ ዝነክእ 2 መስመር ፍሪ ዘይነክእ",
+    "om": "1 line touches free and 2 lines non touching free"
+  },
+  "BIG_CROSS_ONE_DIAGONAL": {
+    "en": "Big cross and 1 diagonal",
+    "am": "ትልቅ መስቀል ከ1 ዲያጎናል መስመር",
+    "ti": "ዓባይ መስቀል ምስ 1 ዲያጎናል",
+    "om": "Big cross and 1 diagonal"
+  },
+  "TWO_ROWS_ONE_SQUARE_ALT": {
+    "en": "2 rows and 1 square all separate",
+    "am": "2 የተኙ መስመር ከ1 ስኴር ሁሉም የማይገናኙ",
+    "ti": "2 ዝደቀሰ ምስ 1 ስኴር ኩሎም ዘይራከቡ",
+    "om": "2 rows and 1 square all separate"
+  },
+  "SIX_LINES": {
+    "en": "6 lines",
+    "am": "6 መስመር",
+    "ti": "6 መስመር",
+    "om": "6 lines"
+  },
+  "THREE_COLUMNS": {
+    "en": "3 columns",
+    "am": "3 የቆሙ መስመር",
+    "ti": "3 ደው ዝበለ",
+    "om": "3 columns"
+  },
+  "FOUR_PARALLEL_LINES": {
+    "en": "4 parallel lines",
+    "am": "4 የማይገናኙ መስመር",
+    "ti": "4 ዘይራከቡ መስመር",
+    "om": "4 parallel lines"
+  },
+  "FOUR_ANGLES_TWO_SQUARES": {
+    "en": "4 angles with 2 squares all separate",
+    "am": "4 ነጥቦች (ማዕዘኖች) ከ2 ስኴር ሁሉም የማይገናኙ",
+    "ti": "4 ነጠብጣብ (አንግል) ምስ 2 ስኴር ፣ ኩሎም ዘይራከቡ",
+    "om": "4 angles with 2 squares all separate"
+  },
+  "FOUR_LINES": {
+    "en": "4 lines",
+    "am": "4 መስመር",
+    "ti": "4 መስመር",
+    "om": "4 lines"
+  },
+  "THREE_ROWS": {
+    "en": "3 rows",
+    "am": "3 የተኙ መስመር",
+    "ti": "3 ዝደቀሰ",
+    "om": "3 rows"
+  },
+  "TWO_ROWS_ONE_COLUMN": {
+    "en": "2 rows and 1 column",
+    "am": "2 የተኙ ከ1የቆመ መስመር",
+    "ti": "2 ዝደቀሰ ምስ 1 ደው ዝበለ",
+    "om": "2 rows and 1 column"
+  },
+  "TWO_DIAGONALS": {
+    "en": "2 diagonals",
+    "am": "2 ዲያጎናል",
+    "ti": "2 ዲያጎናል",
+    "om": "2 diagonals"
+  },
+  "ONE_COLUMN_ONE_ROW_ONE_SQUARE": {
+    "en": "1 column 1 row and 1 square all standalone",
+    "am": "1 ስኴር ከ 1 የቆመ እና ከ1 የተኛ መስመር ራሳቸው የቻሉ",
+    "ti": "1 ደው ዝበለ 1 ዝደቀሰ ምስ 1 ስኴር ዓርሶም ዝኸአሉ",
+    "om": "1 column 1 row and 1 square all standalone"
+  },
+  "BIG_T_ONE_DIAGONAL": {
+    "en": "Big T in all directions and 1 diagonal",
+    "am": "ትልቅ T በሁሉም አቅጣጫ ከ1 ዲያጎናል መስመር",
+    "ti": "ዓባይ T ናብ ኩሉ አንፈት ምስ 1 ዲያጎናል",
+    "om": "Big T in all directions and 1 diagonal"
+  }
+}

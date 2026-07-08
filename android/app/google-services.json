@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "534492968992",
+    "project_id": "lakamba-5",
+    "storage_bucket": "lakamba-5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:534492968992:android:57ec9a7ffa3795019de445",
+        "android_client_info": {
+          "package_name": "friends.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi3TSFfGlBi72PBbG7bX4opMwKaKBx9TY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
