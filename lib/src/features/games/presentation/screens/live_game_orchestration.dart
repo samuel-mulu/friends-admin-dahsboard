@@ -169,10 +169,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (!shouldRunFinishTransition(
-      currentStatus: game.status,
+    if (!shouldEnterTerminalSideEffects(
+      alreadyInSummary: _review.postGameSummaryReviewActive,
       sessionRoomActive: _joinedGameId != null,
-      summaryScheduled: false,
+      shouldRunTransition: shouldRunFinishTransition(
+        currentStatus: game.status,
+        sessionRoomActive: _joinedGameId != null,
+        summaryScheduled: false,
+      ),
     )) {
       return;
     }
@@ -196,7 +200,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _syncNextBallCountdownTicker();
     _startPostGameSummary(scheduleAdvance: true);
     unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
-    _scheduleCanonicalRefetch(wallet: !_isGuest);
   }
 
   bool get _showsPostGameSummary => _review.showsPostGameSummary;
@@ -821,10 +824,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (!shouldRunFinishTransition(
-      currentStatus: _game?.status,
+    if (!shouldEnterTerminalSideEffects(
+      alreadyInSummary: _review.postGameSummaryReviewActive,
       sessionRoomActive: _joinedGameId != null,
-      summaryScheduled: _review.postGameSummaryReviewActive,
+      shouldRunTransition: shouldRunFinishTransition(
+        currentStatus: _game?.status,
+        sessionRoomActive: _joinedGameId != null,
+        summaryScheduled: _review.postGameSummaryReviewActive,
+      ),
     )) {
       return;
     }
@@ -881,7 +888,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _sortMyCartelas();
     _syncCalledNumbersForFinishedReview();
     _startPostGameSummary(scheduleAdvance: true);
-    _scheduleCanonicalRefetch(wallet: !_isGuest);
   }
 
   void _handleNoWinnerLocally({
@@ -894,10 +900,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (!shouldRunFinishTransition(
-      currentStatus: _game?.status,
+    if (!shouldEnterTerminalSideEffects(
+      alreadyInSummary: _review.postGameSummaryReviewActive,
       sessionRoomActive: _joinedGameId != null,
-      summaryScheduled: _review.postGameSummaryReviewActive,
+      shouldRunTransition: shouldRunFinishTransition(
+        currentStatus: _game?.status,
+        sessionRoomActive: _joinedGameId != null,
+        summaryScheduled: _review.postGameSummaryReviewActive,
+      ),
     )) {
       return;
     }
@@ -937,7 +947,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _sortMyCartelas();
     _syncCalledNumbersForFinishedReview();
     _startPostGameSummary(scheduleAdvance: true);
-    _scheduleCanonicalRefetch(wallet: !_isGuest);
 
     if (showSnackbar) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
