@@ -78,6 +78,7 @@ import '../utils/live_sync_trigger_action.dart';
 import '../utils/socket_payload_normalizer.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
 import '../utils/live_resume_sync.dart';
+import '../utils/live_resume_terminal_gate.dart';
 import '../debug/live_realtime_debug.dart';
 import '../widgets/registration_open_pulse.dart';
 import '../widgets/winner_window_countdown.dart';
@@ -554,6 +555,21 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   @override
   Duration get preparingPhaseCap => _preparingPhaseCap;
+
+  @override
+  bool get isTerminalTransitionActive {
+    final review = _review;
+    final realtime = controllers.realtime;
+    return review.postGameSummaryReviewActive ||
+        review.postGameSummaryAdvancing ||
+        isTerminalCanonicalRefetchActive(
+          canonicalRefetchInFlight: realtime.canonicalRefetchInFlight,
+          pendingRefetchReason: realtime.pendingRefetchReason,
+          lastTerminalCanonicalRefetchRequestedAt:
+              realtime.lastTerminalCanonicalRefetchRequestedAt,
+          now: countdownNow(),
+        );
+  }
 
   bool get _shouldCacheTimingConfigForLivePlay {
     final game = _game;

@@ -82,6 +82,9 @@ abstract class LiveGameHost {
 
   Duration get preparingPhaseCap;
 
+  /// True while post-game summary / terminal refetch should block resume sync.
+  bool get isTerminalTransitionActive;
+
   /// Full canonical reload after resume/reconnect (backend truth only).
   Future<void> runResumeSync({bool allowCachedOperations = true});
 

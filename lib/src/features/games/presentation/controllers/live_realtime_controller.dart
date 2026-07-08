@@ -12,6 +12,7 @@ import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../providers/games_providers.dart';
 import '../utils/live_resume_provider_policy.dart';
+import '../utils/live_resume_terminal_gate.dart';
 import '../utils/live_socket_session_membership.dart';
 import 'live_game_host.dart';
 
@@ -274,6 +275,19 @@ class LiveRealtimeController {
 
   Future<void> syncLatest({required String reason}) async {
     if (!host.mounted) {
+      return;
+    }
+
+    final trigger = liveSyncTriggerFromResumeReason(reason);
+    if (!shouldRunResumeSync(
+      trigger: trigger,
+      postGameSummaryReviewActive:
+          host.controllers.review.postGameSummaryReviewActive,
+      postGameSummaryAdvancing:
+          host.controllers.review.postGameSummaryAdvancing,
+      terminalCanonicalRefetchInFlight: host.isTerminalTransitionActive,
+    )) {
+      LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_terminal_active');
       return;
     }
 
