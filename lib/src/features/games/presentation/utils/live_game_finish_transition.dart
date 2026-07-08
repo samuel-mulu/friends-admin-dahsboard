@@ -50,6 +50,7 @@ bool shouldPinTerminalSession({
   return switch (status) {
     GameStatus.finished => true,
     GameStatus.noWinner => true,
+    GameStatus.cancelled => true,
     GameStatus.winnerWindow => winnerWindowExpired,
     _ => false,
   };

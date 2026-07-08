@@ -43,14 +43,14 @@ void main() {
       );
     });
 
-    test('does not pin cancelled sessions', () {
+    test('pins cancelled sessions during terminal handoff', () {
       expect(
         shouldPinTerminalSession(
           status: GameStatus.cancelled,
           postGameSummaryReviewActive: false,
           winnerWindowExpired: false,
         ),
-        isFalse,
+        isTrue,
       );
     });
   });

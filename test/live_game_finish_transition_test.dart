@@ -88,4 +88,28 @@ void main() {
       expect(isTerminalGameStatus(GameStatus.playing), isFalse);
     });
   });
+
+  group('shouldPinTerminalSession', () {
+    test('pins cancelled while summary review active', () {
+      expect(
+        shouldPinTerminalSession(
+          status: GameStatus.cancelled,
+          postGameSummaryReviewActive: true,
+          winnerWindowExpired: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('pins cancelled status by default', () {
+      expect(
+        shouldPinTerminalSession(
+          status: GameStatus.cancelled,
+          postGameSummaryReviewActive: false,
+          winnerWindowExpired: false,
+        ),
+        isTrue,
+      );
+    });
+  });
 }
