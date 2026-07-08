@@ -18,6 +18,15 @@ class WinnerCartelaDisplayCache {
     winningBallCellIndexByGameCartelaId.clear();
   }
 
+  bool hasPatternsFor(String gameCartelaId) {
+    final cells = patternCellsByGameCartelaId[gameCartelaId];
+    if (cells != null && cells.isNotEmpty) {
+      return true;
+    }
+    final claim = claimPatternsByGameCartelaId[gameCartelaId];
+    return claim != null && claim.isNotEmpty;
+  }
+
   void storePatterns({
     required String gameCartelaId,
     required List<CompletedPatternModel> patterns,
@@ -81,6 +90,7 @@ class WinnerCartelaDisplayCache {
       return;
     }
 
+    // Enrich-only: missing/empty patterns must not wipe sticky socket patterns.
     final claimPatterns = claimPatternsByGameCartelaId[result.gameCartelaId];
     if (claimPatterns != null && claimPatterns.isNotEmpty) {
       storePatterns(
@@ -89,6 +99,11 @@ class WinnerCartelaDisplayCache {
         columns: result.columns,
         lastCalledNumber: result.lastCalledNumber,
       );
+      return;
+    }
+
+    if (hasPatternsFor(result.gameCartelaId)) {
+      return;
     }
   }
 }

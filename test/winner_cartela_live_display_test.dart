@@ -52,6 +52,58 @@ void main() {
     expect(cache.overlayByGameCartelaId['gc-1']?.isEmpty, isFalse);
   });
 
+  test('applySessionResult without patterns leaves sticky claim patterns', () {
+    final cache = WinnerCartelaDisplayCache();
+    cache.storeClaimSnapshot(
+      gameCartelaId: 'c1',
+      patterns: patterns,
+      columns: columns,
+      lastCalledNumber: const SessionWinnerLastCalledNumber(
+        letter: 'O',
+        number: 74,
+      ),
+    );
+
+    cache.applySessionResult(
+      SessionWinnerResultModel(
+        gameCartelaId: 'c1',
+        cartelaId: 'cartela-1',
+        cartelaNumber: 1,
+        amount: '10',
+        columns: columns,
+        completedPatterns: const [],
+      ),
+    );
+
+    expect(cache.hasPatternsFor('c1'), isTrue);
+    expect(cache.overlayByGameCartelaId['c1']?.isEmpty, isFalse);
+  });
+
+  test(
+    'applySessionResult without patterns leaves sticky storePatterns overlays',
+    () {
+      final cache = WinnerCartelaDisplayCache();
+      cache.storePatterns(
+        gameCartelaId: 'c2',
+        patterns: patterns,
+        columns: columns,
+      );
+
+      cache.applySessionResult(
+        SessionWinnerResultModel(
+          gameCartelaId: 'c2',
+          cartelaId: 'cartela-2',
+          cartelaNumber: 2,
+          amount: '10',
+          columns: columns,
+          completedPatterns: const [],
+        ),
+      );
+
+      expect(cache.hasPatternsFor('c2'), isTrue);
+    },
+  );
+
   test(
     'WinnerCartelaDisplayCache clears stale winning ball when unresolved',
     () {
