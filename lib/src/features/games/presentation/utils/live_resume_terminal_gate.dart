@@ -18,14 +18,15 @@ bool shouldRunResumeSync({
   required bool postGameSummaryAdvancing,
   required bool terminalCanonicalRefetchInFlight,
 }) {
-  if (trigger == LiveSyncTrigger.manualRefresh) {
-    return true;
-  }
-
   final terminalActive = postGameSummaryReviewActive ||
       postGameSummaryAdvancing ||
       terminalCanonicalRefetchInFlight;
 
+  // manual_refresh, app_resume and socket_reconnect all resolve through the
+  // single trigger table. During an active terminal transition every one of
+  // them (including manual_refresh) resolves to `ignore` so nothing races the
+  // atomic terminal apply. Outside a terminal transition manual_refresh always
+  // runs a canonical snapshot fetch.
   final action = resolveLiveSyncTriggerAction(
     trigger,
     terminalTransitionActive: terminalActive,

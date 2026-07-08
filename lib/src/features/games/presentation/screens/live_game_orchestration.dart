@@ -1175,6 +1175,27 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           return;
         }
 
+        // Terminal transition hold (CANCELLED / FINISHED / NO_WINNER -> READY):
+        // the backend can briefly report no current/queued game between emitting
+        // the terminal event and opening the next READY registration. Do NOT
+        // tear down the UI on that transient gap. Hold the previous UI; the next
+        // READY snapshot (delivered by the status/operation socket events that
+        // always follow) re-applies atomically. This window is self-bounding:
+        // isTerminalTransitionActive expires ~3s after the terminal refetch, so
+        // a genuinely empty state still clears via the branch below afterwards.
+        if (priorGame != null && isTerminalTransitionActive) {
+          _safeSetState(generation, () {
+            _isLoading = false;
+            _errorMessage = null;
+            _emptyMessage = null;
+            if (resumeSync) {
+              _realtime.canonicalRefetchInFlight = false;
+            }
+          });
+          _evaluateLiveRoomSplash();
+          return;
+        }
+
         _expireReadyTransitionLockIfNeeded();
         _applySocketSessionMembership(null);
         final waitingForRealtime = !_socketService.isConnected;
@@ -2064,20 +2085,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       reason: reason,
       wallet: wallet,
       registrationSessionId: registrationSessionId,
-      includeCalledNumbers: includeCalledNumbers,
-      includeMyCartelas: includeMyCartelas,
-    );
-  }
-
-  Future<void> _refetchCanonical({
-    bool wallet = false,
-    bool includeCalledNumbers = false,
-    bool includeMyCartelas = false,
-    String reason = 'screen_refetch',
-  }) {
-    return _realtime.refetchCanonical(
-      reason: reason,
-      wallet: wallet,
       includeCalledNumbers: includeCalledNumbers,
       includeMyCartelas: includeMyCartelas,
     );

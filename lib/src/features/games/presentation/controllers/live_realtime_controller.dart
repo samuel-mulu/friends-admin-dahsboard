@@ -62,7 +62,12 @@ class LiveRealtimeController {
   ServerClockService get serverClock => host.ref.read(serverClockProvider);
   SocketService get socketService => host.ref.read(socketServiceProvider);
   LiveConnectionState get connectionState => _resolveConnectionState();
-  bool get showSyncOverlay => _syncOverlayVisible;
+  // Never paint the sync overlay on top of held UI during a terminal
+  // transition (CANCELLED/FINISHED -> READY). The terminal owner holds the
+  // previous UI and applies the next snapshot atomically; a spinner over it
+  // is the "glitch at the change time" we want to avoid.
+  bool get showSyncOverlay =>
+      _syncOverlayVisible && !host.isTerminalTransitionActive;
   bool get showHeaderSyncSpinner => _syncScheduled || resumeSyncInFlight;
   String get syncOverlayTitle =>
       _isReconnectStyleSync ? 'Reconnecting...' : 'Syncing latest game...';

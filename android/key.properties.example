@@ -1,0 +1,16 @@
+# Release signing configuration template.
+#
+# 1. Generate an upload keystore (once), keep the .jks file safe and private:
+#      keytool -genkey -v -keystore upload-keystore.jks \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# 2. Copy this file to android/key.properties and fill in the real values.
+#    android/key.properties is gitignored and must NEVER be committed.
+#
+# 3. `storeFile` is resolved relative to the android/ directory. Point it at
+#    your keystore, e.g. upload-keystore.jks or an absolute path.
+
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=upload-keystore.jks

@@ -41,6 +41,12 @@ LiveSyncAction resolveLiveSyncTriggerAction(
       }
       return LiveSyncAction.canonicalSnapshotFetch;
     case LiveSyncTrigger.manualRefresh:
+      // A terminal transition already fetches canonical truth atomically.
+      // Ignore manual refresh during that window so it cannot race and
+      // overwrite the terminal apply (CANCELLED/FINISHED -> READY).
+      if (terminalTransitionActive) {
+        return LiveSyncAction.ignore;
+      }
       return LiveSyncAction.canonicalSnapshotFetch;
     case LiveSyncTrigger.operationUpdated:
       if (updatedReason == 'number_called') {
