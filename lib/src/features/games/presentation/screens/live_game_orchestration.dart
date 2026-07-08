@@ -792,13 +792,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    unawaited(
-      _refetchCanonicalImmediate(
-        wallet: !_isGuest,
-        registrationSessionId: _game?.sessionId,
-        includeCalledNumbers: true,
-        includeMyCartelas: false,
-      ),
+    if (!shouldRunCancelTransition(
+      currentStatus: _game?.status,
+      sessionRoomActive: _joinedGameId != null,
+    )) {
+      return;
+    }
+
+    _realtime.requestTerminalCanonicalRefetch(
+      reason: 'game_cancelled',
+      wallet: !_isGuest,
+      registrationSessionId: _game?.sessionId,
+      includeCalledNumbers: true,
+      includeMyCartelas: false,
     );
   }
 
@@ -3071,13 +3077,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    unawaited(
-      _refetchCanonicalImmediate(
-        wallet: !_isGuest,
-        registrationSessionId: _game?.sessionId,
-        includeCalledNumbers: true,
-        includeMyCartelas: false,
-      ),
+    _realtime.requestTerminalCanonicalRefetch(
+      reason: 'game_finished',
+      wallet: !_isGuest,
+      registrationSessionId: _game?.sessionId,
+      includeCalledNumbers: true,
+      includeMyCartelas: false,
     );
   }
 

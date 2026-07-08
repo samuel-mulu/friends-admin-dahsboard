@@ -166,19 +166,24 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     final isTerminal =
         status == 'FINISHED' || status == 'NO_WINNER' || status == 'CANCELLED';
 
-    if (isTerminal) {
-      unawaited(
-        _refetchCanonicalImmediate(
-          wallet: !_isGuest,
-          registrationSessionId: _game?.sessionId,
-          includeCalledNumbers: true,
-          includeMyCartelas: false,
-        ),
+    final action = resolveLiveSyncTriggerAction(
+      LiveSyncTrigger.statusChanged,
+      isTerminalStatus: isTerminal,
+    );
+
+    if (action == LiveSyncAction.terminalTransitionSnapshot) {
+      _realtime.requestTerminalCanonicalRefetch(
+        reason: 'status_changed_terminal',
+        wallet: !_isGuest,
+        registrationSessionId: _game?.sessionId,
+        includeCalledNumbers: true,
+        includeMyCartelas: false,
       );
       return;
     }
 
     _scheduleCanonicalRefetch(
+      reason: 'status_changed',
       registrationSessionId: sessionId,
       includeCalledNumbers: true,
     );
