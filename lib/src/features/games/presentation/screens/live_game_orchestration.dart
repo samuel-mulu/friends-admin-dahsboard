@@ -2583,8 +2583,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     LiveRealtimeDebug.socket('game:number_called', normalizedPayload);
 
-    final needsLiveReconcile =
-        game != null && !isLivePlayGameStatus(game.status);
     final pauseStripForClaim = _isAnyClaimChecking;
 
     var scheduleChanged = false;
@@ -2619,21 +2617,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           calledNumbersCount: highestKnownOrder > game.calledNumbersCount
               ? highestKnownOrder
               : game.calledNumbersCount,
-          status: needsLiveReconcile ? GameStatus.playing : game.status,
-          canRegister: needsLiveReconcile ? false : game.canRegister,
-          registrationOpen: needsLiveReconcile ? false : game.registrationOpen,
         );
-      }
-      if (needsLiveReconcile) {
-        _isSyncingLiveGame = true;
       }
     }
 
-    if (needsLiveReconcile) {
-      setState(applyGameSchedule);
-    } else {
-      applyGameSchedule();
-    }
+    applyGameSchedule();
 
     if (game != null) {
       final updatedGame = _game!;
@@ -2651,7 +2639,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       LiveRealtimeDebug.log(
         'number_called_unreconciled order=${calledNumber.order} recovery=canonical',
       );
-      _scheduleCanonicalRefetch(includeCalledNumbers: true);
+      _scheduleCanonicalRefetch(
+        reason: 'number_called_conflict',
+        includeCalledNumbers: true,
+      );
     } else if (applyResult.requiresCalledNumbersSync) {
       LiveRealtimeDebug.log(
         'number_called_gap expected=${applyResult.expectedNextOrder} '
@@ -2665,18 +2656,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
     }
 
-    if (needsLiveReconcile) {
+    // Non-live status with a ball: ask ops for truth — never invent PLAYING.
+    if (game != null && !isLivePlayGameStatus(game.status)) {
       LiveRealtimeDebug.log(
-        'number_called promoted to live play (order=${calledNumber.order})',
+        'number_called needs live reconcile (order=${calledNumber.order})',
       );
-      unawaited(
-        _refetchCanonicalImmediate(includeCalledNumbers: false).whenComplete(
-          () {
-            if (mounted) {
-              setState(() => _isSyncingLiveGame = false);
-            }
-          },
-        ),
+      _scheduleCanonicalRefetch(
+        reason: 'number_called_needs_live_reconcile',
+        includeCalledNumbers: true,
       );
     }
   }
