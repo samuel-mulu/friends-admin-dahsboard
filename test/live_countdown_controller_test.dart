@@ -186,7 +186,10 @@ class _CountdownHarnessState extends ConsumerState<_CountdownHarness>
   Duration get preparingPhaseCap => const Duration(seconds: 45);
 
   @override
-  Future<void> runResumeSync() async {}
+  bool get isTerminalTransitionActive => false;
+
+  @override
+  Future<void> runResumeSync({bool allowCachedOperations = true}) async {}
 
   @override
   Future<void> runInitialLoad({

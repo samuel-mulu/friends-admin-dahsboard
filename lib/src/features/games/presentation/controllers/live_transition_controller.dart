@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../data/models/game_model.dart';
 import '../utils/live_presentation_phase.dart';
+import '../utils/live_preparing_poll_sync_gate.dart';
 import '../utils/live_ready_transition_lock.dart' as transition_lock;
 import 'live_game_host.dart';
 
@@ -364,6 +365,13 @@ class LiveTransitionController {
         stopPreparingPhasePolling();
         return;
       }
+      if (shouldSkipPreparingPollDuringSync(
+        resumeSyncInFlight: host.controllers.realtime.resumeSyncInFlight,
+        canonicalRefetchInFlight:
+            host.controllers.realtime.canonicalRefetchInFlight,
+      )) {
+        return;
+      }
       unawaited(
         host.controllers.realtime.refetchCanonicalImmediate(
           reason: 'preparing_phase_poll',
@@ -380,6 +388,13 @@ class LiveTransitionController {
   }
 
   void schedulePreparingPhaseCatchUpRefetch() {
+    if (shouldSkipPreparingPollDuringSync(
+      resumeSyncInFlight: host.controllers.realtime.resumeSyncInFlight,
+      canonicalRefetchInFlight:
+          host.controllers.realtime.canonicalRefetchInFlight,
+    )) {
+      return;
+    }
     unawaited(
       host.controllers.realtime.refetchCanonicalImmediate(
         reason: 'preparing_phase_catch_up',
