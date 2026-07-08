@@ -2891,7 +2891,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (payload.containsKey('nextAutoCallAt')) {
       _applyAutoCallScheduleFromPayload(payload);
     } else {
-      _scheduleCanonicalRefetch();
+      _scheduleCanonicalRefetch(reason: 'bingo_invalid_missing_schedule');
     }
   }
 
@@ -3352,10 +3352,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final normalizedPayload = normalizeSocketPayload(payload);
-    if (normalizedPayload == null) {
-      _logInvalidSocketPayloadOnce('wallet:updated', payload);
-    } else {
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'wallet:updated',
+      scheduleRefetchOnInvalid: false,
+    );
+    if (normalizedPayload != null) {
       LiveRealtimeDebug.socket('wallet:updated', normalizedPayload);
     }
 
