@@ -143,10 +143,11 @@ class LiveReviewController {
     winnerCartelaDisplay.clear();
   }
 
-  void clearFinishedReviewSessionData() {
-    clearFinishedReviewVisualState(
-      reason: WinnerPatternClearReason.clearSessionScopedReview,
-    );
+  void clearFinishedReviewSessionData({
+    WinnerPatternClearReason patternClearReason =
+        WinnerPatternClearReason.clearSessionScopedReview,
+  }) {
+    clearFinishedReviewVisualState(reason: patternClearReason);
     sessionWinnerResults = const [];
     sessionWinnerResultsLoaded = false;
     sessionWinnerResultsLoading = false;
@@ -165,14 +166,24 @@ class LiveReviewController {
     winnerCartelaDialogAutoShownForSessionId = null;
   }
 
-  void clearPostGameSummaryHold({void Function()? resetRegistrationCountdown}) {
+  void clearPostGameSummaryHold({
+    void Function()? resetRegistrationCountdown,
+    WinnerPatternClearReason patternClearReason =
+        WinnerPatternClearReason.clearSessionScopedReview,
+    bool clearWinnerPatterns = true,
+  }) {
     winnerCartelaDialogVisible = false;
     winnerCartelaDialogAutoShownForSessionId = null;
     postGameSummaryReviewActive = false;
     postGameSummaryHoldBypassed = false;
     postGameSummaryAdvancing = false;
     postGameSummaryShownAt = null;
-    clearFinishedReviewSessionData();
+    sessionWinnerResults = const [];
+    sessionWinnerResultsLoaded = false;
+    sessionWinnerResultsLoading = false;
+    if (clearWinnerPatterns) {
+      clearFinishedReviewVisualState(reason: patternClearReason);
+    }
     finishTransitionTimer?.cancel();
     finishTransitionTimer = null;
     postGameSummaryCountdownTicker?.cancel();
@@ -401,7 +412,10 @@ class LiveReviewController {
     }
 
     winnerCartelaDialogVisible = false;
-    // Do NOT clear winnerCartelaDisplay here — wait for sessionChanged apply.
+    // Policy: patterns stay sticky through advance until sessionChanged apply.
+    clearFinishedReviewVisualState(
+      reason: WinnerPatternClearReason.postGameAdvanceBegin,
+    );
     finishTransitionTimer?.cancel();
     finishTransitionTimer = null;
     postGameSummaryCountdownTicker?.cancel();

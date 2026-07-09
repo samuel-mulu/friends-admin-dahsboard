@@ -1,3 +1,5 @@
+import '../../data/models/game_model.dart';
+
 enum WinnerPatternClearReason {
   postGameAdvanceBegin,
   sessionChanged,
@@ -14,4 +16,20 @@ bool shouldClearWinnerPatterns(WinnerPatternClearReason reason) {
     WinnerPatternClearReason.completePatternReplacement => true,
     WinnerPatternClearReason.clearSessionScopedReview => true,
   };
+}
+
+bool shouldClearWinnerPatternsOnSessionApply({
+  required bool sessionChanged,
+  required bool postGameSummaryAdvancing,
+  required GameStatus incomingStatus,
+}) {
+  if (!sessionChanged) {
+    return false;
+  }
+  if (!postGameSummaryAdvancing) {
+    return shouldClearWinnerPatterns(WinnerPatternClearReason.sessionChanged);
+  }
+  // During post-game advance, keep patterns until the next READY snapshot lands.
+  return incomingStatus == GameStatus.ready &&
+      shouldClearWinnerPatterns(WinnerPatternClearReason.sessionChanged);
 }

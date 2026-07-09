@@ -1808,9 +1808,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _review.sessionWinnerResults = const [];
         _review.sessionWinnerResultsLoaded = false;
         _review.sessionWinnerResultsLoading = false;
-        _review.clearFinishedReviewVisualState(
-          reason: WinnerPatternClearReason.sessionChanged,
-        );
+        if (shouldClearWinnerPatternsOnSessionApply(
+          sessionChanged: true,
+          postGameSummaryAdvancing: _review.postGameSummaryAdvancing,
+          incomingStatus: game.status,
+        )) {
+          _review.clearFinishedReviewVisualState(
+            reason: WinnerPatternClearReason.sessionChanged,
+          );
+        }
         _cn.cartelaSortResults = const {};
         _cn.blockedCartelaFrozenMarks.clear();
         _cn.blockedCartelaFrozenSortResults.clear();
@@ -1902,7 +1908,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       // A stale refetch may still report winnerWindow while local state already
       // advanced to finished; keep the review hold until we truly leave terminal.
       if (shouldClearFinished && !isTerminalGameStatus(mergedGame.status)) {
-        _clearPostGameSummaryHold();
+        _clearPostGameSummaryHold(
+          patternClearReason: WinnerPatternClearReason.sessionChanged,
+        );
       }
       if (resumeSync) {
         _realtime.canonicalRefetchInFlight = false;
@@ -3026,10 +3034,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
   }
 
-  void _clearPostGameSummaryHold() {
+  void _clearPostGameSummaryHold({
+    WinnerPatternClearReason patternClearReason =
+        WinnerPatternClearReason.clearSessionScopedReview,
+    bool clearWinnerPatterns = true,
+  }) {
     _dismissWinnerCartelaDialogIfOpen();
     _review.clearPostGameSummaryHold(
       resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,
+      patternClearReason: patternClearReason,
+      clearWinnerPatterns: clearWinnerPatterns,
     );
   }
 
@@ -3130,7 +3144,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (nextGame == null ||
           (onlyIfRegistrationAvailable &&
               (nextGame.status != GameStatus.ready || !nextGame.canRegister))) {
-        _clearPostGameSummaryHold();
+        _clearPostGameSummaryHold(
+          patternClearReason: WinnerPatternClearReason.sessionChanged,
+          clearWinnerPatterns: false,
+        );
         await _loadInitialState(
           showLoading: false,
           allowTerminalTransition: true,
@@ -3148,7 +3165,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (_game?.status != GameStatus.finished &&
           _game?.status != GameStatus.noWinner &&
           _game?.status != GameStatus.cancelled) {
-        _clearPostGameSummaryHold();
+        _clearPostGameSummaryHold(
+          patternClearReason: WinnerPatternClearReason.sessionChanged,
+        );
         final advancedGame = _game;
         if (advancedGame != null &&
             advancedGame.status == GameStatus.ready &&
