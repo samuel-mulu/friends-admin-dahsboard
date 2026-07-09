@@ -67,9 +67,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
               winnerCartelaNumbers: winnerCartelaNumbers,
               blockedCartelaNumbers: blockedCartelaNumbers,
               isCheckingClaim: isClaiming,
-              isRefreshing:
-                  _cn.isRefreshingCalledNumbersPanel ||
-                  _realtime.showHeaderSyncSpinner,
+              isRefreshing: _cn.isRefreshingCalledNumbersPanel,
               connectionState: _realtime.connectionState,
               lockExpanded: false,
               headerLeading: _buildGameInfoStripLeading(context),

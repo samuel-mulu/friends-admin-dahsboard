@@ -34,7 +34,9 @@ class LiveRealtimeController {
   // state current. This kills reconnect "sync storms" and the entry-time
   // double fetch (initial load immediately followed by the first connect).
   static const _reconnectSyncThrottle = Duration(seconds: 2);
-  static const _syncOverlayDelay = Duration(milliseconds: 1500);
+  static const _syncOverlayDelayManual = Duration(milliseconds: 1500);
+  static const _syncOverlayDelayBackground = Duration(seconds: 3);
+  static const _recentSyncSkipWindow = Duration(seconds: 5);
   static const _currentBadgeDuration = Duration(seconds: 4);
 
   final LiveSocketSessionMembership socketMembership =
@@ -79,7 +81,10 @@ class LiveRealtimeController {
       _syncOverlayVisible &&
       !host.isTerminalTransitionActive &&
       !host.controllers.transition.readyTransitionLockActive;
-  bool get showHeaderSyncSpinner => _syncScheduled || resumeSyncInFlight;
+  bool get showHeaderSyncSpinner =>
+      (_syncScheduled || resumeSyncInFlight) &&
+      (_activeSyncReason == 'manual_refresh' || _lastSyncFailed);
+  bool get lastSyncFailed => _lastSyncFailed;
   String get syncOverlayTitle =>
       _isReconnectStyleSync ? 'Reconnecting...' : 'Syncing latest game...';
   String get syncOverlayMessage => _isReconnectStyleSync
@@ -310,14 +315,30 @@ class LiveRealtimeController {
     // Flaky-mobile reconnect throttle: if the socket is already back and we
     // applied canonical truth in the last couple of seconds, a reconnect fetch
     // is redundant. Membership rejoin + live events (run before this) keep us
-    // current. Manual refresh and app_resume are never throttled here.
-    if (trigger == LiveSyncTrigger.socketReconnect &&
+    // current. Manual refresh is never throttled here.
+    if (trigger == LiveSyncTrigger.socketReconnect) {
+      if (!host.initialLoadComplete) {
+        LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_initial_load');
+        return;
+      }
+      if (socketService.isConnected &&
+          !resumeSyncInFlight &&
+          !ResumeSyncGuard.inFlight &&
+          _lastSuccessfulSyncAt != null &&
+          DateTime.now().difference(_lastSuccessfulSyncAt!) <
+              _reconnectSyncThrottle) {
+        LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_recently_synced');
+        return;
+      }
+    }
+
+    if (trigger == LiveSyncTrigger.appResume &&
+        host.initialLoadComplete &&
+        host.game != null &&
         socketService.isConnected &&
-        !resumeSyncInFlight &&
-        !ResumeSyncGuard.inFlight &&
         _lastSuccessfulSyncAt != null &&
         DateTime.now().difference(_lastSuccessfulSyncAt!) <
-            _reconnectSyncThrottle) {
+            _recentSyncSkipWindow) {
       LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_recently_synced');
       return;
     }
@@ -494,8 +515,17 @@ class LiveRealtimeController {
     _syncOverlayVisible = false;
     _currentBadgeTimer?.cancel();
     _syncOverlayTimer?.cancel();
-    _syncOverlayTimer = Timer(_syncOverlayDelay, () {
+    final overlayDelay = reason == 'manual_refresh'
+        ? _syncOverlayDelayManual
+        : _syncOverlayDelayBackground;
+    _syncOverlayTimer = Timer(overlayDelay, () {
       if (!host.mounted || !(_syncScheduled || resumeSyncInFlight)) {
+        return;
+      }
+      // Skip overlay when painted game is already on screen for background sync.
+      if (_usesResumeDebounce(reason) &&
+          host.initialLoadComplete &&
+          host.game != null) {
         return;
       }
       _syncOverlayVisible = true;
@@ -525,7 +555,7 @@ class LiveRealtimeController {
 
   void _handleSyncFailure() {
     _syncOverlayTimer?.cancel();
-    _syncOverlayVisible = false;
+    _syncOverlayVisible = true;
     _activeSyncReason = null;
     _lastSyncFailed = true;
     _currentBadgeTimer?.cancel();

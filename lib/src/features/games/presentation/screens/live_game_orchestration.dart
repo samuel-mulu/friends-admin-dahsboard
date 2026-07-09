@@ -1978,6 +1978,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       // Canonical truth is now on screen; feed the reconnect throttle so a
       // socket `connect` right after this apply does not refetch redundantly.
       _realtime.markCanonicalApplied();
+      _initialLoadComplete = true;
+      if (!_hasCompletedInitialPaint) {
+        _hasCompletedInitialPaint = true;
+      }
 
       // A stale refetch may still report winnerWindow while local state already
       // advanced to finished; keep the review hold until we truly leave terminal.

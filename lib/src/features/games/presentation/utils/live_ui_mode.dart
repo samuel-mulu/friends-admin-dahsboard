@@ -328,8 +328,7 @@ class LiveUiModeResolver {
       final wantsSurfaces = !_screenBlocked(input) && !input.isGuest;
       final readyAtomic = resolveReadyAtomicVisibility(
         hasReadyGame: wantsSurfaces && primary != null,
-        gridReady: input.holds.registrationGridReady &&
-            !input.holds.canonicalRefetchInFlight,
+        gridReady: input.holds.registrationGridReady,
         holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
             input.holds.canonicalRefetchInFlight,
       );
@@ -607,8 +606,7 @@ class LiveUiModeResolver {
         useRegistrationOpenLayout && _showRegistrationGrid(mode, input.isGuest);
     final readyAtomic = resolveReadyAtomicVisibility(
       hasReadyGame: wantsRegistrationSurfaces,
-      gridReady: input.holds.registrationGridReady &&
-          !input.holds.canonicalRefetchInFlight,
+      gridReady: input.holds.registrationGridReady,
       holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
           input.holds.canonicalRefetchInFlight,
     );

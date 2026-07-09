@@ -226,6 +226,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _awaitingPrizeWalletRefresh = false;
   Timer? _liveRoomSplashTicker;
   bool _awaitingLiveRoom = true;
+  bool _initialLoadComplete = false;
+  bool _hasCompletedInitialPaint = false;
   DateTime? _liveRoomSplashStartedAt;
   int _loadGeneration = 0;
   LivePresentationPhase? _lastDebugPhase;
@@ -306,6 +308,28 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   GameModel? get _blockingLiveSessionGame =>
       _lastOperations?.liveGame ?? _lastOperations?.checkingGame;
 
+  String? get _registrationGridSessionId {
+    final registrationOpen = _lastOperations?.registrationOpenGame;
+    if (registrationOpen?.sessionId != null &&
+        registrationOpen!.sessionId!.isNotEmpty) {
+      return registrationOpen.sessionId;
+    }
+    final game = _game;
+    if (game?.status == GameStatus.ready &&
+        game?.sessionId != null &&
+        game!.sessionId!.isNotEmpty) {
+      return game.sessionId;
+    }
+    return null;
+  }
+
+  bool _isRegistrationGridReady(String? sessionId) {
+    if (sessionId == null || sessionId.isEmpty) {
+      return false;
+    }
+    return ref.watch(registrationStateProvider(sessionId)).hasValue;
+  }
+
   LiveUiModeState get _liveUiMode {
     return resolveLiveUiMode(
       ResolveLiveUiModeInput(
@@ -325,7 +349,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
           canonicalRefetchInFlight:
               controllers.realtime.canonicalRefetchInFlight,
           postGameSummaryAdvancing: _review.postGameSummaryAdvancing,
-          registrationGridReady: true,
+          registrationGridReady:
+              _isRegistrationGridReady(_registrationGridSessionId),
         ),
         now: _countdownNow(),
         preparingStaleAfter: _preparingPhaseCap,
@@ -544,6 +569,9 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   Duration get preparingPhaseCap => _preparingPhaseCap;
 
   @override
+  bool get initialLoadComplete => _initialLoadComplete;
+
+  @override
   bool get isTerminalTransitionActive {
     final review = _review;
     final realtime = controllers.realtime;
@@ -637,6 +665,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     if (widget.initialGame != null) {
       _game = widget.initialGame;
       _isLoading = false;
+      _awaitingLiveRoom = false;
+      _hasCompletedInitialPaint = true;
+      _initialLoadComplete = true;
     }
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
@@ -737,10 +768,15 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     });
 
     final body = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 450),
+      duration: _hasCompletedInitialPaint
+          ? const Duration(milliseconds: 450)
+          : Duration.zero,
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) {
+        if (!_hasCompletedInitialPaint) {
+          return child;
+        }
         return FadeTransition(
           opacity: animation,
           child: SlideTransition(
@@ -787,6 +823,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             visible: _realtime.showSyncOverlay,
             title: _realtime.syncOverlayTitle,
             message: _realtime.syncOverlayMessage,
+            showRetry: _realtime.lastSyncFailed,
             onRetry: () => unawaited(_refresh()),
           ),
         ],
@@ -798,7 +835,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     final game = _game;
     final registrationBodyTarget = _registrationOpenBodyTarget;
     if (registrationBodyTarget != null) {
-      return 'registration-${registrationBodyTarget.id}-${registrationBodyTarget.sessionId ?? 'pending'}';
+      return 'registration-${registrationBodyTarget.sessionId ?? registrationBodyTarget.id}';
     }
 
     if (game == null ||
@@ -883,13 +920,20 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: AppSpacing.screenPadding.copyWith(top: 0),
-        children: _buildFullScrollContent(),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: AppSpacing.screenPadding.copyWith(top: 0),
+              children: _buildFullScrollContent(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1022,7 +1066,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 ? registrationBody
                 : _PreparingGamePanel(
                     registeredCartelas: registeredCartelas,
-                    isRefetching: controllers.realtime.canonicalRefetchInFlight,
+                    isRefetching: false,
                     titleOverride: showRegistrationHandoffPreparing
                         ? context.l10n.postGameSummaryOpeningNextRound
                         : null,
@@ -1090,13 +1134,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   List<Widget> _buildFullScrollContent() {
     if (_awaitingLiveRoom) {
-      return [const SizedBox(height: 240)];
+      return const [SizedBox.expand()];
     }
     if (_isLoading) {
-      return [
-        const Padding(
-          padding: EdgeInsets.only(top: 64),
-          child: FriendsBingoLoading(compact: true),
+      return const [
+        SizedBox.expand(
+          child: Center(
+            child: FriendsBingoLoading(compact: true),
+          ),
         ),
       ];
     }
@@ -2968,12 +3013,14 @@ class _LiveSyncOverlay extends StatelessWidget {
     required this.visible,
     required this.title,
     required this.message,
+    required this.showRetry,
     required this.onRetry,
   });
 
   final bool visible;
   final String title;
   final String message;
+  final bool showRetry;
   final VoidCallback onRetry;
 
   @override
@@ -3022,7 +3069,9 @@ class _LiveSyncOverlay extends StatelessWidget {
                         ],
                       ),
                     ),
-                    TextButton(onPressed: onRetry, child: const Text('Retry')),
+                    if (showRetry) ...[
+                      TextButton(onPressed: onRetry, child: const Text('Retry')),
+                    ],
                   ],
                 ),
               ),

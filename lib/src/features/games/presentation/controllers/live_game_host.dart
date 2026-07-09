@@ -85,6 +85,9 @@ abstract class LiveGameHost {
   /// True while post-game summary / terminal refetch should block resume sync.
   bool get isTerminalTransitionActive;
 
+  /// True after the first successful canonical apply on this screen instance.
+  bool get initialLoadComplete;
+
   /// Full canonical reload after resume/reconnect (backend truth only).
   Future<void> runResumeSync({bool allowCachedOperations = true});
 
