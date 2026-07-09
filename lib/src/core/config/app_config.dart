@@ -1,11 +1,42 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Compile-time app configuration from `--dart-define` / `--dart-define-from-file`.
+///
+/// Local development (Chrome):
+/// ```bash
+/// flutter run -d chrome --dart-define-from-file=.env
+/// ```
+///
+/// Release APK (production URLs required — never ship localhost):
+/// ```bash
+/// flutter build apk --release --dart-define-from-file=.env
+/// ```
+///
+/// Copy [.env.example] for local dev or [.env.production.example] for release builds.
 class AppConfig {
-  AppConfig({required this.apiBaseUrl, required this.socketBaseUrl});
+  AppConfig({
+    required this.apiBaseUrl,
+    required this.socketBaseUrl,
+    this.realtimeDebug = false,
+    this.debug = false,
+    this.telebirrDepositDebug = false,
+  });
 
   final String apiBaseUrl;
   final String socketBaseUrl;
+
+  /// Verbose live-game / auto-call socket tracing (debug builds only).
+  final bool realtimeDebug;
+
+  /// General debug tracing (debug builds only).
+  final bool debug;
+
+  /// Telebirr deposit verification tracing (debug builds only).
+  final bool telebirrDepositDebug;
+
+  bool get telebirrDebugEnabled =>
+      debug || telebirrDepositDebug || realtimeDebug;
 
   factory AppConfig.fromEnvironment() {
     const apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
@@ -13,6 +44,12 @@ class AppConfig {
     const legacySocketBaseUrlOverride = String.fromEnvironment(
       'SOCKET_BASE_URL',
     );
+    const realtimeDebug = bool.fromEnvironment('REALTIME_DEBUG');
+    const debug = bool.fromEnvironment('DEBUG');
+    const telebirrDepositDebug = bool.fromEnvironment(
+      'TELEBIRR_DEPOSIT_DEBUG',
+    );
+
     final apiBaseUrl = _normalize(
       apiBaseUrlOverride.isNotEmpty
           ? apiBaseUrlOverride
@@ -31,7 +68,13 @@ class AppConfig {
     );
     _validateReleaseSocketBaseUrl(socketBaseUrl);
 
-    return AppConfig(apiBaseUrl: apiBaseUrl, socketBaseUrl: socketBaseUrl);
+    return AppConfig(
+      apiBaseUrl: apiBaseUrl,
+      socketBaseUrl: socketBaseUrl,
+      realtimeDebug: realtimeDebug,
+      debug: debug,
+      telebirrDepositDebug: telebirrDepositDebug,
+    );
   }
 
   static String _defaultApiBaseUrlForPlatform() {
@@ -59,7 +102,8 @@ class AppConfig {
     if (!hasOverride) {
       throw StateError(
         'API_BASE_URL is required for release builds. '
-        'Do not ship a release build with localhost defaults.',
+        'Rebuild with production URLs, e.g. '
+        'flutter build apk --release --dart-define-from-file=.env',
       );
     }
 
@@ -87,7 +131,8 @@ class AppConfig {
     if (isLocalHost) {
       throw StateError(
         '$name must point to a production host in release builds. '
-        'Current value: $url',
+        'Current value: $url. '
+        'Use --dart-define-from-file=.env with production URLs.',
       );
     }
   }

@@ -1,29 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/logging/app_logger.dart';
 
 /// Opt-in console tracing for Telebirr deposit verification on device.
 ///
-/// Enable when running locally or on a device:
-/// ```bash
-/// flutter run \
-///   --dart-define=API_BASE_URL=https://friendsbingo.onrender.com \
-///   --dart-define=DEBUG=true
-/// ```
-///
-/// Also enabled by `TELEBIRR_DEPOSIT_DEBUG=true` or `REALTIME_DEBUG=true` in
-/// debug builds.
+/// Set `DEBUG=true`, `TELEBIRR_DEPOSIT_DEBUG=true`, or `REALTIME_DEBUG=true`
+/// in `.env` and run with `--dart-define-from-file=.env`.
 class TelebirrDepositDebug {
   TelebirrDepositDebug._();
 
-  static const _debugEnabled = bool.fromEnvironment('DEBUG');
-  static const _telebirrEnabled = bool.fromEnvironment(
-    'TELEBIRR_DEPOSIT_DEBUG',
-  );
-  static const _realtimeEnabled = bool.fromEnvironment('REALTIME_DEBUG');
-
   static bool get isEnabled =>
-      kDebugMode && (_debugEnabled || _telebirrEnabled || _realtimeEnabled);
+      kDebugMode && AppConfig.fromEnvironment().telebirrDebugEnabled;
 
   static void log(String message) {
     if (!isEnabled) {

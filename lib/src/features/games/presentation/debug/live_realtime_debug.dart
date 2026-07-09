@@ -1,22 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/logging/app_logger.dart';
 
 /// Opt-in console tracing for AUTO call / live-game sync.
 ///
-/// Enable when running locally:
-/// ```bash
-/// flutter run -d chrome \
-///   --dart-define=API_BASE_URL=http://localhost:3002 \
-///   --dart-define=SOCKET_URL=http://localhost:3002 \
-///   --dart-define=REALTIME_DEBUG=true
-/// ```
+/// Set `REALTIME_DEBUG=true` in `.env` and run with:
+/// `flutter run -d chrome --dart-define-from-file=.env`
 class LiveRealtimeDebug {
   LiveRealtimeDebug._();
 
-  static const _enabled = bool.fromEnvironment('REALTIME_DEBUG');
-
-  static bool get isEnabled => kDebugMode && _enabled;
+  static bool get isEnabled =>
+      kDebugMode && AppConfig.fromEnvironment().realtimeDebug;
 
   static void log(String message) {
     if (!isEnabled) {
