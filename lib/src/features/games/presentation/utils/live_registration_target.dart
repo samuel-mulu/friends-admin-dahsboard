@@ -84,6 +84,7 @@ bool shouldDeferNextRoundRegistrationCountdown({
     LivePresentationPhase.liveWaitingFirstBall ||
     LivePresentationPhase.liveCalling ||
     LivePresentationPhase.winnerWindow ||
+    LivePresentationPhase.winnerWindowClosing ||
     LivePresentationPhase.checking => true,
     _ => false,
   };

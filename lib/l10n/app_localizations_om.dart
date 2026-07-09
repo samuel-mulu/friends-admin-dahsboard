@@ -1551,6 +1551,13 @@ class AppLocalizationsOm extends AppLocalizations {
       'Taphattoonni biroo foddaa mo\'ataa keessatti ammallee gaafachuu danda\'u.';
 
   @override
+  String get gameWinnerWindowClosingTitle => 'Winner window closed';
+
+  @override
+  String get gameWinnerWindowClosingMessage =>
+      'Finalizing results — the round summary will appear shortly.';
+
+  @override
   String get gameResultsLoading => 'Bu\'aa raawundii fe\'amaa jira…';
 
   @override

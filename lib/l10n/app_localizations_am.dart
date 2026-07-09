@@ -1499,6 +1499,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'ሌሎች ተጫዋቾች በአሸናፊ መስኮቱ ውስጥ አሁንም ሊጠይቁ ይችላሉ።';
 
   @override
+  String get gameWinnerWindowClosingTitle => 'Winner window closed';
+
+  @override
+  String get gameWinnerWindowClosingMessage =>
+      'Finalizing results — the round summary will appear shortly.';
+
+  @override
   String get gameResultsLoading => 'Loading round results…';
 
   @override

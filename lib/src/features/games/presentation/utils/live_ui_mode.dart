@@ -116,6 +116,7 @@ class LiveUiModeState {
     required this.countdownKind,
     required this.registrationOpenBodyTarget,
     required this.hasBlockingLiveGame,
+    this.showsOwnedPreparingShell = false,
   });
 
   final LiveUiMode mode;
@@ -137,6 +138,7 @@ class LiveUiModeState {
   final LiveUiCountdownKind countdownKind;
   final GameModel? registrationOpenBodyTarget;
   final bool hasBlockingLiveGame;
+  final bool showsOwnedPreparingShell;
 }
 
 class LiveUiModeResolver {
@@ -211,14 +213,40 @@ class LiveUiModeResolver {
   static ReadyTransitionLock? _activeTransitionLock(
     ResolveLiveUiModeInput input,
   ) {
+    return input.holds.readyTransitionLock;
+  }
+
+  static bool _preparingTransitionActive(ResolveLiveUiModeInput input) {
     final lock = input.holds.readyTransitionLock;
-    if (lock == null) {
-      return null;
-    }
-    if (readyTransitionLockExpired(lock, input.now)) {
-      return null;
-    }
-    return lock;
+    return lock != null && lock.isPreparingToPlay;
+  }
+
+  static LivePresentationPhase _resolvePresentationPhase(
+    ResolveLiveUiModeInput input, {
+    required GameModel game,
+    required bool registrationCountdownClosed,
+    required bool hasBlockingLiveGame,
+  }) {
+    return LivePresentationPhaseResolver.resolve(
+      game: game,
+      registrationCountdownClosed: registrationCountdownClosed,
+      canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
+      calledNumbers: input.calledNumbers,
+      staleAfter: input.preparingStaleAfter,
+      blockingLiveGameExists: hasBlockingLiveGame,
+      winnerWindowExpired: input.winnerWindowExpired,
+      preparingTransitionActive: _preparingTransitionActive(input),
+    );
+  }
+
+  static bool _showsOwnedPreparingShell({
+    required LiveUiMode mode,
+    required LivePresentationPhase presentationPhase,
+    required bool hasPrimarySessionCartelas,
+  }) {
+    return hasPrimarySessionCartelas &&
+        mode == LiveUiMode.registrationWaitingForCurrentGame &&
+        presentationPhase == LivePresentationPhase.preparingGame;
   }
 
   static bool _registrationOpenGameBeatsTransitionLock(
@@ -313,27 +341,34 @@ class LiveUiModeResolver {
             snapshot;
 
     if (operations == null) {
-      final presentationPhase = LivePresentationPhaseResolver.resolve(
+      final presentationPhase = _resolvePresentationPhase(
+        input,
         game: primary,
         registrationCountdownClosed: true,
-        canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
-        calledNumbers: input.calledNumbers,
-        staleAfter: input.preparingStaleAfter,
-        blockingLiveGameExists: hasBlockingLiveGame,
+        hasBlockingLiveGame: hasBlockingLiveGame,
       );
       final mode =
           presentationPhase == LivePresentationPhase.preparingGame
               ? LiveUiMode.registrationWaitingForCurrentGame
               : LiveUiMode.registrationCountdown;
-      final wantsSurfaces = !_screenBlocked(input) && !input.isGuest;
+      final showsOwnedPreparingShell = _showsOwnedPreparingShell(
+        mode: mode,
+        presentationPhase: presentationPhase,
+        hasPrimarySessionCartelas: input.hasPrimarySessionCartelas,
+      );
+      final useRegistrationOpenLayoutBase =
+          !showsOwnedPreparingShell && !_screenBlocked(input);
+      final wantsRegistrationSurfaces =
+          useRegistrationOpenLayoutBase && !input.isGuest;
       final readyAtomic = resolveReadyAtomicVisibility(
-        hasReadyGame: wantsSurfaces && primary != null,
+        hasReadyGame: wantsRegistrationSurfaces && primary != null,
         gridReady: input.holds.registrationGridReady &&
             !input.holds.canonicalRefetchInFlight,
         holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
             input.holds.canonicalRefetchInFlight,
       );
-      final showSurfaces = readyAtomic.showBanner && readyAtomic.showGrid;
+      final showRegistrationSurfaces =
+          readyAtomic.showBanner && readyAtomic.showGrid;
 
       return LiveUiModeState(
         mode: mode,
@@ -341,10 +376,11 @@ class LiveUiModeResolver {
         secondaryRegistrationGame: null,
         registrationTarget: primary,
         presentationPhase: presentationPhase,
-        useRegistrationOpenLayout: showSurfaces,
+        useRegistrationOpenLayout:
+            useRegistrationOpenLayoutBase && showRegistrationSurfaces,
         showsInlinePlayCartelas: false,
         showCalledNumbersStrip: false,
-        showRegistrationGrid: showSurfaces,
+        showRegistrationGrid: showRegistrationSurfaces,
         showReview: false,
         hideRegistrationCountdown: true,
         deferNextRoundRegistrationCountdown: false,
@@ -355,8 +391,12 @@ class LiveUiModeResolver {
         usesExpandedNoCartelaRegistrationLayout: false,
         showMissedRoundWrapper: false,
         countdownKind: LiveUiCountdownKind.none,
-        registrationOpenBodyTarget: showSurfaces ? primary : null,
+        registrationOpenBodyTarget: useRegistrationOpenLayoutBase &&
+                showRegistrationSurfaces
+            ? primary
+            : null,
         hasBlockingLiveGame: hasBlockingLiveGame,
+        showsOwnedPreparingShell: showsOwnedPreparingShell,
       );
     }
 
@@ -414,13 +454,11 @@ class LiveUiModeResolver {
   }) {
     final presentationPhase = game == null
         ? LivePresentationPhase.preparingGame
-        : LivePresentationPhaseResolver.resolve(
+        : _resolvePresentationPhase(
+            input,
             game: game,
             registrationCountdownClosed: true,
-            canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
-            calledNumbers: input.calledNumbers,
-            staleAfter: input.preparingStaleAfter,
-            blockingLiveGameExists: hasBlockingLiveGame,
+            hasBlockingLiveGame: hasBlockingLiveGame,
           );
 
     return LiveUiModeState(
@@ -454,13 +492,11 @@ class LiveUiModeResolver {
     final mode = game.status == GameStatus.noWinner
         ? LiveUiMode.reviewNoWinner
         : LiveUiMode.reviewFinished;
-    final presentationPhase = LivePresentationPhaseResolver.resolve(
+    final presentationPhase = _resolvePresentationPhase(
+      input,
       game: game,
       registrationCountdownClosed: input.holds.registrationCountdownClosed,
-      canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
-      calledNumbers: input.calledNumbers,
-      staleAfter: input.preparingStaleAfter,
-      blockingLiveGameExists: hasBlockingLiveGame,
+      hasBlockingLiveGame: hasBlockingLiveGame,
     );
     final blocksPromotion = _blocksRegistrationPromotion(
       input: input,
@@ -531,13 +567,11 @@ class LiveUiModeResolver {
     required bool ownsLiveCartelas,
   }) {
     final nextUpcoming = operations.nextUpcomingGameFor(current: primary);
-    final presentationPhase = LivePresentationPhaseResolver.resolve(
+    final presentationPhase = _resolvePresentationPhase(
+      input,
       game: primary,
       registrationCountdownClosed: _effectiveRegistrationCountdownClosed(input),
-      canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
-      calledNumbers: input.calledNumbers,
-      staleAfter: input.preparingStaleAfter,
-      blockingLiveGameExists: hasBlockingLiveGame,
+      hasBlockingLiveGame: hasBlockingLiveGame,
     );
 
     final mode = _modeForPrimary(
@@ -586,7 +620,7 @@ class LiveUiModeResolver {
       registrationTargetIsCurrent: registrationTargetIsCurrent,
     );
 
-    final useRegistrationOpenLayout = _useRegistrationOpenLayout(
+    final useRegistrationOpenLayoutBase = _useRegistrationOpenLayout(
       input: input,
       mode: mode,
       primary: primary,
@@ -595,6 +629,14 @@ class LiveUiModeResolver {
       registrationTargetIsCurrent: registrationTargetIsCurrent,
       presentationPhase: presentationPhase,
     );
+    final showsOwnedPreparingShell = _showsOwnedPreparingShell(
+      mode: mode,
+      presentationPhase: presentationPhase,
+      hasPrimarySessionCartelas: input.hasPrimarySessionCartelas,
+    );
+    final useRegistrationOpenLayout = showsOwnedPreparingShell
+        ? false
+        : useRegistrationOpenLayoutBase;
 
     final showsInlinePlay = _showsInlinePlayCartelas(mode, presentationPhase);
     final registrationOpenBodyTarget = useRegistrationOpenLayout
@@ -646,6 +688,7 @@ class LiveUiModeResolver {
       registrationOpenBodyTarget:
           showRegistrationSurfaces ? registrationOpenBodyTarget : null,
       hasBlockingLiveGame: hasBlockingLiveGame,
+      showsOwnedPreparingShell: showsOwnedPreparingShell,
     );
   }
 
@@ -814,6 +857,11 @@ class LiveUiModeResolver {
 
     if (mode == LiveUiMode.registrationCountdown ||
         mode == LiveUiMode.registrationWaitingForCurrentGame) {
+      if (mode == LiveUiMode.registrationWaitingForCurrentGame &&
+          input.hasPrimarySessionCartelas &&
+          presentationPhase == LivePresentationPhase.preparingGame) {
+        return false;
+      }
       return presentationPhase.isRegistrationLayout;
     }
 
@@ -910,7 +958,9 @@ class LiveUiModeResolver {
       LiveUiMode.registrationCountdown when presentationPhase ==
               LivePresentationPhase.registrationOpen =>
         LiveUiCountdownKind.registration,
-      LiveUiMode.winnerWindow => LiveUiCountdownKind.winnerWindow,
+      LiveUiMode.winnerWindow
+          when presentationPhase == LivePresentationPhase.winnerWindow =>
+        LiveUiCountdownKind.winnerWindow,
       LiveUiMode.liveOwned || LiveUiMode.liveSpectator =>
         LiveUiCountdownKind.nextBall,
       _ => LiveUiCountdownKind.none,

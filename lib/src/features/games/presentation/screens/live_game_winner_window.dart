@@ -22,6 +22,12 @@ mixin _LiveGameWinnerWindow on _LiveGameOrchestration {
 
     return switch (_livePresentationPhase) {
       LivePresentationPhase.winnerWindow => _buildWinnerWindowBanner(game),
+      LivePresentationPhase.winnerWindowClosing => _LiveStatusBanner(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+          title: context.l10n.gameWinnerWindowClosingTitle,
+          message: context.l10n.gameWinnerWindowClosingMessage,
+        ),
       LivePresentationPhase.checking => _LiveStatusBanner(
           color: Theme.of(context).colorScheme.tertiaryContainer,
           foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,

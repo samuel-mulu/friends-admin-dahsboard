@@ -13,8 +13,6 @@ class LiveTransitionController {
   final LiveGameHost host;
 
   transition_lock.ReadyTransitionLock? readyTransitionLock;
-  Timer? readyTransitionLockTimeoutTimer;
-  bool lockTimeoutRefetchScheduled = false;
   Timer? preparingPhasePollTimer;
 
   bool get readyTransitionLockActive =>
@@ -22,7 +20,6 @@ class LiveTransitionController {
       readyTransitionLock!.isActiveAt(host.countdownNow());
 
   void dispose() {
-    readyTransitionLockTimeoutTimer?.cancel();
     preparingPhasePollTimer?.cancel();
   }
 
@@ -35,32 +32,15 @@ class LiveTransitionController {
       return;
     }
 
-    readyTransitionLockTimeoutTimer?.cancel();
-    readyTransitionLockTimeoutTimer = null;
-    lockTimeoutRefetchScheduled = false;
-
     readyTransitionLock = transition_lock.startReadyTransitionLock(
       game: game,
       reason: reason,
       startedAt: host.countdownNow(),
     );
-
-    readyTransitionLockTimeoutTimer = Timer(
-      transition_lock.kReadyTransitionLockTimeout,
-      () {
-        if (!host.mounted || readyTransitionLock == null) {
-          return;
-        }
-        expireReadyTransitionLockIfNeeded();
-      },
-    );
   }
 
   void clearReadyTransitionLock() {
-    readyTransitionLockTimeoutTimer?.cancel();
-    readyTransitionLockTimeoutTimer = null;
     readyTransitionLock = null;
-    lockTimeoutRefetchScheduled = false;
   }
 
   void syncReadyTransitionLock({
@@ -78,21 +58,7 @@ class LiveTransitionController {
       pinnedGame: mergedGame ?? host.game,
       now: host.countdownNow(),
     )) {
-      final timedOut = transition_lock.readyTransitionLockExpired(
-        lock,
-        host.countdownNow(),
-      );
       clearReadyTransitionLock();
-      if (timedOut && !lockTimeoutRefetchScheduled) {
-        lockTimeoutRefetchScheduled = true;
-        unawaited(
-          host.controllers.realtime.refetchCanonicalImmediate(
-            reason: 'ready_transition_lock_timeout',
-            includeCalledNumbers: lock.isPreparingToPlay,
-            registrationSessionId: lock.sessionId,
-          ),
-        );
-      }
     }
   }
 
@@ -120,30 +86,6 @@ class LiveTransitionController {
       clearReadyTransitionLock();
     }
     host.controllers.countdown.reopenRegistrationCountdown(registration);
-  }
-
-  void expireReadyTransitionLockIfNeeded() {
-    final lock = readyTransitionLock;
-    if (lock == null ||
-        !transition_lock.readyTransitionLockExpired(
-          lock,
-          host.countdownNow(),
-        )) {
-      return;
-    }
-
-    final sessionId = lock.sessionId;
-    host.markNeedsBuild(clearReadyTransitionLock);
-    if (!lockTimeoutRefetchScheduled) {
-      lockTimeoutRefetchScheduled = true;
-      unawaited(
-        host.controllers.realtime.refetchCanonicalImmediate(
-          reason: 'ready_transition_lock_expired',
-          includeCalledNumbers: lock.isPreparingToPlay,
-          registrationSessionId: sessionId,
-        ),
-      );
-    }
   }
 
   bool isEmptyRegistrationCloseCandidate(GameModel game) {
@@ -176,10 +118,7 @@ class LiveTransitionController {
     host.markNeedsBuild(() {
       countdown.registrationCountdownClosed = true;
       countdown.registrationCountdownScopeKey = registrationScopeKeyFor(game);
-      if (transition_lock.shouldStartReadyTransitionLockPreparing(
-        game: game,
-        hasOwnedCartelas: host.myCartelas.isNotEmpty,
-      )) {
+      if (transition_lock.shouldStartReadyTransitionLockPreparing(game: game)) {
         startReadyTransitionLock(
           game: game,
           reason: transition_lock.ReadyTransitionReason.preparingToPlay,

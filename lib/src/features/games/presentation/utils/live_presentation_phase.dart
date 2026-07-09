@@ -13,6 +13,8 @@ enum LivePresentationPhase {
   liveWaitingFirstBall,
   liveCalling,
   winnerWindow,
+  /// Winner window countdown elapsed; waiting for in-flight claims before review.
+  winnerWindowClosing,
   checking,
   review,
   cancelled,
@@ -43,8 +45,13 @@ extension LivePresentationPhaseX on LivePresentationPhase {
       this == LivePresentationPhase.liveWaitingFirstBall ||
       this == LivePresentationPhase.liveCalling ||
       this == LivePresentationPhase.winnerWindow ||
+      this == LivePresentationPhase.winnerWindowClosing ||
       this == LivePresentationPhase.checking ||
       isTerminalLayout;
+
+  bool get isWinnerWindowLayout =>
+      this == LivePresentationPhase.winnerWindow ||
+      this == LivePresentationPhase.winnerWindowClosing;
 }
 
 bool registrationCountdownIsReopened({
@@ -260,6 +267,9 @@ int winnerWindowSecondsLeft(DateTime? windowEndsAt, {DateTime? now}) {
 /// canonical winner-results from the API.
 const int winnerWindowWinnerResultsPreloadSeconds = 5;
 
+/// Maximum wait after the winner window expires before forcing the finished UI.
+const Duration kWinnerWindowClosingMaxWait = Duration(seconds: 8);
+
 bool shouldPreloadWinnerResultsDuringWindow(
   DateTime? windowEndsAt, {
   DateTime? now,
@@ -346,13 +356,17 @@ class LivePresentationPhaseResolver {
     required List<CalledNumberModel> calledNumbers,
     required Duration staleAfter,
     bool blockingLiveGameExists = false,
+    bool winnerWindowExpired = false,
+    bool preparingTransitionActive = false,
   }) {
     if (game == null) {
       return LivePresentationPhase.noActiveGame;
     }
 
     if (game.status == GameStatus.winnerWindow) {
-      return LivePresentationPhase.winnerWindow;
+      return winnerWindowExpired
+          ? LivePresentationPhase.winnerWindowClosing
+          : LivePresentationPhase.winnerWindow;
     }
 
     if (game.status == GameStatus.checking) {
@@ -385,10 +399,13 @@ class LivePresentationPhaseResolver {
           : LivePresentationPhase.liveCalling;
     }
 
-    // Balls are being drawn — leave registration layout even if operations
-    // still reports registrationOpen (AUTO start lag or stale snapshot).
+    // Balls may arrive before status flips to PLAYING. Stay on preparing
+    // while the closing-session lock is active so every device matches.
     if (game.status == GameStatus.ready &&
         (calledNumbers.isNotEmpty || game.calledNumbersCount > 0)) {
+      if (preparingTransitionActive) {
+        return LivePresentationPhase.preparingGame;
+      }
       return LivePresentationPhase.liveCalling;
     }
 

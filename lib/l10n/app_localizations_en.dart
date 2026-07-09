@@ -1539,6 +1539,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Other players can still claim during the winner window.';
 
   @override
+  String get gameWinnerWindowClosingTitle => 'Winner window closed';
+
+  @override
+  String get gameWinnerWindowClosingMessage =>
+      'Finalizing results — the round summary will appear shortly.';
+
+  @override
   String get gameResultsLoading => 'Loading round results…';
 
   @override

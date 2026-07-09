@@ -2728,6 +2728,18 @@ abstract class AppLocalizations {
   /// **'Other players can still claim during the winner window.'**
   String get gameWinnerWindowMessage;
 
+  /// No description provided for @gameWinnerWindowClosingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Winner window closed'**
+  String get gameWinnerWindowClosingTitle;
+
+  /// No description provided for @gameWinnerWindowClosingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalizing results — the round summary will appear shortly.'**
+  String get gameWinnerWindowClosingMessage;
+
   /// No description provided for @gameResultsLoading.
   ///
   /// In en, this message translates to:

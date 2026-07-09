@@ -3,9 +3,7 @@ part of 'live_game_screen.dart';
 mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
   bool get _usesSessionWideOutcomeChips {
     final phase = _livePresentationPhase;
-    if (phase == LivePresentationPhase.winnerWindow ||
-        phase == LivePresentationPhase.review ||
-        (_game?.status == GameStatus.winnerWindow && _winnerWindowExpired)) {
+    if (phase.isWinnerWindowLayout || phase == LivePresentationPhase.review) {
       return true;
     }
     if (_review.sessionWinnerCartelaNumbers.isNotEmpty &&
@@ -39,7 +37,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       valueListenable: _cn.calledNumbersPanelRevision,
       builder: (context, _, _) {
         final l10n = context.l10n;
-        final isClaiming = _isAnyClaimChecking;
+        final isClosing =
+            _livePresentationPhase == LivePresentationPhase.winnerWindowClosing;
+        final isClaiming = _isAnyClaimChecking && !isClosing;
         final showWinnerOnly = _stripShowsWinnerOnly;
         final checkingCartelaNumbers = showWinnerOnly
             ? const <int>[]
@@ -56,7 +56,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
               )
             : _winnerCartelaNumbers;
         final canOpenWinnerDialog = winnerCartelaNumbers.isNotEmpty &&
-            (_stripShowsWinnerOnly || _usesSessionWideOutcomeChips);
+            _livePresentationPhase == LivePresentationPhase.review;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -230,6 +230,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         });
 
         _flushPendingClaimSocketEvents();
+
+        _tryEnterFinishedReview();
 
         if (outcomeSnackbarMessage != null &&
             !(claimResult?.isWinner == true &&

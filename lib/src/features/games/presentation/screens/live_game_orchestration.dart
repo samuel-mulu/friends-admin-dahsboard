@@ -68,9 +68,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }) =>
       _transition.syncOpenRegistrationBeatsTransitionLock(operations: operations);
 
-  void _expireReadyTransitionLockIfNeeded() =>
-      _transition.expireReadyTransitionLockIfNeeded();
-
   /// Backend deadline for the winner-window countdown (never estimated locally).
   DateTime? get _effectiveWinnerWindowEndsAt {
     if (_game?.status != GameStatus.winnerWindow) {
@@ -160,6 +157,104 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operations.nextUpcomingGameFor(current: current) == null;
   }
 
+  void _resetWinnerWindowClosingState() {
+    _winnerWindowClosingStartedAt = null;
+    _pendingTerminalGameMerge = null;
+  }
+
+  GameModel _resolveGameForPendingWinnerWindowClaims(GameModel mergedGame) {
+    final priorGame = _game;
+    final hadExpiredWinnerWindow =
+        priorGame?.status == GameStatus.winnerWindow && _winnerWindowExpired;
+    final incomingTerminal =
+        mergedGame.status == GameStatus.finished ||
+        mergedGame.status == GameStatus.noWinner;
+
+    if (hadExpiredWinnerWindow &&
+        incomingTerminal &&
+        _hasPendingWinnerWindowClaims) {
+      _pendingTerminalGameMerge = mergedGame;
+      return mergedGame.copyWith(
+        status: GameStatus.winnerWindow,
+        winnerWindowEndsAt:
+            priorGame?.winnerWindowEndsAt ??
+            _countdown.winnerWindowEndsAt ??
+            mergedGame.winnerWindowEndsAt,
+      );
+    }
+
+    if (!incomingTerminal || !_hasPendingWinnerWindowClaims) {
+      _pendingTerminalGameMerge = null;
+    }
+    return mergedGame;
+  }
+
+  bool get _hasPendingWinnerWindowClaims =>
+      _isAnyClaimChecking ||
+      _cn.claimStripHoldActive ||
+      _cn.claimingCartelaIds.isNotEmpty ||
+      _review.sessionCheckingCartelaNumbers.isNotEmpty;
+
+  bool get _canTransitionToFinished {
+    final game = _game;
+    if (game == null ||
+        game.status != GameStatus.winnerWindow ||
+        !_winnerWindowExpired) {
+      return false;
+    }
+
+    final closingStarted = _winnerWindowClosingStartedAt;
+    if (closingStarted != null &&
+        _countdownNow().difference(closingStarted) >=
+            kWinnerWindowClosingMaxWait) {
+      return true;
+    }
+
+    return !_hasPendingWinnerWindowClaims;
+  }
+
+  void _onWinnerWindowExpired() {
+    if (!_winnerWindowExpired) {
+      return;
+    }
+
+    _winnerWindowClosingStartedAt ??= _countdownNow();
+    if (mounted) {
+      setState(() {});
+    }
+    _tryEnterFinishedReview();
+  }
+
+  void _tryEnterFinishedReview() {
+    if (!_canTransitionToFinished) {
+      return;
+    }
+
+    final pending = _pendingTerminalGameMerge;
+    if (pending != null) {
+      _pendingTerminalGameMerge = null;
+      _resetWinnerWindowClosingState();
+      if (pending.status == GameStatus.noWinner) {
+        _handleNoWinnerLocally(
+          finishedAt: pending.finishedAt,
+          showSnackbar: false,
+          refreshCartelas: false,
+        );
+      } else {
+        _handleGameFinishedLocally(
+          winnerCartelaId: pending.winnerCartelaId,
+          finishedAt: pending.finishedAt,
+          winnerPayoutsSummary: pending.winnerPayoutsSummary,
+          showSnackbar: false,
+          refreshCartelas: false,
+        );
+      }
+      return;
+    }
+
+    _enterFinishedReviewFromExpiredWindow();
+  }
+
   void _enterFinishedReviewFromExpiredWindow() {
     final game = _game;
     if (game == null ||
@@ -183,6 +278,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _applySocketSessionMembership(null);
     _review.stopWinnerWindowPreloadPolling();
+    _resetWinnerWindowClosingState();
 
     setState(() {
       _game = game.copyWith(
@@ -250,6 +346,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
     _pendingWinnerWindowPayload = null;
     _pendingBingoInvalidPayload = null;
+    _resetWinnerWindowClosingState();
     _cn.clearSessionScopedState(
       clearCalledNumbers: clearCalledNumbers,
       clearManualMarks: clearManualMarks,
@@ -327,6 +424,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     List<SessionWinnerResultModel> results,
   ) {
     if (!mounted || results.isEmpty) {
+      return;
+    }
+
+    if (!_showsPostGameSummary &&
+        _livePresentationPhase != LivePresentationPhase.review) {
       return;
     }
 
@@ -539,7 +641,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   bool get _cartelaMarksFrozenForEvidence {
-    if (_livePresentationPhase == LivePresentationPhase.winnerWindow ||
+    if (_livePresentationPhase.isWinnerWindowLayout ||
         _game?.status == GameStatus.winnerWindow) {
       return true;
     }
@@ -559,7 +661,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final phase = _livePresentationPhase;
     return phase == LivePresentationPhase.checking ||
-        phase == LivePresentationPhase.winnerWindow;
+        phase.isWinnerWindowLayout;
   }
 
   int? _cartelaNumberFromPayload(Map<String, dynamic> payload) {
@@ -637,6 +739,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Future<void> _onWinnerCartelaChipTapped(int cartelaNumber) async {
     if (_review.winnerCartelaDialogVisible) {
+      return;
+    }
+
+    if (!_showsPostGameSummary &&
+        _livePresentationPhase != LivePresentationPhase.review) {
       return;
     }
 
@@ -1142,9 +1249,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
               _realtime.canonicalRefetchInFlight = false;
             }
           });
-          if (!_transition.lockTimeoutRefetchScheduled &&
-              !_realtime.canonicalRefetchInFlight) {
-            _transition.lockTimeoutRefetchScheduled = true;
+          if (!_realtime.canonicalRefetchInFlight) {
             unawaited(
               _refetchCanonicalImmediate(
                 includeCalledNumbers: false,
@@ -1196,7 +1301,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           return;
         }
 
-        _expireReadyTransitionLockIfNeeded();
         _applySocketSessionMembership(null);
         final waitingForRealtime = !_socketService.isConnected;
         _safeSetState(generation, () {
@@ -1556,7 +1660,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       if (shouldMarkFinished && _isCurrentLoad(generation)) {
-        if (game.status == GameStatus.noWinner) {
+        if (_pendingTerminalGameMerge != null) {
+          _tryEnterFinishedReview();
+        } else if (game.status == GameStatus.noWinner) {
           _handleNoWinnerLocally(
             finishedAt: game.finishedAt,
             showSnackbar: false,
@@ -1907,12 +2013,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       final previousNextAutoCallAt = _game?.nextAutoCallAt;
-      final mergedGame = resumeSync
-          ? game
-          : GameModel.mergeCanonicalSessionState(
-              current: _game,
-              incoming: game,
-            );
+      final mergedGame = _resolveGameForPendingWinnerWindowClaims(
+        resumeSync
+            ? game
+            : GameModel.mergeCanonicalSessionState(
+                current: _game,
+                incoming: game,
+              ),
+      );
 
       _game = mergedGame;
       final scheduleChanged = !dateTimesEqualForSchedule(
@@ -2043,6 +2151,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       hasSessionCheckingCartelaNumbers:
           _review.sessionCheckingCartelaNumbers.isNotEmpty,
     );
+    _tryEnterFinishedReview();
   }
 
   void _syncCalledNumbersForFinishedReview() {
@@ -2736,7 +2845,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
-    _maybeAutoShowWinnerCartelaDialog();
+    _tryEnterFinishedReview();
   }
 
   void _onBingoInvalid(dynamic payload) {
@@ -2814,6 +2923,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _markCalledNumbersPanelDirty();
 
     _releaseCalledNumbersStripHoldIfIdle();
+    _tryEnterFinishedReview();
     if (payload.containsKey('nextAutoCallAt')) {
       _applyAutoCallScheduleFromPayload(payload);
     } else {
@@ -2898,6 +3008,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (normalized != null) {
       _countdown.winnerWindowCountdownTracker.reset();
       _countdown.nextBallPlayPhase = NextBallPlayPhase.counting;
+      _resetWinnerWindowClosingState();
     }
 
     setState(() {
@@ -2972,7 +3083,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       shouldRunWinnerWindowTicker:
           _game?.status == GameStatus.winnerWindow &&
           _effectiveWinnerWindowEndsAt != null,
-      onExpired: _enterFinishedReviewFromExpiredWindow,
+      onExpired: _onWinnerWindowExpired,
       onPollSessionWinners: _shouldPollSessionWinnerResults
           ? _syncSessionWinnerResultsPolling
           : null,
@@ -3008,6 +3119,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _startPostGameSummary({required bool scheduleAdvance}) {
+    _dismissWinnerCartelaDialogIfOpen();
     _review.startPostGameSummary(
       scheduleAdvance: scheduleAdvance,
       onStarted: () {

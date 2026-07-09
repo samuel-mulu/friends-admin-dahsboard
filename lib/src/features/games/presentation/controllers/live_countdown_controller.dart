@@ -359,8 +359,6 @@ class LiveCountdownController {
 
     if (winnerWindowExpired()) {
       onExpired();
-      onPollSessionWinners?.call();
-      return;
     }
 
     winnerWindowTicker = Timer.periodic(const Duration(milliseconds: 500), (_) {
@@ -371,8 +369,6 @@ class LiveCountdownController {
       onPreloadSessionWinners?.call();
 
       if (winnerWindowExpired()) {
-        winnerWindowTicker?.cancel();
-        winnerWindowTicker = null;
         onExpired();
         onPollSessionWinners?.call();
       }

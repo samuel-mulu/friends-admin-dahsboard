@@ -223,6 +223,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   List<String> _myCartelaDisplayOrderIds = const [];
   Map<String, dynamic>? _pendingWinnerWindowPayload;
   Map<String, dynamic>? _pendingBingoInvalidPayload;
+  DateTime? _winnerWindowClosingStartedAt;
+  GameModel? _pendingTerminalGameMerge;
   bool _awaitingPrizeWalletRefresh = false;
   Timer? _liveRoomSplashTicker;
   bool _awaitingLiveRoom = true;
@@ -283,6 +285,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   bool get _suppressNextGameQueueHint {
     return _livePresentationPhase == LivePresentationPhase.winnerWindow ||
+        _livePresentationPhase == LivePresentationPhase.winnerWindowClosing ||
         _livePresentationPhase == LivePresentationPhase.checking ||
         _livePresentationPhase == LivePresentationPhase.review;
   }
@@ -658,7 +661,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _liveRoomSplashTicker?.cancel();
     _review.stopSessionWinnerResultsPolling();
     controllers.transition.preparingPhasePollTimer?.cancel();
-    controllers.transition.readyTransitionLockTimeoutTimer?.cancel();
     _stopPreparingPhasePolling();
     controllers.transition.clearReadyTransitionLock();
     _cancelCanonicalRefetchDebounce();
@@ -796,6 +798,13 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   String get _bodyTransitionKey {
     final game = _game;
+    final sessionId = game?.sessionId ?? game?.id;
+    if (_hasVisibleCurrentSessionCartelas &&
+        sessionId != null &&
+        (_showsOwnedPreparingShell || _showsInlinePlayCartelas)) {
+      return 'owned-play-$sessionId';
+    }
+
     final registrationBodyTarget = _registrationOpenBodyTarget;
     if (registrationBodyTarget != null) {
       return 'registration-${registrationBodyTarget.id}-${registrationBodyTarget.sessionId ?? 'pending'}';
@@ -814,12 +823,17 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     return 'live-${game.sessionId ?? game.id}';
   }
 
+  bool get _showsOwnedPreparingShell => _liveUiMode.showsOwnedPreparingShell;
+
+  bool get _usesOwnedCartelaStickyShell =>
+      _showsOwnedPreparingShell || _showsInlinePlayCartelas;
+
   bool get _usesStickyLivePlayHeader {
     if (_game == null) {
       return false;
     }
 
-    return _showsInlinePlayCartelas;
+    return _usesOwnedCartelaStickyShell;
   }
 
   bool get _usesExpandedNoCartelaRegistrationLayout {
@@ -860,6 +874,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             ),
           ],
         );
+      }
+
+      if (_usesOwnedCartelaStickyShell && !_usesExpandedNoCartelaRegistrationLayout) {
+        return _buildOwnedCartelaStickyShell();
       }
 
       return Column(
@@ -998,18 +1016,32 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               ),
             )
           else
-            CollapsibleLiveTopSection(
+            CollapsibleRegistrationOpenCluster(
               game: game,
-              nextGame: isCurrentRound && !_suppressNextGameQueueHint
-                  ? _queueUpcomingGameForDisplay
-                  : null,
-              variant: LiveTopSectionVariant.livePlay,
+              myRegisteredCartelasCount: _regDisplayCountForGame(game),
               expanded: _gameInfoExpanded,
               onExpandedChanged: (expanded) {
                 setState(() => _gameInfoExpanded = expanded);
               },
-              nextRegisteredCartelaNumbers: _nextRegisteredCartelaNumbers,
-              myRegisteredCartelasCount: _regDisplayCountForGame(game),
+              statusBanner: statusBanner,
+              banner: RegistrationOpenPulse(
+                key: ValueKey(
+                  'registration-preparing-${game.sessionId ?? game.id}',
+                ),
+                isGuest: _isGuest,
+                ruleName: game.localizedRuleName(ref),
+                titleOverride: context.l10n.registrationClosedPreparing,
+                animateMemberMessages: false,
+                scheduledStartAt: null,
+                countdownOverrideLabel:
+                    context.l10n.registrationClosedPreparing,
+                serverClock: _serverClock,
+                countdownTracker: controllers.countdown.registrationCountdownTracker,
+                scopeKey: game.sessionId ?? game.id,
+                embedded: true,
+                showFlair: false,
+                useBigGameCountdownFormat: game.isBigGame,
+              ),
             ),
           if (phase != LivePresentationPhase.registrationOpen &&
               statusBanner != null) ...[
@@ -1162,6 +1194,82 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         ],
       ],
     ];
+  }
+
+  Widget _buildOwnedCartelaStickyShell() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: AppSpacing.screenPadding.copyWith(top: 0, bottom: 0),
+          child: _showsOwnedPreparingShell
+              ? _buildOwnedPreparingHeader()
+              : _buildStickyLiveHeader(),
+        ),
+        Expanded(
+          child: Padding(
+            padding: AppSpacing.screenPadding.copyWith(top: 0),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 450),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.03),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<String>(
+                  _showsOwnedPreparingShell ? 'owned-preparing' : 'owned-live',
+                ),
+                child: _showsOwnedPreparingShell
+                    ? _buildOwnedPreparingBody()
+                    : RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: AppSpacing.screenPadding.copyWith(
+                            top: AppSpacing.sm,
+                          ),
+                          children: _buildStickyLiveScrollContent(),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOwnedPreparingHeader() {
+    final game = _game!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildCollapsibleLiveTopSection(
+          game: game,
+          nextGame: _suppressNextGameQueueHint ? null : _queueUpcomingGameForDisplay,
+          variant: LiveTopSectionVariant.registration,
+        ),
+        if (_buildLiveStatusBanner() case final banner?) ...[VGap.sm, banner],
+      ],
+    );
+  }
+
+  Widget _buildOwnedPreparingBody() {
+    return _PreparingGamePanel(
+      registeredCartelas: _myCartelas,
+      isRefetching: controllers.realtime.canonicalRefetchInFlight,
+    );
   }
 
   Widget _buildStickyNoCartelaRegistrationBody() {
@@ -1673,6 +1781,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             : 'Mark numbers on your cartelas below as they are called live. You can still register more.',
       LivePresentationPhase.winnerWindow =>
         context.l10n.gameWinnerWindowMessage,
+      LivePresentationPhase.winnerWindowClosing =>
+        context.l10n.gameWinnerWindowClosingMessage,
       LivePresentationPhase.review => '',
       LivePresentationPhase.noPlayersJoined =>
         context.l10n.gameNoPlayersMessage,

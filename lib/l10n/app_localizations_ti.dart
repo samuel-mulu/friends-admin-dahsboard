@@ -1503,6 +1503,13 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameWinnerWindowMessage => 'ካልኦት ተጻወቲ ኣብ ናይ ዓወታ መስኮት ክጠልቡ ይኽእሉ።';
 
   @override
+  String get gameWinnerWindowClosingTitle => 'Winner window closed';
+
+  @override
+  String get gameWinnerWindowClosingMessage =>
+      'Finalizing results — the round summary will appear shortly.';
+
+  @override
   String get gameResultsLoading => 'Loading round results…';
 
   @override

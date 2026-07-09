@@ -1498,6 +1498,12 @@
   "gameWinnerWindowMessage": "Other players can still claim during the winner window.",
   "@gameWinnerWindowMessage": {},
 
+  "gameWinnerWindowClosingTitle": "Winner window closed",
+  "@gameWinnerWindowClosingTitle": {},
+
+  "gameWinnerWindowClosingMessage": "Finalizing results — the round summary will appear shortly.",
+  "@gameWinnerWindowClosingMessage": {},
+
   "gameResultsLoading": "Loading round results…",
   "@gameResultsLoading": {},
 

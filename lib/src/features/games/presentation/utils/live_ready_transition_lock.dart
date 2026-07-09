@@ -1,12 +1,6 @@
 import '../../data/models/game_model.dart';
 import 'live_primary_game_selection.dart';
 
-/// Max wait for READY session close outcome (PLAYING or next READY).
-const Duration kReadyTransitionLockTimeout = Duration(seconds: 9);
-
-/// Alias for callers that referenced the preparing-pin timeout constant.
-const Duration kPreparingStartTransitionTimeout = kReadyTransitionLockTimeout;
-
 enum ReadyTransitionReason {
   preparingToPlay,
   noPlayersHandoff,
@@ -26,22 +20,12 @@ class ReadyTransitionLock {
   final DateTime startedAt;
   final GameModel snapshotGame;
 
-  static const maxTtl = kReadyTransitionLockTimeout;
-
-  bool isActiveAt(DateTime now) => !readyTransitionLockExpired(this, now);
+  bool isActiveAt(DateTime now) => true;
 
   bool get isPreparingToPlay => reason == ReadyTransitionReason.preparingToPlay;
 
   bool get isNoPlayersHandoff =>
       reason == ReadyTransitionReason.noPlayersHandoff;
-}
-
-bool readyTransitionLockExpired(
-  ReadyTransitionLock lock,
-  DateTime now, {
-  Duration timeout = kReadyTransitionLockTimeout,
-}) {
-  return now.difference(lock.startedAt) >= timeout;
 }
 
 bool isTransitionLockTerminalStatus(GameStatus status) {
@@ -52,11 +36,8 @@ bool isTransitionLockTerminalStatus(GameStatus status) {
 
 bool shouldStartReadyTransitionLockPreparing({
   required GameModel game,
-  required bool hasOwnedCartelas,
 }) {
-  return hasOwnedCartelas &&
-      game.status == GameStatus.ready &&
-      game.calledNumbersCount == 0;
+  return game.status == GameStatus.ready && game.calledNumbersCount == 0;
 }
 
 bool shouldStartReadyTransitionLockNoPlayers({
@@ -122,10 +103,6 @@ bool shouldClearReadyTransitionLock({
   required DateTime now,
 }) {
   if (lock == null) {
-    return true;
-  }
-
-  if (readyTransitionLockExpired(lock, now)) {
     return true;
   }
 
