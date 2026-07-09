@@ -74,6 +74,7 @@ import '../utils/next_ball_countdown.dart';
 import '../utils/next_ball_stale_guard.dart';
 import '../utils/number_called_schedule_patch.dart';
 import '../utils/number_called_status_policy.dart';
+import '../utils/live_status_socket_patch.dart';
 import '../utils/live_sync_trigger_action.dart';
 import '../utils/socket_payload_normalizer.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
@@ -671,6 +672,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
+    ref.listenManual(authControllerProvider, _onAuthSessionChanged);
     unawaited(_bootstrapLiveRoomSplash());
     _registerSocketListeners();
     _joinSessionRoomEarly(widget.gameId ?? widget.initialGame?.sessionId);
@@ -725,48 +727,48 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _cn.stopDisconnectedPolling();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(authControllerProvider, (previous, next) {
-      final hadSession = previous?.session != null;
-      final hasSession = next.session != null;
-      if (hadSession == hasSession) {
+  void _onAuthSessionChanged(AuthState? previous, AuthState next) {
+    final hadSession = previous?.session != null;
+    final hasSession = next.session != null;
+    if (hadSession == hasSession) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
         return;
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
+      if (!hadSession && hasSession) {
+        unawaited(() async {
+          await _loadInitialState(showLoading: false);
+          if (!mounted) {
+            return;
+          }
+          _ensureManualMarksReadyForActiveSession();
+        }());
+        return;
+      }
 
-        if (!hadSession && hasSession) {
-          unawaited(() async {
-            await _loadInitialState(showLoading: false);
-            if (!mounted) {
-              return;
-            }
-            _ensureManualMarksReadyForActiveSession();
-          }());
-          return;
-        }
+      if (_cn.manualMarkedNumbers.isNotEmpty ||
+          _cn.lastManualMarkedKey != null ||
+          _cn.marksOwnerUserId != null ||
+          _cn.restoredMarksSessionId != null) {
+        setState(() {
+          _cn.manualMarkedNumbers.clear();
+          _cn.lastManualMarkedKey = null;
+          _cn.marksSessionId = null;
+          _cn.marksOwnerUserId = null;
+          _cn.restoredMarksSessionId = null;
+        });
+      }
 
-        if (_cn.manualMarkedNumbers.isNotEmpty ||
-            _cn.lastManualMarkedKey != null ||
-            _cn.marksOwnerUserId != null ||
-            _cn.restoredMarksSessionId != null) {
-          setState(() {
-            _cn.manualMarkedNumbers.clear();
-            _cn.lastManualMarkedKey = null;
-            _cn.marksSessionId = null;
-            _cn.marksOwnerUserId = null;
-            _cn.restoredMarksSessionId = null;
-          });
-        }
-
-        unawaited(_loadInitialState(showLoading: false));
-      });
+      unawaited(_loadInitialState(showLoading: false));
     });
+  }
 
+  @override
+  Widget build(BuildContext context) {
     final body = AnimatedSwitcher(
       duration: _hasCompletedInitialPaint
           ? const Duration(milliseconds: 450)
@@ -818,14 +820,17 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       visible: _awaitingLiveRoom,
       child: Stack(
         children: [
-          Positioned.fill(child: content),
-          _LiveSyncOverlay(
-            visible: _realtime.showSyncOverlay,
-            title: _realtime.syncOverlayTitle,
-            message: _realtime.syncOverlayMessage,
-            showRetry: _realtime.lastSyncFailed,
-            onRetry: () => unawaited(_refresh()),
+          Positioned.fill(
+            child: _awaitingLiveRoom ? const SizedBox.shrink() : content,
           ),
+          if (!_awaitingLiveRoom)
+            _LiveSyncOverlay(
+              visible: _realtime.showSyncOverlay,
+              title: _realtime.syncOverlayTitle,
+              message: _realtime.syncOverlayMessage,
+              showRetry: _realtime.lastSyncFailed,
+              onRetry: () => unawaited(_refresh()),
+            ),
         ],
       ),
     );

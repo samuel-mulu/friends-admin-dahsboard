@@ -182,10 +182,30 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       return;
     }
 
+    final patched = applyStatusChangedSocketPatch(
+      current: _game,
+      payload: normalizedPayload,
+    );
+    if (patched != null) {
+      markNeedsBuild(() {
+        _game = patched;
+        _countdown.onNextBallScheduleChanged(
+          game: patched,
+          nextAutoCallAt: patched.nextAutoCallAt,
+          scheduleChanged: true,
+        );
+        if (patched.status == GameStatus.winnerWindow) {
+          _countdown.winnerWindowEndsAt = patched.winnerWindowEndsAt;
+        }
+      });
+      _syncWinnerWindowTicker();
+      _syncNextBallCountdownTicker();
+    }
+
     _scheduleCanonicalRefetch(
-      reason: 'status_changed',
+      reason: 'status_changed_metrics',
       registrationSessionId: sessionId,
-      includeCalledNumbers: true,
+      includeCalledNumbers: false,
     );
   }
 

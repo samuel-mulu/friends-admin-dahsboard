@@ -819,154 +819,83 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  void _handleGameFinishedLocally({
-    String? winnerCartelaId,
-    DateTime? finishedAt,
-    List<WinnerPayoutSummary>? winnerPayoutsSummary,
-    List<SessionWinnerResultModel>? winnerResults,
-    bool showSnackbar = false,
-    bool refreshCartelas = true,
-  }) {
-    final game = _game;
-    if (game == null) {
+  /// Runs terminal review side effects once after canonical apply already set
+  /// FINISHED / NO_WINNER status — avoids a second status mutation.
+  void _runTerminalSideEffectsAfterCanonicalApply(GameModel game) {
+    if (!isTerminalGameStatus(game.status)) {
       return;
     }
+
+    final shouldRunTransition = game.status == GameStatus.cancelled
+        ? shouldRunCancelTransition(
+            currentStatus: game.status,
+            sessionRoomActive: _joinedGameId != null,
+          )
+        : shouldRunFinishTransition(
+            currentStatus: game.status,
+            sessionRoomActive: _joinedGameId != null,
+            summaryScheduled: _review.postGameSummaryReviewActive,
+          );
 
     if (!shouldEnterTerminalSideEffects(
       alreadyInSummary: _review.postGameSummaryReviewActive,
       sessionRoomActive: _joinedGameId != null,
-      shouldRunTransition: shouldRunFinishTransition(
-        currentStatus: _game?.status,
-        sessionRoomActive: _joinedGameId != null,
-        summaryScheduled: _review.postGameSummaryReviewActive,
-      ),
+      shouldRunTransition: shouldRunTransition,
     )) {
       return;
     }
 
-    _applySocketSessionMembership(null);
-
-    setState(() {
-      _clearSessionScopedPlayState(
-        clearCartelas: false,
-        clearCalledNumbers: false,
-        clearManualMarks: false,
-      );
-      _game = game.copyWith(
-        status: GameStatus.finished,
-        finishedAt: finishedAt ?? game.finishedAt ?? DateTime.now(),
-        winnerCartelaId: winnerCartelaId ?? game.winnerCartelaId,
-        winnerPayoutsSummary: winnerPayoutsSummary ?? game.winnerPayoutsSummary,
-        winnerWindowEndsAt: null,
-        noWinnerGraceEndsAt: null,
-        noWinnerReason: null,
-        canRegister: false,
-        registrationOpen: false,
-      );
-      _countdown.winnerWindowEndsAt = null;
-      if (winnerCartelaId != null) {
-        _myCartelas = _myCartelas
-            .map((cartela) {
-              if (cartela.isWinner || cartela.id == winnerCartelaId) {
-                return cartela.copyWith(
-                  status: GameCartelaStatus.winner,
-                  isWinner: true,
-                  blockedAt: null,
-                );
-              }
-              return cartela;
-            })
-            .toList(growable: false);
-      }
-      if (winnerResults != null && winnerResults.isNotEmpty) {
-        _applySessionWinnerResults(winnerResults);
-        _review.sessionWinnerResultsLoaded = true;
-      }
-    });
-    _syncWinnerWindowTicker();
-    _syncNextBallCountdownTicker();
-    _syncSessionWinnerResultsPolling();
-
-    if (refreshCartelas) {
-      unawaited(_refreshMyCartelasSilently());
+    if (_joinedGameId != null) {
+      _applySocketSessionMembership(null);
     }
 
-    unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
-
-    _sortMyCartelas();
-    _syncCalledNumbersForFinishedReview();
-    _startPostGameSummary(scheduleAdvance: true);
-  }
-
-  void _handleNoWinnerLocally({
-    DateTime? finishedAt,
-    bool showSnackbar = false,
-    bool refreshCartelas = true,
-  }) {
-    final game = _game;
-    if (game == null) {
-      return;
-    }
-
-    if (!shouldEnterTerminalSideEffects(
-      alreadyInSummary: _review.postGameSummaryReviewActive,
-      sessionRoomActive: _joinedGameId != null,
-      shouldRunTransition: shouldRunFinishTransition(
-        currentStatus: _game?.status,
-        sessionRoomActive: _joinedGameId != null,
-        summaryScheduled: _review.postGameSummaryReviewActive,
-      ),
-    )) {
-      return;
-    }
-
-    _applySocketSessionMembership(null);
-
-    setState(() {
-      _clearSessionScopedPlayState(
-        clearCartelas: false,
-        clearCalledNumbers: false,
-        clearManualMarks: false,
-      );
-      _review.sessionWinnerResults = const [];
-      _review.sessionWinnerResultsLoaded = true;
-      _review.sessionWinnerResultsLoading = false;
-      _game = game.copyWith(
-        status: GameStatus.noWinner,
-        finishedAt: finishedAt ?? game.finishedAt ?? DateTime.now(),
-        winnerCartelaId: null,
-        winnerPayoutsSummary: const [],
-        winnerWindowEndsAt: null,
-        noWinnerGraceEndsAt: null,
-        noWinnerReason: game.noWinnerReason ?? 'ALL_NUMBERS_CALLED',
-        canRegister: false,
-        registrationOpen: false,
-      );
-      _countdown.winnerWindowEndsAt = null;
-    });
-    _syncWinnerWindowTicker();
-    _syncNextBallCountdownTicker();
-    _stopSessionWinnerResultsPolling();
-
-    if (refreshCartelas) {
-      unawaited(_refreshMyCartelasSilently());
-    }
-
-    _sortMyCartelas();
-    _syncCalledNumbersForFinishedReview();
-    _startPostGameSummary(scheduleAdvance: true);
-
-    if (showSnackbar) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('No winner this round. All numbers were called.'),
-          ),
+    if (game.status == GameStatus.noWinner) {
+      setState(() {
+        _clearSessionScopedPlayState(
+          clearCartelas: false,
+          clearCalledNumbers: false,
+          clearManualMarks: false,
         );
+        _review.sessionWinnerResults = const [];
+        _review.sessionWinnerResultsLoaded = true;
+        _review.sessionWinnerResultsLoading = false;
+        _countdown.winnerWindowEndsAt = null;
       });
+      _stopSessionWinnerResultsPolling();
+    } else if (game.status == GameStatus.finished) {
+      setState(() {
+        _clearSessionScopedPlayState(
+          clearCartelas: false,
+          clearCalledNumbers: false,
+          clearManualMarks: false,
+        );
+        if (game.winnerCartelaId != null) {
+          _myCartelas = _myCartelas
+              .map((cartela) {
+                if (cartela.isWinner || cartela.id == game.winnerCartelaId) {
+                  return cartela.copyWith(
+                    status: GameCartelaStatus.winner,
+                    isWinner: true,
+                    blockedAt: null,
+                  );
+                }
+                return cartela;
+              })
+              .toList(growable: false);
+        }
+        _countdown.winnerWindowEndsAt = null;
+      });
+      unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
+    }
+
+    _syncWinnerWindowTicker();
+    _syncNextBallCountdownTicker();
+    _sortMyCartelas();
+    _syncCalledNumbersForFinishedReview();
+
+    if (game.status == GameStatus.finished ||
+        game.status == GameStatus.noWinner) {
+      _startPostGameSummary(scheduleAdvance: true);
     }
   }
 
@@ -1178,12 +1107,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         // Terminal transition hold (CANCELLED / FINISHED / NO_WINNER -> READY):
         // the backend can briefly report no current/queued game between emitting
         // the terminal event and opening the next READY registration. Do NOT
-        // tear down the UI on that transient gap. Hold the previous UI; the next
-        // READY snapshot (delivered by the status/operation socket events that
-        // always follow) re-applies atomically. This window is self-bounding:
-        // isTerminalTransitionActive expires ~3s after the terminal refetch, so
-        // a genuinely empty state still clears via the branch below afterwards.
-        if (priorGame != null && isTerminalTransitionActive) {
+        // tear down the UI on that transient gap.
+        if (priorGame != null &&
+            (isTerminalTransitionActive ||
+                shouldHoldTerminalPaint(
+                  priorGame: priorGame,
+                  operations: operations,
+                ))) {
           _safeSetState(generation, () {
             _isLoading = false;
             _errorMessage = null;
@@ -1556,21 +1486,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       if (shouldMarkFinished && _isCurrentLoad(generation)) {
-        if (game.status == GameStatus.noWinner) {
-          _handleNoWinnerLocally(
-            finishedAt: game.finishedAt,
-            showSnackbar: false,
-            refreshCartelas: false,
-          );
-        } else {
-          _handleGameFinishedLocally(
-            winnerCartelaId: game.winnerCartelaId,
-            finishedAt: game.finishedAt,
-            winnerPayoutsSummary: game.winnerPayoutsSummary,
-            showSnackbar: false,
-            refreshCartelas: false,
-          );
-        }
+        _runTerminalSideEffectsAfterCanonicalApply(game);
       } else if (_isCurrentLoad(generation)) {
         _ensurePostGameSummaryHoldIfNeeded();
       }
@@ -2318,6 +2234,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   Future<void> _bootstrapLiveRoomSplash() async {
+    if (widget.embedded || widget.initialGame != null) {
+      if (mounted) {
+        setState(() => _awaitingLiveRoom = false);
+      }
+      return;
+    }
+
     final storage = await ref.read(appPreferencesStorageProvider.future);
     if (!mounted) {
       return;

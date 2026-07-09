@@ -55,3 +55,29 @@ bool shouldPinTerminalSession({
     _ => false,
   };
 }
+
+/// Hold terminal/review paint until the backend opens the next READY registration
+/// or a new live session appears in operations.
+bool shouldHoldTerminalPaint({
+  required GameModel? priorGame,
+  required GameOperationsCurrentResponse? operations,
+}) {
+  if (priorGame == null || !isTerminalGameStatus(priorGame.status)) {
+    return false;
+  }
+
+  if (operations?.registrationOpenGame != null) {
+    return false;
+  }
+
+  final live = operations?.liveGame;
+  if (live != null &&
+      live.sessionId != priorGame.sessionId &&
+      (live.status == GameStatus.playing ||
+          live.status == GameStatus.checking ||
+          live.status == GameStatus.winnerWindow)) {
+    return false;
+  }
+
+  return true;
+}
