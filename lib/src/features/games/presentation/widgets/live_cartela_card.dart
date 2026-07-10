@@ -39,6 +39,7 @@ class LiveCartelaCard extends StatelessWidget {
     this.blockedReasonCode,
     this.blockedServerReason,
     this.bingoLockListenable,
+    this.decorativeMotionAllowedListenable,
     super.key,
   });
 
@@ -60,6 +61,8 @@ class LiveCartelaCard extends StatelessWidget {
   final String? blockedServerReason;
   /// When set, BINGO button toggles from this notifier without rebuilding the card body.
   final ValueListenable<bool>? bingoLockListenable;
+  /// When false (e.g. while scrolling), claim/one-away pulses pause so scroll stays calm.
+  final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final Set<String> manualMarkedNumbers;
   final String? lastManualMarkedKey;
   final void Function(GameCartelaModel cartela, String header, String value)
@@ -108,6 +111,7 @@ class LiveCartelaCard extends StatelessWidget {
     return RepaintBoundary(
       child: _GreenClaimPulseWrapper(
       active: showClaimReadyHighlight || (isWinner && !isBlocked),
+      motionAllowedListenable: decorativeMotionAllowedListenable,
       child: _OneAwayPulseWrapper(
         active:
             isOneAwayFromWin &&
@@ -115,6 +119,7 @@ class LiveCartelaCard extends StatelessWidget {
             !isBlocked &&
             !isWinner &&
             !readOnlyOutcome,
+        motionAllowedListenable: decorativeMotionAllowedListenable,
         child: Card(
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
@@ -1025,10 +1030,15 @@ class _OneAwayCellPulseWrapperState extends State<_OneAwayCellPulseWrapper>
 }
 
 class _GreenClaimPulseWrapper extends StatefulWidget {
-  const _GreenClaimPulseWrapper({required this.active, required this.child});
+  const _GreenClaimPulseWrapper({
+    required this.active,
+    required this.child,
+    this.motionAllowedListenable,
+  });
 
   final bool active;
   final Widget child;
+  final ValueListenable<bool>? motionAllowedListenable;
 
   @override
   State<_GreenClaimPulseWrapper> createState() => _GreenClaimPulseWrapperState();
@@ -1047,36 +1057,53 @@ class _GreenClaimPulseWrapperState extends State<_GreenClaimPulseWrapper>
       duration: const Duration(milliseconds: 520),
     );
     _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    widget.motionAllowedListenable?.addListener(_syncAnimation);
     _syncAnimation();
   }
 
   @override
   void didUpdateWidget(covariant _GreenClaimPulseWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.active != widget.active) {
+    if (oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
+      oldWidget.motionAllowedListenable?.removeListener(_syncAnimation);
+      widget.motionAllowedListenable?.addListener(_syncAnimation);
+    }
+    if (oldWidget.active != widget.active ||
+        oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
       _syncAnimation();
     }
   }
 
+  bool get _motionAllowed => widget.motionAllowedListenable?.value ?? true;
+
   void _syncAnimation() {
-    if (widget.active) {
-      _controller.repeat(reverse: true);
-    } else {
-      _controller
-        ..stop()
-        ..value = 0;
+    if (!mounted) {
+      return;
     }
+    final shouldPulse = widget.active && _motionAllowed;
+    if (shouldPulse) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+      setState(() {});
+      return;
+    }
+    _controller
+      ..stop()
+      ..value = 0;
+    setState(() {});
   }
 
   @override
   void dispose() {
+    widget.motionAllowedListenable?.removeListener(_syncAnimation);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.active) {
+    if (!widget.active || !_motionAllowed) {
       return widget.child;
     }
 
@@ -1108,10 +1135,15 @@ class _GreenClaimPulseWrapperState extends State<_GreenClaimPulseWrapper>
 }
 
 class _OneAwayPulseWrapper extends StatefulWidget {
-  const _OneAwayPulseWrapper({required this.active, required this.child});
+  const _OneAwayPulseWrapper({
+    required this.active,
+    required this.child,
+    this.motionAllowedListenable,
+  });
 
   final bool active;
   final Widget child;
+  final ValueListenable<bool>? motionAllowedListenable;
 
   @override
   State<_OneAwayPulseWrapper> createState() => _OneAwayPulseWrapperState();
@@ -1130,36 +1162,53 @@ class _OneAwayPulseWrapperState extends State<_OneAwayPulseWrapper>
       duration: const Duration(milliseconds: 520),
     );
     _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    widget.motionAllowedListenable?.addListener(_syncAnimation);
     _syncAnimation();
   }
 
   @override
   void didUpdateWidget(covariant _OneAwayPulseWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.active != widget.active) {
+    if (oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
+      oldWidget.motionAllowedListenable?.removeListener(_syncAnimation);
+      widget.motionAllowedListenable?.addListener(_syncAnimation);
+    }
+    if (oldWidget.active != widget.active ||
+        oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
       _syncAnimation();
     }
   }
 
+  bool get _motionAllowed => widget.motionAllowedListenable?.value ?? true;
+
   void _syncAnimation() {
-    if (widget.active) {
-      _controller.repeat(reverse: true);
-    } else {
-      _controller
-        ..stop()
-        ..value = 0;
+    if (!mounted) {
+      return;
     }
+    final shouldPulse = widget.active && _motionAllowed;
+    if (shouldPulse) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+      setState(() {});
+      return;
+    }
+    _controller
+      ..stop()
+      ..value = 0;
+    setState(() {});
   }
 
   @override
   void dispose() {
+    widget.motionAllowedListenable?.removeListener(_syncAnimation);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.active) {
+    if (!widget.active || !_motionAllowed) {
       return widget.child;
     }
 

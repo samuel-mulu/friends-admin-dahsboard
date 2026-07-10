@@ -2920,6 +2920,12 @@ abstract class AppLocalizations {
   /// **'This game was cancelled. Entry fees were refunded. Next round starting…'**
   String get gameCancelledMessage;
 
+  /// No description provided for @gameCancelledNoRefundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This game was cancelled. Next round starting…'**
+  String get gameCancelledNoRefundMessage;
+
   /// No description provided for @bulkConfirmHint.
   ///
   /// In en, this message translates to:

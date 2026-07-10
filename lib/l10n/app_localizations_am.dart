@@ -1612,6 +1612,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'ይህ ጨዋታ ተሰርዟል። የምዝገባ ክፍያዎች ተመልሰዋል። ቀጣይ ዙር እየተጀመረ ነው…';
 
   @override
+  String get gameCancelledNoRefundMessage => 'ይህ ጨዋታ ተሰርዟል። ቀጣይ ዙር እየተጀመረ ነው…';
+
+  @override
   String get bulkConfirmHint => 'ለመመልከት ነካ · ለማስወገድ X · ዝግጁ ሲሆን ይመዝገቡ';
 
   @override

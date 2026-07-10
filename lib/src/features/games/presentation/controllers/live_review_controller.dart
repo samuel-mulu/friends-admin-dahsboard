@@ -91,26 +91,28 @@ class LiveReviewController {
   }
 
   bool winnerResultsReadyForDialog(List<SessionWinnerResultModel> results) {
-    return winner_display.winnerResultsReadyForDisplay(results);
+    return dialogResultsForDisplay(results).isNotEmpty;
   }
 
-  bool hasStickyWinnerPayload() {
-    return winnerCartelaDisplay.claimPatternsByGameCartelaId.values.any(
-          (patterns) => patterns.isNotEmpty,
-        ) ||
-        winnerCartelaDisplay.patternCellsByGameCartelaId.values.any(
-          (cells) => cells.isNotEmpty,
-        );
+  /// Modal rows are API-backed only — sticky claim placeholders never open it.
+  List<SessionWinnerResultModel> dialogResultsForDisplay(
+    List<SessionWinnerResultModel> results,
+  ) {
+    return winner_display.winnerResultsForModal(
+      displayResults: results,
+      apiResults: sessionWinnerResults,
+    );
   }
 
   bool canAutoShowWinnerDialog({
     required bool postGameSummaryVisible,
+    required bool eligibleViewer,
     required List<SessionWinnerResultModel> resultsForDisplay,
   }) {
     return winner_display.winnerDialogReadyForImmediateShow(
       postGameSummaryVisible: postGameSummaryVisible,
-      hasStickyWinnerPayload: hasStickyWinnerPayload(),
-      winnerResultsLoaded: winnerResultsReadyForDialog(resultsForDisplay),
+      eligibleViewer: eligibleViewer,
+      modalResults: resultsForDisplay,
     );
   }
 
@@ -120,6 +122,11 @@ class LiveReviewController {
     }
 
     sessionWinnerResults = results;
+    // Do not thrash cartela overlays from API while the winner window is open.
+    // Claim snapshots already paint patterns; Finished applies API display.
+    if (host.game?.status == GameStatus.winnerWindow) {
+      return;
+    }
     refreshWinnerDisplayFromSessionStrip();
   }
 
@@ -289,74 +296,24 @@ class LiveReviewController {
 
     unawaited(fetch(force: true));
 
-    sessionWinnerResultsPollTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) {
-        if (!host.mounted ||
-            !shouldPollSessionWinnerResults(
-              resultsForDisplay: resultsForDisplay,
-            )) {
-          stopSessionWinnerResultsPolling();
-          return;
-        }
+    sessionWinnerResultsPollTimer = Timer.periodic(const Duration(seconds: 2), (
+      _,
+    ) {
+      if (!host.mounted ||
+          !shouldPollSessionWinnerResults(
+            resultsForDisplay: resultsForDisplay,
+          )) {
+        stopSessionWinnerResultsPolling();
+        return;
+      }
 
-        unawaited(fetch(force: true));
-      },
-    );
+      unawaited(fetch(force: true));
+    });
   }
 
   void stopSessionWinnerResultsPolling() {
     sessionWinnerResultsPollTimer?.cancel();
     sessionWinnerResultsPollTimer = null;
-  }
-
-  bool isWinnerWindowPreloadActive({required DateTime? windowEndsAt}) {
-    if (host.game?.status != GameStatus.winnerWindow) {
-      return false;
-    }
-
-    return presentation_phase.shouldPreloadWinnerResultsDuringWindow(
-      windowEndsAt,
-      now: host.countdownNow(),
-    );
-  }
-
-  void syncWinnerWindowPreloadPolling({
-    required DateTime? windowEndsAt,
-    required List<SessionWinnerResultModel> resultsForDisplay,
-    required Future<void> Function({bool force}) fetch,
-  }) {
-    winnerWindowPreloadPollTimer?.cancel();
-    winnerWindowPreloadPollTimer = null;
-
-    if (!isWinnerWindowPreloadActive(windowEndsAt: windowEndsAt)) {
-      return;
-    }
-
-    if (winnerResultsReadyForDialog(resultsForDisplay)) {
-      return;
-    }
-
-    unawaited(fetch(force: true));
-
-    winnerWindowPreloadPollTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) {
-        if (!host.mounted ||
-            !isWinnerWindowPreloadActive(windowEndsAt: windowEndsAt)) {
-          stopWinnerWindowPreloadPolling();
-          return;
-        }
-
-        final latestResults = sessionWinnerResultsForDisplay();
-        if (winnerResultsReadyForDialog(latestResults)) {
-          stopWinnerWindowPreloadPolling();
-          return;
-        }
-
-        unawaited(fetch(force: true));
-      },
-    );
   }
 
   void stopWinnerWindowPreloadPolling() {
@@ -379,33 +336,36 @@ class LiveReviewController {
   }
 
   /// Polls for canonical FINISHED/NO_WINNER after WW countdown expiry.
+  /// Local finish is only attempted via [onTimedOut] or the caller's poll body.
   void startWinnerWindowClosingPoll({
     required void Function() onPoll,
     required bool Function() shouldContinue,
+    void Function()? onTimedOut,
   }) {
     stopWinnerWindowClosingPoll();
     winnerWindowClosingPollAttempts = 0;
     winnerWindowClosingTimedOut = false;
 
-    winnerWindowClosingPollTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) {
-        if (!host.mounted || !shouldContinue()) {
-          stopWinnerWindowClosingPoll();
-          return;
-        }
+    winnerWindowClosingPollTimer = Timer.periodic(const Duration(seconds: 1), (
+      _,
+    ) {
+      if (!host.mounted || !shouldContinue()) {
+        stopWinnerWindowClosingPoll();
+        return;
+      }
 
-        winnerWindowClosingPollAttempts += 1;
-        if (winnerWindowClosingPollAttempts > winnerWindowClosingPollMaxAttempts) {
-          winnerWindowClosingTimedOut = true;
-          stopWinnerWindowClosingPoll();
-          host.markNeedsBuild();
-          return;
-        }
+      winnerWindowClosingPollAttempts += 1;
+      if (winnerWindowClosingPollAttempts >
+          winnerWindowClosingPollMaxAttempts) {
+        winnerWindowClosingTimedOut = true;
+        stopWinnerWindowClosingPoll();
+        onTimedOut?.call();
+        host.markNeedsBuild();
+        return;
+      }
 
-        onPoll();
-      },
-    );
+      onPoll();
+    });
   }
 
   void startPostGameSummary({

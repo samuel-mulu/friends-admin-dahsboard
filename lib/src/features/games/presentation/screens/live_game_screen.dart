@@ -13,7 +13,6 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../../core/time/countdown_target_tracker.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/utils/api_date_time.dart';
@@ -27,7 +26,6 @@ import '../utils/cartela_mark_helpers.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
 import '../widgets/called_numbers_strip.dart';
-import '../widgets/cartela_number_chip.dart';
 import '../../domain/cartela_board_preview_cache.dart';
 import '../widgets/bulk_cartela_review_sheet.dart';
 import '../widgets/cartela_registration_sheet.dart';
@@ -57,7 +55,6 @@ import '../utils/cartela_outcome_public_visibility.dart';
 import '../utils/live_ready_transition_lock.dart';
 import '../utils/live_presentation_phase.dart';
 import '../utils/live_ui_mode.dart';
-import '../utils/live_primary_game_selection.dart';
 import '../utils/live_registration_target.dart';
 import '../utils/live_registration_visibility.dart';
 import '../utils/live_registration_metrics_patch.dart';
@@ -73,7 +70,6 @@ import '../utils/registration_cartela_grid_index.dart';
 import '../utils/next_ball_countdown.dart';
 import '../utils/next_ball_stale_guard.dart';
 import '../utils/number_called_schedule_patch.dart';
-import '../utils/number_called_status_policy.dart';
 import '../utils/live_status_socket_patch.dart';
 import '../utils/live_sync_trigger_action.dart';
 import '../utils/socket_payload_normalizer.dart';
@@ -111,7 +107,6 @@ import '../providers/realtime_connection_provider.dart';
 import '../providers/registration_state_patch_provider.dart';
 import '../utils/live_embedded_operations_snapshot.dart';
 import '../utils/live_resume_provider_policy.dart';
-import '../utils/session_winner_results_for_display.dart';
 import '../../domain/registration_state_patch.dart';
 import '../../domain/resolved_cartela_availability.dart';
 import '../utils/registration_ux_metrics.dart';
@@ -234,6 +229,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   int _loadGeneration = 0;
   LivePresentationPhase? _lastDebugPhase;
   bool _isSyncingLiveGame = false;
+  /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
+  final ValueNotifier<bool> _liveCartelaScrollIdle = ValueNotifier<bool>(true);
   Timer? _invalidSocketPayloadRefetchTimer;
   String? _lastInvalidSocketPayloadLogKey;
   DateTime? _lastInvalidSocketPayloadLogAt;
@@ -722,6 +719,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _loadGeneration++;
     WidgetsBinding.instance.removeObserver(this);
     _liveRoomSplashTicker?.cancel();
+    _liveCartelaScrollIdle.dispose();
     _review.stopSessionWinnerResultsPolling();
     controllers.transition.preparingPhasePollTimer?.cancel();
     controllers.transition.readyTransitionLockTimeoutTimer?.cancel();
@@ -974,11 +972,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: AppSpacing.screenPadding.copyWith(top: AppSpacing.sm),
-                children: _buildStickyLiveScrollContent(),
-              ),
+              child: _buildStickyLiveScrollView(),
             ),
           ),
         ],
@@ -1223,53 +1217,107 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     return [_buildActiveGameContent(includeCalledNumbersStrip: true)];
   }
 
-  List<Widget> _buildStickyLiveScrollContent() {
+  /// Primary live-play scroller: sticky header stays outside; cartelas use a
+  /// real 2-col [SliverGrid] (no shrinkWrap) so only on-screen cards build.
+  Widget _buildStickyLiveScrollView() {
+    final padding = AppSpacing.screenPadding.copyWith(top: AppSpacing.sm);
+
     if (_showsGuestSpectator) {
-      return [
-        _GuestSpectatorHint(
-          onSignUp: () => context.go('/register'),
-          onSignIn: () => context.go(loginPathWithRedirect('/games')),
-        ),
-      ];
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: padding,
+        children: [
+          _GuestSpectatorHint(
+            onSignUp: () => context.go('/register'),
+            onSignIn: () => context.go(loginPathWithRedirect('/games')),
+          ),
+        ],
+      );
     }
 
-    return [
-      if (_hasVisibleCurrentSessionCartelas) ...[
-        _InlineRegisteredCartelaList(
-          cartelas: _orderedMyCartelas,
-          sortResultsByCartelaId: _cn.cartelaSortResults,
-          canClaimBingoFor: _canClaimBingoForCartela,
-          claimingCartelaIds: _cn.claimingCartelaIds,
-          pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
-          showPendingClaimState: !_showsPostGameSummary,
-          showFinishedOutcome: _showFinishedCartelaOutcome,
-          freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
-          manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-          lastManualMarkedKey: _cn.lastManualMarkedKey,
-          markedNumbersFor: _markedNumbersForCartela,
-          sortResultFor: _sortResultForCartela,
-          winningPatternCellsByGameCartelaId:
-              _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
-          winningPatternOverlayByGameCartelaId:
-              _review.winnerCartelaDisplay.overlayByGameCartelaId,
-          winningBallCellIndexByGameCartelaId:
-              _review.winnerCartelaDisplay.winningBallCellIndexByGameCartelaId,
-          prizeAmountFor: _prizeAmountForGameCartela,
-          onMarkedNumberToggled: _toggleMarkedNumber,
-          onClaimBingo: _claimBingo,
-          onClearMarksForCartela: _clearMarksForCartela,
-          blockedReasonCodeFor: _blockedReasonCodeForCartela,
-          blockedServerReasonFor: _blockedServerReasonForCartela,
-          onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
-          bingoLockListenable: _countdown.bingoClaimLocked,
-        ),
-        if (_shouldShowInlineRegistrationPanel &&
-            !_blocksRegistrationPromotion) ...[
-          VGap.md,
-          _buildRegistrationTargetSection(),
-        ],
-      ],
-    ];
+    if (!_hasVisibleCurrentSessionCartelas) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: padding,
+      );
+    }
+
+    final cartelaList = _InlineRegisteredCartelaList(
+      cartelas: _orderedMyCartelas,
+      sortResultsByCartelaId: _cn.cartelaSortResults,
+      canClaimBingoFor: _canClaimBingoForCartela,
+      claimingCartelaIds: _cn.claimingCartelaIds,
+      pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
+      showPendingClaimState: !_showsPostGameSummary,
+      showFinishedOutcome: _showFinishedCartelaOutcome,
+      freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
+      manualMarkedNumbers: _cn.effectiveMarkedNumbers,
+      lastManualMarkedKey: _cn.lastManualMarkedKey,
+      markedNumbersFor: _markedNumbersForCartela,
+      sortResultFor: _sortResultForCartela,
+      winningPatternCellsByGameCartelaId:
+          _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
+      winningPatternOverlayByGameCartelaId:
+          _review.winnerCartelaDisplay.overlayByGameCartelaId,
+      winningBallCellIndexByGameCartelaId:
+          _review.winnerCartelaDisplay.winningBallCellIndexByGameCartelaId,
+      prizeAmountFor: _prizeAmountForGameCartela,
+      onMarkedNumberToggled: _toggleMarkedNumber,
+      onClaimBingo: _claimBingo,
+      onClearMarksForCartela: _clearMarksForCartela,
+      blockedReasonCodeFor: _blockedReasonCodeForCartela,
+      blockedServerReasonFor: _blockedServerReasonForCartela,
+      onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
+      bingoLockListenable: _countdown.bingoClaimLocked,
+      decorativeMotionAllowedListenable: _liveCartelaScrollIdle,
+    );
+
+    final showRegistrationFooter =
+        _shouldShowInlineRegistrationPanel && !_blocksRegistrationPromotion;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.depth != 0) {
+              return false;
+            }
+            // Pause decorative pulses only for the whole gesture — keep scroll continuous.
+            if (notification is ScrollStartNotification) {
+              if (_liveCartelaScrollIdle.value) {
+                _liveCartelaScrollIdle.value = false;
+              }
+            } else if (notification is ScrollEndNotification) {
+              if (!_liveCartelaScrollIdle.value) {
+                _liveCartelaScrollIdle.value = true;
+              }
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            // Whole cartela pane scrolls continuously (not row/column snap).
+            // ignore: deprecated_member_use
+            cacheExtent: 900,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: padding,
+                sliver: cartelaList.asSliver(
+                  crossAxisExtent: constraints.maxWidth - padding.horizontal,
+                ),
+              ),
+              if (showRegistrationFooter)
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.md),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildRegistrationTargetSection(),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildStickyNoCartelaRegistrationBody() {
@@ -1835,6 +1883,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     required this.blockedServerReasonFor,
     this.onReorder,
     this.bingoLockListenable,
+    this.decorativeMotionAllowedListenable,
   });
 
   final List<GameCartelaModel> cartelas;
@@ -1862,6 +1911,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
   final String? Function(GameCartelaModel) blockedServerReasonFor;
   final void Function(int fromIndex, int toIndex)? onReorder;
   final ValueListenable<bool>? bingoLockListenable;
+  final ValueListenable<bool>? decorativeMotionAllowedListenable;
 
   Widget _buildCartelaCard({
     required GameCartelaModel gameCartela,
@@ -1907,6 +1957,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
       bingoLockListenable: bingoLockListenable,
+      decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
     );
   }
 
@@ -1961,69 +2012,99 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     );
   }
 
+  Widget _buildGridItem({
+    required BuildContext context,
+    required int index,
+    required double cellWidth,
+    required double cellHeight,
+  }) {
+    final gameCartela = cartelas[index];
+    final sortResult =
+        sortResultFor(gameCartela) ?? sortResultsByCartelaId[gameCartela.id];
+    final rawStoredWinnerOverlay =
+        winningPatternOverlayByGameCartelaId[gameCartela.id];
+    final storedWinnerOverlay =
+        rawStoredWinnerOverlay ?? const CartelaPatternProgressOverlay();
+    final storedWinnerHighlights =
+        rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty
+        ? rawStoredWinnerOverlay.allOverlayCellIndexes
+        : winningPatternCellsByGameCartelaId[gameCartela.id] ?? const <int>{};
+    final winningHighlightCells = {
+      ...?sortResult?.completedPatternCells,
+      ...storedWinnerHighlights,
+    };
+    final card = _buildCartelaCard(
+      gameCartela: gameCartela,
+      sortResult: sortResult,
+      storedWinnerOverlay: storedWinnerOverlay,
+      useStoredWinnerOverlay:
+          rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
+      storedWinnerHighlights: storedWinnerHighlights,
+      winningHighlightCells: winningHighlightCells,
+    );
+
+    return _wrapReorderableCell(
+      context: context,
+      index: index,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+      card: card,
+    );
+  }
+
+  static const _crossAxisSpacing = 6.0;
+  static const _childAspectRatio = 0.72;
+  static const _mainAxisSpacing = 6.0;
+
+  /// Real scrolling 2-col grid for sticky live play ([CustomScrollView]).
+  Widget asSliver({required double crossAxisExtent}) {
+    final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
+    final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
+    final cellHeight = cellWidth / _childAspectRatio;
+
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: _mainAxisSpacing,
+        crossAxisSpacing: _crossAxisSpacing,
+        childAspectRatio: _childAspectRatio,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _buildGridItem(
+          context: context,
+          index: index,
+          cellWidth: cellWidth,
+          cellHeight: cellHeight,
+        ),
+        childCount: cartelas.length,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Nested inside a parent [ListView] (non-sticky layouts only).
     return LayoutBuilder(
       builder: (context, constraints) {
-        const crossAxisSpacing = 6.0;
-        const childAspectRatio = 0.72;
-        final cellWidth = (constraints.maxWidth - crossAxisSpacing) / 2;
-        final cellHeight = cellWidth / childAspectRatio;
+        final cellWidth = (constraints.maxWidth - _crossAxisSpacing) / 2;
+        final cellHeight = cellWidth / _childAspectRatio;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 6,
-                crossAxisSpacing: crossAxisSpacing,
-                childAspectRatio: childAspectRatio,
-              ),
-              itemCount: cartelas.length,
-              itemBuilder: (context, index) {
-                final gameCartela = cartelas[index];
-                final sortResult =
-                    sortResultFor(gameCartela) ??
-                    sortResultsByCartelaId[gameCartela.id];
-                final rawStoredWinnerOverlay =
-                    winningPatternOverlayByGameCartelaId[gameCartela.id];
-                final storedWinnerOverlay =
-                    rawStoredWinnerOverlay ??
-                    const CartelaPatternProgressOverlay();
-                final storedWinnerHighlights =
-                    rawStoredWinnerOverlay != null &&
-                        !rawStoredWinnerOverlay.isEmpty
-                    ? rawStoredWinnerOverlay.allOverlayCellIndexes
-                    : winningPatternCellsByGameCartelaId[gameCartela.id] ??
-                          const <int>{};
-                final winningHighlightCells = {
-                  ...?sortResult?.completedPatternCells,
-                  ...storedWinnerHighlights,
-                };
-                final card = _buildCartelaCard(
-                  gameCartela: gameCartela,
-                  sortResult: sortResult,
-                  storedWinnerOverlay: storedWinnerOverlay,
-                  useStoredWinnerOverlay:
-                      rawStoredWinnerOverlay != null &&
-                      !rawStoredWinnerOverlay.isEmpty,
-                  storedWinnerHighlights: storedWinnerHighlights,
-                  winningHighlightCells: winningHighlightCells,
-                );
-
-                return _wrapReorderableCell(
-                  context: context,
-                  index: index,
-                  cellWidth: cellWidth,
-                  cellHeight: cellHeight,
-                  card: card,
-                );
-              },
-            ),
-          ],
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: _mainAxisSpacing,
+            crossAxisSpacing: _crossAxisSpacing,
+            childAspectRatio: _childAspectRatio,
+          ),
+          itemCount: cartelas.length,
+          itemBuilder: (context, index) => _buildGridItem(
+            context: context,
+            index: index,
+            cellWidth: cellWidth,
+            cellHeight: cellHeight,
+          ),
         );
       },
     );

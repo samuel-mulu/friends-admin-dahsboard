@@ -1668,6 +1668,10 @@ class AppLocalizationsOm extends AppLocalizations {
       'Taphni kun haqame. Kaffaltiin seensaa deebifame. Raawundii itti aanu jalqabaa jira…';
 
   @override
+  String get gameCancelledNoRefundMessage =>
+      'Taphni kun haqame. Raawundii itti aanu jalqabaa jira…';
+
+  @override
   String get bulkConfirmHint =>
       'Ilaaluuf tuqi · Haquuf X · Qophaa\'ee yoo ta\'e galmeessi';
 

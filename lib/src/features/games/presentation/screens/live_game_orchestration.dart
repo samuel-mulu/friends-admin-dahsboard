@@ -57,16 +57,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _syncReadyTransitionLock({
     required GameOperationsCurrentResponse? operations,
     required GameModel? mergedGame,
-  }) =>
-      _transition.syncReadyTransitionLock(
-        operations: operations,
-        mergedGame: mergedGame,
-      );
+  }) => _transition.syncReadyTransitionLock(
+    operations: operations,
+    mergedGame: mergedGame,
+  );
 
   void _syncOpenRegistrationBeatsTransitionLock({
     GameOperationsCurrentResponse? operations,
-  }) =>
-      _transition.syncOpenRegistrationBeatsTransitionLock(operations: operations);
+  }) => _transition.syncOpenRegistrationBeatsTransitionLock(
+    operations: operations,
+  );
 
   void _expireReadyTransitionLockIfNeeded() =>
       _transition.expireReadyTransitionLockIfNeeded();
@@ -165,8 +165,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (game == null ||
         game.status != GameStatus.winnerWindow ||
         !_winnerWindowExpired ||
-        _review.winnerWindowClosing ||
         _review.postGameSummaryReviewActive) {
+      return;
+    }
+
+    // Single Finalizing path: wait for pending bingo checks, then server/local finish.
+    if (_review.winnerWindowClosing) {
       return;
     }
 
@@ -184,18 +188,131 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
     }
 
-    requestClosingRefetch();
+    // If a bingo check is in flight, wait for valid/invalid — do not spam refetch.
+    if (!_isAnyClaimChecking) {
+      requestClosingRefetch();
+    }
+
     _review.startWinnerWindowClosingPoll(
-      onPoll: requestClosingRefetch,
+      onPoll: () {
+        if (_isAnyClaimChecking) {
+          // Still resolving a late bingo — light sync only every few seconds.
+          if (_review.winnerWindowClosingPollAttempts % 3 == 0) {
+            requestClosingRefetch();
+          }
+          return;
+        }
+
+        requestClosingRefetch();
+        // Claims idle: leave Finalizing via local finish if server is still WW.
+        if (_review.winnerWindowClosingPollAttempts >= 1) {
+          final current = _game;
+          if (current != null) {
+            _finishWinnerWindowClosingLocally(current);
+          }
+        }
+      },
       shouldContinue: () =>
           mounted &&
           _review.winnerWindowClosing &&
           !_review.postGameSummaryReviewActive &&
           _game?.status == GameStatus.winnerWindow,
+      onTimedOut: () {
+        // Stuck checking must not block finished UI forever.
+        _forceClearClaimCheckingForWinnerWindowClose();
+        final current = _game;
+        if (current != null) {
+          _finishWinnerWindowClosingLocally(current);
+        }
+        requestClosingRefetch();
+      },
     );
     if (mounted) {
       setState(() {});
     }
+  }
+
+  /// Drop local checking holds so Finalizing can proceed after timeout.
+  void _forceClearClaimCheckingForWinnerWindowClose() {
+    _cn.claimStripHoldActive = false;
+    _cn.claimingCartelaIds.clear();
+    _cn.pendingClaimCartelaIds.clear();
+    _cn.preClaimNextAutoCallAt = null;
+    _review.sessionCheckingCartelaNumbers = const [];
+    _cn.flushBufferedCalledNumbers();
+  }
+
+  void _finishWinnerWindowClosingLocally(GameModel game) {
+    if (game.status != GameStatus.winnerWindow ||
+        !_winnerWindowExpired ||
+        _isAnyClaimChecking ||
+        _review.postGameSummaryReviewActive) {
+      return;
+    }
+
+    if (!shouldEnterTerminalSideEffects(
+      alreadyInSummary: _review.postGameSummaryReviewActive,
+      sessionRoomActive: _joinedGameId != null,
+      shouldRunTransition: shouldRunFinishTransition(
+        currentStatus: game.status,
+        sessionRoomActive: _joinedGameId != null,
+        summaryScheduled: false,
+      ),
+    )) {
+      return;
+    }
+
+    _review.resetWinnerWindowClosingState();
+    _applySocketSessionMembership(null);
+    _review.stopWinnerWindowPreloadPolling();
+
+    setState(() {
+      _game = game.copyWith(
+        status: GameStatus.finished,
+        finishedAt: game.finishedAt ?? _countdownNow(),
+        winnerWindowEndsAt: null,
+        noWinnerGraceEndsAt: null,
+        noWinnerReason: null,
+        canRegister: false,
+        registrationOpen: false,
+      );
+      _countdown.winnerWindowEndsAt = null;
+    });
+
+    _syncWinnerWindowTicker();
+    _syncNextBallCountdownTicker();
+    _startPostGameSummary(scheduleAdvance: true);
+    unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
+    _realtime.requestTerminalCanonicalRefetch(
+      reason: 'winner_window_local_finish',
+      wallet: !_isGuest,
+      registrationSessionId: game.sessionId,
+      includeCalledNumbers: true,
+      includeMyCartelas: false,
+    );
+  }
+
+  /// When Finalizing and pending bingo checks go idle, finish the round.
+  void _requestFinishedAfterPendingClaimsCleared() {
+    final game = _game;
+    if (game == null ||
+        !_review.winnerWindowClosing ||
+        game.status != GameStatus.winnerWindow ||
+        !_winnerWindowExpired ||
+        _isAnyClaimChecking ||
+        _review.postGameSummaryReviewActive) {
+      return;
+    }
+
+    _realtime.requestTerminalCanonicalRefetch(
+      reason: 'winner_window_pending_cleared',
+      wallet: !_isGuest,
+      registrationSessionId: game.sessionId,
+      includeCalledNumbers: true,
+      includeMyCartelas: false,
+    );
+    // Do not wait on another poll cycle — claims are done, leave Finalizing.
+    _finishWinnerWindowClosingLocally(game);
   }
 
   bool get _showsPostGameSummary => _review.showsPostGameSummary;
@@ -307,15 +424,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  List<SessionWinnerResultModel> get _sessionWinnerResultsForModal {
-    return winnerResultsForModal(
-      displayResults: _sessionWinnerResultsForDisplay,
-      apiResults: _review.sessionWinnerResults,
-    );
-  }
+  bool get _winnerReviewEligibleViewer =>
+      !_isGuest && _hasVisibleCurrentSessionCartelas;
 
-  void _applySessionWinnerResults(List<SessionWinnerResultModel> results) {
-    _review.applySessionWinnerResults(results);
+  List<SessionWinnerResultModel> get _winnerReviewDialogResults {
+    return _review.dialogResultsForDisplay(_sessionWinnerResultsForDisplay);
   }
 
   void _refreshWinnerDisplayFromSessionStrip() {
@@ -400,7 +513,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       ..._review.sessionBlockedCartelaNumbers,
       cartelaNumber,
     ]);
-    _review.sessionCheckingCartelaNumbers = _review.sessionCheckingCartelaNumbers
+    _review.sessionCheckingCartelaNumbers = _review
+        .sessionCheckingCartelaNumbers
         .where((number) => number != cartelaNumber)
         .toList(growable: false);
   }
@@ -413,7 +527,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _clearSessionCheckingCartelaNumber(int cartelaNumber) {
-    _review.sessionCheckingCartelaNumbers = _review.sessionCheckingCartelaNumbers
+    _review.sessionCheckingCartelaNumbers = _review
+        .sessionCheckingCartelaNumbers
         .where((number) => number != cartelaNumber)
         .toList(growable: false);
   }
@@ -437,7 +552,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return false;
     }
 
-    return _cn.socketAutoCallEnabled ?? game.operationMode.toUpperCase() == 'AUTO';
+    return _cn.socketAutoCallEnabled ??
+        game.operationMode.toUpperCase() == 'AUTO';
   }
 
   int get _highestKnownCalledOrder => _cn.highestKnownCalledOrder;
@@ -491,11 +607,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _syncNextBallCountdownTicker() {
     _countdown.syncNextBallTicker(
       _liveCountdownTickContext,
-      onDisplayChanged: () {
-        if (mounted) {
-          setState(() {});
-        }
-      },
+      // Bingo lock uses bingoClaimLocked ValueNotifier — do not root setState
+      // on every tick (rebuilds all cartelas and makes scroll feel busy).
+      onDisplayChanged: () {},
       onStaleRecovery: _handleNextBallStaleRecovery,
     );
   }
@@ -600,11 +714,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       force: force,
       onResultsUpdated: () {
         _syncSessionWinnerResultsPolling();
-        if (_review.winnerResultsReadyForDialog(
-          _sessionWinnerResultsForDisplay,
-        )) {
-          _review.stopWinnerWindowPreloadPolling();
-        }
         _maybeAutoShowWinnerCartelaDialog();
       },
     );
@@ -626,23 +735,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    // Wait for canonical winner-results so prizes/cartela numbers are real
-    // (sticky claim snapshots alone produced cartela #0 / 0 ETB).
-    if (!_review.sessionWinnerResultsLoaded) {
-      return;
-    }
-
-    final results = _sessionWinnerResultsForModal;
+    final results = _winnerReviewDialogResults;
     if (results.isEmpty) {
       return;
     }
     if (!_review.canAutoShowWinnerDialog(
       postGameSummaryVisible: true,
+      eligibleViewer: _winnerReviewEligibleViewer,
       resultsForDisplay: results,
     )) {
-      return;
-    }
-    if (!_review.winnerResultsReadyForDialog(results)) {
       return;
     }
 
@@ -651,7 +752,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   Future<void> _onWinnerCartelaChipTapped(int cartelaNumber) async {
-    if (_review.winnerCartelaDialogVisible) {
+    if (_review.winnerCartelaDialogVisible || !_winnerReviewEligibleViewer) {
       return;
     }
 
@@ -660,16 +761,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    var results = _sessionWinnerResultsForModal;
-    if (results.isEmpty || !_review.winnerResultsReadyForDialog(results)) {
+    var results = _winnerReviewDialogResults;
+    if (results.isEmpty) {
       await _fetchSessionWinnerResultsIfNeeded(force: true);
       if (!mounted) {
         return;
       }
-      results = _sessionWinnerResultsForModal;
+      results = _winnerReviewDialogResults;
     }
 
-    if (_review.winnerResultsReadyForDialog(results)) {
+    if (results.isNotEmpty) {
       final filtered = results
           .where((result) => result.cartelaNumber == cartelaNumber)
           .toList(growable: false);
@@ -1017,14 +1118,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           ignoreOlder: !resumeSync,
         );
         if (resumeSync) {
-      LiveRealtimeDebug.resumeSyncOpsApplied(
+          LiveRealtimeDebug.resumeSyncOpsApplied(
             liveStatus: operations.liveGame?.status.name,
-            registrationStatus:
-                operations.registrationOpenGame?.status.name,
-            sessionId: operations.liveGame?.sessionId ??
+            registrationStatus: operations.registrationOpenGame?.status.name,
+            sessionId:
+                operations.liveGame?.sessionId ??
                 operations.checkingGame?.sessionId ??
                 operations.registrationOpenGame?.sessionId,
-            calledCount: operations.liveGame?.calledNumbersCount ??
+            calledCount:
+                operations.liveGame?.calledNumbersCount ??
                 operations.checkingGame?.calledNumbersCount,
           );
           LiveRealtimeDebug.log('resume_sync_operations_loaded');
@@ -1033,11 +1135,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
       final loadSelection = await _loadGame(
         operations: operations,
-        advanceTarget: resumeSync ? null : (widget.initialGame ?? advanceTarget),
-        allowOwnershipLookup: resumeSync ||
-            includeMyCartelas ||
-            showLoading ||
-            _game == null,
+        advanceTarget: resumeSync
+            ? null
+            : (widget.initialGame ?? advanceTarget),
+        allowOwnershipLookup:
+            resumeSync || includeMyCartelas || showLoading || _game == null,
       );
       final game = loadSelection.game;
       final preloadedPrimaryCartelas = loadSelection.preloadedPrimaryCartelas;
@@ -1079,7 +1181,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           current: priorGame,
         );
         if (shouldKeepTransitionLockShell(
-          lock: _readyTransitionLockActive ? _transition.readyTransitionLock : null,
+          lock: _readyTransitionLockActive
+              ? _transition.readyTransitionLock
+              : null,
           currentGame: _game,
           incomingGame: null,
           now: _countdownNow(),
@@ -1099,7 +1203,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             unawaited(
               _refetchCanonicalImmediate(
                 includeCalledNumbers: false,
-                registrationSessionId: _transition.readyTransitionLock?.sessionId,
+                registrationSessionId:
+                    _transition.readyTransitionLock?.sessionId,
               ),
             );
           }
@@ -1251,7 +1356,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         effectiveIncludeCalledNumbers = true;
       }
 
-      var effectiveIncludeMyCartelas = resumeSync ? !_isGuest : includeMyCartelas;
+      var effectiveIncludeMyCartelas = resumeSync
+          ? !_isGuest
+          : includeMyCartelas;
       if (resumeSync && !_isGuest) {
         final myCartelasDecision = resolveResumeMyCartelasFetch(
           game: game,
@@ -1471,7 +1578,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           game.status == GameStatus.noWinner;
       final shouldMarkFinished = isFinished && !wasFinished;
       final shouldClearFinished = !isFinished;
-      final shouldStaggerCalledNumbers = effectiveIncludeCalledNumbers &&
+      final shouldStaggerCalledNumbers =
+          effectiveIncludeCalledNumbers &&
           !sessionChanged &&
           (resumeSync
               ? shouldStaggerResumeCalledNumbers(
@@ -1546,33 +1654,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
       });
       _evaluateLiveRoomSplash();
-    }
-  }
-
-  Future<void> _reloadTimeConfig() async {
-    if (!mounted) {
-      return;
-    }
-
-    if (_timingConfigLoaded && _shouldCacheTimingConfigForLivePlay) {
-      return;
-    }
-
-    try {
-      final timingConfig = await _gamesRepository.getTimeConfig();
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _timingConfig = timingConfig;
-        _timingConfigLoaded = true;
-      });
-      if (timingConfig.serverNow != null) {
-        _syncServerClockFromUtc(timingConfig.serverNow!);
-      }
-    } catch (_) {
-      // Keep the last loaded config when a background refresh fails.
     }
   }
 
@@ -1673,17 +1754,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     bool forceAuxiliaryRefresh = false,
   }) {
     if (operations != null) {
-      ref.read(currentGameOperationsProvider.notifier).adoptResumeSnapshot(
-        operations,
-      );
+      ref
+          .read(currentGameOperationsProvider.notifier)
+          .adoptResumeSnapshot(operations);
     }
 
     final sessionId = _game?.sessionId;
     if (sessionId != null) {
-      final shouldInvalidateRegistration = shouldInvalidateRegistrationStateOnResume(
-        sessionId: sessionId,
-        primaryGame: _game,
-      );
+      final shouldInvalidateRegistration =
+          shouldInvalidateRegistrationStateOnResume(
+            sessionId: sessionId,
+            primaryGame: _game,
+          );
       final allowRegistrationRefresh =
           shouldInvalidateRegistration &&
           ResumeAuxiliaryRefreshGate.shouldRunWalletRegistration(
@@ -1791,10 +1873,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final marksSessionChanged = previousMarksSessionId != game.sessionId;
 
     _safeSetState(generation, () {
-      _syncReadyTransitionLock(
-        operations: operations,
-        mergedGame: game,
-      );
+      _syncReadyTransitionLock(operations: operations, mergedGame: game);
       _syncOpenRegistrationBeatsTransitionLock(operations: operations);
 
       if (game.sessionId != _cn.marksSessionId) {
@@ -1908,7 +1987,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
       _maybeAutoExpandForQueuedNextGame();
       _countdown.winnerWindowEndsAt =
-          (calledNumbersSyncGame ?? mergedGame).status == GameStatus.winnerWindow
+          (calledNumbersSyncGame ?? mergedGame).status ==
+              GameStatus.winnerWindow
           ? (calledNumbersSyncGame ?? mergedGame).winnerWindowEndsAt
           : null;
       _syncRegistrationCountdownClosedState(game: mergedGame);
@@ -1989,9 +2069,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   Future<void> _refreshCalledNumbersFromUi() {
     return _cn.refreshCalledNumbersFromUi(
       onError: (message) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       },
       refreshWinnerDisplay: _refreshWinnerDisplayFromSessionStrip,
     );
@@ -2005,6 +2085,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       hasSessionCheckingCartelaNumbers:
           _review.sessionCheckingCartelaNumbers.isNotEmpty,
     );
+
+    _requestFinishedAfterPendingClaimsCleared();
   }
 
   void _syncCalledNumbersForFinishedReview() {
@@ -2148,11 +2230,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   GameModel? _resolvePrimaryFromOperations(
     GameOperationsCurrentResponse ops, {
     required bool ownsLiveCartelas,
-  }) =>
-      _transition.resolvePrimaryFromOperations(
-        ops,
-        ownsLiveCartelas: ownsLiveCartelas,
-      );
+  }) => _transition.resolvePrimaryFromOperations(
+    ops,
+    ownsLiveCartelas: ownsLiveCartelas,
+  );
 
   bool _ownsLiveCartelasForOperations(GameOperationsCurrentResponse ops) =>
       _transition.ownsLiveCartelasForOperations(ops);
@@ -2192,12 +2273,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final liveCandidate = ops.liveGame ?? ops.checkingGame;
     final registrationGame = ops.registrationOpenGame;
     List<GameCartelaModel>? preloadedPrimaryCartelas;
-    final liveSessionId = liveCandidate?.sessionId;
-    final ownsLocalLiveCartelas =
-        liveSessionId != null &&
-        liveSessionId.isNotEmpty &&
-        _game?.sessionId == liveSessionId &&
-        _myCartelas.isNotEmpty;
 
     // Primary round selection is driven by operations/current plus the
     // authenticated player's live-session ownership from /my-cartelas.
@@ -2263,9 +2338,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           }()
         : Future.value(
             _resolvePrimaryFromOperations(
-              ops,
-              ownsLiveCartelas: _ownsLiveCartelasForOperations(ops),
-            ) ?? ops.currentGameForPlayer,
+                  ops,
+                  ownsLiveCartelas: _ownsLiveCartelasForOperations(ops),
+                ) ??
+                ops.currentGameForPlayer,
           );
     final resolvedGame = await game;
     _joinSessionRoomEarly(resolvedGame?.sessionId);
@@ -2369,7 +2445,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           ? () => _scheduleCoalescedInvalidSocketPayloadRefetch(
               includeCalledNumbers: includeCalledNumbers,
               wallet: wallet,
-              preferRegistrationSessionRefetch: preferRegistrationSessionRefetch,
+              preferRegistrationSessionRefetch:
+                  preferRegistrationSessionRefetch,
             )
           : null,
     );
@@ -2477,6 +2554,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     LiveRealtimeDebug.socket('game:number_called', normalizedPayload);
 
+    final serverNowRaw = normalizedPayload['serverNow'];
+    final serverNow = parseApiDateTime(serverNowRaw)?.toUtc();
+    if (serverNow != null) {
+      _syncServerClockFromUtc(serverNow);
+    }
+
     final pauseStripForClaim = _isAnyClaimChecking;
 
     var scheduleChanged = false;
@@ -2527,6 +2610,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         );
         _syncNextBallCountdownTicker();
       }
+      // Unlock/relock with the ball — do not wait for the next countdown tick.
+      _countdown.refreshBingoClaimLock(
+        game: updatedGame,
+        autoCallActive: _isAutoCallActiveForSession,
+        highestKnownCalledOrder: highestKnownOrder,
+      );
     }
 
     if (applyResult.requiresCanonicalSync) {
@@ -2674,6 +2763,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
       if (gameCartelaId != null) {
         _cn.pendingClaimCartelaIds.remove(gameCartelaId);
+        _cn.claimingCartelaIds.remove(gameCartelaId);
         _storeClaimWinningSnapshot(
           gameCartelaId: gameCartelaId,
           patterns: completedPatterns,
@@ -2704,6 +2794,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _applyAutoCallScheduleFromPayload(normalizedPayload);
     }
 
+    if (_cn.claimingCartelaIds.isEmpty) {
+      _cn.claimStripHoldActive = false;
+    }
     _releaseCalledNumbersStripHoldIfIdle();
   }
 
@@ -2925,15 +3018,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  void _syncWinnerWindowWinnerResultsPreload() {
-    _review.syncWinnerWindowPreloadPolling(
-      windowEndsAt: _effectiveWinnerWindowEndsAt,
-      resultsForDisplay: _sessionWinnerResultsForDisplay,
-      fetch: _fetchSessionWinnerResultsIfNeeded,
-    );
-  }
-
   void _syncWinnerWindowTicker() {
+    // WW must not preload/apply winner-results UI.
+    // Finished owns the API fetch via _startPostGameSummary / terminal apply.
     _countdown.syncWinnerWindowTicker(
       shouldRunWinnerWindowTicker:
           _game?.status == GameStatus.winnerWindow &&
@@ -2942,7 +3029,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       onPollSessionWinners: _shouldPollSessionWinnerResults
           ? _syncSessionWinnerResultsPolling
           : null,
-      onPreloadSessionWinners: _syncWinnerWindowWinnerResultsPreload,
+      onPreloadSessionWinners: null,
     );
   }
 
@@ -2978,6 +3065,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       scheduleAdvance: scheduleAdvance,
       onStarted: () {
         _syncCalledNumbersForFinishedReview();
+        _maybeAutoShowWinnerCartelaDialog();
         unawaited(
           _fetchSessionWinnerResultsIfNeeded(force: true).whenComplete(() {
             if (mounted) {
@@ -3019,11 +3107,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       ),
       isAdvancing: _review.postGameSummaryAdvancing,
       onNext: _onPostGameSummaryNextTapped,
-      onOpenWinners: _sessionWinnerResultsForModal.isEmpty
+      onOpenWinners:
+          !_winnerReviewEligibleViewer || _winnerReviewDialogResults.isEmpty
           ? null
-          : () => _showWinnerCartelaDialogForReview(
-              _sessionWinnerResultsForModal,
-            ),
+          : () => _showWinnerCartelaDialogForReview(_winnerReviewDialogResults),
     );
   }
 
@@ -3033,7 +3120,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _onPostGameSummaryNextTapped() {
-    if (!_review.postGameSummaryReviewActive || _review.postGameSummaryAdvancing) {
+    if (!_review.postGameSummaryReviewActive ||
+        _review.postGameSummaryAdvancing) {
       return;
     }
 
@@ -3060,7 +3148,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (_review.finishTransitionTimer == null || !_review.finishTransitionTimer!.isActive) {
+    if (_review.finishTransitionTimer == null ||
+        !_review.finishTransitionTimer!.isActive) {
       _scheduleAdvanceToNextGame();
     }
   }
@@ -3097,7 +3186,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Future<void> _runFinishedAdvanceSequence({bool force = false}) async {
     final shouldHonorReviewHold =
-        _review.postGameSummaryReviewActive && !_review.postGameSummaryHoldBypassed;
+        _review.postGameSummaryReviewActive &&
+        !_review.postGameSummaryHoldBypassed;
     if (!mounted ||
         (!force && shouldHonorReviewHold && !_postGameSummaryHoldElapsed)) {
       if (!force) {
@@ -3353,14 +3443,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         ? intervalRaw.round()
         : game.autoCallIntervalMs;
     final autoCallEnabled = parseAutoCallEnabledFromPayload(payload);
-    final scheduleChanged = hasNextAutoCallAt &&
+    final scheduleChanged =
+        hasNextAutoCallAt &&
         !dateTimesEqualForSchedule(nextAutoCallAt, game.nextAutoCallAt);
     final intervalChanged =
         intervalRaw is num && autoCallIntervalMs != game.autoCallIntervalMs;
 
-    if (!scheduleChanged &&
-        autoCallEnabled == null &&
-        !intervalChanged) {
+    if (!scheduleChanged && autoCallEnabled == null && !intervalChanged) {
       return;
     }
 
@@ -3386,6 +3475,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (scheduleChanged) {
         _syncNextBallCountdownTicker();
       }
+      _countdown.refreshBingoClaimLock(
+        game: updatedGame,
+        autoCallActive: _isAutoCallActiveForSession,
+        highestKnownCalledOrder: _highestKnownCalledOrder,
+      );
     }
 
     LiveRealtimeDebug.log('auto_call_schedule_applied refresh=false');
@@ -3478,8 +3572,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   String _buildCartelaSortSignature() {
     final game = _game;
-    final marks = normalizeManualMarkedNumbers(_cn.effectiveMarkedNumbers).toList()
-      ..sort();
+    final marks = normalizeManualMarkedNumbers(
+      _cn.effectiveMarkedNumbers,
+    ).toList()..sort();
     final cartelaState = _myCartelas
         .map(
           (cartela) =>
@@ -3516,7 +3611,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _cn.cartelaSortResults = {
       for (final entry in evaluated.entries)
-        entry.key: _cn.blockedCartelaFrozenSortResults[entry.key] ?? entry.value,
+        entry.key:
+            _cn.blockedCartelaFrozenSortResults[entry.key] ?? entry.value,
     };
     _cn.cartelaSortSignature = signature;
   }
@@ -3589,7 +3685,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       });
     }
 
-    if (_cn.restoredMarksSessionId == sessionId && _cn.marksOwnerUserId == userId) {
+    if (_cn.restoredMarksSessionId == sessionId &&
+        _cn.marksOwnerUserId == userId) {
       return;
     }
 

@@ -56,7 +56,8 @@ int _winnerResultDisplayCompletenessScore(SessionWinnerResultModel result) {
 /// [completedPatterns] while winner results are still loading.
 List<SessionWinnerResultModel> sessionWinnerResultsForDisplay({
   required List<SessionWinnerResultModel> apiResults,
-  required Map<String, List<CompletedPatternModel>> claimPatternsByGameCartelaId,
+  required Map<String, List<CompletedPatternModel>>
+  claimPatternsByGameCartelaId,
   SessionWinnerLastCalledNumber? sessionLastCalledNumber,
   List<GameCartelaModel> myCartelas = const [],
   List<WinnerPayoutSummary>? winnerPayoutsSummary,
@@ -72,11 +73,16 @@ List<SessionWinnerResultModel> sessionWinnerResultsForDisplay({
   final myCartelaByNumber = <int, GameCartelaModel>{
     for (final cartela in myCartelas) cartela.cartela.number: cartela,
   };
+  final myCartelaByGameCartelaId = <String, GameCartelaModel>{
+    for (final cartela in myCartelas) cartela.id: cartela,
+  };
   final myCartelaByCartelaId = <String, GameCartelaModel>{
     for (final cartela in myCartelas) cartela.cartelaId: cartela,
   };
 
-  List<CompletedPatternModel> claimPatternsFor(SessionWinnerResultModel result) {
+  List<CompletedPatternModel> claimPatternsFor(
+    SessionWinnerResultModel result,
+  ) {
     final direct = claimPatternsByGameCartelaId[result.gameCartelaId];
     if (direct != null && direct.isNotEmpty) {
       return direct;
@@ -126,28 +132,28 @@ List<SessionWinnerResultModel> sessionWinnerResultsForDisplay({
   final deduped = <String, SessionWinnerResultModel>{};
 
   for (final result in apiResults) {
-        final claimPatterns = claimPatternsFor(result);
-        var updated = result.copyWith(
-          amount: amountFor(result),
-          columns: columnsFor(result),
-        );
+    final claimPatterns = claimPatternsFor(result);
+    var updated = result.copyWith(
+      amount: amountFor(result),
+      columns: columnsFor(result),
+    );
 
-        if (claimPatterns.isNotEmpty && updated.completedPatterns.isEmpty) {
-          updated = updated.copyWith(completedPatterns: claimPatterns);
-        }
+    if (claimPatterns.isNotEmpty && updated.completedPatterns.isEmpty) {
+      updated = updated.copyWith(completedPatterns: claimPatterns);
+    }
 
-        if (sessionLastCalledNumber != null) {
-          updated = updated.copyWith(lastCalledNumber: sessionLastCalledNumber);
-        }
+    if (sessionLastCalledNumber != null) {
+      updated = updated.copyWith(lastCalledNumber: sessionLastCalledNumber);
+    }
 
-        final key = _winnerResultDedupeKey(updated);
-        final existing = deduped[key];
-        if (existing == null ||
-            _winnerResultDisplayCompletenessScore(updated) >
-                _winnerResultDisplayCompletenessScore(existing)) {
-          deduped[key] = updated;
-        }
-      }
+    final key = _winnerResultDedupeKey(updated);
+    final existing = deduped[key];
+    if (existing == null ||
+        _winnerResultDisplayCompletenessScore(updated) >
+            _winnerResultDisplayCompletenessScore(existing)) {
+      deduped[key] = updated;
+    }
+  }
 
   // Sticky socket claims can open the winner UI before HTTP winner-results.
   for (final entry in claimPatternsByGameCartelaId.entries) {
@@ -161,8 +167,10 @@ List<SessionWinnerResultModel> sessionWinnerResultsForDisplay({
       continue;
     }
 
-    final mine = myCartelaByCartelaId[entry.key];
-    final payout = payoutByCartelaId[mine?.cartelaId ?? ''] ??
+    final mine =
+        myCartelaByGameCartelaId[entry.key] ?? myCartelaByCartelaId[entry.key];
+    final payout =
+        payoutByCartelaId[mine?.cartelaId ?? ''] ??
         (mine != null ? payoutByNumber[mine.cartela.number] : null);
     final sticky = SessionWinnerResultModel(
       gameCartelaId: entry.key,
@@ -192,6 +200,12 @@ bool winnerResultsReadyForDisplay(List<SessionWinnerResultModel> results) {
   }
 
   return results.every(winnerResultReadyForDisplay);
+}
+
+List<SessionWinnerResultModel> displayableWinnerResults(
+  List<SessionWinnerResultModel> results,
+) {
+  return results.where(winnerResultReadyForDisplay).toList(growable: false);
 }
 
 /// Modal rows must be API-backed with a real cartela number and patterns.
@@ -236,16 +250,15 @@ List<SessionWinnerResultModel> winnerResultsForModal({
 }
 
 /// Auto-open the finished winner dialog only during post-game summary review
-/// once canonical winner-results are loaded.
+/// for eligible viewers, once at least one API-backed modal row is ready.
 bool winnerDialogReadyForImmediateShow({
   required bool postGameSummaryVisible,
-  required bool hasStickyWinnerPayload,
-  required bool winnerResultsLoaded,
+  required bool eligibleViewer,
+  required List<SessionWinnerResultModel> modalResults,
 }) {
-  if (!postGameSummaryVisible) {
+  if (!postGameSummaryVisible || !eligibleViewer) {
     return false;
   }
-  // Sticky alone is insufficient — wait for API winner-results.
-  return winnerResultsLoaded;
-}
 
+  return modalResults.isNotEmpty;
+}

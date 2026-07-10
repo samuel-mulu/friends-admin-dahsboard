@@ -55,7 +55,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
                 myCartelas: _myCartelas,
               )
             : _winnerCartelaNumbers;
-        final canOpenWinnerDialog = winnerCartelaNumbers.isNotEmpty &&
+        final canOpenWinnerDialog =
+            winnerCartelaNumbers.isNotEmpty &&
+            _winnerReviewEligibleViewer &&
             _showsPostGameSummary &&
             (_stripShowsWinnerOnly || _usesSessionWideOutcomeChips);
 
@@ -76,7 +78,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
                   unawaited(_realtime.syncLatest(reason: 'manual_refresh')),
               onWinnerCartelaTapped: canOpenWinnerDialog
                   ? (cartelaNumber) =>
-                      unawaited(_onWinnerCartelaChipTapped(cartelaNumber))
+                        unawaited(_onWinnerCartelaChipTapped(cartelaNumber))
                   : null,
             ),
             if (isClaiming) ...[
@@ -170,14 +172,13 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
 
       if (result.isWinner && result.gameStatus == GameStatus.winnerWindow) {
         setState(() {
-          _applyClaimResultState(
-            result: result,
-            gameCartela: gameCartela,
-          );
+          _applyClaimResultState(result: result, gameCartela: gameCartela);
           claimStateAppliedEarly = true;
           _cn.claimStripHoldActive = false;
           _cn.claimingCartelaIds.remove(gameCartela.id);
           _cn.preClaimNextAutoCallAt = null;
+          final cartelaNumber = gameCartela.cartela.number;
+          _clearSessionCheckingCartelaNumber(cartelaNumber);
         });
         _applyWinnerWindowState(winnerWindowEndsAt: result.winnerWindowEndsAt);
         _flushPendingClaimSocketEvents();
@@ -185,6 +186,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           _flushBufferedCalledNumbers();
         }
         _syncWinnerWindowTicker();
+        // Late bingo during Finalizing: continue to finished once checks are idle.
+        _releaseCalledNumbersStripHoldIfIdle();
         return;
       }
 
@@ -216,7 +219,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           ? error.displayMessage
           : 'Could not submit bingo claim.';
     } finally {
-      final isWinnerWindowSuccess = claimResult?.isWinner == true &&
+      final isWinnerWindowSuccess =
+          claimResult?.isWinner == true &&
           claimResult?.gameStatus == GameStatus.winnerWindow;
 
       if (!isWinnerWindowSuccess) {
@@ -232,7 +236,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         setState(() {
           if (claimFailed) {
             if (shouldOptimisticPause) {
-              _game = _game?.copyWith(nextAutoCallAt: _cn.preClaimNextAutoCallAt);
+              _game = _game?.copyWith(
+                nextAutoCallAt: _cn.preClaimNextAutoCallAt,
+              );
             }
           } else if (claimResult != null) {
             _applyClaimResultState(
@@ -244,6 +250,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           _cn.claimStripHoldActive = false;
           _cn.claimingCartelaIds.remove(gameCartela.id);
           _cn.preClaimNextAutoCallAt = null;
+          _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
 
           if (_cn.claimingCartelaIds.isEmpty) {
             _flushBufferedCalledNumbers();
@@ -263,6 +270,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         if (claimResult?.gameCartelaStatus == GameCartelaStatus.blocked) {
           _scheduleCanonicalRefetch();
         }
+
+        // Claim resolved (valid/invalid/failed) — unblock Finalizing if WW expired.
+        _releaseCalledNumbersStripHoldIfIdle();
       }
     }
   }

@@ -69,6 +69,52 @@ class LiveCountdownController {
     bingoClaimLocked.value = value;
   }
 
+  /// Recompute BINGO pre-call lock from schedule + called order (ValueNotifier only).
+  void refreshBingoClaimLock({
+    required GameModel? game,
+    required bool autoCallActive,
+    required int highestKnownCalledOrder,
+    bool forceUnlock = false,
+  }) {
+    if (forceUnlock || game == null) {
+      updateBingoClaimLocked(false);
+      return;
+    }
+
+    if (game.status == GameStatus.winnerWindow) {
+      updateBingoClaimLocked(false);
+      return;
+    }
+
+    final target = _effectiveNextAutoCallTarget(game);
+    final clock = host.controllers.realtime.serverClock;
+    final resolvedPlayPhase = next_ball_countdown.resolveNextBallPlayPhase(
+      gameStatus: game.status,
+      autoCallActive: autoCallActive,
+      nextAutoCallAt: target,
+      clock: clock,
+    );
+    if (resolvedPlayPhase == next_ball_countdown.NextBallPlayPhase.calling &&
+        nextBallPlayPhase != next_ball_countdown.NextBallPlayPhase.calling) {
+      callingPhaseBaselineOrder = highestKnownCalledOrder;
+    } else if (resolvedPlayPhase !=
+        next_ball_countdown.NextBallPlayPhase.calling) {
+      callingPhaseBaselineOrder = null;
+    }
+    nextBallPlayPhase = resolvedPlayPhase;
+
+    final locked = next_ball_countdown.isBingoClaimCountdownLocked(
+      gameStatus: game.status,
+      autoCallActive: autoCallActive,
+      nextAutoCallAt: target,
+      clock: clock,
+      playPhase: resolvedPlayPhase,
+      highestKnownCalledOrder: highestKnownCalledOrder,
+      callingPhaseBaselineOrder: callingPhaseBaselineOrder,
+    );
+    updateBingoClaimLocked(locked);
+  }
+
   @visibleForTesting
   int get activeNextBallTickerCount => _activeNextBallTickerCount;
 
@@ -398,6 +444,8 @@ class LiveCountdownController {
     bool logCountdown = true,
   }) {
     if (context.isAnyClaimChecking) {
+      // Do not freeze lock while checking — claim UI already blocks via isClaiming.
+      updateBingoClaimLocked(false);
       return false;
     }
 
@@ -432,30 +480,11 @@ class LiveCountdownController {
       clock: clock,
     );
     final rawSeconds = next_ball_countdown.nextBallCountdownSeconds(target, clock: clock);
-    final resolvedPlayPhase = next_ball_countdown.resolveNextBallPlayPhase(
-      gameStatus: game.status,
+    refreshBingoClaimLock(
+      game: game,
       autoCallActive: context.autoCallActive,
-      nextAutoCallAt: target,
-      clock: clock,
-    );
-    if (resolvedPlayPhase == next_ball_countdown.NextBallPlayPhase.calling &&
-        nextBallPlayPhase != next_ball_countdown.NextBallPlayPhase.calling) {
-      callingPhaseBaselineOrder = context.highestKnownCalledOrder;
-    } else if (resolvedPlayPhase !=
-        next_ball_countdown.NextBallPlayPhase.calling) {
-      callingPhaseBaselineOrder = null;
-    }
-    nextBallPlayPhase = resolvedPlayPhase;
-    final locked = next_ball_countdown.isBingoClaimCountdownLocked(
-      gameStatus: game.status,
-      autoCallActive: context.autoCallActive,
-      nextAutoCallAt: target,
-      clock: clock,
-      playPhase: resolvedPlayPhase,
       highestKnownCalledOrder: context.highestKnownCalledOrder,
-      callingPhaseBaselineOrder: callingPhaseBaselineOrder,
     );
-    updateBingoClaimLocked(locked);
     nextBallStaleGuard.onScheduleOrBallEvent(
       target: target,
       sessionId: game.sessionId ?? game.id,
