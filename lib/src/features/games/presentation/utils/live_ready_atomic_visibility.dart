@@ -8,8 +8,11 @@ class ReadyAtomicVisibility {
   final bool showGrid;
 }
 
-/// Keeps READY registration banner and cartela grid in lockstep.
-/// Never show one without the other when the READY snapshot is incomplete.
+/// READY registration banner vs cartela grid visibility.
+///
+/// The banner must stay visible as soon as a READY game exists. Gating the
+/// banner on [gridReady] previously cut REGISTRATION OPEN during READY→READY
+/// transitions and fell through to a grid-only layout without the pulse.
 ReadyAtomicVisibility resolveReadyAtomicVisibility({
   required bool hasReadyGame,
   required bool gridReady,
@@ -22,6 +25,8 @@ ReadyAtomicVisibility resolveReadyAtomicVisibility({
   if (!hasReadyGame) {
     return const ReadyAtomicVisibility(showBanner: false, showGrid: false);
   }
-  final both = gridReady;
-  return ReadyAtomicVisibility(showBanner: both, showGrid: both);
+  return ReadyAtomicVisibility(
+    showBanner: true,
+    showGrid: gridReady,
+  );
 }

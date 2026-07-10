@@ -1089,7 +1089,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ],
           VGap.sm,
           Expanded(
-            child: cartelaActionsEnabled
+            child: !uiMode.showRegistrationGrid
+                ? const Center(
+                    child: FriendsBingoLoader.inline(compact: true),
+                  )
+                : cartelaActionsEnabled
                 ? registrationBody
                 : _PreparingGamePanel(
                     registeredCartelas: registeredCartelas,

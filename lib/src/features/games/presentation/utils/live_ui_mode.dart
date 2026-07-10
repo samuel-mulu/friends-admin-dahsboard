@@ -645,7 +645,6 @@ class LiveUiModeResolver {
       holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
           input.holds.canonicalRefetchInFlight,
     );
-    final showRegistrationSurfaces = readyAtomic.showBanner && readyAtomic.showGrid;
 
     return LiveUiModeState(
       mode: mode,
@@ -653,11 +652,13 @@ class LiveUiModeResolver {
       secondaryRegistrationGame: secondaryRegistration,
       registrationTarget: registrationTarget,
       presentationPhase: presentationPhase,
+      // Banner drives registration-open layout so REGISTRATION OPEN is not cut
+      // while the cartela grid is still hydrating after a READY transition.
       useRegistrationOpenLayout:
-          useRegistrationOpenLayout && showRegistrationSurfaces,
+          useRegistrationOpenLayout && readyAtomic.showBanner,
       showsInlinePlayCartelas: showsInlinePlay,
       showCalledNumbersStrip: showsInlinePlay && !primary.isRegistrationOpen,
-      showRegistrationGrid: showRegistrationSurfaces,
+      showRegistrationGrid: readyAtomic.showGrid,
       showReview: mode == LiveUiMode.reviewFinished ||
           mode == LiveUiMode.reviewNoWinner,
       hideRegistrationCountdown: hideRegistrationCountdown,
@@ -674,10 +675,10 @@ class LiveUiModeResolver {
       blocksRegistrationPromotion: blocksPromotion,
       usesExpandedNoCartelaRegistrationLayout: false,
       showMissedRoundWrapper:
-          mode == LiveUiMode.missedRoundRegistration && showRegistrationSurfaces,
+          mode == LiveUiMode.missedRoundRegistration && readyAtomic.showBanner,
       countdownKind: _countdownKind(mode, presentationPhase, input.holds),
       registrationOpenBodyTarget:
-          showRegistrationSurfaces ? registrationOpenBodyTarget : null,
+          readyAtomic.showBanner ? registrationOpenBodyTarget : null,
       hasBlockingLiveGame: hasBlockingLiveGame,
     );
   }
