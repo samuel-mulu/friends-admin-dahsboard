@@ -139,6 +139,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     BingoClaimResult? claimResult;
     String? outcomeSnackbarMessage;
     var claimFailed = false;
+    var claimStateAppliedEarly = false;
 
     try {
       if (_isBingoClaimCountdownLocked) {
@@ -167,6 +168,22 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       }
 
       if (result.isWinner && result.gameStatus == GameStatus.winnerWindow) {
+        setState(() {
+          _applyClaimResultState(
+            result: result,
+            gameCartela: gameCartela,
+          );
+          claimStateAppliedEarly = true;
+          _cn.claimStripHoldActive = false;
+          _cn.claimingCartelaIds.remove(gameCartela.id);
+          _cn.preClaimNextAutoCallAt = null;
+        });
+        _applyWinnerWindowState(winnerWindowEndsAt: result.winnerWindowEndsAt);
+        _flushPendingClaimSocketEvents();
+        if (_cn.claimingCartelaIds.isEmpty) {
+          _flushBufferedCalledNumbers();
+        }
+        _syncWinnerWindowTicker();
         return;
       }
 
@@ -198,14 +215,19 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           ? error.displayMessage
           : 'Could not submit bingo claim.';
     } finally {
-      final elapsed = DateTime.now().difference(claimStartedAt);
-      final remaining =
-          _LiveGameScreenStateBase._checkingCartelaMinimumDisplay - elapsed;
-      if (remaining > Duration.zero) {
-        await Future<void>.delayed(remaining);
+      final isWinnerWindowSuccess = claimResult?.isWinner == true &&
+          claimResult?.gameStatus == GameStatus.winnerWindow;
+
+      if (!isWinnerWindowSuccess) {
+        final elapsed = DateTime.now().difference(claimStartedAt);
+        final remaining =
+            _LiveGameScreenStateBase._checkingCartelaMinimumDisplay - elapsed;
+        if (remaining > Duration.zero) {
+          await Future<void>.delayed(remaining);
+        }
       }
 
-      if (mounted) {
+      if (mounted && !claimStateAppliedEarly) {
         setState(() {
           if (claimFailed) {
             if (shouldOptimisticPause) {
@@ -230,8 +252,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         _flushPendingClaimSocketEvents();
 
         if (outcomeSnackbarMessage != null &&
-            !(claimResult?.isWinner == true &&
-                claimResult?.gameStatus == GameStatus.winnerWindow) &&
+            !isWinnerWindowSuccess &&
             claimResult?.gameCartelaStatus != GameCartelaStatus.blocked) {
           ScaffoldMessenger.of(
             context,
@@ -240,9 +261,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
 
         if (claimResult?.gameCartelaStatus == GameCartelaStatus.blocked) {
           _scheduleCanonicalRefetch();
-        } else if (claimResult?.isWinner == true &&
-            claimResult?.gameStatus == GameStatus.winnerWindow) {
-          _syncWinnerWindowTicker();
         }
       }
     }

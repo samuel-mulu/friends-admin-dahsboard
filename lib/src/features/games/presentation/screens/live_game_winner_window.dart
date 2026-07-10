@@ -52,6 +52,14 @@ mixin _LiveGameWinnerWindow on _LiveGameOrchestration {
       windowEndsAt: windowEndsAt,
       now: _countdownNow(),
     )) {
+      if (_winnerWindowExpired && game.status == GameStatus.winnerWindow) {
+        return _LiveStatusBanner(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+          title: context.l10n.gameWinnerWindowOpen,
+          message: context.l10n.gameSyncingMessage,
+        );
+      }
       return const SizedBox.shrink();
     }
 

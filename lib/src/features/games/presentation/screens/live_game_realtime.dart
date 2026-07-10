@@ -198,6 +198,11 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           _countdown.winnerWindowEndsAt = patched.winnerWindowEndsAt;
         }
       });
+      if (patched.status == GameStatus.winnerWindow ||
+          patched.status == GameStatus.finished ||
+          patched.status == GameStatus.noWinner) {
+        _refreshLocalOperationsSnapshotIfNeeded();
+      }
       _syncWinnerWindowTicker();
       _syncNextBallCountdownTicker();
     }

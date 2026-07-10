@@ -838,6 +838,19 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   String get _bodyTransitionKey {
     final game = _game;
+    if (game != null) {
+      final sessionKey = game.sessionId ?? game.id;
+      final phase = _livePresentationPhase;
+      if (phase == LivePresentationPhase.winnerWindow ||
+          phase == LivePresentationPhase.review ||
+          phase == LivePresentationPhase.liveCalling ||
+          phase == LivePresentationPhase.liveWaitingFirstBall ||
+          phase == LivePresentationPhase.checking ||
+          _resolverPinsTerminalSession) {
+        return 'live-$sessionKey';
+      }
+    }
+
     final registrationBodyTarget = _registrationOpenBodyTarget;
     if (registrationBodyTarget != null) {
       return 'registration-${registrationBodyTarget.sessionId ?? registrationBodyTarget.id}';

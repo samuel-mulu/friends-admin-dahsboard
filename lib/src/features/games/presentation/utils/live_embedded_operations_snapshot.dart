@@ -1,10 +1,10 @@
 import '../../data/models/game_model.dart';
 
-/// Local operations snapshot for embedded live screens that intentionally skip
-/// `operations/current` on bootstrap (socket-first / big-game shell).
+/// Local operations snapshot derived from the current [game] session.
 ///
+/// Used when socket-first UI advances before `operations/current` catches up.
 /// Backend remains canonical when a real operations refetch runs later.
-GameOperationsCurrentResponse embeddedOperationsSnapshotForGame(
+GameOperationsCurrentResponse localOperationsSnapshotForGame(
   GameModel game, {
   required DateTime serverNow,
 }) {
@@ -37,4 +37,12 @@ GameOperationsCurrentResponse embeddedOperationsSnapshotForGame(
     timestamp: serverNow,
     serverNow: serverNow,
   );
+}
+
+/// @deprecated Use [localOperationsSnapshotForGame].
+GameOperationsCurrentResponse embeddedOperationsSnapshotForGame(
+  GameModel game, {
+  required DateTime serverNow,
+}) {
+  return localOperationsSnapshotForGame(game, serverNow: serverNow);
 }

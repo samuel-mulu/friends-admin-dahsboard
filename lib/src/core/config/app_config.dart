@@ -1,19 +1,25 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Compile-time app configuration from `--dart-define` / `--dart-define-from-file`.
+/// App configuration from `--dart-define`, bundled `.env`, or debug defaults.
 ///
-/// Local development (Chrome):
+/// Resolution order for each key:
+/// 1. `--dart-define` / `--dart-define-from-file` (compile-time)
+/// 2. bundled `.env` asset (runtime via flutter_dotenv)
+/// 3. platform localhost defaults (debug only)
+///
+/// Local development:
 /// ```bash
 /// flutter run -d chrome --dart-define-from-file=.env
 /// ```
 ///
-/// Release APK (production URLs required — never ship localhost):
+/// Release APK:
 /// ```bash
-/// flutter build apk --release --dart-define-from-file=.env
+/// flutter build apk --release
 /// ```
-///
-/// Copy [.env.example] for local dev or [.env.production.example] for release builds.
+/// Ensure `.env` exists with production URLs before building — it is bundled
+/// into the app via [pubspec.yaml].
 class AppConfig {
   AppConfig({
     required this.apiBaseUrl,
@@ -39,16 +45,31 @@ class AppConfig {
       debug || telebirrDepositDebug || realtimeDebug;
 
   factory AppConfig.fromEnvironment() {
-    const apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
-    const socketUrlOverride = String.fromEnvironment('SOCKET_URL');
-    const legacySocketBaseUrlOverride = String.fromEnvironment(
-      'SOCKET_BASE_URL',
-    );
-    const realtimeDebug = bool.fromEnvironment('REALTIME_DEBUG');
-    const debug = bool.fromEnvironment('DEBUG');
-    const telebirrDepositDebug = bool.fromEnvironment(
-      'TELEBIRR_DEPOSIT_DEBUG',
-    );
+    const apiBaseUrlDefine = String.fromEnvironment('API_BASE_URL');
+    const socketUrlDefine = String.fromEnvironment('SOCKET_URL');
+    const legacySocketBaseUrlDefine = String.fromEnvironment('SOCKET_BASE_URL');
+
+    final apiBaseUrlOverride = _firstNonEmpty([
+      apiBaseUrlDefine,
+      _envString('API_BASE_URL'),
+    ]);
+    final socketUrlOverride = _firstNonEmpty([
+      socketUrlDefine,
+      _envString('SOCKET_URL'),
+    ]);
+    final legacySocketBaseUrlOverride = _firstNonEmpty([
+      legacySocketBaseUrlDefine,
+      _envString('SOCKET_BASE_URL'),
+    ]);
+
+    final realtimeDebug =
+        const bool.fromEnvironment('REALTIME_DEBUG') ||
+        _envBool('REALTIME_DEBUG');
+    final debug =
+        const bool.fromEnvironment('DEBUG') || _envBool('DEBUG');
+    final telebirrDepositDebug =
+        const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG') ||
+        _envBool('TELEBIRR_DEPOSIT_DEBUG');
 
     final apiBaseUrl = _normalize(
       apiBaseUrlOverride.isNotEmpty
@@ -77,6 +98,24 @@ class AppConfig {
     );
   }
 
+  static String _envString(String key) {
+    return dotenv.maybeGet(key)?.trim() ?? '';
+  }
+
+  static String _firstNonEmpty(List<String> values) {
+    for (final value in values) {
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+    return '';
+  }
+
+  static bool _envBool(String key) {
+    final value = _envString(key).toLowerCase();
+    return value == 'true' || value == '1';
+  }
+
   static String _defaultApiBaseUrlForPlatform() {
     if (kIsWeb) {
       return 'http://localhost:3002';
@@ -102,8 +141,8 @@ class AppConfig {
     if (!hasOverride) {
       throw StateError(
         'API_BASE_URL is required for release builds. '
-        'Rebuild with production URLs, e.g. '
-        'flutter build apk --release --dart-define-from-file=.env',
+        'Add production URLs to .env before building, e.g. '
+        'Copy-Item .env.production.example .env',
       );
     }
 
@@ -132,7 +171,7 @@ class AppConfig {
       throw StateError(
         '$name must point to a production host in release builds. '
         'Current value: $url. '
-        'Use --dart-define-from-file=.env with production URLs.',
+        'Update .env with production URLs before building.',
       );
     }
   }

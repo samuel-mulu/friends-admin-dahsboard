@@ -3,6 +3,7 @@ import '../../data/models/game_model.dart';
 import 'live_presentation_phase.dart';
 import 'live_ready_atomic_visibility.dart';
 import 'live_ready_transition_lock.dart';
+import 'live_embedded_operations_snapshot.dart';
 
 /// Flutter-only presentation modes. These are not backend statuses.
 enum LiveUiMode {
@@ -158,8 +159,22 @@ class LiveUiModeResolver {
     }
 
     final pinned = input.pinnedPrimaryGame;
-    if (pinned != null &&
-        (holds.pinTerminalSession || holds.postGameSummaryReviewActive)) {
+    if (pinned != null && holds.postGameSummaryReviewActive) {
+      return _buildForPinnedTerminal(
+        input: input,
+        game: pinned,
+        hasBlockingLiveGame: hasBlockingLiveGame,
+      );
+    }
+
+    if (pinned != null && holds.pinTerminalSession) {
+      if (pinned.status == GameStatus.winnerWindow) {
+        return _buildForPinnedWinnerWindow(
+          input: input,
+          game: pinned,
+          hasBlockingLiveGame: hasBlockingLiveGame,
+        );
+      }
       return _buildForPinnedTerminal(
         input: input,
         game: pinned,
@@ -442,6 +457,33 @@ class LiveUiModeResolver {
       countdownKind: LiveUiCountdownKind.none,
       registrationOpenBodyTarget: game,
       hasBlockingLiveGame: hasBlockingLiveGame,
+    );
+  }
+
+  static LiveUiModeState _buildForPinnedWinnerWindow({
+    required ResolveLiveUiModeInput input,
+    required GameModel game,
+    required bool hasBlockingLiveGame,
+  }) {
+    final operations = input.operations;
+    final alignedOps = operations != null
+        ? GameOperationsCurrentResponse(
+            liveGame: game,
+            checkingGame: operations.checkingGame,
+            registrationOpenGame: operations.registrationOpenGame,
+            queue: operations.queue,
+            timestamp: operations.timestamp,
+            serverNow: operations.serverNow,
+          )
+        : localOperationsSnapshotForGame(game, serverNow: input.now);
+
+    return _buildForPrimaryGame(
+      input: input,
+      primary: game,
+      operations: alignedOps,
+      hasBlockingLiveGame: hasBlockingLiveGame || alignedOps.liveGame != null,
+      ownsLiveCartelas:
+          input.ownsLiveSessionCartelas || input.hasPrimarySessionCartelas,
     );
   }
 

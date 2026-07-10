@@ -32,6 +32,7 @@ class LiveReviewController {
   Timer? winnerWindowPreloadPollTimer;
   bool winnerCartelaDialogVisible = false;
   String? winnerCartelaDialogAutoShownForSessionId;
+  bool winnerWindowClosing = false;
   List<int> sessionWinnerCartelaNumbers = const [];
   List<int> sessionBlockedCartelaNumbers = const [];
   List<int> sessionCheckingCartelaNumbers = const [];
@@ -52,7 +53,6 @@ class LiveReviewController {
     return finish_transition.shouldPinTerminalSession(
       status: game.status,
       postGameSummaryReviewActive: postGameSummaryReviewActive,
-      winnerWindowExpired: host.controllers.countdown.winnerWindowExpired(),
     );
   }
 
@@ -164,6 +164,7 @@ class LiveReviewController {
       reason: WinnerPatternClearReason.sessionChanged,
     );
     winnerCartelaDialogAutoShownForSessionId = null;
+    winnerWindowClosing = false;
   }
 
   void clearPostGameSummaryHold({
@@ -174,6 +175,7 @@ class LiveReviewController {
   }) {
     winnerCartelaDialogVisible = false;
     winnerCartelaDialogAutoShownForSessionId = null;
+    winnerWindowClosing = false;
     postGameSummaryReviewActive = false;
     postGameSummaryHoldBypassed = false;
     postGameSummaryAdvancing = false;

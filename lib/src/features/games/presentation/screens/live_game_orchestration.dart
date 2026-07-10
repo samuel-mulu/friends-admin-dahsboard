@@ -165,41 +165,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (game == null ||
         game.status != GameStatus.winnerWindow ||
         !_winnerWindowExpired ||
+        _review.winnerWindowClosing ||
         _review.postGameSummaryReviewActive) {
       return;
     }
 
-    if (!shouldEnterTerminalSideEffects(
-      alreadyInSummary: _review.postGameSummaryReviewActive,
-      sessionRoomActive: _joinedGameId != null,
-      shouldRunTransition: shouldRunFinishTransition(
-        currentStatus: game.status,
-        sessionRoomActive: _joinedGameId != null,
-        summaryScheduled: false,
-      ),
-    )) {
-      return;
-    }
-
-    _applySocketSessionMembership(null);
+    _review.winnerWindowClosing = true;
     _review.stopWinnerWindowPreloadPolling();
 
-    setState(() {
-      _game = game.copyWith(
-        status: GameStatus.finished,
-        finishedAt: game.finishedAt ?? _countdownNow(),
-        winnerWindowEndsAt: null,
-        noWinnerGraceEndsAt: null,
-        noWinnerReason: null,
-        canRegister: false,
-        registrationOpen: false,
-      );
-      _countdown.winnerWindowEndsAt = null;
-    });
-    _syncWinnerWindowTicker();
-    _syncNextBallCountdownTicker();
-    _startPostGameSummary(scheduleAdvance: true);
-    unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
+    _realtime.requestTerminalCanonicalRefetch(
+      reason: 'winner_window_expired',
+      wallet: !_isGuest,
+      registrationSessionId: game.sessionId,
+      includeCalledNumbers: true,
+      includeMyCartelas: false,
+    );
   }
 
   bool get _showsPostGameSummary => _review.showsPostGameSummary;
@@ -826,6 +806,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    _review.winnerWindowClosing = false;
+
     final shouldRunTransition = game.status == GameStatus.cancelled
         ? shouldRunCancelTransition(
             currentStatus: game.status,
@@ -980,7 +962,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
       } else if (widget.initialGame != null) {
         final serverNow = ref.read(serverClockProvider).nowUtc();
-        operations = embeddedOperationsSnapshotForGame(
+        operations = localOperationsSnapshotForGame(
           widget.initialGame!,
           serverNow: serverNow,
         );
@@ -2855,25 +2837,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
       }
     });
-    _refreshEmbeddedOperationsSnapshotIfNeeded();
+    _refreshLocalOperationsSnapshotIfNeeded();
     _markCalledNumbersPanelDirty();
     _syncWinnerWindowTicker();
     _syncNextBallCountdownTicker();
   }
 
-  /// Keep embedded/socket-first UI mode aligned when local game state advances
-  /// from socket events before the next operations/current refetch.
-  void _refreshEmbeddedOperationsSnapshotIfNeeded() {
-    if (!widget.embedded) {
-      return;
-    }
-
+  /// Keep local operations aligned when game state advances from socket events
+  /// before the next operations/current refetch.
+  void _refreshLocalOperationsSnapshotIfNeeded() {
     final game = _game;
     if (game == null) {
       return;
     }
 
-    _lastOperations = embeddedOperationsSnapshotForGame(
+    _lastOperations = localOperationsSnapshotForGame(
       game,
       serverNow: _serverClock.nowUtc(),
     );

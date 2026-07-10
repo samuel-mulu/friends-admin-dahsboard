@@ -41,7 +41,6 @@ bool isTerminalGameStatus(GameStatus status) {
 bool shouldPinTerminalSession({
   required GameStatus? status,
   required bool postGameSummaryReviewActive,
-  required bool winnerWindowExpired,
 }) {
   if (postGameSummaryReviewActive) {
     return true;
@@ -51,7 +50,7 @@ bool shouldPinTerminalSession({
     GameStatus.finished => true,
     GameStatus.noWinner => true,
     GameStatus.cancelled => true,
-    GameStatus.winnerWindow => winnerWindowExpired,
+    GameStatus.winnerWindow => true,
     _ => false,
   };
 }
@@ -62,7 +61,32 @@ bool shouldHoldTerminalPaint({
   required GameModel? priorGame,
   required GameOperationsCurrentResponse? operations,
 }) {
-  if (priorGame == null || !isTerminalGameStatus(priorGame.status)) {
+  if (priorGame == null) {
+    return false;
+  }
+
+  if (priorGame.status == GameStatus.winnerWindow) {
+    final live = operations?.liveGame;
+    if (live != null && live.sessionId == priorGame.sessionId) {
+      if (live.status == GameStatus.winnerWindow ||
+          live.status == GameStatus.finished ||
+          live.status == GameStatus.noWinner) {
+        return false;
+      }
+      return true;
+    }
+
+    final registration = operations?.registrationOpenGame;
+    if (registration != null &&
+        registration.sessionId != priorGame.sessionId &&
+        registration.status == GameStatus.ready) {
+      return false;
+    }
+
+    return true;
+  }
+
+  if (!isTerminalGameStatus(priorGame.status)) {
     return false;
   }
 
