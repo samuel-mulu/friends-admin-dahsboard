@@ -1498,6 +1498,27 @@
   "gameWinnerWindowMessage": "Other players can still claim during the winner window.",
   "@gameWinnerWindowMessage": {},
 
+  "gameFinalizingWinners": "Finalizing winners…",
+  "@gameFinalizingWinners": {},
+
+  "gameFinalizingWinnersMessage": "Waiting for the server to finish this round and credit prizes.",
+  "@gameFinalizingWinnersMessage": {},
+
+  "gameFinalizingWinnersDelayed": "Taking longer than usual. Pull to refresh or tap retry.",
+  "@gameFinalizingWinnersDelayed": {},
+
+  "gameStartingRound": "Starting round…",
+  "@gameStartingRound": {},
+
+  "gameStartingRoundMessage": "Waiting for the live session to open.",
+  "@gameStartingRoundMessage": {},
+
+  "gameOpeningNextRound": "Opening next round…",
+  "@gameOpeningNextRound": {},
+
+  "gameOpeningNextRoundMessage": "Waiting for the next registration to open.",
+  "@gameOpeningNextRoundMessage": {},
+
   "gameResultsLoading": "Loading round results…",
   "@gameResultsLoading": {},
 

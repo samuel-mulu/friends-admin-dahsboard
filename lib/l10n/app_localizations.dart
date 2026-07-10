@@ -2728,6 +2728,48 @@ abstract class AppLocalizations {
   /// **'Other players can still claim during the winner window.'**
   String get gameWinnerWindowMessage;
 
+  /// No description provided for @gameFinalizingWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalizing winners…'**
+  String get gameFinalizingWinners;
+
+  /// No description provided for @gameFinalizingWinnersMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the server to finish this round and credit prizes.'**
+  String get gameFinalizingWinnersMessage;
+
+  /// No description provided for @gameFinalizingWinnersDelayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Taking longer than usual. Pull to refresh or tap retry.'**
+  String get gameFinalizingWinnersDelayed;
+
+  /// No description provided for @gameStartingRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting round…'**
+  String get gameStartingRound;
+
+  /// No description provided for @gameStartingRoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the live session to open.'**
+  String get gameStartingRoundMessage;
+
+  /// No description provided for @gameOpeningNextRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening next round…'**
+  String get gameOpeningNextRound;
+
+  /// No description provided for @gameOpeningNextRoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the next registration to open.'**
+  String get gameOpeningNextRoundMessage;
+
   /// No description provided for @gameResultsLoading.
   ///
   /// In en, this message translates to:

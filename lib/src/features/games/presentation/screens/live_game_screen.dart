@@ -111,6 +111,7 @@ import '../providers/realtime_connection_provider.dart';
 import '../providers/registration_state_patch_provider.dart';
 import '../utils/live_embedded_operations_snapshot.dart';
 import '../utils/live_resume_provider_policy.dart';
+import '../utils/session_winner_results_for_display.dart';
 import '../../domain/registration_state_patch.dart';
 import '../../domain/resolved_cartela_availability.dart';
 import '../utils/registration_ux_metrics.dart';
@@ -381,6 +382,22 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       operations: _lastOperations,
       now: _countdownNow(),
     );
+  }
+
+  String get _transitionLockOverlayTitle {
+    final lock = controllers.transition.readyTransitionLock;
+    if (lock?.isNoPlayersHandoff == true) {
+      return context.l10n.gameOpeningNextRound;
+    }
+    return context.l10n.gameStartingRound;
+  }
+
+  String get _transitionLockOverlayMessage {
+    final lock = controllers.transition.readyTransitionLock;
+    if (lock?.isNoPlayersHandoff == true) {
+      return context.l10n.gameOpeningNextRoundMessage;
+    }
+    return context.l10n.gameStartingRoundMessage;
   }
 
   GameModel? get _queueUpcomingGameForDisplay {
@@ -844,11 +861,12 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               visible:
                   _realtime.showSyncOverlay || _showTransitionLockLoading,
               title: _showTransitionLockLoading
-                  ? context.l10n.gameSyncing
+                  ? _transitionLockOverlayTitle
                   : _realtime.syncOverlayTitle,
               message: _showTransitionLockLoading
-                  ? context.l10n.gameSyncingMessage
+                  ? _transitionLockOverlayMessage
                   : _realtime.syncOverlayMessage,
+              dimContent: _showTransitionLockLoading,
               showRetry:
                   !_showTransitionLockLoading && _realtime.lastSyncFailed,
               onRetry: () => unawaited(_refresh()),
@@ -3055,6 +3073,7 @@ class _LiveSyncOverlay extends StatelessWidget {
     required this.message,
     required this.showRetry,
     required this.onRetry,
+    this.dimContent = false,
   });
 
   final bool visible;
@@ -3062,6 +3081,7 @@ class _LiveSyncOverlay extends StatelessWidget {
   final String message;
   final bool showRetry;
   final VoidCallback onRetry;
+  final bool dimContent;
 
   @override
   Widget build(BuildContext context) {
@@ -3071,7 +3091,7 @@ class _LiveSyncOverlay extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         opacity: visible ? 1 : 0,
         child: Container(
-          color: Colors.black.withValues(alpha: 0.12),
+          color: Colors.black.withValues(alpha: dimContent ? 0.28 : 0.12),
           alignment: Alignment.topCenter,
           padding: const EdgeInsets.fromLTRB(20, 88, 20, 20),
           child: ConstrainedBox(

@@ -56,8 +56,10 @@ mixin _LiveGameWinnerWindow on _LiveGameOrchestration {
         return _LiveStatusBanner(
           color: Theme.of(context).colorScheme.tertiaryContainer,
           foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
-          title: context.l10n.gameWinnerWindowOpen,
-          message: context.l10n.gameSyncingMessage,
+          title: context.l10n.gameFinalizingWinners,
+          message: _review.winnerWindowClosingTimedOut
+              ? context.l10n.gameFinalizingWinnersDelayed
+              : context.l10n.gameFinalizingWinnersMessage,
         );
       }
       return const SizedBox.shrink();

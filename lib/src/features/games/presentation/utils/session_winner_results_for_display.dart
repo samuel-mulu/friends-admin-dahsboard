@@ -194,8 +194,49 @@ bool winnerResultsReadyForDisplay(List<SessionWinnerResultModel> results) {
   return results.every(winnerResultReadyForDisplay);
 }
 
+/// Modal rows must be API-backed with a real cartela number and patterns.
+/// Sticky-only placeholders (`#0` / `0 ETB`) are never shown in the dialog.
+bool isCompleteWinnerResultForModal(
+  SessionWinnerResultModel result, {
+  required bool hasApiRow,
+}) {
+  if (!hasApiRow) {
+    return false;
+  }
+  if (result.cartelaNumber <= 0) {
+    return false;
+  }
+  if (result.completedPatterns.isEmpty) {
+    return false;
+  }
+  return true;
+}
+
+List<SessionWinnerResultModel> winnerResultsForModal({
+  required List<SessionWinnerResultModel> displayResults,
+  required List<SessionWinnerResultModel> apiResults,
+}) {
+  if (apiResults.isEmpty) {
+    return const [];
+  }
+
+  final apiIds = {
+    for (final result in apiResults)
+      if (result.gameCartelaId.trim().isNotEmpty) result.gameCartelaId,
+  };
+
+  return displayResults
+      .where(
+        (result) => isCompleteWinnerResultForModal(
+          result,
+          hasApiRow: apiIds.contains(result.gameCartelaId),
+        ),
+      )
+      .toList(growable: false);
+}
+
 /// Auto-open the finished winner dialog only during post-game summary review
-/// once canonical winner-results (or a complete sticky+API merge) are ready.
+/// once canonical winner-results are loaded.
 bool winnerDialogReadyForImmediateShow({
   required bool postGameSummaryVisible,
   required bool hasStickyWinnerPayload,
@@ -204,7 +245,7 @@ bool winnerDialogReadyForImmediateShow({
   if (!postGameSummaryVisible) {
     return false;
   }
-  // Prefer loaded API results; sticky alone is insufficient for auto-open.
-  return winnerResultsLoaded || hasStickyWinnerPayload;
+  // Sticky alone is insufficient — wait for API winner-results.
+  return winnerResultsLoaded;
 }
 

@@ -1503,6 +1503,31 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameWinnerWindowMessage => 'ካልኦት ተጻወቲ ኣብ ናይ ዓወታ መስኮት ክጠልቡ ይኽእሉ።';
 
   @override
+  String get gameFinalizingWinners => 'Finalizing winners…';
+
+  @override
+  String get gameFinalizingWinnersMessage =>
+      'Waiting for the server to finish this round and credit prizes.';
+
+  @override
+  String get gameFinalizingWinnersDelayed =>
+      'Taking longer than usual. Pull to refresh or tap retry.';
+
+  @override
+  String get gameStartingRound => 'Starting round…';
+
+  @override
+  String get gameStartingRoundMessage =>
+      'Waiting for the live session to open.';
+
+  @override
+  String get gameOpeningNextRound => 'Opening next round…';
+
+  @override
+  String get gameOpeningNextRoundMessage =>
+      'Waiting for the next registration to open.';
+
+  @override
   String get gameResultsLoading => 'Loading round results…';
 
   @override

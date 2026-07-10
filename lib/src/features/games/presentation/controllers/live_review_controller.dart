@@ -33,6 +33,9 @@ class LiveReviewController {
   bool winnerCartelaDialogVisible = false;
   String? winnerCartelaDialogAutoShownForSessionId;
   bool winnerWindowClosing = false;
+  bool winnerWindowClosingTimedOut = false;
+  int winnerWindowClosingPollAttempts = 0;
+  Timer? winnerWindowClosingPollTimer;
   List<int> sessionWinnerCartelaNumbers = const [];
   List<int> sessionBlockedCartelaNumbers = const [];
   List<int> sessionCheckingCartelaNumbers = const [];
@@ -44,6 +47,7 @@ class LiveReviewController {
     finishTransitionTimer?.cancel();
     stopSessionWinnerResultsPolling();
     stopWinnerWindowPreloadPolling();
+    stopWinnerWindowClosingPoll();
   }
 
   Duration get postGameSummaryHold =>
@@ -164,7 +168,7 @@ class LiveReviewController {
       reason: WinnerPatternClearReason.sessionChanged,
     );
     winnerCartelaDialogAutoShownForSessionId = null;
-    winnerWindowClosing = false;
+    resetWinnerWindowClosingState();
   }
 
   void clearPostGameSummaryHold({
@@ -175,7 +179,7 @@ class LiveReviewController {
   }) {
     winnerCartelaDialogVisible = false;
     winnerCartelaDialogAutoShownForSessionId = null;
-    winnerWindowClosing = false;
+    resetWinnerWindowClosingState();
     postGameSummaryReviewActive = false;
     postGameSummaryHoldBypassed = false;
     postGameSummaryAdvancing = false;
@@ -358,6 +362,50 @@ class LiveReviewController {
   void stopWinnerWindowPreloadPolling() {
     winnerWindowPreloadPollTimer?.cancel();
     winnerWindowPreloadPollTimer = null;
+  }
+
+  static const int winnerWindowClosingPollMaxAttempts = 15;
+
+  void stopWinnerWindowClosingPoll() {
+    winnerWindowClosingPollTimer?.cancel();
+    winnerWindowClosingPollTimer = null;
+  }
+
+  void resetWinnerWindowClosingState() {
+    stopWinnerWindowClosingPoll();
+    winnerWindowClosing = false;
+    winnerWindowClosingTimedOut = false;
+    winnerWindowClosingPollAttempts = 0;
+  }
+
+  /// Polls for canonical FINISHED/NO_WINNER after WW countdown expiry.
+  void startWinnerWindowClosingPoll({
+    required void Function() onPoll,
+    required bool Function() shouldContinue,
+  }) {
+    stopWinnerWindowClosingPoll();
+    winnerWindowClosingPollAttempts = 0;
+    winnerWindowClosingTimedOut = false;
+
+    winnerWindowClosingPollTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        if (!host.mounted || !shouldContinue()) {
+          stopWinnerWindowClosingPoll();
+          return;
+        }
+
+        winnerWindowClosingPollAttempts += 1;
+        if (winnerWindowClosingPollAttempts > winnerWindowClosingPollMaxAttempts) {
+          winnerWindowClosingTimedOut = true;
+          stopWinnerWindowClosingPoll();
+          host.markNeedsBuild();
+          return;
+        }
+
+        onPoll();
+      },
+    );
   }
 
   void startPostGameSummary({

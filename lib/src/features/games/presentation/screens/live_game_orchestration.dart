@@ -171,15 +171,31 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _review.winnerWindowClosing = true;
+    _review.winnerWindowClosingTimedOut = false;
     _review.stopWinnerWindowPreloadPolling();
 
-    _realtime.requestTerminalCanonicalRefetch(
-      reason: 'winner_window_expired',
-      wallet: !_isGuest,
-      registrationSessionId: game.sessionId,
-      includeCalledNumbers: true,
-      includeMyCartelas: false,
+    void requestClosingRefetch() {
+      _realtime.requestTerminalCanonicalRefetch(
+        reason: 'winner_window_expired',
+        wallet: !_isGuest,
+        registrationSessionId: game.sessionId,
+        includeCalledNumbers: true,
+        includeMyCartelas: false,
+      );
+    }
+
+    requestClosingRefetch();
+    _review.startWinnerWindowClosingPoll(
+      onPoll: requestClosingRefetch,
+      shouldContinue: () =>
+          mounted &&
+          _review.winnerWindowClosing &&
+          !_review.postGameSummaryReviewActive &&
+          _game?.status == GameStatus.winnerWindow,
     );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool get _showsPostGameSummary => _review.showsPostGameSummary;
@@ -288,6 +304,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       sessionLastCalledNumber: _showsPostGameSummary
           ? _sessionLastCalledNumberFromStrip()
           : null,
+    );
+  }
+
+  List<SessionWinnerResultModel> get _sessionWinnerResultsForModal {
+    return winnerResultsForModal(
+      displayResults: _sessionWinnerResultsForDisplay,
+      apiResults: _review.sessionWinnerResults,
     );
   }
 
@@ -609,7 +632,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final results = _sessionWinnerResultsForDisplay;
+    final results = _sessionWinnerResultsForModal;
+    if (results.isEmpty) {
+      return;
+    }
     if (!_review.canAutoShowWinnerDialog(
       postGameSummaryVisible: true,
       resultsForDisplay: results,
@@ -634,13 +660,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    var results = _sessionWinnerResultsForDisplay;
-    if (!_review.winnerResultsReadyForDialog(results)) {
+    var results = _sessionWinnerResultsForModal;
+    if (results.isEmpty || !_review.winnerResultsReadyForDialog(results)) {
       await _fetchSessionWinnerResultsIfNeeded(force: true);
       if (!mounted) {
         return;
       }
-      results = _sessionWinnerResultsForDisplay;
+      results = _sessionWinnerResultsForModal;
     }
 
     if (_review.winnerResultsReadyForDialog(results)) {
@@ -820,7 +846,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    _review.winnerWindowClosing = false;
+    _review.resetWinnerWindowClosingState();
 
     final shouldRunTransition = game.status == GameStatus.cancelled
         ? shouldRunCancelTransition(
@@ -1856,7 +1882,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           calledNumbersSyncGame.sessionId != mergedGame.sessionId) {
         _applySessionOutcomeFromGame(calledNumbersSyncGame);
       }
+      // HTTP operations/current always replaces any local WW/PLAYING overlay.
       _lastOperations = operations;
+      if (kDebugMode &&
+          operations?.liveGame != null &&
+          mergedGame.sessionId != null &&
+          operations!.liveGame!.sessionId == mergedGame.sessionId &&
+          operations.liveGame!.status != mergedGame.status) {
+        debugPrint(
+          '[live_ops] http_status=${operations.liveGame!.status.name} '
+          'local_status=${mergedGame.status.name} '
+          'session=${mergedGame.sessionId}',
+        );
+      }
       _hasBlockingLiveGame =
           operations?.liveGame != null || operations?.checkingGame != null;
       _nextUpcomingGame = _resolveQueueUpcomingGame(
@@ -2981,10 +3019,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       ),
       isAdvancing: _review.postGameSummaryAdvancing,
       onNext: _onPostGameSummaryNextTapped,
-      onOpenWinners: _sessionWinnerResultsForDisplay.isEmpty
+      onOpenWinners: _sessionWinnerResultsForModal.isEmpty
           ? null
           : () => _showWinnerCartelaDialogForReview(
-              _sessionWinnerResultsForDisplay,
+              _sessionWinnerResultsForModal,
             ),
     );
   }
