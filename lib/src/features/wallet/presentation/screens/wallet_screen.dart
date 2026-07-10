@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../providers/wallet_provider.dart';
@@ -85,7 +86,7 @@ class WalletScreen extends ConsumerWidget {
             ),
             loading: () => const Padding(
               padding: EdgeInsets.only(top: 80),
-              child: Center(child: CircularProgressIndicator()),
+              child: FriendsBingoLoader.inline(),
             ),
             error: (error, _) => WalletStateCard(
               message: error is ApiException

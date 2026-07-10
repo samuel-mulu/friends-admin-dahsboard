@@ -18,8 +18,21 @@ class RealtimeBrandingOverlay extends StatelessWidget {
     return Stack(
       children: [
         child,
-        if (visible)
-          const Positioned.fill(child: BrandingSplashView()),
+        // Cross-fade the branded splash in/out so entering a live room resolves
+        // smoothly into content instead of hard-cutting.
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: visible
+                  ? const BrandingSplashView()
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ),
       ],
     );
   }

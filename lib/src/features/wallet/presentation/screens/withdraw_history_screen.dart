@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../providers/wallet_history_providers.dart';
 import '../widgets/wallet_state_card.dart';
 import '../widgets/withdrawal_requests_table.dart';
@@ -37,7 +38,7 @@ class WithdrawHistoryScreen extends ConsumerWidget {
               },
               loading: () => const Padding(
                 padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator()),
+                child: FriendsBingoLoader.inline(),
               ),
               error: (error, _) => WalletStateCard(
                 message: error is ApiException

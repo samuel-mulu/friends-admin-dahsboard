@@ -6,6 +6,7 @@ import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/local_reauth_dialog.dart';
 import '../../data/models/payment_provider.dart';
@@ -261,7 +262,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: FriendsBingoLoader.inline(),
                   ),
                   error: (_, _) => Text(
                     l10n.withdrawHistoryCouldNotLoad,

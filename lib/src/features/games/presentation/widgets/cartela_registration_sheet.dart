@@ -7,7 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/friends_bingo_loading.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/cartela_model.dart';
 import '../../data/models/game_cartela_model.dart';
@@ -1006,7 +1006,7 @@ class _CartelaRegistrationSheetState
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const FriendsBingoLoading(compact: true),
+                        const FriendsBingoLoader.inline(compact: true),
                         const SizedBox(height: 12),
                         Text(
                           _hasFreeEntry

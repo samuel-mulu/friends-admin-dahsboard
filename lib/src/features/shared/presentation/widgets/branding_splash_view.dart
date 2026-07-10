@@ -6,14 +6,49 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_branding.dart';
 
 /// First-launch branded splash for Friends Bingo House.
-class BrandingSplashView extends StatefulWidget {
-  const BrandingSplashView({super.key});
+///
+/// Thin [Scaffold] wrapper around [BrandedLoadingBackdrop] so existing callers
+/// that expect a full route/page keep working. New code that needs to layer the
+/// branded loader over content (overlays, `Positioned.fill`) should use
+/// [BrandedLoadingBackdrop] directly — or the unified `FriendsBingoLoader`.
+class BrandingSplashView extends StatelessWidget {
+  const BrandingSplashView({this.message, super.key});
+
+  /// Optional status line shown in place of the rotating tips.
+  final String? message;
 
   @override
-  State<BrandingSplashView> createState() => _BrandingSplashViewState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BrandedLoadingBackdrop(message: message),
+    );
+  }
 }
 
-class _BrandingSplashViewState extends State<BrandingSplashView>
+/// Full-bleed branded loading visual (gradient + floating BINGO balls + tips).
+///
+/// Deliberately returns **no** [Scaffold] so it can be used both as a route
+/// body and layered inside a [Stack]/`Positioned.fill` without nesting
+/// scaffolds. Always fills its parent via [SizedBox.expand].
+class BrandedLoadingBackdrop extends StatefulWidget {
+  const BrandedLoadingBackdrop({
+    this.message,
+    this.compact = false,
+    super.key,
+  });
+
+  /// When provided, replaces the rotating tips with a fixed status line.
+  final String? message;
+
+  /// Compact layout for smaller regions (drops the ambient background pattern
+  /// and large spacers, keeps the balls + a single status line).
+  final bool compact;
+
+  @override
+  State<BrandedLoadingBackdrop> createState() => _BrandedLoadingBackdropState();
+}
+
+class _BrandedLoadingBackdropState extends State<BrandedLoadingBackdrop>
     with TickerProviderStateMixin {
   static const _tips = [
     'Connecting you to the live Friends Bingo House.',
@@ -30,6 +65,7 @@ class _BrandingSplashViewState extends State<BrandingSplashView>
 
   Timer? _tipTimer;
   int _tipIndex = 0;
+  bool _reducedMotion = false;
 
   @override
   void initState() {
@@ -37,12 +73,12 @@ class _BrandingSplashViewState extends State<BrandingSplashView>
     _introController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..forward();
+    );
 
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
-    )..repeat();
+    );
 
     _titleFade = CurvedAnimation(
       parent: _introController,
@@ -61,13 +97,44 @@ class _BrandingSplashViewState extends State<BrandingSplashView>
       parent: _introController,
       curve: const Interval(0.35, 1, curve: Curves.easeOut),
     );
+  }
 
-    _tipTimer = Timer.periodic(const Duration(milliseconds: 2600), (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Honor the OS "reduce motion" setting: resolve to a static branded state
+    // instead of looping animations / rotating tips.
+    final reduced = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduced == _reducedMotion && _introController.isCompleted) {
+      return;
+    }
+    _reducedMotion = reduced;
+    _applyMotionState();
+  }
+
+  void _applyMotionState() {
+    _tipTimer?.cancel();
+    if (_reducedMotion) {
+      _introController.value = 1;
+      _floatController.stop();
+      _floatController.value = 0;
+      return;
+    }
+
+    if (!_introController.isAnimating && !_introController.isCompleted) {
+      _introController.forward();
+    }
+    if (!_floatController.isAnimating) {
+      _floatController.repeat();
+    }
+    if (widget.message == null) {
+      _tipTimer = Timer.periodic(const Duration(milliseconds: 2600), (_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
+      });
+    }
   }
 
   @override
@@ -80,8 +147,108 @@ class _BrandingSplashViewState extends State<BrandingSplashView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: DecoratedBox(
+    final compact = widget.compact;
+    final statusText = widget.message ?? _tips[_tipIndex];
+
+    final wordmark = FadeTransition(
+      opacity: _titleFade,
+      child: SlideTransition(
+        position: _titleSlide,
+        child: Column(
+          children: [
+            Text(
+              'FRIENDS BINGO',
+              textAlign: TextAlign.center,
+              style: AppBranding.wordmarkGold(size: compact ? 30 : 42),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: AppBranding.gold.withValues(alpha: 0.7),
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'HOUSE',
+                style: AppBranding.wordmarkGold(size: compact ? 16 : 22)
+                    .copyWith(letterSpacing: 6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final balls = FadeTransition(
+      opacity: _subtitleFade,
+      child: _FloatingBingoBalls(animation: _floatController),
+    );
+
+    final status = FadeTransition(
+      opacity: _subtitleFade,
+      child: SizedBox(
+        height: compact ? 48 : 72,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.15),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: Text(
+            statusText,
+            key: ValueKey(statusText),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.88),
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final content = SafeArea(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+          children: compact
+              ? [
+                  wordmark,
+                  const SizedBox(height: 20),
+                  balls,
+                  const SizedBox(height: 12),
+                  status,
+                ]
+              : [
+                  const Spacer(flex: 2),
+                  wordmark,
+                  const SizedBox(height: 28),
+                  balls,
+                  const Spacer(flex: 2),
+                  status,
+                  const SizedBox(height: 36),
+                ],
+        ),
+      ),
+    );
+
+    return SizedBox.expand(
+      child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -97,91 +264,8 @@ class _BrandingSplashViewState extends State<BrandingSplashView>
         ),
         child: Stack(
           children: [
-            const _SplashBackgroundPattern(),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    const Spacer(flex: 2),
-                    FadeTransition(
-                      opacity: _titleFade,
-                      child: SlideTransition(
-                        position: _titleSlide,
-                        child: Column(
-                          children: [
-                            Text(
-                              'FRIENDS BINGO',
-                              textAlign: TextAlign.center,
-                              style: AppBranding.wordmarkGold(size: 42),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppBranding.gold.withValues(alpha: 0.7),
-                                ),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                'HOUSE',
-                                style: AppBranding.wordmarkGold(size: 22)
-                                    .copyWith(letterSpacing: 6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    FadeTransition(
-                      opacity: _subtitleFade,
-                      child: _FloatingBingoBalls(animation: _floatController),
-                    ),
-                    const Spacer(flex: 2),
-                    FadeTransition(
-                      opacity: _subtitleFade,
-                      child: SizedBox(
-                        height: 72,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 500),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0, 0.15),
-                                  end: Offset.zero,
-                                ).animate(animation),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: Text(
-                            _tips[_tipIndex],
-                            key: ValueKey(_tipIndex),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.88),
-                                  height: 1.45,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-                  ],
-                ),
-              ),
-            ),
+            if (!compact) const _SplashBackgroundPattern(),
+            content,
           ],
         ),
       ),

@@ -1234,7 +1234,7 @@ class _CartelaRegistrationPanelState
           child: cartelasAsync.when(
             data: (catalogState) {
               if (catalogState.isReshuffling) {
-                return const FriendsBingoLoading(compact: true);
+                return const FriendsBingoLoader.inline(compact: true);
               }
 
               _syncCatalogById(catalogState.items);
@@ -1268,7 +1268,7 @@ class _CartelaRegistrationPanelState
                 onExpiredSelectionReservations: _forgetSelectionReservations,
               );
             },
-            loading: () => const FriendsBingoLoading(compact: true),
+            loading: () => const FriendsBingoLoader.inline(compact: true),
             error: (error, _) => _LiveInfoCard(
               title: 'Could not load cartelas',
               message: error is ApiException

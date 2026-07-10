@@ -17,7 +17,7 @@ import '../../../../core/time/countdown_target_tracker.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/utils/api_date_time.dart';
-import '../../../../core/widgets/friends_bingo_loading.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../domain/bulk_register_result.dart';
 import '../../domain/cartela_availability.dart';
 import '../../domain/game_rule_localized_name.dart';
@@ -932,6 +932,13 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   }
 
   Widget _buildBody() {
+    // Initial load with no content yet: cover the whole screen with the branded
+    // loader instead of a tiny spinner on a dark surface (which reads as a
+    // black gap). Background reloads (game already present) keep their content.
+    if (_isLoading && _game == null) {
+      return const FriendsBingoLoader.fullscreen();
+    }
+
     if (_shouldUseRegistrationOpenLayout) {
       return _buildRegistrationOpenBody();
     }
@@ -1197,9 +1204,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     if (_isLoading) {
       return const [
         SizedBox.expand(
-          child: Center(
-            child: FriendsBingoLoading(compact: true),
-          ),
+          child: FriendsBingoLoader.inline(compact: true),
         ),
       ];
     }
@@ -2957,7 +2962,7 @@ class _PreparingGamePanel extends StatelessWidget {
             child: Column(
               children: [
                 if (isRefetching) ...[
-                  const FriendsBingoLoading(compact: true),
+                  const FriendsBingoLoader.inline(compact: true),
                   VGap.xl,
                 ],
                 Text(
@@ -3108,7 +3113,10 @@ class _LiveSyncOverlay extends StatelessWidget {
                     const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: AppBranding.gold,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

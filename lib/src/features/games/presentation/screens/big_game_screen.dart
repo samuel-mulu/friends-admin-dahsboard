@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../domain/game_category_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../../core/time/countdown_target_tracker.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/time/server_clock_service.dart';
@@ -184,16 +185,9 @@ class _BigGameLoadingView extends StatelessWidget {
                       color: AppBranding.gold,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    SizedBox(
-                      width: 180,
-                      child: LinearProgressIndicator(
-                        minHeight: 3,
-                        borderRadius: BorderRadius.circular(99),
-                        color: AppBranding.gold,
-                        backgroundColor: AppBranding.gold.withValues(
-                          alpha: 0.2,
-                        ),
-                      ),
+                    const SizedBox(
+                      height: 32,
+                      child: FriendsBingoLoader.inline(compact: true),
                     ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../providers/wallet_history_providers.dart';
 import '../widgets/wallet_state_card.dart';
 
@@ -95,7 +96,7 @@ class DepositHistoryScreen extends ConsumerWidget {
               },
               loading: () => const Padding(
                 padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator()),
+                child: FriendsBingoLoader.inline(),
               ),
               error: (error, _) => WalletStateCard(
                 message: error is ApiException
