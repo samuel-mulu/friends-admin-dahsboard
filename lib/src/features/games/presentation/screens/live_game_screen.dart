@@ -365,38 +365,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool get _readyTransitionLockActive =>
       controllers.transition.readyTransitionLockActive;
 
-  /// While READY→PLAYING/handoff outcome is unknown, show loading — not a guessed shell.
-  bool get _showTransitionLockLoading {
-    if (!_readyTransitionLockActive) {
-      return false;
-    }
-    final lock = controllers.transition.readyTransitionLock;
-    if (lock == null) {
-      return false;
-    }
-    return !isReadyTransitionLockOutcomeKnown(
-      lock: lock,
-      operations: _lastOperations,
-      now: _countdownNow(),
-    );
-  }
-
-  String get _transitionLockOverlayTitle {
-    final lock = controllers.transition.readyTransitionLock;
-    if (lock?.isNoPlayersHandoff == true) {
-      return context.l10n.gameOpeningNextRound;
-    }
-    return context.l10n.gameStartingRound;
-  }
-
-  String get _transitionLockOverlayMessage {
-    final lock = controllers.transition.readyTransitionLock;
-    if (lock?.isNoPlayersHandoff == true) {
-      return context.l10n.gameOpeningNextRoundMessage;
-    }
-    return context.l10n.gameStartingRoundMessage;
-  }
-
   GameModel? get _queueUpcomingGameForDisplay {
     final nextGame = _nextUpcomingGame;
     if (nextGame == null) {
@@ -856,17 +824,13 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ),
           if (!_awaitingLiveRoom)
             _LiveSyncOverlay(
-              visible:
-                  _realtime.showSyncOverlay || _showTransitionLockLoading,
-              title: _showTransitionLockLoading
-                  ? _transitionLockOverlayTitle
-                  : _realtime.syncOverlayTitle,
-              message: _showTransitionLockLoading
-                  ? _transitionLockOverlayMessage
-                  : _realtime.syncOverlayMessage,
-              dimContent: _showTransitionLockLoading,
-              showRetry:
-                  !_showTransitionLockLoading && _realtime.lastSyncFailed,
+              // Transition handoff uses inline "Opening next round…" — never a
+              // modal/dim overlay. Keep this overlay for realtime sync only.
+              visible: _realtime.showSyncOverlay,
+              title: _realtime.syncOverlayTitle,
+              message: _realtime.syncOverlayMessage,
+              dimContent: false,
+              showRetry: _realtime.lastSyncFailed,
               onRetry: () => unawaited(_refresh()),
             ),
         ],
@@ -1027,6 +991,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         uiMode.mode == LiveUiMode.handoffOpeningNext;
     final isMissedRoundRegistration =
         uiMode.mode == LiveUiMode.missedRoundRegistration;
+    // Handoff keeps the registration pulse header so "Opening next round…" is
+    // inline — never a modal overlay.
+    final showRegistrationPulseHeader =
+        phase == LivePresentationPhase.registrationOpen ||
+        showRegistrationHandoffPreparing;
     final registrationBody = showMissedRoundWrapper
         ? _buildMissedRoundRegistrationSection(
             target: game,
@@ -1039,7 +1008,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (phase == LivePresentationPhase.registrationOpen)
+          if (showRegistrationPulseHeader)
             CollapsibleRegistrationOpenCluster(
               game: game,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
@@ -1114,8 +1083,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               nextRegisteredCartelaNumbers: _nextRegisteredCartelaNumbers,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
             ),
-          if (phase != LivePresentationPhase.registrationOpen &&
-              statusBanner != null) ...[
+          if (!showRegistrationPulseHeader && statusBanner != null) ...[
             VGap.sm,
             statusBanner,
           ],
@@ -1125,12 +1093,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 ? registrationBody
                 : _PreparingGamePanel(
                     registeredCartelas: registeredCartelas,
-                    isRefetching: false,
-                    titleOverride: showRegistrationHandoffPreparing
-                        ? context.l10n.postGameSummaryOpeningNextRound
-                        : null,
+                    isRefetching: showRegistrationHandoffPreparing,
+                    // Title is on the pulse banner during handoff.
                     messageOverride: showRegistrationHandoffPreparing
-                        ? context.l10n.preparingGameNoCartelas
+                        ? context.l10n.gameOpeningNextRoundMessage
                         : null,
                   ),
           ),

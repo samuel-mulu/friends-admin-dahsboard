@@ -308,20 +308,30 @@ class LiveUiModeResolver {
       }
     }
 
-    // Unknown outcome: do not paint a guessed READY/registration shell from the
-    // lock snapshot. Surfaces stay off until operations confirms PLAYING/READY.
+    // Unknown outcome: paint inline preparing/handoff UI (no modal overlay).
+    // Surfaces stay non-interactive until operations confirms PLAYING/READY.
     if (!isReadyTransitionLockOutcomeKnown(
       lock: lock,
       operations: operations,
       now: input.now,
     )) {
+      if (lock.isNoPlayersHandoff) {
+        return _buildForHandoff(
+          input: input,
+          game: lock.snapshotGame,
+          hasBlockingLiveGame: hasBlockingLiveGame,
+        );
+      }
+
+      final snapshot = lock.snapshotGame;
       return LiveUiModeState(
         mode: LiveUiMode.registrationWaitingForCurrentGame,
-        primaryGame: lock.snapshotGame,
+        primaryGame: snapshot,
         secondaryRegistrationGame: null,
-        registrationTarget: null,
+        registrationTarget: snapshot,
         presentationPhase: LivePresentationPhase.preparingGame,
-        useRegistrationOpenLayout: false,
+        useRegistrationOpenLayout:
+            snapshot != null && !_screenBlocked(input),
         showsInlinePlayCartelas: false,
         showCalledNumbersStrip: false,
         showRegistrationGrid: false,
@@ -333,7 +343,7 @@ class LiveUiModeResolver {
         usesExpandedNoCartelaRegistrationLayout: false,
         showMissedRoundWrapper: false,
         countdownKind: LiveUiCountdownKind.none,
-        registrationOpenBodyTarget: null,
+        registrationOpenBodyTarget: snapshot,
         hasBlockingLiveGame: hasBlockingLiveGame,
       );
     }
