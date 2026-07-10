@@ -171,6 +171,43 @@ bool shouldKeepTransitionLockShell({
       currentGame.sessionId == lock.snapshotGame.sessionId;
 }
 
+/// True once operations confirms the lock's outcome (live advance or next READY).
+/// Until then the UI must show loading — not a guessed registration shell.
+bool isReadyTransitionLockOutcomeKnown({
+  required ReadyTransitionLock lock,
+  required GameOperationsCurrentResponse? operations,
+  required DateTime now,
+}) {
+  if (!lock.isActiveAt(now) || operations == null) {
+    return false;
+  }
+
+  final lockSessionId = lock.sessionId;
+  final live = operations.liveGame ?? operations.checkingGame;
+  if (live != null && live.sessionId == lockSessionId) {
+    return live.status == GameStatus.playing ||
+        live.status == GameStatus.checking ||
+        live.status == GameStatus.winnerWindow ||
+        isTransitionLockTerminalStatus(live.status);
+  }
+
+  if (live != null && live.sessionId != lockSessionId) {
+    return true;
+  }
+
+  if (lock.isNoPlayersHandoff &&
+      registrationOpenGameSupersedesTransitionLock(
+        registrationOpenGame: operations.registrationOpenGame,
+        lockedSessionId: lockSessionId,
+        lockReason: lock.reason,
+        now: now,
+      )) {
+    return true;
+  }
+
+  return false;
+}
+
 /// Keeps the closing READY session primary while its outcome is unknown.
 GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
   required GameOperationsCurrentResponse operations,

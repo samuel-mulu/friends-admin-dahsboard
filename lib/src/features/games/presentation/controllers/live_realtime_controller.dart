@@ -72,11 +72,9 @@ class LiveRealtimeController {
   ServerClockService get serverClock => host.ref.read(serverClockProvider);
   SocketService get socketService => host.ref.read(socketServiceProvider);
   LiveConnectionState get connectionState => _resolveConnectionState();
-  // Never paint the sync overlay on top of held UI during a transition. Both
-  // the terminal owner (CANCELLED/FINISHED -> READY) and the ready-transition
-  // lock (READY -> PLAYING / READY -> READY handoff) hold the previous UI and
-  // apply the next snapshot atomically; a spinner over that swap is the
-  // "glitch at the change time" we want to avoid.
+  // Never paint the sync overlay on top of held terminal UI during a transition.
+  // Ready-transition lock unknown outcome uses a dedicated loading overlay on the
+  // screen instead of inventing a READY/registration shell.
   bool get showSyncOverlay =>
       _syncOverlayVisible &&
       !host.isTerminalTransitionActive &&

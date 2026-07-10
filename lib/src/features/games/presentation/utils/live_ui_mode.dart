@@ -308,6 +308,36 @@ class LiveUiModeResolver {
       }
     }
 
+    // Unknown outcome: do not paint a guessed READY/registration shell from the
+    // lock snapshot. Surfaces stay off until operations confirms PLAYING/READY.
+    if (!isReadyTransitionLockOutcomeKnown(
+      lock: lock,
+      operations: operations,
+      now: input.now,
+    )) {
+      return LiveUiModeState(
+        mode: LiveUiMode.registrationWaitingForCurrentGame,
+        primaryGame: lock.snapshotGame,
+        secondaryRegistrationGame: null,
+        registrationTarget: null,
+        presentationPhase: LivePresentationPhase.preparingGame,
+        useRegistrationOpenLayout: false,
+        showsInlinePlayCartelas: false,
+        showCalledNumbersStrip: false,
+        showRegistrationGrid: false,
+        showReview: false,
+        hideRegistrationCountdown: true,
+        deferNextRoundRegistrationCountdown: false,
+        helperKey: LiveUiHelperKey.none,
+        blocksRegistrationPromotion: true,
+        usesExpandedNoCartelaRegistrationLayout: false,
+        showMissedRoundWrapper: false,
+        countdownKind: LiveUiCountdownKind.none,
+        registrationOpenBodyTarget: null,
+        hasBlockingLiveGame: hasBlockingLiveGame,
+      );
+    }
+
     final snapshot = lock.snapshotGame;
     if (lock.isNoPlayersHandoff) {
       return _buildForHandoff(
@@ -327,57 +357,10 @@ class LiveUiModeResolver {
           ) ??
             snapshot;
 
-    if (operations == null) {
-      final presentationPhase = LivePresentationPhaseResolver.resolve(
-        game: primary,
-        registrationCountdownClosed: true,
-        canonicalRefetchInFlight: input.holds.canonicalRefetchInFlight,
-        calledNumbers: input.calledNumbers,
-        staleAfter: input.preparingStaleAfter,
-        blockingLiveGameExists: hasBlockingLiveGame,
-      );
-      final mode =
-          presentationPhase == LivePresentationPhase.preparingGame
-              ? LiveUiMode.registrationWaitingForCurrentGame
-              : LiveUiMode.registrationCountdown;
-      final wantsSurfaces = !_screenBlocked(input) && !input.isGuest;
-      final readyAtomic = resolveReadyAtomicVisibility(
-        hasReadyGame: wantsSurfaces && primary != null,
-        gridReady: input.holds.registrationGridReady,
-        holdingPreviousReady: input.holds.postGameSummaryAdvancing &&
-            input.holds.canonicalRefetchInFlight,
-      );
-      final showSurfaces = readyAtomic.showBanner && readyAtomic.showGrid;
-
-      return LiveUiModeState(
-        mode: mode,
-        primaryGame: primary,
-        secondaryRegistrationGame: null,
-        registrationTarget: primary,
-        presentationPhase: presentationPhase,
-        useRegistrationOpenLayout: showSurfaces,
-        showsInlinePlayCartelas: false,
-        showCalledNumbersStrip: false,
-        showRegistrationGrid: showSurfaces,
-        showReview: false,
-        hideRegistrationCountdown: true,
-        deferNextRoundRegistrationCountdown: false,
-        helperKey: mode == LiveUiMode.registrationWaitingForCurrentGame
-            ? LiveUiHelperKey.preparingGameNoCartelas
-            : LiveUiHelperKey.none,
-        blocksRegistrationPromotion: false,
-        usesExpandedNoCartelaRegistrationLayout: false,
-        showMissedRoundWrapper: false,
-        countdownKind: LiveUiCountdownKind.none,
-        registrationOpenBodyTarget: showSurfaces ? primary : null,
-        hasBlockingLiveGame: hasBlockingLiveGame,
-      );
-    }
-
     return _buildForPrimaryGame(
       input: input,
       primary: primary,
-      operations: operations,
+      operations: operations!,
       hasBlockingLiveGame: hasBlockingLiveGame,
       ownsLiveCartelas: ownsLiveCartelas,
     );

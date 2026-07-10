@@ -194,15 +194,17 @@ bool winnerResultsReadyForDisplay(List<SessionWinnerResultModel> results) {
   return results.every(winnerResultReadyForDisplay);
 }
 
-/// Socket claim / winner-window payload is enough to open winner UI immediately.
+/// Auto-open the finished winner dialog only during post-game summary review
+/// once canonical winner-results (or a complete sticky+API merge) are ready.
 bool winnerDialogReadyForImmediateShow({
-  required bool summaryOrWinnerWindowVisible,
+  required bool postGameSummaryVisible,
   required bool hasStickyWinnerPayload,
   required bool winnerResultsLoaded,
 }) {
-  if (!summaryOrWinnerWindowVisible) {
+  if (!postGameSummaryVisible) {
     return false;
   }
-  return hasStickyWinnerPayload || winnerResultsLoaded;
+  // Prefer loaded API results; sticky alone is insufficient for auto-open.
+  return winnerResultsLoaded || hasStickyWinnerPayload;
 }
 

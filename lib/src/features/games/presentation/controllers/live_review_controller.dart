@@ -100,11 +100,11 @@ class LiveReviewController {
   }
 
   bool canAutoShowWinnerDialog({
-    required bool summaryOrWinnerWindowVisible,
+    required bool postGameSummaryVisible,
     required List<SessionWinnerResultModel> resultsForDisplay,
   }) {
     return winner_display.winnerDialogReadyForImmediateShow(
-      summaryOrWinnerWindowVisible: summaryOrWinnerWindowVisible,
+      postGameSummaryVisible: postGameSummaryVisible,
       hasStickyWinnerPayload: hasStickyWinnerPayload(),
       winnerResultsLoaded: winnerResultsReadyForDialog(resultsForDisplay),
     );

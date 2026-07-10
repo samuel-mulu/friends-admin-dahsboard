@@ -56,6 +56,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
               )
             : _winnerCartelaNumbers;
         final canOpenWinnerDialog = winnerCartelaNumbers.isNotEmpty &&
+            _showsPostGameSummary &&
             (_stripShowsWinnerOnly || _usesSessionWideOutcomeChips);
 
         return Column(

@@ -367,6 +367,22 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool get _readyTransitionLockActive =>
       controllers.transition.readyTransitionLockActive;
 
+  /// While READY→PLAYING/handoff outcome is unknown, show loading — not a guessed shell.
+  bool get _showTransitionLockLoading {
+    if (!_readyTransitionLockActive) {
+      return false;
+    }
+    final lock = controllers.transition.readyTransitionLock;
+    if (lock == null) {
+      return false;
+    }
+    return !isReadyTransitionLockOutcomeKnown(
+      lock: lock,
+      operations: _lastOperations,
+      now: _countdownNow(),
+    );
+  }
+
   GameModel? get _queueUpcomingGameForDisplay {
     final nextGame = _nextUpcomingGame;
     if (nextGame == null) {
@@ -825,10 +841,16 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ),
           if (!_awaitingLiveRoom)
             _LiveSyncOverlay(
-              visible: _realtime.showSyncOverlay,
-              title: _realtime.syncOverlayTitle,
-              message: _realtime.syncOverlayMessage,
-              showRetry: _realtime.lastSyncFailed,
+              visible:
+                  _realtime.showSyncOverlay || _showTransitionLockLoading,
+              title: _showTransitionLockLoading
+                  ? context.l10n.gameSyncing
+                  : _realtime.syncOverlayTitle,
+              message: _showTransitionLockLoading
+                  ? context.l10n.gameSyncingMessage
+                  : _realtime.syncOverlayMessage,
+              showRetry:
+                  !_showTransitionLockLoading && _realtime.lastSyncFailed,
               onRetry: () => unawaited(_refresh()),
             ),
         ],

@@ -592,17 +592,26 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final inWinnerWindow = _game?.status == GameStatus.winnerWindow;
-    final summaryOrWindow = _showsPostGameSummary || inWinnerWindow;
+    // Winner modal is finished/post-summary only — never during WINNER_WINDOW.
+    if (!_showsPostGameSummary) {
+      return;
+    }
+
     final sessionId = _game?.sessionId;
     if (sessionId == null ||
         _review.winnerCartelaDialogAutoShownForSessionId == sessionId) {
       return;
     }
 
+    // Wait for canonical winner-results so prizes/cartela numbers are real
+    // (sticky claim snapshots alone produced cartela #0 / 0 ETB).
+    if (!_review.sessionWinnerResultsLoaded) {
+      return;
+    }
+
     final results = _sessionWinnerResultsForDisplay;
     if (!_review.canAutoShowWinnerDialog(
-      summaryOrWinnerWindowVisible: summaryOrWindow,
+      postGameSummaryVisible: true,
       resultsForDisplay: results,
     )) {
       return;
@@ -617,6 +626,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Future<void> _onWinnerCartelaChipTapped(int cartelaNumber) async {
     if (_review.winnerCartelaDialogVisible) {
+      return;
+    }
+
+    // Modal is finished-review only; block taps during WINNER_WINDOW / live.
+    if (!_showsPostGameSummary) {
       return;
     }
 
@@ -2653,7 +2667,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
-    _maybeAutoShowWinnerCartelaDialog();
   }
 
   void _onBingoInvalid(dynamic payload) {
@@ -2801,7 +2814,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
-    _maybeAutoShowWinnerCartelaDialog();
     _scheduleCanonicalRefetch(reason: 'winner_window_enrich');
   }
 
@@ -2816,6 +2828,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _countdown.winnerWindowCountdownTracker.reset();
       _countdown.nextBallPlayPhase = NextBallPlayPhase.counting;
     }
+
+    // Never keep a finished-style winner modal open over the window countdown.
+    _dismissWinnerCartelaDialogIfOpen();
 
     setState(() {
       if (normalized != null) {
