@@ -1225,6 +1225,7 @@ class _CartelaRegistrationPanelState
           isGuest: widget.isGuest,
           searchController: _searchController,
           onReshuffle: _requestShuffleReshuffle,
+          onRegisteredNumberTap: _handleRegisteredNumberTap,
         ),
         if (_session.registeringCartelaIds.isNotEmpty) ...[
           VGap.sm,
@@ -1306,7 +1307,8 @@ class _CartelaRegistrationPanelState
       return;
     }
 
-    if (!option.resolved.isAvailable || _cartelaSheetOpen) {
+    final alreadyOwned = option.availability == CartelaAvailability.mine;
+    if ((!option.resolved.isAvailable && !alreadyOwned) || _cartelaSheetOpen) {
       return;
     }
 
@@ -1350,7 +1352,8 @@ class _CartelaRegistrationPanelState
             category: widget.category,
             fixedPrizeAmount: widget.fixedPrizeAmount,
             maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
-            onSessionIdResolved: _handleSessionIdResolved,
+            onSessionIdResolved: alreadyOwned ? null : _handleSessionIdResolved,
+            alreadyOwned: alreadyOwned,
           );
         },
       );
@@ -1360,11 +1363,54 @@ class _CartelaRegistrationPanelState
       }
     }
 
-    if (!mounted || registeredCartela == null) {
+    if (!mounted || registeredCartela == null || alreadyOwned) {
       return;
     }
 
     _notifyRegistered([registeredCartela]);
+  }
+
+  CartelaModel? _findCartelaModelByNumber(int number) {
+    for (final cartela in _catalogById.values) {
+      if (cartela.number == number) {
+        return cartela;
+      }
+    }
+    for (final registered in widget.registeredCartelas) {
+      if (registered.cartela.number == number) {
+        return registered.cartela;
+      }
+    }
+    for (final registered in _session.trackedRegisteredCartelas) {
+      if (registered.cartela.number == number) {
+        return registered.cartela;
+      }
+    }
+    return null;
+  }
+
+  void _handleRegisteredNumberTap(int number) {
+    if (_session.selectModeEnabled || _cartelaSheetOpen) {
+      return;
+    }
+
+    final cartela = _findCartelaModelByNumber(number);
+    if (cartela == null) {
+      return;
+    }
+
+    unawaited(
+      _openCartelaModal(
+        _RegisterCartelaOption(
+          cartela: cartela,
+          resolved: ResolvedCartelaAvailability(
+            cartelaId: cartela.id,
+            cartelaNumber: cartela.number,
+            availability: CartelaAvailability.mine,
+          ),
+        ),
+      ),
+    );
   }
 
   Map<String, RegisteredCartelaSummary> _summaryByCartelaId(
@@ -1441,6 +1487,7 @@ class _RegistrationToolbar extends StatelessWidget {
     required this.isGuest,
     required this.searchController,
     required this.onReshuffle,
+    required this.onRegisteredNumberTap,
   });
 
   final List<int> registeredNumbers;
@@ -1460,6 +1507,7 @@ class _RegistrationToolbar extends StatelessWidget {
   final bool isGuest;
   final TextEditingController searchController;
   final VoidCallback onReshuffle;
+  final ValueChanged<int> onRegisteredNumberTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1714,20 +1762,26 @@ class _RegistrationToolbar extends StatelessWidget {
               runSpacing: AppSpacing.xs,
               children: registeredNumbers
                   .map(
-                    (number) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
+                    (number) => Material(
+                      color: theme.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(AppSpacing.sm),
+                      child: InkWell(
+                        onTap: selectModeEnabled
+                            ? null
+                            : () => onRegisteredNumberTap(number),
                         borderRadius: BorderRadius.circular(AppSpacing.sm),
-                      ),
-                      child: Text(
-                        '$number',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.w700,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xxs,
+                          ),
+                          child: Text(
+                            '$number',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),

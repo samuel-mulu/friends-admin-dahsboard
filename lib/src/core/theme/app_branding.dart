@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Friends Bingo brand palette — casino-inspired, player-first.
 abstract final class AppBranding {
-  static const brandName = 'FRIENDS BINGO';
+  static const brandName = 'FRIENDS BINGO-ONLINE';
 
   static const gold = Color(0xFFF5C542);
   static const goldDark = Color(0xFFC9A227);

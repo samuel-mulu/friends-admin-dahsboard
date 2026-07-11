@@ -624,6 +624,20 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     _myCartelaDisplayOrderIds = const [];
   }
 
+  /// Copies current-round cartela numbers so the next READY registration panel
+  /// can auto-open single/bulk review with the same cards.
+  void _capturePreviousCartelasForAutoOpen() {
+    if (_isGuest || _myCartelas.isEmpty) {
+      return;
+    }
+
+    _pendingAutoOpenCartelaNumbers =
+        _myCartelas
+            .map((cartela) => cartela.cartela.number)
+            .toList(growable: false)
+          ..sort();
+  }
+
   void _reorderMyCartela(int fromIndex, int toIndex) {
     if (fromIndex == toIndex) {
       return;
@@ -1090,9 +1104,22 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           VGap.sm,
           Expanded(
             child: !uiMode.showRegistrationGrid
-                ? const Center(
-                    child: FriendsBingoLoader.inline(compact: true),
-                  )
+                ? (_isGuest
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          children: [
+                            _GuestSpectatorHint(
+                              onSignUp: () => context.go('/register'),
+                              onSignIn: () => context.go(
+                                loginPathWithRedirect('/games'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : const Center(
+                          child: FriendsBingoLoader.inline(compact: true),
+                        ))
                 : cartelaActionsEnabled
                 ? registrationBody
                 : _PreparingGamePanel(
@@ -1490,11 +1517,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         ] else if (!_hasVisibleCurrentSessionCartelas &&
             !_review.postGameSummaryReviewActive)
           _isGuest
-              ? _GuestSignupCard(
-                  title: 'Join the game',
-                  message: _canRegisterCartelas
-                      ? 'Sign up to register cartelas and join this round.'
-                      : 'Registration is closed. Sign up to be ready for the next round.',
+              ? _GuestSpectatorHint(
                   onSignUp: () => context.go('/register'),
                   onSignIn: () => context.go(loginPathWithRedirect('/games')),
                 )
@@ -1690,15 +1713,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       return;
     }
 
-    if (_myCartelas.isNotEmpty) {
-      setState(() {
-        _pendingAutoOpenCartelaNumbers =
-            _myCartelas
-                .map((cartela) => cartela.cartela.number)
-                .toList(growable: false)
-              ..sort();
-      });
-    }
+    setState(_capturePreviousCartelasForAutoOpen);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -2955,69 +2970,6 @@ class _GuestPromoStage {
   final List<int> winningIndexes;
   final List<int> accentIndexes;
   final _GuestPromoLineKind lineKind;
-}
-
-class _GuestSignupCard extends StatelessWidget {
-  const _GuestSignupCard({
-    required this.title,
-    required this.message,
-    required this.onSignUp,
-    required this.onSignIn,
-  });
-
-  final String title;
-  final String message;
-  final VoidCallback onSignUp;
-  final VoidCallback onSignIn;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: AppSpacing.cardPaddingDense,
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            VGap.md,
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.4,
-              ),
-            ),
-            VGap.xl,
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onSignIn,
-                    child: Text(context.l10n.signIn),
-                  ),
-                ),
-                HGap.md,
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onSignUp,
-                    child: Text(context.l10n.signUp),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _PreparingGamePanel extends StatelessWidget {

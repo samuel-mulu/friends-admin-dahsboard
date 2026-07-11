@@ -41,6 +41,9 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
     this.existingReservationId,
     this.existingReservationExpiresAt,
     this.onSessionIdResolved,
+    /// When true, opens as a read-only preview for an already-registered cartela
+    /// (no hold / register). Shows a "This is yours" label instead.
+    this.alreadyOwned = false,
     super.key,
   });
 
@@ -58,6 +61,7 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
   final String? fixedPrizeAmount;
   final int? maxCartelasPerPlayer;
   final ValueChanged<String>? onSessionIdResolved;
+  final bool alreadyOwned;
 
   @override
   ConsumerState<CartelaRegistrationSheet> createState() =>
@@ -103,6 +107,13 @@ class _CartelaRegistrationSheetState
     _resolvedSessionId = widget.sessionId;
     _previewCartela = _initialPreviewCartela();
 
+    if (widget.alreadyOwned) {
+      if (_previewCartela?.hasBoardValues != true) {
+        unawaited(_loadPreviewBoard());
+      }
+      return;
+    }
+
     if (_previewCartela?.hasBoardValues != true &&
         _resolvedSessionId != null &&
         _resolvedSessionId!.isNotEmpty) {
@@ -137,7 +148,8 @@ class _CartelaRegistrationSheetState
   @override
   void dispose() {
     _autoCloseTimer?.cancel();
-    if (!_registered &&
+    if (!widget.alreadyOwned &&
+        !_registered &&
         !_released &&
         !_isSubmitting &&
         _reservationId != null) {
@@ -419,6 +431,9 @@ class _CartelaRegistrationSheetState
       _previewCartela?.hasBoardValues != true && _prepareError == null;
 
   String? get _primaryActionLabel {
+    if (widget.alreadyOwned) {
+      return 'This is yours';
+    }
     if (_isSubmitting) {
       return 'Registering...';
     }
@@ -438,6 +453,9 @@ class _CartelaRegistrationSheetState
   }
 
   VoidCallback? get _primaryAction {
+    if (widget.alreadyOwned) {
+      return null;
+    }
     if (_isSubmitting) {
       return null;
     }
@@ -655,6 +673,9 @@ class _CartelaRegistrationSheetState
   }
 
   String get _countdownLabel {
+    if (widget.alreadyOwned) {
+      return 'Yours';
+    }
     if (_isSubmitting) {
       return '...';
     }
@@ -668,6 +689,9 @@ class _CartelaRegistrationSheetState
   }
 
   String get _holdStatusLabel {
+    if (widget.alreadyOwned) {
+      return 'Already registered to you';
+    }
     if (_isSubmitting) {
       return 'Registering...';
     }
@@ -690,7 +714,11 @@ class _CartelaRegistrationSheetState
     return PopScope(
       canPop: !_isSubmitting,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop && !_registered && !_released && !_isSubmitting) {
+        if (didPop &&
+            !widget.alreadyOwned &&
+            !_registered &&
+            !_released &&
+            !_isSubmitting) {
           unawaited(_releaseReservation());
         }
       },
@@ -939,7 +967,10 @@ class _CartelaRegistrationSheetState
                         ),
                       ),
                     ),
-                    if (!_hasFreeEntry && !_hasEnoughBalance && _holdReady)
+                    if (!_hasFreeEntry &&
+                        !_hasEnoughBalance &&
+                        _holdReady &&
+                        !widget.alreadyOwned)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
                         child: Text(

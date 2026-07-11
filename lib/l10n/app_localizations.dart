@@ -105,7 +105,7 @@ abstract class AppLocalizations {
   /// Application title
   ///
   /// In en, this message translates to:
-  /// **'Friends Bingo'**
+  /// **'Friends Bingo-online'**
   String get appTitle;
 
   /// Greeting prefix in app bar

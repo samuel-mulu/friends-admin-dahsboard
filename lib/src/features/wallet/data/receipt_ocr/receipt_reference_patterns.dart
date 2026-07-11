@@ -1,21 +1,20 @@
 import '../models/payment_provider.dart';
+import 'cbe_receipt_ocr_helper.dart';
 import 'receipt_ocr_result.dart';
+import 'receipt_ocr_text_utils.dart';
+import 'telebirr_receipt_ocr_helper.dart';
 
 class ReceiptReferencePatterns {
-  // ─────────────────────── Reference patterns (unchanged for non-CBE) ───────────────
-  static final RegExp _telebirrReferencePattern = RegExp(
-    r'\bD[A-Z0-9]{8,15}\b',
-  );
+  // ─────────────────────── Reference patterns (Awash / BOA fallback) ───────────────
   static final RegExp _awashReferencePattern = RegExp(r'\b\d{12,18}\b');
 
-  // CBE: labeled patterns (applied to uppercase-normalized text)
+  // CBE/BOA shared FT detection (BOA still uses this path)
   static final List<RegExp> _cbeLabeledRefLabels = [
     RegExp(r'TRANSACTION\s*ID\s*[:=\s]\s*'),
     RegExp(r'REFERENCE\s*NO\.?\s*[:=\s]\s*'),
     RegExp(r'VAT\s*RECEIPT\s*NO\.?\s*[:=\s]\s*'),
   ];
 
-  // CBE bare-FT fallback (no space, normalized uppercase text)
   static final RegExp _ftPatternBare = RegExp(r'\bFT[A-Z0-9]{6,20}\b');
 
   // ─────────────────────────────── Amount patterns ──────────────────────────────────
@@ -29,25 +28,24 @@ class ReceiptReferencePatterns {
     r'(TRANSFERRED AMOUNT|SETTLED AMOUNT|TOTAL AMOUNT DEBITED|TOTAL DEBITED|TOTAL PAID AMOUNT|TOTAL PAID|TOTAL AMOUNT|TOTAL|AMOUNT)\s*[:\-]?\s*(?:ETB\s*)?(-?\d+(?:,\d{3})*(?:\.\d{1,2})?)',
   );
 
-  // CBE receipt validation markers
-  static const List<String> _cbeMarkers = [
-    'COMMERCIAL BANK OF ETHIOPIA',
-    'CBE',
-    'CBETETAA',
-  ];
-
   // ──────────────────────────────────── Public API ───────────────────────────────────
 
   static String? detectReference(PaymentProvider provider, String rawText) {
-    final text = _normalize(rawText);
+    if (provider == PaymentProvider.cbe) {
+      return CbeReceiptOcrHelper.parse(rawText).reference;
+    }
+    if (provider == PaymentProvider.telebirr) {
+      return TelebirrReceiptOcrHelper.parse(rawText).reference;
+    }
+
+    final text = ReceiptOcrTextUtils.normalize(rawText);
     if (text.isEmpty) return null;
 
-    if (provider == PaymentProvider.cbe || provider == PaymentProvider.boa) {
+    if (provider == PaymentProvider.boa) {
       return _detectCbeFtReference(text)?.reference;
     }
 
     final match = switch (provider) {
-      PaymentProvider.telebirr => _telebirrReferencePattern.firstMatch(text),
       PaymentProvider.awash => _awashReferencePattern.firstMatch(text),
       _ => null,
     };
@@ -55,30 +53,29 @@ class ReceiptReferencePatterns {
   }
 
   static String? detectAmount(PaymentProvider provider, String rawText) {
+    if (provider == PaymentProvider.cbe) {
+      return CbeReceiptOcrHelper.parse(rawText).amount;
+    }
+    if (provider == PaymentProvider.telebirr) {
+      return TelebirrReceiptOcrHelper.parse(rawText).amount;
+    }
     return _extractBestAmountCandidate(provider, rawText)?.normalizedAmount;
   }
 
   static ReceiptOcrResult parse(PaymentProvider provider, String rawText) {
-    final normalized = _normalize(rawText);
-
-    // CBE-only: validate the image is actually a CBE receipt.
-    // If the text contains no CBE markers, return confidence 0.
     if (provider == PaymentProvider.cbe) {
-      if (!_containsAny(normalized, _cbeMarkers)) {
-        return ReceiptOcrResult(
-          reference: null,
-          amount: null,
-          rawText: rawText,
-          provider: provider.apiValue,
-          confidence: 0.0,
-        );
-      }
+      return CbeReceiptOcrHelper.parse(rawText);
+    }
+    if (provider == PaymentProvider.telebirr) {
+      return TelebirrReceiptOcrHelper.parse(rawText);
     }
 
-    // Reference
+    final normalized = ReceiptOcrTextUtils.normalize(rawText);
+
+    // Reference (BOA / Awash)
     bool referenceCorrected = false;
     String? reference;
-    if (provider == PaymentProvider.cbe || provider == PaymentProvider.boa) {
+    if (provider == PaymentProvider.boa) {
       final refResult = _detectCbeFtReference(normalized);
       reference = refResult?.reference;
       referenceCorrected = refResult?.corrected ?? false;
@@ -107,10 +104,9 @@ class ReceiptReferencePatterns {
     );
   }
 
-  // ──────────────────────────── CBE reference detection ─────────────────────────────
+  // ──────────────────────────── BOA FT reference detection ──────────────────────────
 
   static _FtRefResult? _detectCbeFtReference(String normalizedText) {
-    // 1. Try labeled patterns: "transaction ID:", "Reference No.", "VAT Receipt No."
     for (final labelPattern in _cbeLabeledRefLabels) {
       final labelMatch = labelPattern.firstMatch(normalizedText);
       if (labelMatch == null) continue;
@@ -124,63 +120,40 @@ class ReceiptReferencePatterns {
       final token = _extractFtTokenFromContext(context);
       if (token != null) {
         final beforeCorrection = token.replaceAll(' ', '').toUpperCase();
-        final corrected = _applyOcrCorrections(beforeCorrection);
+        final corrected = ReceiptOcrTextUtils.applyOcrCorrections(
+          beforeCorrection,
+        );
         final wasCorrected = corrected != beforeCorrection;
         return _FtRefResult(reference: corrected, corrected: wasCorrected);
       }
     }
 
-    // 2. Bare FT pattern fallback (already normalized uppercase)
     final match = _ftPatternBare.firstMatch(normalizedText);
     if (match != null) {
       final raw = match.group(0)!;
-      final corrected = _applyOcrCorrections(raw);
-      return _FtRefResult(
-        reference: corrected,
-        corrected: corrected != raw,
-      );
+      final corrected = ReceiptOcrTextUtils.applyOcrCorrections(raw);
+      return _FtRefResult(reference: corrected, corrected: corrected != raw);
     }
 
     return null;
   }
 
-  /// Extracts an FT reference token from a ~45-char context window after the label.
-  /// Handles one OCR-inserted space (e.g. "FT26174 PCT3Q").
   static String? _extractFtTokenFromContext(String context) {
-    // First try: no spaces (clean OCR)
     final cleanMatch = RegExp(r'FT[A-Z0-9]{6,20}').firstMatch(context);
     if (cleanMatch != null) {
       final candidate = cleanMatch.group(0)!;
       if (_isValidFtReference(candidate)) return candidate;
     }
 
-    // Second try: one OCR-inserted space splitting the token
-    final splitMatch =
-        RegExp(r'FT[A-Z0-9]{3,10}\s[A-Z0-9]{1,10}').firstMatch(context);
+    final splitMatch = RegExp(
+      r'FT[A-Z0-9]{3,10}\s[A-Z0-9]{1,10}',
+    ).firstMatch(context);
     if (splitMatch != null) {
       final candidate = splitMatch.group(0)!.replaceAll(' ', '');
       if (_isValidFtReference(candidate)) return candidate;
     }
 
     return null;
-  }
-
-  /// Apply OCR confusion corrections ONLY when a character is between two digits.
-  /// Safe substitutions: I/l/L→1, O→0, S→5, B→8, Z→2
-  /// Note: text is normalized to uppercase before this runs, so lowercase l
-  /// will appear as L.
-  static String _applyOcrCorrections(String input) {
-    return input.replaceAllMapped(
-      RegExp(r'(?<=[0-9])[IiLlOSBZ](?=[0-9])'),
-      (m) => switch (m.group(0)!) {
-        'I' || 'i' || 'L' || 'l' => '1',
-        'O' => '0',
-        'S' => '5',
-        'B' => '8',
-        'Z' => '2',
-        _ => m.group(0)!,
-      },
-    );
   }
 
   static bool _isValidFtReference(String candidate) {
@@ -190,7 +163,7 @@ class ReceiptReferencePatterns {
         RegExp(r'^[A-Z0-9]+$').hasMatch(candidate);
   }
 
-  // ───────────────────────────────── Amount extraction ──────────────────────────────
+  // ───────────────────────────────── Amount extraction (Awash/BOA) ──────────────────
 
   static _AmountCandidate? _extractBestAmountCandidate(
     PaymentProvider provider,
@@ -216,7 +189,7 @@ class ReceiptReferencePatterns {
     final candidates = <_AmountCandidate>[];
 
     for (var index = 0; index < lines.length; index += 1) {
-      final normalizedLine = _normalize(lines[index]);
+      final normalizedLine = ReceiptOcrTextUtils.normalize(lines[index]);
       if (normalizedLine.isEmpty) continue;
 
       final lineType = _classifyAmountLine(normalizedLine);
@@ -242,7 +215,7 @@ class ReceiptReferencePatterns {
       if (priority <= 0) continue;
 
       for (final rawValue in values) {
-        final normalized = _normalizeAmount(rawValue);
+        final normalized = ReceiptOcrTextUtils.normalizeAmount(rawValue);
         if (normalized == null) continue;
         candidates.add(
           _AmountCandidate(
@@ -259,8 +232,7 @@ class ReceiptReferencePatterns {
   }
 
   static _AmountLineType _classifyAmountLine(String normalizedLine) {
-    // --- Ignore fee/tax lines (checked first) ---
-    if (_containsAny(normalizedLine, const [
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const [
       'SERVICE CHARGE',
       'SERVICE FEE',
       'CHARGE',
@@ -271,39 +243,37 @@ class ReceiptReferencePatterns {
       return _AmountLineType.ignore;
     }
 
-    // --- Priority 1: Transferred Amount label ---
-    if (_containsAny(normalizedLine, const [
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const [
       'TRANSFERRED AMOUNT',
       'TRANSFER AMOUNT',
     ])) {
       return _AmountLineType.transferred;
     }
 
-    // --- Priority 2: "ETB XX.X has been debited" (CBE app screenshot) ---
     if (normalizedLine.contains('HAS BEEN DEBITED')) {
       return _AmountLineType.debitedStatement;
     }
 
-    if (_containsAny(normalizedLine, const ['SETTLED AMOUNT'])) {
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const [
+      'SETTLED AMOUNT',
+    ])) {
       return _AmountLineType.settled;
     }
 
-    // --- Low-priority total lines (include bank fees, never first choice) ---
-    if (_containsAny(normalizedLine, const [
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const [
       'TOTAL AMOUNT DEBITED',
       'TOTAL DEBITED',
     ])) {
       return _AmountLineType.totalDebited;
     }
-    if (_containsAny(normalizedLine, const [
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const [
       'TOTAL PAID AMOUNT',
       'TOTAL PAID',
     ])) {
       return _AmountLineType.totalPaid;
     }
 
-    // --- Priority 3: Generic "Amount" label ---
-    if (_containsAny(normalizedLine, const ['AMOUNT'])) {
+    if (ReceiptOcrTextUtils.containsAny(normalizedLine, const ['AMOUNT'])) {
       return _AmountLineType.amount;
     }
 
@@ -320,14 +290,12 @@ class ReceiptReferencePatterns {
   ) {
     return switch (lineType) {
       _AmountLineType.ignore => 0,
-      // Priority 1: explicit "Transferred Amount" label
       _AmountLineType.transferred => switch (provider) {
         PaymentProvider.cbe => 120,
         PaymentProvider.telebirr => 115,
         PaymentProvider.awash => 110,
         PaymentProvider.boa => 110,
       },
-      // Priority 2 (CBE): "ETB XX.X has been debited" in the summary sentence
       _AmountLineType.debitedStatement => switch (provider) {
         PaymentProvider.cbe => 110,
         _ => 80,
@@ -336,14 +304,12 @@ class ReceiptReferencePatterns {
         PaymentProvider.telebirr => 112,
         _ => 102,
       },
-      // Priority 3: generic "Amount" label
       _AmountLineType.amount => switch (provider) {
         PaymentProvider.awash => 110,
         PaymentProvider.boa => 110,
         PaymentProvider.telebirr => 105,
         PaymentProvider.cbe => 100,
       },
-      // Low priority: these include bank fees — only used if nothing better exists
       _AmountLineType.totalDebited => 50,
       _AmountLineType.totalPaid => 45,
       _AmountLineType.genericEtb => 30,
@@ -351,17 +317,12 @@ class ReceiptReferencePatterns {
     };
   }
 
-  // ─────────────────────────────────── Confidence ───────────────────────────────────
-
   static double _calcConfidence({
     required String? amount,
     required _AmountLineType? amountLineType,
     required String? reference,
     required bool referenceCorrected,
   }) {
-    // Amount score based on source quality.
-    // High-quality single-field result scores ≥ 0.60 so the UI can pre-fill.
-    // "Total Amount Debited" scores very low because it includes bank fees.
     final amountScore = amount == null
         ? 0.0
         : switch (amountLineType) {
@@ -369,15 +330,11 @@ class ReceiptReferencePatterns {
             _AmountLineType.debitedStatement => 0.70,
             _AmountLineType.settled => 0.68,
             _AmountLineType.amount => 0.62,
-            // totalDebited/totalPaid include fees — very low confidence
             _AmountLineType.totalDebited => 0.20,
             _AmountLineType.totalPaid => 0.20,
             _ => 0.15,
           };
 
-    // Reference score.
-    // Clean + good amount → 0.70 + 0.50 = 1.20 → clamped to 1.0 ✓
-    // Corrected + good amount → 0.70 + 0.15 = 0.85 ✓
     final refScore = reference == null
         ? 0.0
         : referenceCorrected
@@ -386,36 +343,11 @@ class ReceiptReferencePatterns {
 
     return (amountScore + refScore).clamp(0.0, 1.0);
   }
-
-  // ───────────────────────────────────── Helpers ────────────────────────────────────
-
-  static String? _normalizeAmount(String rawValue) {
-    final sanitized = rawValue.replaceAll(',', '').trim();
-    if (sanitized.isEmpty) return null;
-
-    final parsed = double.tryParse(sanitized);
-    if (parsed == null || parsed <= 0 || parsed >= 100000) return null;
-
-    return parsed.toStringAsFixed(2);
-  }
-
-  static String _normalize(String rawText) {
-    return rawText.toUpperCase().replaceAll('\u00A0', ' ').trim();
-  }
-
-  static bool _containsAny(String source, List<String> needles) {
-    for (final needle in needles) {
-      if (source.contains(needle)) return true;
-    }
-    return false;
-  }
 }
-
-// ─────────────────────────────────── Internal types ───────────────────────────────
 
 enum _AmountLineType {
   transferred,
-  debitedStatement, // "ETB XX.X has been debited" — CBE app screenshot line
+  debitedStatement,
   settled,
   amount,
   totalDebited,

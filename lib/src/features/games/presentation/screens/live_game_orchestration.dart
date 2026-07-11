@@ -3252,6 +3252,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return false;
     }
 
+    // Capture before session clear so next READY registration can promo
+    // the cartelas just played (single/bulk auto-open).
+    _capturePreviousCartelasForAutoOpen();
+
     try {
       final operations = await _gamesRepository.getCurrentGameOperations();
       if (!mounted) {

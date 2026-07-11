@@ -9,7 +9,7 @@ class AppLocalizationsOm extends AppLocalizations {
   AppLocalizationsOm([String locale = 'om']) : super(locale);
 
   @override
-  String get appTitle => 'Friends Bingo';
+  String get appTitle => 'Friends Bingo-online';
 
   @override
   String get appBarHi => 'Akkam, ';

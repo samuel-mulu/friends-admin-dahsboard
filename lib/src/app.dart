@@ -166,7 +166,7 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
     });
 
     return MaterialApp.router(
-      title: 'Friends Bingo',
+      title: 'Friends Bingo-online',
       debugShowCheckedModeBanner: false,
       locale: locale,
       localizationsDelegates: const [

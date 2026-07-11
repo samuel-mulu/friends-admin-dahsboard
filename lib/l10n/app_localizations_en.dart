@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Friends Bingo';
+  String get appTitle => 'Friends Bingo-online';
 
   @override
   String get appBarHi => 'Hi, ';

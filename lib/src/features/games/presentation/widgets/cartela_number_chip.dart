@@ -41,7 +41,8 @@ class CartelaNumberChip extends StatelessWidget {
         ? (isSelected || availability == CartelaAvailability.available) &&
               !isRegistering &&
               !selectBlocked
-        : availability == CartelaAvailability.available &&
+        : (availability == CartelaAvailability.available ||
+                  availability == CartelaAvailability.mine) &&
               !isRegistering &&
               !selectBlocked;
 
