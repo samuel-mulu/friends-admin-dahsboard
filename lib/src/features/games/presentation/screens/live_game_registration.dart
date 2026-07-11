@@ -252,6 +252,9 @@ class _CartelaRegistrationPanelState
 
   bool get _hasFreeEntry => widget.category.hasFreeEntry;
 
+  bool get _canUseBonusCartelaBalance =>
+      widget.category.canUseBonusCartelaBalance;
+
   bool get _isBigGame => widget.category == GameCategory.bigGame;
 
   int get _bonusCartelaLimit => widget.maxCartelasPerPlayer ?? 5;
@@ -381,7 +384,6 @@ class _CartelaRegistrationPanelState
       setState(() {
         _searchQuery = query;
       });
-      ref.read(cartelaCatalogProvider.notifier).setSearch(query);
     });
 
     final initialSessionId = widget.sessionId;
@@ -494,7 +496,7 @@ class _CartelaRegistrationPanelState
     if (count == 0 || _hasFreeEntry) {
       return '0';
     }
-    final bonusCartelas = _bonusCartelaBalance;
+    final bonusCartelas = _usableBonusCartelaBalance;
     final paidCount = count > bonusCartelas ? count - bonusCartelas : 0;
     return (_parseMoney(widget.entryFee) * paidCount).toStringAsFixed(2);
   }
@@ -505,6 +507,9 @@ class _CartelaRegistrationPanelState
         ? walletAsync.value.bonusCartelaBalance
         : 0;
   }
+
+  int get _usableBonusCartelaBalance =>
+      _canUseBonusCartelaBalance ? _bonusCartelaBalance : 0;
 
   String? _selectedRemainingBalance(String? walletBalance) {
     if (_hasFreeEntry) {
@@ -543,7 +548,7 @@ class _CartelaRegistrationPanelState
     }
 
     final moneyAffordable = (_parseMoney(walletBalance) / entryFee).floor();
-    return _bonusCartelaBalance + moneyAffordable;
+    return _usableBonusCartelaBalance + moneyAffordable;
   }
 
   bool _canAddMoreSelections(String? walletBalance) {
@@ -741,7 +746,7 @@ class _CartelaRegistrationPanelState
           isBigGame: _isBigGame,
           fixedPrizeAmount: widget.fixedPrizeAmount,
           maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
-          bonusCartelaBalance: _bonusCartelaBalance,
+          bonusCartelaBalance: _usableBonusCartelaBalance,
           onCartelaRemoved: (cartela) {
             unawaited(
               _unselectReservedCartela(
@@ -1205,7 +1210,7 @@ class _CartelaRegistrationPanelState
         _RegistrationToolbar(
           registeredNumbers: registeredNumbers,
           walletBalance: wallet?.balance,
-          bonusCartelaBalance: wallet?.bonusCartelaBalance ?? 0,
+          bonusCartelaBalance: _usableBonusCartelaBalance,
           isFirstTimePlayer: wallet?.isFirstTimePlayer ?? false,
           selectModeEnabled: _session.selectModeEnabled,
           maxAffordableSelections: maxAffordable,
@@ -1250,11 +1255,11 @@ class _CartelaRegistrationPanelState
 
               return RegistrationCartelaGrid(
                 searchQuery: _searchQuery,
-                shuffledCartelaIds: catalogState.isShuffled
+                // Keep shuffle order only when not searching; search sorts by number.
+                shuffledCartelaIds: _searchQuery.isEmpty && catalogState.isShuffled
                     ? _shuffledCartelaIds
                     : null,
-                serverSideSearch: catalogState.searchQuery.isNotEmpty &&
-                    !catalogState.isSearchPending,
+                serverSideSearch: false,
                 session: _session,
                 sessionId: snapshotSessionId,
                 lockedCartelaIds: widget.lockedCartelaIds,
@@ -1316,9 +1321,7 @@ class _CartelaRegistrationPanelState
     final walletBalance = walletAsync is AsyncData<WalletModel>
         ? walletAsync.value.balance
         : null;
-    final bonusCartelaBalance = walletAsync is AsyncData<WalletModel>
-        ? walletAsync.value.bonusCartelaBalance
-        : 0;
+    final bonusCartelaBalance = _usableBonusCartelaBalance;
     final isFirstTimePlayer = walletAsync is AsyncData<WalletModel>
         ? walletAsync.value.isFirstTimePlayer
         : false;
@@ -1465,6 +1468,7 @@ class _RegistrationToolbar extends StatelessWidget {
     final isBigGotd = category == GameCategory.bigGotd;
     final isBonusLike = category.isBonusLike;
     final hasFreeEntry = category.hasFreeEntry;
+    final canUseBonusCartelaBalance = category.canUseBonusCartelaBalance;
     final isBigGame = category == GameCategory.bigGame;
     final canUseSelectMode =
         maxAffordableSelections == null || maxAffordableSelections! >= 1;
@@ -1507,11 +1511,11 @@ class _RegistrationToolbar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!isGuest &&
-              !hasFreeEntry &&
+              canUseBonusCartelaBalance &&
               isFirstTimePlayer &&
               bonusCartelaBalance > 0) ...[
             Text(
-              'Welcome! Your first $bonusCartelaBalance cartelas use bonus credits, not ETB.',
+              'Welcome! Your first $bonusCartelaBalance cartelas are free on normal games only.',
               style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.primary,
@@ -1645,7 +1649,7 @@ class _RegistrationToolbar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (!isGuest && !hasFreeEntry) ...[
-                if (bonusCartelaBalance > 0) ...[
+                if (canUseBonusCartelaBalance && bonusCartelaBalance > 0) ...[
                   Icon(
                     Icons.redeem_rounded,
                     size: 16,

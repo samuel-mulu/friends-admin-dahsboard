@@ -39,9 +39,6 @@ class WinningPatternCartelaGrid extends StatelessWidget {
     final headerFontSize = compact
         ? CartelaBoardLayout.compactReviewHeaderFontSize
         : CartelaBoardLayout.reviewHeaderFontSize;
-    final cellFontSize = compact
-        ? CartelaBoardLayout.compactReviewCellNumberFontSize
-        : CartelaBoardLayout.reviewCellNumberFontSize;
     final effectiveHighlights = _effectiveHighlightCellIndexes;
 
     return Column(
@@ -105,7 +102,6 @@ class WinningPatternCartelaGrid extends StatelessWidget {
                                     isWinningBall: isWinningBall,
                                     isHighlighted: isHighlighted,
                                     isFree: isFree,
-                                    fontSize: cellFontSize,
                                   ),
                                 );
                               }),
@@ -140,14 +136,12 @@ class _WinningPatternCell extends StatelessWidget {
     required this.isWinningBall,
     required this.isHighlighted,
     required this.isFree,
-    required this.fontSize,
   });
 
   final String value;
   final bool isWinningBall;
   final bool isHighlighted;
   final bool isFree;
-  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +227,8 @@ class _WinningPatternCell extends StatelessWidget {
                     child: Text(
                       displayValue,
                       style: TextStyle(
-                        fontSize: isFree ? fontSize + 1 : fontSize,
+                        fontSize: CartelaBoardLayout
+                            .maximizedCellNumberFontSize(diameter),
                         fontWeight: FontWeight.w800,
                         color: textColor,
                         height: 1,

@@ -1653,10 +1653,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'This game was cancelled. Entry fees were refunded. Next round starting…';
 
   @override
-  String get gameCancelledNoRefundMessage =>
-      'This game was cancelled. Next round starting…';
-
-  @override
   String get bulkConfirmHint =>
       'Tap to preview · X to remove · Register when ready';
 

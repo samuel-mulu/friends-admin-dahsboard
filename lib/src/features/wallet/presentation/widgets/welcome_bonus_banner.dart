@@ -44,9 +44,9 @@ class WelcomeBonusBanner extends StatelessWidget {
                   ),
                   VGap.xs,
                   Text(
-                    'You have ${wallet.bonusCartelaBalance} bonus cartelas. '
-                    'Each one registers 1 cartela without using your ETB balance. '
-                    'Bonus cartelas are not withdrawable.',
+                    'You have ${wallet.bonusCartelaBalance} bonus cartelas for normal games. '
+                    'Each one registers 1 normal-game cartela without using your ETB balance. '
+                    'Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onPrimaryContainer,
                     ),

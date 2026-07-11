@@ -190,6 +190,11 @@ class _RegistrationCartelaGridState
       return;
     }
 
+    // Search is client-side filter only — do not load more while filtering.
+    if (widget.searchQuery.isNotEmpty) {
+      return;
+    }
+
     final catalog = ref.read(cartelaCatalogProvider).value;
     if (catalog == null) {
       return;
@@ -265,19 +270,32 @@ class _RegistrationCartelaGridState
       return const SizedBox.shrink();
     }
 
+    // Client-side search filters the full shuffled pool so every number is findable.
+    final catalogForGrid = widget.searchQuery.isNotEmpty &&
+            catalogState.shuffledPool.isNotEmpty
+        ? catalogState.shuffledPool
+        : catalogState.items;
+
     _gridIndex.update(
-      catalog: catalogState.items,
+      catalog: catalogForGrid,
       searchQuery: widget.searchQuery,
       shuffledCartelaIds: widget.shuffledCartelaIds,
-      serverSideSearch: widget.serverSideSearch,
+      serverSideSearch: false,
     );
 
     if (_gridIndex.isEmpty) {
+      if (widget.searchQuery.isNotEmpty) {
+        return const Center(
+          child: Text('No matches. Try another number.'),
+        );
+      }
       return const SizedBox.shrink();
     }
 
-    final extraTiles = catalogState.isLoadingMore ? 8 : 0;
+    final extraTiles =
+        widget.searchQuery.isEmpty && catalogState.isLoadingMore ? 8 : 0;
     final isShuffled = catalogState.isShuffled;
+    final isSearching = widget.searchQuery.isNotEmpty;
 
     return RegistrationGridScope(
       session: widget.session,
@@ -290,7 +308,10 @@ class _RegistrationCartelaGridState
       child: LayoutBuilder(
         builder: (context, constraints) {
           final visibleCount = _gridIndex.length;
+          // Search is a plain filter — never use shuffle fit-to-height layout
+          // (that stretches a few matches into tall thin strips).
           final fitsWithoutScrolling =
+              !isSearching &&
               isShuffled &&
               RegistrationCartelaGridLayout.fitsWithoutScrolling(
                 maxWidth: constraints.maxWidth,

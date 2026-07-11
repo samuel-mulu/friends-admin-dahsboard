@@ -83,13 +83,26 @@ class BroadcastsNotifier extends AsyncNotifier<PlayerBroadcastsState> {
     return PlayerBroadcastsState.fromResponse(response);
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading<PlayerBroadcastsState>();
-    state = await AsyncValue.guard(() async {
+  /// Refetch inbox from HTTP.
+  ///
+  /// When [quiet] is true (socket reconnect), keep showing the previous inbox
+  /// instead of flashing an empty loading state that can race with socket adds.
+  Future<void> refresh({bool quiet = false}) async {
+    if (!quiet) {
+      state = const AsyncLoading<PlayerBroadcastsState>();
+    }
+
+    final result = await AsyncValue.guard(() async {
       final response =
           await ref.read(broadcastsRepositoryProvider).getMyBroadcasts();
       return PlayerBroadcastsState.fromResponse(response);
     });
+
+    if (!ref.mounted) {
+      return;
+    }
+
+    state = result;
   }
 
   Future<void> dismiss(String id) async {

@@ -377,13 +377,16 @@ class _CartelaRegistrationSheetState
 
   bool get _hasFreeEntry => widget.category.hasFreeEntry;
 
+  bool get _canUseBonusCartelaBalance =>
+      widget.category.canUseBonusCartelaBalance;
+
   bool get _isBigGame => widget.category == GameCategory.bigGame;
 
   bool get _hasEnoughBalance {
     if (_hasFreeEntry) {
       return true;
     }
-    if (widget.bonusCartelaBalance > 0) {
+    if (_canUseBonusCartelaBalance && widget.bonusCartelaBalance > 0) {
       return true;
     }
     final balance = widget.walletBalance;
@@ -397,7 +400,7 @@ class _CartelaRegistrationSheetState
     if (_hasFreeEntry) {
       return 'Free entry';
     }
-    if (widget.bonusCartelaBalance > 0) {
+    if (_canUseBonusCartelaBalance && widget.bonusCartelaBalance > 0) {
       if (widget.isFirstTimePlayer) {
         return 'Uses 1 welcome bonus cartela';
       }

@@ -1615,9 +1615,6 @@ class AppLocalizationsTi extends AppLocalizations {
       'እዚ ጸወታ ተሰሪዙ። ናይ ምዝገባ ክፍሊታት ተመሊሱ ኣሎ። ዝቕጽል ዙር ይጅምር ኣሎ…';
 
   @override
-  String get gameCancelledNoRefundMessage => 'እዚ ጸወታ ተሰሪዙ። ዝቕጽል ዙር ይጅምር ኣሎ…';
-
-  @override
   String get bulkConfirmHint => 'ንምርኣይ ነካ · ንምውጻእ X · ድሉው ምስ ዀነ ተመዝገብ';
 
   @override

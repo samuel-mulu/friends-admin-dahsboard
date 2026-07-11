@@ -54,6 +54,9 @@ enum GameCategory {
       this == GameCategory.bonus || this == GameCategory.bigGotd;
 
   bool get hasFreeEntry => this == GameCategory.bonus;
+
+  /// Welcome bonus cartela credits apply only to normal games.
+  bool get canUseBonusCartelaBalance => this == GameCategory.normal;
 }
 
 enum GameStatus {
@@ -440,6 +443,8 @@ class GameModel {
   bool get isBonusLike => category.isBonusLike;
 
   bool get hasFreeEntry => category.hasFreeEntry;
+
+  bool get canUseBonusCartelaBalance => category.canUseBonusCartelaBalance;
 
   /// Whether this game shows as "Registration Open" to players
   bool get isRegistrationOpen =>

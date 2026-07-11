@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/games_repository.dart';
@@ -14,49 +12,27 @@ final cartelaCatalogProvider =
 
 class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
   static const defaultPageSize = 5000;
-  static const searchPageSize = 300;
-
-  static int pageLimit({required bool isSearch, required bool shuffle}) {
-    if (isSearch) {
-      return searchPageSize;
-    }
-    return defaultPageSize;
-  }
-
-  Timer? _searchDebounce;
-  int _searchGeneration = 0;
 
   @override
   Future<CartelaCatalogState> build() async {
     final link = ref.keepAlive();
-    ref.onDispose(() {
-      link.close();
-      _searchDebounce?.cancel();
-    });
+    ref.onDispose(link.close);
 
-    return _fetchPage(search: '', cursor: null, shuffle: true);
+    return _fetchPage(cursor: null, shuffle: true);
   }
 
   Future<void> refresh() async {
     final previous = state.value;
-    final search = previous?.searchQuery ?? '';
-    final useShuffle = search.isEmpty;
     state = previous == null
         ? const AsyncLoading()
         : AsyncData(
             previous.copyWith(
               isLoadingMore: false,
-              isShuffled: useShuffle,
+              isShuffled: true,
               isSearchPending: false,
             ),
           );
-    state = AsyncData(
-      await _fetchPage(
-        search: search,
-        cursor: null,
-        shuffle: useShuffle,
-      ),
-    );
+    state = AsyncData(await _fetchPage(cursor: null, shuffle: true));
   }
 
   Future<void> reshuffle() async {
@@ -80,68 +56,6 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
         isReshuffling: false,
       ),
     );
-  }
-
-  void setSearch(String query) {
-    _searchDebounce?.cancel();
-    final generation = ++_searchGeneration;
-
-    final previous = state.value;
-    if (previous != null && previous.searchQuery != query) {
-      state = AsyncData(
-        previous.copyWith(
-          searchQuery: query,
-          isLoadingMore: false,
-          isShuffled: query.isEmpty,
-          isSearchPending: query.isNotEmpty,
-        ),
-      );
-    }
-
-    final debounceMs = _searchDebounceMs(query);
-    if (debounceMs == 0) {
-      unawaited(_runSearchFetch(generation, query));
-      return;
-    }
-
-    _searchDebounce = Timer(Duration(milliseconds: debounceMs), () {
-      unawaited(_runSearchFetch(generation, query));
-    });
-  }
-
-  int _searchDebounceMs(String query) {
-    if (query.isEmpty) {
-      return 0;
-    }
-
-    if (RegExp(r'^\d+$').hasMatch(query)) {
-      return 120;
-    }
-
-    return 250;
-  }
-
-  Future<void> _runSearchFetch(int generation, String query) async {
-    if (generation != _searchGeneration) {
-      return;
-    }
-
-    final previous = state.value;
-    if (previous != null && previous.searchQuery == query && !previous.isSearchPending) {
-      return;
-    }
-
-    try {
-      state = AsyncData(
-        await _fetchPage(
-          search: query,
-          cursor: null,
-          shuffle: query.isEmpty,
-        ),
-      );
-    } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
-    }
   }
 
   Future<void> loadMoreShuffledFromPool() async {
@@ -173,9 +87,7 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
 
   Future<void> loadMore() async {
     final current = state.value;
-    if (current == null ||
-        current.isLoadingMore ||
-        current.isSearchPending) {
+    if (current == null || current.isLoadingMore) {
       return;
     }
 
@@ -190,16 +102,12 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
 
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
-      final nextPage = await _fetchPage(
-        search: current.searchQuery,
-        cursor: current.nextCursor,
-      );
+      final nextPage = await _fetchPage(cursor: current.nextCursor);
       state = AsyncData(
         CartelaCatalogState(
           items: [...current.items, ...nextPage.items],
           nextCursor: nextPage.nextCursor,
           total: nextPage.total ?? current.total,
-          searchQuery: current.searchQuery,
           isShuffled: current.isShuffled,
         ),
       );
@@ -210,15 +118,12 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
   }
 
   Future<CartelaCatalogState> _fetchPage({
-    required String search,
     required String? cursor,
     bool shuffle = false,
   }) async {
-    final isSearch = search.isNotEmpty;
     final page = await ref.read(gamesRepositoryProvider).getCartelasPage(
-      limit: pageLimit(isSearch: isSearch, shuffle: shuffle),
+      limit: defaultPageSize,
       cursor: cursor,
-      search: isSearch ? search : null,
       shuffle: shuffle,
     );
 
@@ -235,9 +140,7 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
         shuffledPool: pool,
         nextCursor: page.nextCursor,
         total: page.total,
-        searchQuery: search,
         isShuffled: true,
-        isSearchPending: false,
       );
     }
 
@@ -245,9 +148,7 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
       items: page.items,
       nextCursor: page.nextCursor,
       total: page.total,
-      searchQuery: search,
       isShuffled: false,
-      isSearchPending: false,
     );
   }
 }

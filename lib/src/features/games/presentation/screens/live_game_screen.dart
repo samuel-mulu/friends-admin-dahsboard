@@ -964,7 +964,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       _liveUiMode.useRegistrationOpenLayout;
 
   Widget _buildRegistrationOpenBody() {
-    final game = _registrationOpenBodyTarget!;
+    final game = _withSocketRegistrationMetrics(_registrationOpenBodyTarget!);
     final isCurrentRound = _isCurrentGameTarget(game);
     final phase = isCurrentRound
         ? _livePresentationPhase
@@ -1111,6 +1111,41 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   GameModel? get _registrationOpenBodyTarget =>
       _liveUiMode.registrationOpenBodyTarget;
+
+  /// Registration-open UI reads [GameModel] from the operations snapshot, which
+  /// is not updated by socket prize/reg events. Overlay those metrics from the
+  /// socket-patched [_game] / [_nextUpcomingGame] for the same session.
+  GameModel _withSocketRegistrationMetrics(GameModel target) {
+    final sessionId = target.sessionId;
+    if (sessionId == null) {
+      return target;
+    }
+
+    final GameModel? liveSource;
+    if (_game?.sessionId == sessionId) {
+      liveSource = _game;
+    } else if (_nextUpcomingGame?.sessionId == sessionId) {
+      liveSource = _nextUpcomingGame;
+    } else {
+      liveSource = null;
+    }
+
+    if (liveSource == null) {
+      return target;
+    }
+
+    final nextPrize = liveSource.prizeAmount;
+    final nextRegCount = liveSource.registeredCartelasCount;
+    if (nextPrize == target.prizeAmount &&
+        nextRegCount == target.registeredCartelasCount) {
+      return target;
+    }
+
+    return target.copyWith(
+      prizeAmount: nextPrize,
+      registeredCartelasCount: nextRegCount,
+    );
+  }
 
   bool _isCurrentGameTarget(GameModel target) {
     final game = _game;

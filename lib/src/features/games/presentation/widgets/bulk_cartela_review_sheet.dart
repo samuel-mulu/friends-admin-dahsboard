@@ -72,8 +72,12 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
     return (entryFee * walletCartelas).toStringAsFixed(2);
   }
 
+  /// Welcome bonus credits apply only to normal games (not BONUS / Big GOTD / Big Game).
+  bool get _canUseBonusCartelaBalance =>
+      !widget.isBonus && !widget.isBigGotd && !widget.isBigGame;
+
   int _bonusCartelasUsed(int count) {
-    if (widget.isBonus || count <= 0) {
+    if (!_canUseBonusCartelaBalance || count <= 0) {
       return 0;
     }
 
@@ -336,7 +340,10 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
                                 cartela: cartela,
                                 sessionId: widget.sessionId,
                                 slotId: widget.slotId,
-                                reserveForBoardLoad: false,
+                                // Board API requires an active hold; bulk
+                                // select no longer pre-reserves, so reserve
+                                // briefly here to load numbers for preview.
+                                reserveForBoardLoad: true,
                               ),
                               onRemove: () => _removeCartela(cartela),
                             ),

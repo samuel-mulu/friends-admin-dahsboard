@@ -264,7 +264,7 @@ class WalletBreakdownCard extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Bonus cartelas',
+            'Bonus cartelas (normal games)',
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),
         ),

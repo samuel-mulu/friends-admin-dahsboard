@@ -9,11 +9,23 @@ abstract final class CartelaBoardLayout {
   static const double reviewHeaderFontSize = 13.0;
   static const double compactReviewHeaderFontSize = 9.0;
 
-  static const double liveCellNumberFontSize = 11.0;
-  static const double liveFreeFontSize = 11.0;
-  static const double reviewCellNumberFontSize = 15.0;
-  static const double compactReviewCellNumberFontSize = 11.0;
+  /// Target sizes; [FittedBox] scales down to fit the cell circle.
+  static const double liveCellNumberFontSize = 28.0;
+  static const double liveFreeFontSize = 28.0;
+  static const double reviewCellNumberFontSize = 32.0;
+  static const double compactReviewCellNumberFontSize = 22.0;
+
+  /// Fraction of cell diameter used for number text (maximizes readability).
+  static const double cellNumberDiameterFactor = 0.58;
 
   /// Header row + gap + square board area for review dialogs.
   static const double reviewBoardAspectRatio = 1.08;
+
+  /// Largest number font that still fits inside a circular cell.
+  static double maximizedCellNumberFontSize(double diameter) {
+    if (diameter <= 0) {
+      return liveCellNumberFontSize;
+    }
+    return diameter * cellNumberDiameterFactor;
+  }
 }

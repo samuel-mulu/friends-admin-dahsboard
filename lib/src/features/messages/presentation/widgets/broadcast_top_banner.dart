@@ -8,7 +8,7 @@ import '../providers/broadcast_banner_provider.dart';
 import 'admin_messages_modal.dart';
 import 'broadcast_message_ui.dart';
 
-/// Compact top banner for new admin messages (dismissible / persistent).
+/// Compact in-app notification toast under the app bar.
 class BroadcastTopBanner extends ConsumerWidget {
   const BroadcastTopBanner({super.key});
 
@@ -19,8 +19,7 @@ class BroadcastTopBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final bannerState = ref.watch(broadcastBannerProvider);
-    final message = bannerState.visibleMessage;
+    final message = ref.watch(broadcastBannerProvider).visibleMessage;
     if (message == null) {
       return const SizedBox.shrink();
     }
@@ -31,43 +30,54 @@ class BroadcastTopBanner extends ConsumerWidget {
       message.category,
       theme.colorScheme,
     );
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Material(
-      color: accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.16 : 0.1),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.xs,
-            AppSpacing.sm,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BroadcastMessageUi.leadingIcon(
-                context: context,
-                category: message.category,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: Material(
+        color: BroadcastMessageUi.bannerBackground(context),
+        elevation: isDark ? 0 : 2,
+        shadowColor: Colors.black.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () => showAdminMessagesModal(context, ref),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: accent.withValues(alpha: isDark ? 0.35 : 0.22),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: InkWell(
-                  onTap: () => showAdminMessagesModal(context, ref),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.xs),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BroadcastMessageUi.leadingIcon(
+                  context: context,
+                  category: message.category,
+                  size: 36,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
                         ),
+                      ),
+                      if (message.body.trim().isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           message.body,
@@ -78,26 +88,23 @@ class BroadcastTopBanner extends ConsumerWidget {
                             height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.adminMessagesTitle,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: accent,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: l10n.announcementDismiss,
-                onPressed: () =>
-                    ref.read(broadcastBannerProvider.notifier).closeBanner(),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
+                IconButton(
+                  tooltip: l10n.announcementDismiss,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () =>
+                      ref.read(broadcastBannerProvider.notifier).closeBanner(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

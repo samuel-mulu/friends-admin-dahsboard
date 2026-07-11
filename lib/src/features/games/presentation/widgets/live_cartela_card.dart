@@ -939,9 +939,8 @@ class _CartelaGridCell extends StatelessWidget {
                               textAlign: TextAlign.center,
                               maxLines: 1,
                               style: TextStyle(
-                                fontSize: isFree
-                                    ? CartelaBoardLayout.liveFreeFontSize
-                                    : CartelaBoardLayout.liveCellNumberFontSize,
+                                fontSize: CartelaBoardLayout
+                                    .maximizedCellNumberFontSize(diameter),
                                 fontWeight: FontWeight.w900,
                                 height: 1,
                                 color: textColor,

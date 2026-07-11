@@ -62,12 +62,18 @@ class CartelaBoardPreview extends StatelessWidget {
                   return Expanded(
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: isFree
                             ? AppBranding.gold
                                 .withValues(alpha: isDark ? 0.25 : 0.35)
-                            : AppBranding.cellBackground(context, marked: false),
+                            : AppBranding.cellBackground(
+                                context,
+                                marked: false,
+                              ),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isFree
@@ -76,15 +82,23 @@ class CartelaBoardPreview extends StatelessWidget {
                                   .withValues(alpha: 0.45),
                         ),
                       ),
-                      child: Text(
-                        value,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight:
-                              isFree ? FontWeight.w800 : FontWeight.w600,
-                          color: isFree
-                              ? AppBranding.casinoPurpleDeep
-                              : theme.colorScheme.onSurface,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            value,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: isFree ? 22 : 26,
+                              fontWeight:
+                                  isFree ? FontWeight.w800 : FontWeight.w700,
+                              height: 1,
+                              color: isFree
+                                  ? AppBranding.casinoPurpleDeep
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
                         ),
                       ),
                     ),

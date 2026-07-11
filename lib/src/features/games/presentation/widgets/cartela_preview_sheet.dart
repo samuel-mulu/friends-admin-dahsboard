@@ -79,6 +79,7 @@ class CartelaPreviewSheet extends ConsumerStatefulWidget {
 class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
   CartelaModel? _previewCartela;
   bool _loadFailed = false;
+  bool _isLoadingBoard = false;
   late final GamesRepository _repository;
 
   @override
@@ -87,6 +88,7 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
     _repository = ref.read(gamesRepositoryProvider);
     _previewCartela = _initialPreviewCartela();
     if (_previewCartela?.hasBoardValues != true) {
+      _isLoadingBoard = true;
       unawaited(_loadBoard());
     }
   }
@@ -112,7 +114,10 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
   Future<void> _loadBoard() async {
     if (widget.cartela.id.isEmpty) {
       if (mounted) {
-        setState(() => _loadFailed = true);
+        setState(() {
+          _isLoadingBoard = false;
+          _loadFailed = true;
+        });
       }
       return;
     }
@@ -137,7 +142,10 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
 
       if (!widget.reserveForBoardLoad) {
         if (mounted) {
-          setState(() => _loadFailed = true);
+          setState(() {
+            _isLoadingBoard = false;
+            _loadFailed = true;
+          });
         }
         return;
       }
@@ -157,7 +165,10 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
         );
       } else {
         if (mounted) {
-          setState(() => _loadFailed = true);
+          setState(() {
+            _isLoadingBoard = false;
+            _loadFailed = true;
+          });
         }
         return;
       }
@@ -165,7 +176,10 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
       await _applyBoardFromReservation(reservation);
     } catch (_) {
       if (mounted) {
-        setState(() => _loadFailed = true);
+        setState(() {
+          _isLoadingBoard = false;
+          _loadFailed = true;
+        });
       }
     }
   }
@@ -200,6 +214,7 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
     setState(() {
       _previewCartela = preview;
       _loadFailed = false;
+      _isLoadingBoard = false;
     });
   }
 
@@ -253,6 +268,16 @@ class _CartelaPreviewSheetState extends ConsumerState<CartelaPreviewSheet> {
               ),
               const SizedBox(height: 14),
               CartelaBoardPreview(columns: _displayColumns),
+              if (_isLoadingBoard && !hasBoard) ...[
+                const SizedBox(height: 12),
+                const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                ),
+              ],
               if (_loadFailed && !hasBoard) ...[
                 const SizedBox(height: 8),
                 Text(
