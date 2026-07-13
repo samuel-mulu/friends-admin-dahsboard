@@ -14,6 +14,7 @@ import '../../data/receipt_ocr/receipt_ocr_result.dart';
 import '../../data/receipt_ocr/receipt_ocr_service.dart';
 import '../../data/telebirr_receipt_preview_service.dart';
 import '../../data/wallet_repository.dart';
+import '../../domain/wallet_amount_limits.dart';
 import '../providers/deposit_config_provider.dart';
 import '../providers/wallet_history_providers.dart';
 import '../providers/wallet_provider.dart';
@@ -90,6 +91,9 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     if (_ocrReviewRequired && !_receiptDetailsConfirmed) {
       return false;
     }
+    if (!WalletAmountLimits.isSubmittableDeposit(_amountController.text)) {
+      return false;
+    }
     return true;
   }
 
@@ -128,6 +132,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -251,12 +256,14 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     if (_ignoreFieldChanges) {
       return;
     }
-    if (_ocrReviewRequired) {
-      setState(_clearOcrReviewState);
-    }
-    if (_amountServerError != null || _transactionRefServerError != null) {
-      setState(_clearServerErrors);
-    }
+    setState(() {
+      if (_ocrReviewRequired) {
+        _clearOcrReviewState();
+      }
+      if (_amountServerError != null || _transactionRefServerError != null) {
+        _clearServerErrors();
+      }
+    });
     _clearConfirmation();
   }
 
@@ -614,11 +621,22 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     if (trimmed.isEmpty) {
       return l10n.validatorAmountRequired;
     }
-    if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(trimmed)) {
+    if (!WalletAmountLimits.amountPattern.hasMatch(trimmed)) {
       return l10n.validatorAmountInvalid;
     }
-    if (double.tryParse(trimmed) == null || double.parse(trimmed) <= 0) {
+    final parsed = double.tryParse(trimmed);
+    if (parsed == null || parsed <= 0) {
       return l10n.validatorAmountPositive;
+    }
+    if (parsed < WalletAmountLimits.minDeposit) {
+      return l10n.validatorDepositAmountMin(
+        WalletAmountLimits.formatLimit(WalletAmountLimits.minDeposit),
+      );
+    }
+    if (parsed > WalletAmountLimits.maxDeposit) {
+      return l10n.validatorDepositAmountMax(
+        WalletAmountLimits.formatLimit(WalletAmountLimits.maxDeposit),
+      );
     }
     return null;
   }

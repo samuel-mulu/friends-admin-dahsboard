@@ -257,6 +257,7 @@ class WalletBreakdownCard extends StatelessWidget {
 
   Widget _buildBonusCartelaRow(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Row(
       children: [
@@ -264,7 +265,7 @@ class WalletBreakdownCard extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Bonus cartelas (normal games)',
+            l10n.walletBonusCartelasLabel,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),
         ),

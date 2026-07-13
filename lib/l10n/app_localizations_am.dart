@@ -184,6 +184,36 @@ class AppLocalizationsAm extends AppLocalizations {
   String get validatorAmountPositive => 'መጠን ከዜሮ በላይ መሆን አለበት።';
 
   @override
+  String validatorDepositAmountMin(String amount) {
+    return 'ዝቅተኛ ተቀማጭ $amount ብር ነው።';
+  }
+
+  @override
+  String validatorDepositAmountMax(String amount) {
+    return 'ከፍተኛ ተቀማጭ $amount ብር ነው።';
+  }
+
+  @override
+  String validatorWithdrawAmountMin(String amount) {
+    return 'ዝቅተኛ ወጪ $amount ብር ነው።';
+  }
+
+  @override
+  String validatorWithdrawAmountMax(String amount) {
+    return 'ከፍተኛ ወጪ $amount ብር ነው።';
+  }
+
+  @override
+  String depositAmountRangeHelper(String min, String max) {
+    return 'ተቀማጭ ከ $min እስከ $max ብር።';
+  }
+
+  @override
+  String withdrawAmountRangeHelper(String min, String max) {
+    return 'ወጪ ከ $min እስከ $max ብር። አስተዳዳሪ ጥያቄዎን እስኪያስተናግድ ድረስ ይህ መጠን ይቆለፋል።';
+  }
+
+  @override
   String get validatorTransactionRef => 'ትክክለኛ የግብይት ማጣቀሻ አስገባ።';
 
   @override
@@ -247,6 +277,22 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get walletTotalEqualsHint => 'የሚገኝ + የተቆለፈ = ጠቅላላ ቦርሳ';
+
+  @override
+  String get welcomeBonusTitle => 'እንኳን ደህና መጡ ቦነስ';
+
+  @override
+  String welcomeBonusBody(int count) {
+    return '$count ቦነስ ካርቴላዎች ለመደበኛ ጨዋታዎች አሉዎት። እያንዳንዱ 1 መደበኛ የጨዋታ ካርቴላ ያስመዘግባል ያለ ETB ቀሪዎ። Big GOTD እና Big Game የቦርሳ ገንዘብ ይጠቀማሉ። ቦነስ ካርቴላዎች አይወጡም።';
+  }
+
+  @override
+  String get walletBonusCartelasLabel => 'ቦነስ ካርቴላዎች (መደበኛ ጨዋታዎች)';
+
+  @override
+  String registrationBonusBalanceLabel(int count) {
+    return 'ቦነስ: $count';
+  }
 
   @override
   String get walletDeposit => 'ተቀማጭ';
@@ -1715,7 +1761,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gameCategoryNormal => 'Normal Game';
 
   @override
-  String get gameCategoryBonus => 'Bonus Game';
+  String get gameCategoryBonus => 'ቦነስ ጨዋታ';
 
   @override
   String get gameCategoryBigGotd => 'Big GOTD';
@@ -1793,7 +1839,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gamesHubComingNext => 'Coming Next';
 
   @override
-  String get gamesHubBonus => 'Bonus Game';
+  String get gamesHubBonus => 'ቦነስ ጨዋታ';
 
   @override
   String get gamesHubUpcomingEvent => 'Upcoming Event';
@@ -1805,10 +1851,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gamesHubNoLiveBody => 'Check back soon for the next round.';
 
   @override
-  String get gamesHubNoBonusTitle => 'Bonus Game not available';
+  String get gamesHubNoBonusTitle => 'ቦነስ ጨዋታ አይገኝም';
 
   @override
-  String get gamesHubNoBonusBody => 'No bonus round is scheduled today.';
+  String get gamesHubNoBonusBody => 'ዛሬ የታቀደ ቦነስ ዙር የለም።';
 
   @override
   String get gamesHubStartsAfterCurrent => 'Starts after current round';
@@ -1817,7 +1863,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gamesHubJoinLive => 'Join';
 
   @override
-  String get gamesHubOpenBonus => 'Open Bonus Game';
+  String get gamesHubOpenBonus => 'ቦነስ ጨዋታ ክፈት';
 
   @override
   String get gamesHubOpenBigGame => 'Open';
@@ -1845,13 +1891,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gamesHubLoadErrorTitle => 'Could not load games';
 
   @override
-  String get announcementBonusTitle => 'Bonus Game Today';
+  String get announcementBonusTitle => 'ዛሬ ቦነስ ጨዋታ';
 
   @override
-  String get announcementBonusBody => 'Starts after current round';
+  String get announcementBonusBody => 'ከአሁኑ ዙር በኋላ ይጀምራል';
 
   @override
-  String get announcementBonusAction => 'Play Free';
+  String get announcementBonusAction => 'በነጻ ተጫወት';
 
   @override
   String get announcementBigGameTitle => 'BIG GAME';

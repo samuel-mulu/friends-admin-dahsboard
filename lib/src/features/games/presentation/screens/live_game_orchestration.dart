@@ -2294,9 +2294,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                         right.cartela.number,
                       );
                     });
-                  final ownsLocalLiveCartelas =
-                      _game?.sessionId == liveSessionId &&
-                      _myCartelas.isNotEmpty;
+                  final ownsLocalLiveCartelas = ownsLiveSessionCartelas(
+                    liveSessionId: liveSessionId,
+                    primarySessionId: _game?.sessionId,
+                    cartelaSessionIds:
+                        _myCartelas.map((cartela) => cartela.gameId),
+                  );
                   final ownsLiveCartelas =
                       fetchedCartelas.isNotEmpty || ownsLocalLiveCartelas;
 
@@ -2318,9 +2321,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                   );
                 })
                 .catchError((_) {
-                  final ownsLiveCartelas =
-                      _game?.sessionId == liveSessionId &&
-                      _myCartelas.isNotEmpty;
+                  final ownsLiveCartelas = ownsLiveSessionCartelas(
+                    liveSessionId: liveSessionId,
+                    primarySessionId: _game?.sessionId,
+                    cartelaSessionIds:
+                        _myCartelas.map((cartela) => cartela.gameId),
+                  );
                   if (ownsLiveCartelas) {
                     preloadedPrimaryCartelas =
                         List<GameCartelaModel>.from(_myCartelas)

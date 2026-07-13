@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/l10n.dart';
 import '../../data/models/wallet_model.dart';
 
 class WelcomeBonusBanner extends StatelessWidget {
@@ -18,6 +19,7 @@ class WelcomeBonusBanner extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       color: theme.colorScheme.primaryContainer,
@@ -36,7 +38,7 @@ class WelcomeBonusBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome bonus',
+                    l10n.welcomeBonusTitle,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: theme.colorScheme.onPrimaryContainer,
@@ -44,9 +46,7 @@ class WelcomeBonusBanner extends StatelessWidget {
                   ),
                   VGap.xs,
                   Text(
-                    'You have ${wallet.bonusCartelaBalance} bonus cartelas for normal games. '
-                    'Each one registers 1 normal-game cartela without using your ETB balance. '
-                    'Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.',
+                    l10n.welcomeBonusBody(wallet.bonusCartelaBalance),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onPrimaryContainer,
                     ),

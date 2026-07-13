@@ -62,6 +62,12 @@
   "validatorAmountRequired": "መጠን የድሊ።",
   "validatorAmountInvalid": "ቅቡል መጠን የየእቶ።",
   "validatorAmountPositive": "መጠን ካብ ዜሮ ንላዕሊ ክኸውን ኣለዎ።",
+  "validatorDepositAmountMin": "ዝቅተኛ ተቀማጭ {amount} ብር እዩ።",
+  "validatorDepositAmountMax": "ዝለዓለ ተቀማጭ {amount} ብር እዩ።",
+  "validatorWithdrawAmountMin": "ዝቅተኛ ወጻኢ {amount} ብር እዩ።",
+  "validatorWithdrawAmountMax": "ዝለዓለ ወጻኢ {amount} ብር እዩ።",
+  "depositAmountRangeHelper": "ተቀማጭ ካብ {min} ክሳብ {max} ብር።",
+  "withdrawAmountRangeHelper": "ወጻኢ ካብ {min} ክሳብ {max} ብር። ኣስተዳዳሪ ጠለብካ ክሕዝ ድማይ እዚ መጠን ክቖለፍ እዩ።",
   "validatorTransactionRef": "ቅቡል ናይ ዕዳጋ ምልክት የየእቶ።",
 
   "dashboardHello": "ሰላም፣ {name}",
@@ -83,6 +89,10 @@
   "walletFreezBalance": "Freez balance",
   "walletTotalBalance": "ጠቕላላ ዋሌት",
   "walletTotalEqualsHint": "ዝርከብ + ዝተቖለፈ = ጠቕላላ ዋሌት",
+  "welcomeBonusTitle": "እንቋዕ ብደሓን መጻእካ ቦነስ",
+  "welcomeBonusBody": "{count} ቦነስ ካርቴላታት ንንቡር ጸወታታት ኣለካ። ነፍሲ ወከፍ 1 ንቡር ጸወታ ካርቴላ ብዘይ ETB ቀሪኻ የመዝግብ። Big GOTD ከምኡ’ውን Big Game ናይ ዋሌት ገንዘብ ይጥቀሙ። ቦነስ ካርቴላታት ኣይወጹን።",
+  "walletBonusCartelasLabel": "ቦነስ ካርቴላታት (ንቡር ጸወታታት)",
+  "registrationBonusBalanceLabel": "ቦነስ: {count}",
   "walletDeposit": "ኣታዊ ንምግባር",
   "walletWithdraw": "ኣውፅእ",
   "walletTransactionHistory": "ናይ ዋሊት ዝርዝር",
@@ -507,5 +517,14 @@
   "guestPromoCongratsTitle": "እንቋዕ ደስ በለካ!",
   "guestPromoCongratsAmountWon": "{amount} ተዓዊትካ",
   "guestPromoCongratsReceived": "{amount} ብሲቢኢ ባንክ ተቐቢልካ።",
-  "guestPromoCongratsWithdraw": "ንምውጻእ እቶ ወይ ተመዝገብ።"
+  "guestPromoCongratsWithdraw": "ንምውጻእ እቶ ወይ ተመዝገብ።",
+
+  "gameCategoryBonus": "ቦነስ ጸወታ",
+  "gamesHubBonus": "ቦነስ ጸወታ",
+  "gamesHubNoBonusTitle": "ቦነስ ጸወታ የለን",
+  "gamesHubNoBonusBody": "ሎሚ ዝተሓሰበ ቦነስ ዙር የለን።",
+  "gamesHubOpenBonus": "ቦነስ ጸወታ ክፈት",
+  "announcementBonusTitle": "ሎሚ ቦነስ ጸወታ",
+  "announcementBonusBody": "ድሕሪ ሕጂ ዙር ይጅምር",
+  "announcementBonusAction": "ብነጻ ተጻወት"
 }

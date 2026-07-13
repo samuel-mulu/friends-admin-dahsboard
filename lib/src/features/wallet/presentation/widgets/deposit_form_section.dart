@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/utils/uppercase_text_formatter.dart';
 import '../../data/models/payment_provider.dart';
+import '../../domain/wallet_amount_limits.dart';
 
 class DepositFormSection extends StatelessWidget {
   const DepositFormSection({
@@ -39,6 +40,12 @@ class DepositFormSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final minLabel = WalletAmountLimits.formatLimit(
+      WalletAmountLimits.minDeposit,
+    );
+    final maxLabel = WalletAmountLimits.formatLimit(
+      WalletAmountLimits.maxDeposit,
+    );
 
     return Card(
       child: Padding(
@@ -51,9 +58,15 @@ class DepositFormSection extends StatelessWidget {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const [
+                WalletAmountInputFormatter(
+                  maxAmount: WalletAmountLimits.maxDeposit,
+                ),
+              ],
               decoration: InputDecoration(
                 labelText: l10n.depositAmount,
-                hintText: '100',
+                hintText: minLabel,
+                helperText: l10n.depositAmountRangeHelper(minLabel, maxLabel),
                 prefixIcon: const Icon(Icons.payments_outlined),
               ),
               validator: amountValidator,

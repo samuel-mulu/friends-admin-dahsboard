@@ -179,6 +179,42 @@
   "validatorAmountPositive": "Amount must be greater than zero.",
   "@validatorAmountPositive": {},
 
+  "validatorDepositAmountMin": "Minimum deposit is {amount} ETB.",
+  "@validatorDepositAmountMin": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "validatorDepositAmountMax": "Maximum deposit is {amount} ETB.",
+  "@validatorDepositAmountMax": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "validatorWithdrawAmountMin": "Minimum withdrawal is {amount} ETB.",
+  "@validatorWithdrawAmountMin": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "validatorWithdrawAmountMax": "Maximum withdrawal is {amount} ETB.",
+  "@validatorWithdrawAmountMax": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "depositAmountRangeHelper": "Deposit between {min} and {max} ETB.",
+  "@depositAmountRangeHelper": {
+    "placeholders": {
+      "min": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+
+  "withdrawAmountRangeHelper": "Withdraw between {min} and {max} ETB. This amount will be locked until admin processes your request.",
+  "@withdrawAmountRangeHelper": {
+    "placeholders": {
+      "min": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+
   "validatorTransactionRef": "Enter a valid transaction reference.",
   "@validatorTransactionRef": {},
 
@@ -241,6 +277,22 @@
 
   "walletTotalEqualsHint": "Available + Locked = Total wallet",
   "@walletTotalEqualsHint": {},
+
+  "welcomeBonusTitle": "Welcome bonus",
+  "@welcomeBonusTitle": {},
+
+  "welcomeBonusBody": "You have {count} bonus cartelas for normal games. Each one registers 1 normal-game cartela without using your ETB balance. Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.",
+  "@welcomeBonusBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "walletBonusCartelasLabel": "Bonus cartelas (normal games)",
+  "@walletBonusCartelasLabel": {},
+
+  "registrationBonusBalanceLabel": "Bonus: {count}",
+  "@registrationBonusBalanceLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "walletDeposit": "Deposit",
   "@walletDeposit": {},

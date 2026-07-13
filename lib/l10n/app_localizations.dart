@@ -432,6 +432,42 @@ abstract class AppLocalizations {
   /// **'Amount must be greater than zero.'**
   String get validatorAmountPositive;
 
+  /// No description provided for @validatorDepositAmountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum deposit is {amount} ETB.'**
+  String validatorDepositAmountMin(String amount);
+
+  /// No description provided for @validatorDepositAmountMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum deposit is {amount} ETB.'**
+  String validatorDepositAmountMax(String amount);
+
+  /// No description provided for @validatorWithdrawAmountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum withdrawal is {amount} ETB.'**
+  String validatorWithdrawAmountMin(String amount);
+
+  /// No description provided for @validatorWithdrawAmountMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum withdrawal is {amount} ETB.'**
+  String validatorWithdrawAmountMax(String amount);
+
+  /// No description provided for @depositAmountRangeHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit between {min} and {max} ETB.'**
+  String depositAmountRangeHelper(String min, String max);
+
+  /// No description provided for @withdrawAmountRangeHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw between {min} and {max} ETB. This amount will be locked until admin processes your request.'**
+  String withdrawAmountRangeHelper(String min, String max);
+
   /// No description provided for @validatorTransactionRef.
   ///
   /// In en, this message translates to:
@@ -545,6 +581,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available + Locked = Total wallet'**
   String get walletTotalEqualsHint;
+
+  /// No description provided for @welcomeBonusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome bonus'**
+  String get welcomeBonusTitle;
+
+  /// No description provided for @welcomeBonusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} bonus cartelas for normal games. Each one registers 1 normal-game cartela without using your ETB balance. Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.'**
+  String welcomeBonusBody(int count);
+
+  /// No description provided for @walletBonusCartelasLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus cartelas (normal games)'**
+  String get walletBonusCartelasLabel;
+
+  /// No description provided for @registrationBonusBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus: {count}'**
+  String registrationBonusBalanceLabel(int count);
 
   /// No description provided for @walletDeposit.
   ///

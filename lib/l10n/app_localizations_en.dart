@@ -188,6 +188,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get validatorAmountPositive => 'Amount must be greater than zero.';
 
   @override
+  String validatorDepositAmountMin(String amount) {
+    return 'Minimum deposit is $amount ETB.';
+  }
+
+  @override
+  String validatorDepositAmountMax(String amount) {
+    return 'Maximum deposit is $amount ETB.';
+  }
+
+  @override
+  String validatorWithdrawAmountMin(String amount) {
+    return 'Minimum withdrawal is $amount ETB.';
+  }
+
+  @override
+  String validatorWithdrawAmountMax(String amount) {
+    return 'Maximum withdrawal is $amount ETB.';
+  }
+
+  @override
+  String depositAmountRangeHelper(String min, String max) {
+    return 'Deposit between $min and $max ETB.';
+  }
+
+  @override
+  String withdrawAmountRangeHelper(String min, String max) {
+    return 'Withdraw between $min and $max ETB. This amount will be locked until admin processes your request.';
+  }
+
+  @override
   String get validatorTransactionRef => 'Enter a valid transaction reference.';
 
   @override
@@ -251,6 +281,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletTotalEqualsHint => 'Available + Locked = Total wallet';
+
+  @override
+  String get welcomeBonusTitle => 'Welcome bonus';
+
+  @override
+  String welcomeBonusBody(int count) {
+    return 'You have $count bonus cartelas for normal games. Each one registers 1 normal-game cartela without using your ETB balance. Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.';
+  }
+
+  @override
+  String get walletBonusCartelasLabel => 'Bonus cartelas (normal games)';
+
+  @override
+  String registrationBonusBalanceLabel(int count) {
+    return 'Bonus: $count';
+  }
 
   @override
   String get walletDeposit => 'Deposit';

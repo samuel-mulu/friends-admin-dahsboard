@@ -7,6 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/cartela_model.dart';
@@ -710,6 +711,7 @@ class _CartelaRegistrationSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return PopScope(
       canPop: !_isSubmitting,
@@ -778,7 +780,7 @@ class _CartelaRegistrationSheetState
                                 const SizedBox(height: 2),
                                 Text(
                                   _isBonus
-                                      ? 'Bonus Game'
+                                      ? l10n.gameCategoryBonus
                                       : _isBigGotd
                                       ? 'Big GOTD'
                                       : _isBigGame

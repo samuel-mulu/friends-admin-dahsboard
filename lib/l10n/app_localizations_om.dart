@@ -190,6 +190,36 @@ class AppLocalizationsOm extends AppLocalizations {
   String get validatorAmountPositive => 'Hangni zeeroo ol ta\'uu qaba.';
 
   @override
+  String validatorDepositAmountMin(String amount) {
+    return 'Hangni olkaa\'insa xiqqaan $amount ETB dha.';
+  }
+
+  @override
+  String validatorDepositAmountMax(String amount) {
+    return 'Hangni olkaa\'insa ol\'aanaan $amount ETB dha.';
+  }
+
+  @override
+  String validatorWithdrawAmountMin(String amount) {
+    return 'Hangni baasii xiqqaan $amount ETB dha.';
+  }
+
+  @override
+  String validatorWithdrawAmountMax(String amount) {
+    return 'Hangni baasii ol\'aanaan $amount ETB dha.';
+  }
+
+  @override
+  String depositAmountRangeHelper(String min, String max) {
+    return 'Gidduu $min fi $max ETB olkaa\'i.';
+  }
+
+  @override
+  String withdrawAmountRangeHelper(String min, String max) {
+    return 'Gidduu $min fi $max ETB baasi. Hangni kun hanga admin gaaffii kee hordoftyutti cufama.';
+  }
+
+  @override
   String get validatorTransactionRef => 'Wabii daldalaa sirrii galchi.';
 
   @override
@@ -253,6 +283,22 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get walletTotalEqualsHint => 'Available + Locked = Total wallet';
+
+  @override
+  String get welcomeBonusTitle => 'Welcome bonus';
+
+  @override
+  String welcomeBonusBody(int count) {
+    return 'You have $count bonus cartelas for normal games. Each one registers 1 normal-game cartela without using your ETB balance. Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.';
+  }
+
+  @override
+  String get walletBonusCartelasLabel => 'Bonus cartelas (normal games)';
+
+  @override
+  String registrationBonusBalanceLabel(int count) {
+    return 'Bonus: $count';
+  }
 
   @override
   String get walletDeposit => 'Galchi';

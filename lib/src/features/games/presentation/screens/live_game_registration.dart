@@ -1512,6 +1512,7 @@ class _RegistrationToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final isDark = theme.brightness == Brightness.dark;
     final isBigGotd = category == GameCategory.bigGotd;
     final isBonusLike = category.isBonusLike;
@@ -1596,7 +1597,7 @@ class _RegistrationToolbar extends StatelessWidget {
                       ),
                       HGap.xxs,
                       Text(
-                        isBigGotd ? 'Big GOTD' : 'Bonus Game',
+                        isBigGotd ? 'Big GOTD' : l10n.gameCategoryBonus,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w800,
@@ -1705,7 +1706,7 @@ class _RegistrationToolbar extends StatelessWidget {
                   ),
                   HGap.xs,
                   Text(
-                    'Bonus: $bonusCartelaBalance',
+                    l10n.registrationBonusBalanceLabel(bonusCartelaBalance),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: theme.colorScheme.primary,

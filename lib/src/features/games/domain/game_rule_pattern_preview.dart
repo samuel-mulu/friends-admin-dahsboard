@@ -358,12 +358,14 @@ class GameRulePatternPreview {
         _twoColTwoRowColN,
         _twoColTwoRowRow2,
         _twoColTwoRowRow3,
+        _diagMain(),
       ]),
       linePatterns: [
         _twoColTwoRowColB,
         _twoColTwoRowColN,
         _twoColTwoRowRow2,
         _twoColTwoRowRow3,
+        _diagMain(),
       ],
     ),
     'MIX_02': _sample(
@@ -495,7 +497,8 @@ class GameRulePatternPreview {
       squarePatterns: [_fourAnglesSquareA, _fourAnglesSquareB],
     ),
     'FOUR_LINES': _sample(
-      markedCells: _union([_row(0), _row(1), _col(0), _col(1)]),
+      markedCells: _union([_row(2), _row(4), _col(1), _col(3)]),
+      linePatterns: [_row(2), _row(4), _col(1), _col(3)],
     ),
     'THREE_ROWS': _sample(markedCells: _union([_row(0), _row(1), _row(2)])),
     'TWO_ROWS_ONE_COLUMN': _sample(

@@ -4,6 +4,7 @@ import '../../data/models/game_model.dart';
 import '../utils/live_presentation_phase.dart';
 import '../utils/live_preparing_poll_sync_gate.dart';
 import '../utils/live_ready_transition_lock.dart' as transition_lock;
+import '../utils/live_session_ownership.dart';
 import 'live_game_host.dart';
 
 /// READY close handoff, transition lock, and primary selection during gaps.
@@ -241,9 +242,11 @@ class LiveTransitionController {
   bool ownsLiveCartelasForOperations(GameOperationsCurrentResponse ops) {
     final liveSessionId =
         ops.liveGame?.sessionId ?? ops.checkingGame?.sessionId;
-    if (liveSessionId != null &&
-        host.game?.sessionId == liveSessionId &&
-        host.myCartelas.isNotEmpty) {
+    if (ownsLiveSessionCartelas(
+      liveSessionId: liveSessionId,
+      primarySessionId: host.game?.sessionId,
+      cartelaSessionIds: host.myCartelas.map((cartela) => cartela.gameId),
+    )) {
       return true;
     }
     final lock = readyTransitionLock;

@@ -62,6 +62,12 @@
   "validatorAmountRequired": "መጠን ያስፈልጋል።",
   "validatorAmountInvalid": "ትክክለኛ መጠን አስገባ።",
   "validatorAmountPositive": "መጠን ከዜሮ በላይ መሆን አለበት።",
+  "validatorDepositAmountMin": "ዝቅተኛ ተቀማጭ {amount} ብር ነው።",
+  "validatorDepositAmountMax": "ከፍተኛ ተቀማጭ {amount} ብር ነው።",
+  "validatorWithdrawAmountMin": "ዝቅተኛ ወጪ {amount} ብር ነው።",
+  "validatorWithdrawAmountMax": "ከፍተኛ ወጪ {amount} ብር ነው።",
+  "depositAmountRangeHelper": "ተቀማጭ ከ {min} እስከ {max} ብር።",
+  "withdrawAmountRangeHelper": "ወጪ ከ {min} እስከ {max} ብር። አስተዳዳሪ ጥያቄዎን እስኪያስተናግድ ድረስ ይህ መጠን ይቆለፋል።",
   "validatorTransactionRef": "ትክክለኛ የግብይት ማጣቀሻ አስገባ።",
 
   "dashboardHello": "ሰላም፣ {name}",
@@ -83,6 +89,10 @@
   "walletFreezBalance": "Freez balance",
   "walletTotalBalance": "ጠቅላላ ቦርሳ",
   "walletTotalEqualsHint": "የሚገኝ + የተቆለፈ = ጠቅላላ ቦርሳ",
+  "welcomeBonusTitle": "እንኳን ደህና መጡ ቦነስ",
+  "welcomeBonusBody": "{count} ቦነስ ካርቴላዎች ለመደበኛ ጨዋታዎች አሉዎት። እያንዳንዱ 1 መደበኛ የጨዋታ ካርቴላ ያስመዘግባል ያለ ETB ቀሪዎ። Big GOTD እና Big Game የቦርሳ ገንዘብ ይጠቀማሉ። ቦነስ ካርቴላዎች አይወጡም።",
+  "walletBonusCartelasLabel": "ቦነስ ካርቴላዎች (መደበኛ ጨዋታዎች)",
+  "registrationBonusBalanceLabel": "ቦነስ: {count}",
   "walletDeposit": "ተቀማጭ",
   "walletWithdraw": "ሽያጭ",
   "walletTransactionHistory": "የግብይት ታሪክ",
@@ -507,5 +517,14 @@
   "guestPromoCongratsTitle": "እንኳን ደስ አለህ!",
   "guestPromoCongratsAmountWon": "{amount} አሸንፈሃል",
   "guestPromoCongratsReceived": "{amount} በሲቢኢ ባንክ ተቀብለሃል።",
-  "guestPromoCongratsWithdraw": "ለማውጣት ግባ ወይም ተመዝገብ።"
+  "guestPromoCongratsWithdraw": "ለማውጣት ግባ ወይም ተመዝገብ።",
+
+  "gameCategoryBonus": "ቦነስ ጨዋታ",
+  "gamesHubBonus": "ቦነስ ጨዋታ",
+  "gamesHubNoBonusTitle": "ቦነስ ጨዋታ አይገኝም",
+  "gamesHubNoBonusBody": "ዛሬ የታቀደ ቦነስ ዙር የለም።",
+  "gamesHubOpenBonus": "ቦነስ ጨዋታ ክፈት",
+  "announcementBonusTitle": "ዛሬ ቦነስ ጨዋታ",
+  "announcementBonusBody": "ከአሁኑ ዙር በኋላ ይጀምራል",
+  "announcementBonusAction": "በነጻ ተጫወት"
 }

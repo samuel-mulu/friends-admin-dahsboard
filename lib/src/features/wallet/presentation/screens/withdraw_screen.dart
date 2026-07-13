@@ -11,6 +11,7 @@ import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/local_reauth_dialog.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/withdrawal_model.dart';
+import '../../domain/wallet_amount_limits.dart';
 import '../models/withdrawal_confirmation_state.dart';
 import '../providers/wallet_history_providers.dart';
 import '../providers/wallet_provider.dart';
@@ -128,9 +129,34 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   }
 
   void _onFormFieldChanged() {
-    if (_confirmation != null) {
-      _clearConfirmation();
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      if (_confirmation != null) {
+        _autoDismissTimer?.cancel();
+        _confirmation = null;
+        _trackedWithdrawalId = null;
+      }
+    });
+  }
+
+  bool get _canSubmitWithdraw {
+    if (_isSubmitting) {
+      return false;
+    }
+    if (!WalletAmountLimits.isSubmittableWithdraw(_amountController.text)) {
+      return false;
+    }
+    final parsed = WalletAmountLimits.tryParseAmount(_amountController.text);
+    final available = double.tryParse(_availableBalance ?? '');
+    if (parsed != null && available != null && parsed > available) {
+      return false;
+    }
+    if (_receiverController.text.trim().isEmpty) {
+      return false;
+    }
+    return true;
   }
 
   @override
@@ -142,6 +168,12 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     if (availableBalance != null) {
       _availableBalance = availableBalance;
     }
+    final minLabel = WalletAmountLimits.formatLimit(
+      WalletAmountLimits.minWithdraw,
+    );
+    final maxLabel = WalletAmountLimits.formatLimit(
+      WalletAmountLimits.maxWithdraw,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.withdrawScreenTitle)),
@@ -150,6 +182,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
           padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -177,10 +210,18 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: const [
+                    WalletAmountInputFormatter(
+                      maxAmount: WalletAmountLimits.maxWithdraw,
+                    ),
+                  ],
                   decoration: InputDecoration(
                     labelText: l10n.withdrawAmount,
-                    hintText: '100',
-                    helperText: l10n.withdrawAmountLockedHelper,
+                    hintText: minLabel,
+                    helperText: l10n.withdrawAmountRangeHelper(
+                      minLabel,
+                      maxLabel,
+                    ),
                   ),
                   validator: _validateAmount,
                 ),
@@ -203,7 +244,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                     foregroundColor: AppBranding.brandPurple,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _canSubmitWithdraw ? _submit : null,
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
@@ -358,12 +399,22 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     if (trimmed.isEmpty) {
       return l10n.validatorAmountRequired;
     }
-    if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(trimmed)) {
+    if (!WalletAmountLimits.amountPattern.hasMatch(trimmed)) {
       return l10n.validatorAmountInvalid;
     }
     final parsed = double.tryParse(trimmed);
     if (parsed == null || parsed <= 0) {
       return l10n.validatorAmountPositive;
+    }
+    if (parsed < WalletAmountLimits.minWithdraw) {
+      return l10n.validatorWithdrawAmountMin(
+        WalletAmountLimits.formatLimit(WalletAmountLimits.minWithdraw),
+      );
+    }
+    if (parsed > WalletAmountLimits.maxWithdraw) {
+      return l10n.validatorWithdrawAmountMax(
+        WalletAmountLimits.formatLimit(WalletAmountLimits.maxWithdraw),
+      );
     }
 
     final available = double.tryParse(_availableBalance ?? '');

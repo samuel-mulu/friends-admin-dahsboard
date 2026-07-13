@@ -58,6 +58,7 @@ import '../utils/live_ui_mode.dart';
 import '../utils/live_registration_target.dart';
 import '../utils/live_registration_visibility.dart';
 import '../utils/live_registration_metrics_patch.dart';
+import '../utils/live_session_ownership.dart';
 import '../utils/registration_reg_display_count.dart';
 import '../utils/cartela_display_order.dart';
 import '../utils/merge_registered_cartelas.dart';
@@ -294,13 +295,17 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       (_game?.canRegister ?? false);
 
   bool get _ownsLiveSessionCartelas {
+    if (!_hasVisibleCurrentSessionCartelas) {
+      return false;
+    }
     final ops = _lastOperations;
     final liveSessionId =
         ops?.liveGame?.sessionId ?? ops?.checkingGame?.sessionId;
-    if (liveSessionId == null || !_hasVisibleCurrentSessionCartelas) {
-      return false;
-    }
-    return _game?.sessionId == liveSessionId;
+    return ownsLiveSessionCartelas(
+      liveSessionId: liveSessionId,
+      primarySessionId: _game?.sessionId,
+      cartelaSessionIds: _myCartelas.map((cartela) => cartela.gameId),
+    );
   }
 
   /// The session currently in play (PLAYING / CHECKING), not the READY queue game.
@@ -965,7 +970,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             onRefresh: _refresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: AppSpacing.screenPadding.copyWith(top: 0),
+              padding: AppSpacing.screenPadding.copyWith(
+                top: 0,
+                bottom: AppSpacing.screenPadding.bottom +
+                    MediaQuery.viewPaddingOf(context).bottom,
+              ),
               children: _buildFullScrollContent(),
             ),
           ),
@@ -1252,7 +1261,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   /// Primary live-play scroller: sticky header stays outside; cartelas use a
   /// real 2-col [SliverGrid] (no shrinkWrap) so only on-screen cards build.
   Widget _buildStickyLiveScrollView() {
-    final padding = AppSpacing.screenPadding.copyWith(top: AppSpacing.sm);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final padding = AppSpacing.screenPadding.copyWith(
+      top: AppSpacing.sm,
+      bottom: AppSpacing.screenPadding.bottom + bottomInset,
+    );
 
     if (_showsGuestSpectator) {
       return ListView(

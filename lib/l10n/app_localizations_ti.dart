@@ -184,6 +184,36 @@ class AppLocalizationsTi extends AppLocalizations {
   String get validatorAmountPositive => 'መጠን ካብ ዜሮ ንላዕሊ ክኸውን ኣለዎ።';
 
   @override
+  String validatorDepositAmountMin(String amount) {
+    return 'ዝቅተኛ ተቀማጭ $amount ብር እዩ።';
+  }
+
+  @override
+  String validatorDepositAmountMax(String amount) {
+    return 'ዝለዓለ ተቀማጭ $amount ብር እዩ።';
+  }
+
+  @override
+  String validatorWithdrawAmountMin(String amount) {
+    return 'ዝቅተኛ ወጻኢ $amount ብር እዩ።';
+  }
+
+  @override
+  String validatorWithdrawAmountMax(String amount) {
+    return 'ዝለዓለ ወጻኢ $amount ብር እዩ።';
+  }
+
+  @override
+  String depositAmountRangeHelper(String min, String max) {
+    return 'ተቀማጭ ካብ $min ክሳብ $max ብር።';
+  }
+
+  @override
+  String withdrawAmountRangeHelper(String min, String max) {
+    return 'ወጻኢ ካብ $min ክሳብ $max ብር። ኣስተዳዳሪ ጠለብካ ክሕዝ ድማይ እዚ መጠን ክቖለፍ እዩ።';
+  }
+
+  @override
   String get validatorTransactionRef => 'ቅቡል ናይ ዕዳጋ ምልክት የየእቶ።';
 
   @override
@@ -247,6 +277,22 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String get walletTotalEqualsHint => 'ዝርከብ + ዝተቖለፈ = ጠቕላላ ዋሌት';
+
+  @override
+  String get welcomeBonusTitle => 'እንቋዕ ብደሓን መጻእካ ቦነስ';
+
+  @override
+  String welcomeBonusBody(int count) {
+    return '$count ቦነስ ካርቴላታት ንንቡር ጸወታታት ኣለካ። ነፍሲ ወከፍ 1 ንቡር ጸወታ ካርቴላ ብዘይ ETB ቀሪኻ የመዝግብ። Big GOTD ከምኡ’ውን Big Game ናይ ዋሌት ገንዘብ ይጥቀሙ። ቦነስ ካርቴላታት ኣይወጹን።';
+  }
+
+  @override
+  String get walletBonusCartelasLabel => 'ቦነስ ካርቴላታት (ንቡር ጸወታታት)';
+
+  @override
+  String registrationBonusBalanceLabel(int count) {
+    return 'ቦነስ: $count';
+  }
 
   @override
   String get walletDeposit => 'ኣታዊ ንምግባር';
@@ -1718,7 +1764,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameCategoryNormal => 'Normal Game';
 
   @override
-  String get gameCategoryBonus => 'Bonus Game';
+  String get gameCategoryBonus => 'ቦነስ ጸወታ';
 
   @override
   String get gameCategoryBigGotd => 'Big GOTD';
@@ -1796,7 +1842,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gamesHubComingNext => 'Coming Next';
 
   @override
-  String get gamesHubBonus => 'Bonus Game';
+  String get gamesHubBonus => 'ቦነስ ጸወታ';
 
   @override
   String get gamesHubUpcomingEvent => 'Upcoming Event';
@@ -1808,10 +1854,10 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gamesHubNoLiveBody => 'Check back soon for the next round.';
 
   @override
-  String get gamesHubNoBonusTitle => 'Bonus Game not available';
+  String get gamesHubNoBonusTitle => 'ቦነስ ጸወታ የለን';
 
   @override
-  String get gamesHubNoBonusBody => 'No bonus round is scheduled today.';
+  String get gamesHubNoBonusBody => 'ሎሚ ዝተሓሰበ ቦነስ ዙር የለን።';
 
   @override
   String get gamesHubStartsAfterCurrent => 'Starts after current round';
@@ -1820,7 +1866,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gamesHubJoinLive => 'Join';
 
   @override
-  String get gamesHubOpenBonus => 'Open Bonus Game';
+  String get gamesHubOpenBonus => 'ቦነስ ጸወታ ክፈት';
 
   @override
   String get gamesHubOpenBigGame => 'Open';
@@ -1848,13 +1894,13 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gamesHubLoadErrorTitle => 'Could not load games';
 
   @override
-  String get announcementBonusTitle => 'Bonus Game Today';
+  String get announcementBonusTitle => 'ሎሚ ቦነስ ጸወታ';
 
   @override
-  String get announcementBonusBody => 'Starts after current round';
+  String get announcementBonusBody => 'ድሕሪ ሕጂ ዙር ይጅምር';
 
   @override
-  String get announcementBonusAction => 'Play Free';
+  String get announcementBonusAction => 'ብነጻ ተጻወት';
 
   @override
   String get announcementBigGameTitle => 'BIG GAME';
