@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/realtime/socket_service.dart';
+import '../../../../core/time/server_clock_service.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
@@ -12,6 +14,9 @@ import 'live_game_controllers.dart';
 /// rebuilds. Presentation mode is always derived via [resolveLiveUiMode].
 abstract class LiveGameHost {
   bool get mounted;
+
+  /// False while tearing down — safe for async/socket callbacks to bail out.
+  bool get isLiveHostActive;
 
   BuildContext get context;
 
@@ -71,6 +76,10 @@ abstract class LiveGameHost {
   bool get isGuest;
 
   GamesRepository get gamesRepository;
+
+  SocketService get socketService;
+
+  ServerClockService get serverClock;
 
   List<GameCartelaModel> get myCartelas;
 

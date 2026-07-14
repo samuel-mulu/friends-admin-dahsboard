@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/socket_service.dart';
-import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
 import '../debug/live_realtime_debug.dart';
@@ -69,8 +68,8 @@ class LiveRealtimeController {
   DateTime? _lastSuccessfulSyncAt;
   String? _activeSyncReason;
 
-  ServerClockService get serverClock => host.ref.read(serverClockProvider);
-  SocketService get socketService => host.ref.read(socketServiceProvider);
+  ServerClockService get serverClock => host.serverClock;
+  SocketService get socketService => host.socketService;
   LiveConnectionState get connectionState => _resolveConnectionState();
   // Never paint the sync overlay on top of held terminal UI during a transition.
   // Ready-transition lock unknown outcome uses a dedicated loading overlay on the
@@ -137,7 +136,7 @@ class LiveRealtimeController {
     bool includeMyCartelas = false,
     String? registrationSessionId,
   }) {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
 
@@ -163,7 +162,7 @@ class LiveRealtimeController {
       host.effectiveTimingConfig.canonicalRefetchDebounce,
       () {
         canonicalRefetchDebounceTimer = null;
-        if (!host.mounted) {
+        if (!host.isLiveHostActive) {
           return;
         }
 
@@ -198,7 +197,7 @@ class LiveRealtimeController {
     bool includeCalledNumbers = true,
     bool includeMyCartelas = false,
   }) {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
 
@@ -269,7 +268,7 @@ class LiveRealtimeController {
     bool includeCalledNumbers = false,
     bool includeMyCartelas = false,
   }) async {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
 
@@ -293,7 +292,7 @@ class LiveRealtimeController {
   }
 
   Future<void> syncLatest({required String reason}) async {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
 
@@ -381,7 +380,7 @@ class LiveRealtimeController {
 
   Future<void> _runCoalescedResumeSync() async {
     resumeSyncDebounceTimer = null;
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       _clearSyncUi(showCurrent: false);
       _finishResumeSyncCompleter();
       return;
@@ -427,7 +426,7 @@ class LiveRealtimeController {
             force: requireNetworkOperations,
           )) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!host.mounted) {
+          if (!host.isLiveHostActive) {
             return;
           }
           host.ref.invalidate(myWalletProvider);
@@ -460,7 +459,7 @@ class LiveRealtimeController {
       ResumeSyncGuard.inFlight = false;
       final refetchIndicatorWasVisible = canonicalRefetchInFlight;
       canonicalRefetchInFlight = false;
-      if (refetchIndicatorWasVisible && host.mounted) {
+      if (refetchIndicatorWasVisible && host.isLiveHostActive) {
         host.markNeedsBuild();
       }
       _finishResumeSyncCompleter();
@@ -485,7 +484,7 @@ class LiveRealtimeController {
   }
 
   void onSocketConnectivityChanged() {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
     host.markNeedsBuild();
@@ -517,7 +516,7 @@ class LiveRealtimeController {
         ? _syncOverlayDelayManual
         : _syncOverlayDelayBackground;
     _syncOverlayTimer = Timer(overlayDelay, () {
-      if (!host.mounted || !(_syncScheduled || resumeSyncInFlight)) {
+      if (!host.isLiveHostActive || !(_syncScheduled || resumeSyncInFlight)) {
         return;
       }
       // Skip overlay when painted game is already on screen for background sync.
@@ -541,12 +540,12 @@ class LiveRealtimeController {
       _lastSuccessfulSyncAt = DateTime.now();
       _currentBadgeTimer?.cancel();
       _currentBadgeTimer = Timer(_currentBadgeDuration, () {
-        if (host.mounted) {
+        if (host.isLiveHostActive) {
           host.markNeedsBuild();
         }
       });
     }
-    if (host.mounted) {
+    if (host.isLiveHostActive) {
       host.markNeedsBuild();
     }
   }
@@ -558,13 +557,13 @@ class LiveRealtimeController {
     _lastSyncFailed = true;
     _currentBadgeTimer?.cancel();
     _showFailureSnackBar();
-    if (host.mounted) {
+    if (host.isLiveHostActive) {
       host.markNeedsBuild();
     }
   }
 
   void _showFailureSnackBar() {
-    if (!host.mounted) {
+    if (!host.isLiveHostActive) {
       return;
     }
     final messenger = ScaffoldMessenger.maybeOf(host.context);
@@ -608,7 +607,7 @@ class LiveRealtimeController {
   }
 
   Future<void> drainRefetchCanonicalQueue() async {
-    while (host.mounted) {
+    while (host.isLiveHostActive) {
       final wallet = pendingRefetchWallet;
       final includeCalledNumbers = pendingRefetchIncludeCalledNumbers;
       final includeMyCartelas = pendingRefetchIncludeMyCartelas;
@@ -648,7 +647,7 @@ class LiveRealtimeController {
         LiveRealtimeDebug.refreshFailed(reason: reason, error: error);
         Error.throwWithStackTrace(error, stackTrace);
       } finally {
-        if (host.mounted) {
+        if (host.isLiveHostActive) {
           host.markNeedsBuild(() => canonicalRefetchInFlight = false);
         }
       }

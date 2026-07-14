@@ -3,16 +3,27 @@ abstract final class AppSupport {
   static const contactTitle = 'Contact us';
   static const termsTitle = 'Terms and conditions';
 
-  /// Display format shown in the drawer.
-  static const supportPhoneDisplay = '0962520885';
+  /// Display format shown in the drawer and support modals.
+  static const supportPhoneDisplays = ['0961355799', '0952723287'];
 
-  /// Dialable phone URI (Ethiopia +251).
-  static const supportPhoneUri = 'tel:+251962520885';
+  static String get supportPhoneDisplay => supportPhoneDisplays.join(' / ');
+
+  /// Dialable phone URIs (Ethiopia +251).
+  static const supportPhoneUris = [
+    'tel:+251961355799',
+    'tel:+251952723287',
+  ];
 
   /// Telegram handle without @.
   static const telegramUsername = 'friendsbingo';
 
   static Uri get telegramUri => Uri.parse('https://t.me/$telegramUsername');
+
+  static const developerName = '2ms developers';
+  static const developerTelegramUsername = 'samimulu1';
+
+  static Uri get developerTelegramUri =>
+      Uri.parse('https://t.me/$developerTelegramUsername');
 
   static const termsBody = '''
 Friends Bingo – Terms and Conditions

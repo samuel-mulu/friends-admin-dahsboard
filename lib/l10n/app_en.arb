@@ -925,6 +925,18 @@
   "exitAppExit": "Exit",
   "@exitAppExit": {},
 
+  "developerModeBlockedTitle": "Security check",
+  "@developerModeBlockedTitle": {},
+
+  "developerModeBlockedMessage": "Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.",
+  "@developerModeBlockedMessage": {},
+
+  "developerModeOpenSettings": "Open settings",
+  "@developerModeOpenSettings": {},
+
+  "developerModeCloseApp": "Close app",
+  "@developerModeCloseApp": {},
+
   "winningCartelasTitle": "Winning cartelas",
   "@winningCartelasTitle": {},
 
@@ -1288,6 +1300,30 @@
 
   "drawerSignInToPlay": "Sign in to play and register cartelas",
   "@drawerSignInToPlay": {},
+
+  "drawerSounds": "Sounds",
+  "@drawerSounds": {},
+
+  "soundSettingsDeviceOnly": "These settings are saved on this device only.",
+  "@soundSettingsDeviceOnly": {},
+
+  "soundMaster": "Game sounds",
+  "@soundMaster": {},
+
+  "soundCalledNumber": "Called number",
+  "@soundCalledNumber": {},
+
+  "soundGameStart": "Game start",
+  "@soundGameStart": {},
+
+  "soundWinnerWindow": "Winner window",
+  "@soundWinnerWindow": {},
+
+  "soundValidBingo": "Valid bingo",
+  "@soundValidBingo": {},
+
+  "soundVibrate": "Vibrate",
+  "@soundVibrate": {},
 
   "drawerBalance": "Balance",
   "@drawerBalance": {},

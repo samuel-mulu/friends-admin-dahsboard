@@ -10,7 +10,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     return _loadInitialState(
       showLoading: false,
       includeCalledNumbers: true,
-      includeMyCartelas: !_isGuest,
+      includeMyCartelas: !isGuest,
       allowTerminalTransition: true,
       resumeSync: true,
       allowCachedOperations: allowCachedOperations,
@@ -181,7 +181,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     void requestClosingRefetch() {
       _realtime.requestTerminalCanonicalRefetch(
         reason: 'winner_window_expired',
-        wallet: !_isGuest,
+        wallet: !isGuest,
         registrationSessionId: game.sessionId,
         includeCalledNumbers: true,
         includeMyCartelas: false,
@@ -285,7 +285,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'winner_window_local_finish',
-      wallet: !_isGuest,
+      wallet: !isGuest,
       registrationSessionId: game.sessionId,
       includeCalledNumbers: true,
       includeMyCartelas: false,
@@ -306,7 +306,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'winner_window_pending_cleared',
-      wallet: !_isGuest,
+      wallet: !isGuest,
       registrationSessionId: game.sessionId,
       includeCalledNumbers: true,
       includeMyCartelas: false,
@@ -425,7 +425,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   bool get _winnerReviewEligibleViewer =>
-      !_isGuest && _hasVisibleCurrentSessionCartelas;
+      !isGuest && _hasVisibleCurrentSessionCartelas;
 
   List<SessionWinnerResultModel> get _winnerReviewDialogResults {
     return _review.dialogResultsForDisplay(_sessionWinnerResultsForDisplay);
@@ -834,7 +834,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final nextGame = _resolveQueueUpcomingGame(operations, current: current);
       var nextCartelas = const <GameCartelaModel>[];
       final nextSessionId = nextGame?.sessionId;
-      if (!_isGuest &&
+      if (!isGuest &&
           nextSessionId != null &&
           nextSessionId.isNotEmpty &&
           nextSessionId != current.sessionId) {
@@ -933,7 +933,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'game_cancelled',
-      wallet: !_isGuest,
+      wallet: !isGuest,
       registrationSessionId: _game?.sessionId,
       includeCalledNumbers: true,
       includeMyCartelas: false,
@@ -1102,7 +1102,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           operations = null;
         }
       } else if (widget.initialGame != null) {
-        final serverNow = ref.read(serverClockProvider).nowUtc();
+        final serverNow = _serverClock.nowUtc();
         operations = localOperationsSnapshotForGame(
           widget.initialGame!,
           serverNow: serverNow,
@@ -1357,9 +1357,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       var effectiveIncludeMyCartelas = resumeSync
-          ? !_isGuest
+          ? !isGuest
           : includeMyCartelas;
-      if (resumeSync && !_isGuest) {
+      if (resumeSync && !isGuest) {
         final myCartelasDecision = resolveResumeMyCartelasFetch(
           game: game,
           priorSessionId: priorSessionId,
@@ -1408,7 +1408,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
 
         if (parallelCalledNumbersSessionId != null) {
-          if (_isGuest) {
+          if (isGuest) {
             final snapshot = await _gamesRepository.getCalledNumbers(
               parallelCalledNumbersSessionId,
             );
@@ -1478,7 +1478,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             calledNumbers = List<CalledNumberModel>.from(snapshot.calledNumbers)
               ..sort((left, right) => left.order.compareTo(right.order));
           }
-        } else if (!_isGuest &&
+        } else if (!isGuest &&
             effectiveIncludeMyCartelas &&
             preloadedPrimaryCartelas == null) {
           try {
@@ -1544,7 +1544,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         current: game,
       );
       final nextSessionId = nextRegistrationTarget?.sessionId;
-      if (!_isGuest &&
+      if (!isGuest &&
           nextSessionId != null &&
           nextSessionId.isNotEmpty &&
           nextSessionId != game.sessionId) {
@@ -1724,7 +1724,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _runAfterBuild(() {
       final sessionId = _trackedRegistrationSessionId;
-      if (_isGuest || sessionId == null) {
+      if (isGuest || sessionId == null) {
         return;
       }
 
@@ -1930,6 +1930,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       final previousNextAutoCallAt = _game?.nextAutoCallAt;
+      final previousStatus = _game?.status;
       final mergedGame = resumeSync
           ? game
           : GameModel.mergeCanonicalSessionState(
@@ -1938,6 +1939,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             );
 
       _game = mergedGame;
+      if (!sessionChanged &&
+          mergedGame.status == GameStatus.playing &&
+          (previousStatus == GameStatus.ready ||
+              previousStatus == GameStatus.next)) {
+        _playGameSound(SoundEvent.gameStart, sessionId: mergedGame.sessionId);
+      }
       final scheduleChanged = !dateTimesEqualForSchedule(
         mergedGame.nextAutoCallAt,
         previousNextAutoCallAt,
@@ -2042,7 +2049,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     final sessionId = game.sessionId;
-    if (sessionId != null && sessionId.isNotEmpty && !_isGuest) {
+    if (sessionId != null && sessionId.isNotEmpty && !isGuest) {
       unawaited(_ensureManualMarksReadyForSession(sessionId));
     }
 
@@ -2138,7 +2145,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   Future<void> _refreshMyCartelasSilently() async {
-    if (_isGuest) {
+    if (isGuest) {
       return;
     }
 
@@ -2188,7 +2195,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   Future<void> _refreshNextRegistrationCartelasSilently() async {
-    if (_isGuest) {
+    if (isGuest) {
       return;
     }
 
@@ -2277,7 +2284,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     // Primary round selection is driven by operations/current plus the
     // authenticated player's live-session ownership from /my-cartelas.
     final game =
-        !_isGuest &&
+        !isGuest &&
             allowOwnershipLookup &&
             liveCandidate != null &&
             registrationGame != null &&
@@ -2397,7 +2404,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return true;
     }
 
-    if (_isGuest) {
+    if (isGuest) {
       return !_isLoading;
     }
 
@@ -2583,6 +2590,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    _playGameSound(
+      SoundEvent.calledNumber,
+      sessionId: calledNumber.sessionId.isNotEmpty
+          ? calledNumber.sessionId
+          : null,
+      dedupeKey: calledNumber.id,
+    );
+
     final highestKnownOrder = applyResult.highestKnownOrder;
     if (game != null && schedulePatch != null) {
       if (schedulePatch.autoCallEnabled != null) {
@@ -2737,7 +2752,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       payload,
       eventName: 'game:bingo_valid',
       includeCalledNumbers: true,
-      wallet: !_isGuest,
+      wallet: !isGuest,
     );
     if (normalizedPayload == null) {
       return;
@@ -2753,6 +2768,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _cn.processedResolvedClaimIds.add(claimId);
+    _playGameSound(SoundEvent.validBingo, dedupeKey: claimId);
     final gameCartelaId = normalizedPayload['gameCartelaId'] as String?;
     final cartelaNumber = _cartelaNumberFromPayload(normalizedPayload);
     final currentUserId = ref.read(authControllerProvider).session?.user.id;
@@ -2897,7 +2913,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       payload,
       eventName: 'game:winner_window_event',
       includeCalledNumbers: true,
-      wallet: !_isGuest,
+      wallet: !isGuest,
     );
     if (normalizedPayload == null) {
       return;
@@ -2989,6 +3005,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
       }
     });
+    if (_game?.status == GameStatus.winnerWindow) {
+      _playGameSound(SoundEvent.winnerWindow, sessionId: _game?.sessionId);
+    }
     _refreshLocalOperationsSnapshotIfNeeded();
     _markCalledNumbersPanelDirty();
     _syncWinnerWindowTicker();
@@ -3021,6 +3040,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       generation: generation,
       isCurrentLoad: _isCurrentLoad,
       safeSetState: _safeSetState,
+      onBallRevealed: (ball) {
+        _playGameSound(
+          SoundEvent.calledNumber,
+          sessionId: ball.sessionId.isNotEmpty ? ball.sessionId : null,
+          dedupeKey: ball.id,
+        );
+      },
     );
   }
 
@@ -3059,7 +3085,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'game_finished',
-      wallet: !_isGuest,
+      wallet: !isGuest,
       registrationSessionId: _game?.sessionId,
       includeCalledNumbers: true,
       includeMyCartelas: false,
@@ -3364,7 +3390,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       LiveRealtimeDebug.socket('wallet:updated', normalizedPayload);
     }
 
-    if (!_isGuest) {
+    if (!isGuest) {
       ref.invalidate(myWalletProvider);
     }
 
@@ -3515,7 +3541,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
   }
 
-  String? get _marksUserId => ref.read(authControllerProvider).session?.user.id;
+  String? get _marksUserId => _cachedMarksUserId;
 
   void _resetManualMarksForSession({
     required String? sessionId,
@@ -3629,6 +3655,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   @override
   Future<void> _persistManualMarks() async {
+    if (!isLiveHostActive) {
+      return;
+    }
+
     final userId = _marksUserId;
     final sessionId = _game?.sessionId ?? _cn.marksSessionId;
     if (userId == null || sessionId == null || sessionId.isEmpty) {
@@ -3636,7 +3666,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     try {
-      final storage = await ref.read(cartelaMarksStorageProvider.future);
+      final storage = await _marksStorageIfHostActive();
+      if (storage == null || !isLiveHostActive) {
+        return;
+      }
       await storage.save(
         userId: userId,
         gameSessionId: sessionId,
@@ -3649,7 +3682,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   @override
   void _ensureManualMarksReadyForActiveSession() {
-    if (_isGuest) {
+    if (!isLiveHostActive) {
+      return;
+    }
+
+    if (isGuest) {
       if (_cn.manualMarkedNumbers.isNotEmpty ||
           _cn.lastManualMarkedKey != null ||
           _cn.marksOwnerUserId != null ||
@@ -3681,13 +3718,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   Future<void> _ensureManualMarksReadyForSession(String sessionId) async {
+    if (!isLiveHostActive) {
+      return;
+    }
+
     final userId = _marksUserId;
-    if (userId == null || sessionId.isEmpty || _isGuest) {
+    if (userId == null || sessionId.isEmpty || isGuest) {
       return;
     }
 
     if (_cn.marksOwnerUserId != null && _cn.marksOwnerUserId != userId) {
-      if (!mounted) {
+      if (!isLiveHostActive) {
         return;
       }
       setState(() {
@@ -3701,12 +3742,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     try {
-      final storage = await ref.read(cartelaMarksStorageProvider.future);
+      final storage = await _marksStorageIfHostActive();
+      if (storage == null) {
+        return;
+      }
       final restored = await storage.load(
         userId: userId,
         gameSessionId: sessionId,
       );
-      if (!mounted || _game?.sessionId != sessionId) {
+      if (!isLiveHostActive || _game?.sessionId != sessionId) {
         return;
       }
       final normalizedResolved = normalizeManualMarkedNumbers(restored);
@@ -3735,7 +3779,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     try {
-      final storage = await ref.read(cartelaMarksStorageProvider.future);
+      final storage = await _marksStorageIfHostActive();
+      if (storage == null) {
+        return;
+      }
       await storage.clear(userId: userId, gameSessionId: sessionId);
     } catch (_) {}
   }

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:friends_bingo_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/device/device_security_controller.dart';
+import 'core/device/device_security_gate.dart';
 import 'core/device/screen_awake_controller.dart';
 import 'core/l10n/fallback_global_localizations.dart';
 import 'core/notifications/auth_notification_sync.dart';
@@ -72,6 +74,9 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       unawaited(_bootstrapVersionCheck());
+      if (!kDebugMode) {
+        unawaited(_bootstrapDeviceSecurityCheck());
+      }
     }
   }
 
@@ -99,6 +104,13 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
       case AppLifecycleState.resumed:
         controller.onAppResumed();
         unawaited(syncAppAfterResume(ref));
+        if (!kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.android &&
+            !kDebugMode) {
+          unawaited(
+            ref.read(deviceSecurityControllerProvider.notifier).check(),
+          );
+        }
         if (!kIsWeb &&
             defaultTargetPlatform == TargetPlatform.android &&
             ref
@@ -178,12 +190,18 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
-      builder: (context, child) => ForceUpdateGate(child: child),
+      builder: (context, child) => DeviceSecurityGate(
+        child: ForceUpdateGate(child: child),
+      ),
     );
   }
 
   Future<void> _bootstrapVersionCheck() async {
     await ref.read(versionCheckControllerProvider.notifier).check();
+  }
+
+  Future<void> _bootstrapDeviceSecurityCheck() async {
+    await ref.read(deviceSecurityControllerProvider.notifier).check();
   }
 
   Future<void> _recheckForceUpdateAfterBrowser() async {

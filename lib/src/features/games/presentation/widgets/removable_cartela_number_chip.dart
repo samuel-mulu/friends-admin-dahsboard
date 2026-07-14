@@ -32,7 +32,8 @@ class RemovableCartelaNumberChip extends StatelessWidget {
 
     final foreground = isDone
         ? AppBranding.bingoFreeGreen
-        : AppBranding.cartelaChipAvailableForeground(context);
+        : AppBranding.cartelaChipSelectedForeground(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Opacity(
       opacity: isPending ? 0.55 : 1,
@@ -46,7 +47,7 @@ class RemovableCartelaNumberChip extends StatelessWidget {
             color: isDone
                 ? AppBranding.cartelaChipMineBorder(context)
                 : isActive
-                    ? AppBranding.gold
+                    ? (isDark ? AppBranding.gold : AppBranding.brandPurple)
                     : AppBranding.cartelaChipAvailableBorder(context),
             width: isActive ? 2 : 1,
           ),
@@ -72,7 +73,9 @@ class RemovableCartelaNumberChip extends StatelessWidget {
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppBranding.gold,
+                            color: isDark
+                                ? AppBranding.gold
+                                : AppBranding.brandPurple,
                           ),
                         ),
                         const SizedBox(width: 6),

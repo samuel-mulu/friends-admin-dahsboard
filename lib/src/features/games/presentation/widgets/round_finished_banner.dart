@@ -5,6 +5,133 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/session_winner_result_model.dart';
 import 'winner_cartela_number_strip.dart';
 
+Color _bannerGoldAccent(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? AppBranding.gold
+      : AppBranding.goldDark;
+}
+
+/// Gentle attention pulse for the post-round Continue action.
+class _SubtlePulseContinueButton extends StatefulWidget {
+  const _SubtlePulseContinueButton({
+    required this.label,
+    required this.onPressed,
+    required this.isAdvancing,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isAdvancing;
+
+  @override
+  State<_SubtlePulseContinueButton> createState() =>
+      _SubtlePulseContinueButtonState();
+}
+
+class _SubtlePulseContinueButtonState extends State<_SubtlePulseContinueButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SubtlePulseContinueButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isAdvancing != widget.isAdvancing) {
+      _syncAnimation();
+    }
+  }
+
+  void _syncAnimation() {
+    if (widget.isAdvancing) {
+      _controller
+        ..stop()
+        ..value = 0;
+      return;
+    }
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final button = FilledButton(
+      onPressed: widget.isAdvancing ? null : widget.onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppBranding.goldAccent,
+        foregroundColor: AppBranding.brandPurple,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 8,
+        ),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: widget.isAdvancing
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppBranding.brandPurple,
+              ),
+            )
+          : Text(
+              widget.label,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+    );
+
+    if (widget.isAdvancing) {
+      return button;
+    }
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final t = _pulse.value;
+        return Transform.scale(
+          scale: 1 + (t * 0.025),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: AppBranding.goldDark.withValues(
+                    alpha: 0.18 + (t * 0.22),
+                  ),
+                  blurRadius: 3 + (t * 5),
+                  spreadRadius: t * 0.4,
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: button,
+    );
+  }
+}
+
 /// Compact banner shown after the winner window closes; keeps the live layout
 /// visible while players review the winning cartela before the next round.
 class RoundFinishedBanner extends StatelessWidget {
@@ -61,6 +188,7 @@ class RoundFinishedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final goldAccent = _bannerGoldAccent(context);
     final canOpenDialog =
         !isAdvancing && !isNoWinner && onOpenWinners != null && results.isNotEmpty;
 
@@ -76,7 +204,7 @@ class RoundFinishedBanner extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppBranding.gold.withValues(alpha: 0.35),
+              color: goldAccent.withValues(alpha: 0.5),
             ),
           ),
           child: Row(
@@ -84,7 +212,7 @@ class RoundFinishedBanner extends StatelessWidget {
             children: [
               Icon(
                 Icons.emoji_events_rounded,
-                color: AppBranding.gold,
+                color: goldAccent,
                 size: 24,
               ),
               const SizedBox(width: 10),
@@ -167,7 +295,7 @@ class RoundFinishedBanner extends StatelessWidget {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppBranding.gold,
+                              color: goldAccent,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -175,7 +303,7 @@ class RoundFinishedBanner extends StatelessWidget {
                             child: Text(
                               l10n.postGameSummaryOpeningNextRound,
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppBranding.gold,
+                                color: goldAccent,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -186,8 +314,9 @@ class RoundFinishedBanner extends StatelessWidget {
                       Text(
                         l10n.postGameSummaryNextRoundIn(secondsRemaining),
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppBranding.gold,
+                          color: goldAccent,
                           fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
                         ),
                       ),
                   ],
@@ -219,33 +348,10 @@ class RoundFinishedBanner extends StatelessWidget {
                     ),
                   if (onNext != null) ...[
                     if (canOpenDialog) const SizedBox(height: 8),
-                    FilledButton(
-                      onPressed: isAdvancing ? null : onNext,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppBranding.goldAccent,
-                        foregroundColor: AppBranding.brandPurple,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: isAdvancing
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppBranding.brandPurple,
-                              ),
-                            )
-                          : Text(
-                              l10n.postGameSummaryNextGame,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                    _SubtlePulseContinueButton(
+                      label: l10n.postGameSummaryNextGame,
+                      onPressed: onNext,
+                      isAdvancing: isAdvancing,
                     ),
                   ],
                 ],

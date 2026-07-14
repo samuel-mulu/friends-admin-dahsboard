@@ -1746,6 +1746,30 @@ abstract class AppLocalizations {
   /// **'Exit'**
   String get exitAppExit;
 
+  /// No description provided for @developerModeBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security check'**
+  String get developerModeBlockedTitle;
+
+  /// No description provided for @developerModeBlockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.'**
+  String get developerModeBlockedMessage;
+
+  /// No description provided for @developerModeOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get developerModeOpenSettings;
+
+  /// No description provided for @developerModeCloseApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Close app'**
+  String get developerModeCloseApp;
+
   /// No description provided for @winningCartelasTitle.
   ///
   /// In en, this message translates to:
@@ -2333,6 +2357,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in to play and register cartelas'**
   String get drawerSignInToPlay;
+
+  /// No description provided for @drawerSounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Sounds'**
+  String get drawerSounds;
+
+  /// No description provided for @soundSettingsDeviceOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'These settings are saved on this device only.'**
+  String get soundSettingsDeviceOnly;
+
+  /// No description provided for @soundMaster.
+  ///
+  /// In en, this message translates to:
+  /// **'Game sounds'**
+  String get soundMaster;
+
+  /// No description provided for @soundCalledNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Called number'**
+  String get soundCalledNumber;
+
+  /// No description provided for @soundGameStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Game start'**
+  String get soundGameStart;
+
+  /// No description provided for @soundWinnerWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Winner window'**
+  String get soundWinnerWindow;
+
+  /// No description provided for @soundValidBingo.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid bingo'**
+  String get soundValidBingo;
+
+  /// No description provided for @soundVibrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate'**
+  String get soundVibrate;
 
   /// No description provided for @drawerBalance.
   ///

@@ -186,11 +186,9 @@ Future<void> _handleShellBack({
   }
 
   if (location == '/games') {
-    final hasCartelas = ref
-        .read(hasActiveRegisteredCartelasProvider)
-        .hasActiveRegisteredCartelas;
+    final backGuard = ref.read(hasActiveRegisteredCartelasProvider);
 
-    final choice = hasCartelas
+    final choice = backGuard.shouldConfirmLiveGameBack
         ? await showLeaveLiveGameDialog(context)
         : await showExitAppDialog(context);
 

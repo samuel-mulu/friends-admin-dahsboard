@@ -11,6 +11,8 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/realtime/socket_service.dart';
+import '../../../../core/sound/game_sound_service.dart';
+import '../../../../core/sound/sound_event.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/time/server_clock_provider.dart';
@@ -98,6 +100,7 @@ import '../../data/models/session_outcome_summary_model.dart';
 import '../providers/games_providers.dart';
 import '../providers/cartela_catalog_provider.dart';
 import '../../domain/cartela_catalog_state.dart';
+import '../../data/cartela_marks_storage.dart';
 import '../providers/cartela_marks_storage_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../providers/has_active_registered_cartelas_provider.dart';
@@ -154,13 +157,19 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   GamesRepository get gamesRepository => _gamesRepository;
 
   @override
+  SocketService get socketService => _socketService;
+
+  @override
+  ServerClockService get serverClock => _serverClock;
+
+  @override
   void markNeedsBuild([VoidCallback? fn]) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
     void apply() {
-      if (!mounted) {
+      if (!isLiveHostActive) {
         return;
       }
       if (fn != null) {
@@ -188,6 +197,32 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       fn();
     });
   }
+
+  void _playGameSound(
+    SoundEvent event, {
+    String? sessionId,
+    String? dedupeKey,
+  }) {
+    if (!isLiveHostActive) {
+      return;
+    }
+    unawaited(
+      ref.read(gameSoundServiceProvider).play(
+        event,
+        sessionId: sessionId ?? _game?.sessionId,
+        dedupeKey: dedupeKey,
+      ),
+    );
+  }
+
+  /// True while this screen can safely use [ref] and [setState].
+  @override
+  bool get isLiveHostActive => mounted && !_hostTornDown;
+
+  bool _hostTornDown = false;
+  String? _cachedMarksUserId;
+  CartelaMarksStorage? _cartelaMarksStorage;
+  late final ServerClockService _serverClock;
 
   @override
   List<GameCartelaModel> get myCartelas => _registration.myCartelas;
@@ -228,6 +263,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _hasCompletedInitialPaint = false;
   DateTime? _liveRoomSplashStartedAt;
   int _loadGeneration = 0;
+  ProviderSubscription<AuthState>? _authSessionSubscription;
   LivePresentationPhase? _lastDebugPhase;
   bool _isSyncingLiveGame = false;
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
@@ -358,7 +394,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         ),
         now: _countdownNow(),
         preparingStaleAfter: _preparingPhaseCap,
-        isGuest: _isGuest,
+        isGuest: isGuest,
         isLoading: _isLoading,
         awaitingLiveRoom: _awaitingLiveRoom,
         hasError: _errorMessage != null,
@@ -440,8 +476,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   Duration get _preparingPhaseCap =>
       _effectiveTimingConfig.preparingPhaseStaleAfter;
 
-  ServerClockService get _serverClock => ref.read(serverClockProvider);
-
   DateTime _countdownNow({bool useServerClock = true}) {
     if (useServerClock && _serverClock.isSynced) {
       return _serverClock.nowLocal();
@@ -491,11 +525,58 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     gamesRepositoryProvider,
   );
   late final SocketService _socketService = ref.read(socketServiceProvider);
+  HasActiveRegisteredCartelasNotifier? _activeCartelasNotifier;
   // Session ID used for API calls and socket event filtering.
   // null when the current game is a NEXT slot (no session yet).
   String? get _activeSessionId => _game?.sessionId ?? _joinedGameId;
 
-  bool get _isGuest => ref.read(authControllerProvider).session == null;
+  @override
+  bool get isGuest => _cachedMarksUserId == null;
+
+  void _syncCachedAuthSession() {
+    if (_hostTornDown) {
+      return;
+    }
+    try {
+      _cachedMarksUserId = ref.read(authControllerProvider).session?.user.id;
+    } catch (_) {
+      _cachedMarksUserId = null;
+    }
+  }
+
+  void _warmCartelaMarksStorage() {
+    if (_cartelaMarksStorage != null || _hostTornDown) {
+      return;
+    }
+    unawaited(() async {
+      try {
+        final storage = await ref.read(cartelaMarksStorageProvider.future);
+        if (_hostTornDown) {
+          return;
+        }
+        _cartelaMarksStorage = storage;
+      } catch (_) {}
+    }());
+  }
+
+  Future<CartelaMarksStorage?> _marksStorageIfHostActive() async {
+    if (!isLiveHostActive) {
+      return null;
+    }
+    if (_cartelaMarksStorage != null) {
+      return _cartelaMarksStorage;
+    }
+    try {
+      final storage = await ref.read(cartelaMarksStorageProvider.future);
+      if (_hostTornDown) {
+        return null;
+      }
+      _cartelaMarksStorage = storage;
+      return storage;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   GameModel? get game => _game;
@@ -559,9 +640,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   set loadGeneration(int value) => _loadGeneration = value;
 
   @override
-  bool get isGuest => _isGuest;
-
-  @override
   DateTime countdownNow({bool useServerClock = true}) =>
       _countdownNow(useServerClock: useServerClock);
 
@@ -605,16 +683,68 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     _cn.markCalledNumbersPanelDirty();
   }
 
-  /// Syncs current session and cartela count to the back navigation provider.
-  /// Call this whenever _myCartelas or _joinedGameId changes.
+  /// Syncs live-game back-guard state for hardware/app-bar back handling.
   void _syncActiveCartelasToProvider() {
+    final notifier = _activeCartelasNotifier;
+    if (notifier == null) {
+      return;
+    }
+
     _runAfterBuild(() {
+      if (!isLiveHostActive) {
+        return;
+      }
       final sessionId = _activeSessionId;
       final cartelaCount = _myCartelas.length;
-      ref
-          .read(hasActiveRegisteredCartelasProvider.notifier)
-          .updateSessionState(sessionId, cartelaCount);
+      notifier.updateSessionState(
+        sessionId,
+        cartelaCount,
+        requiresLeaveConfirmation: _shouldRequireLiveGameBackConfirm,
+      );
     });
+  }
+
+  bool get _shouldRequireLiveGameBackConfirm {
+    if (_myCartelas.isNotEmpty) {
+      return true;
+    }
+
+    if (_review.postGameSummaryReviewActive || _review.postGameSummaryAdvancing) {
+      return true;
+    }
+
+    switch (_livePresentationPhase) {
+      case LivePresentationPhase.liveWaitingFirstBall:
+      case LivePresentationPhase.liveCalling:
+      case LivePresentationPhase.winnerWindow:
+      case LivePresentationPhase.checking:
+      case LivePresentationPhase.review:
+        return true;
+      case LivePresentationPhase.registrationOpen:
+      case LivePresentationPhase.preparingGame:
+      case LivePresentationPhase.noActiveGame:
+      case LivePresentationPhase.cancelled:
+      case LivePresentationPhase.noPlayersJoined:
+        break;
+    }
+
+    final status = _game?.status;
+    if (status != null) {
+      return _gameStatusRequiresLiveGameBackConfirm(status);
+    }
+
+    return false;
+  }
+
+  bool _gameStatusRequiresLiveGameBackConfirm(GameStatus status) {
+    return switch (status) {
+      GameStatus.playing ||
+      GameStatus.checking ||
+      GameStatus.winnerWindow ||
+      GameStatus.finished ||
+      GameStatus.noWinner => true,
+      _ => false,
+    };
   }
 
   LivePresentationPhase get _livePresentationPhase =>
@@ -632,7 +762,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   /// Copies current-round cartela numbers so the next READY registration panel
   /// can auto-open single/bulk review with the same cards.
   void _capturePreviousCartelasForAutoOpen() {
-    if (_isGuest || _myCartelas.isEmpty) {
+    if (isGuest || _myCartelas.isEmpty) {
       return;
     }
 
@@ -680,6 +810,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   void initState() {
     controllers = LiveGameControllers(this);
     super.initState();
+    _serverClock = ref.read(serverClockProvider);
+    _syncCachedAuthSession();
+    _warmCartelaMarksStorage();
     if (widget.initialGame != null) {
       _game = widget.initialGame;
       _isLoading = false;
@@ -689,7 +822,13 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
-    ref.listenManual(authControllerProvider, _onAuthSessionChanged);
+    _activeCartelasNotifier = ref.read(
+      hasActiveRegisteredCartelasProvider.notifier,
+    );
+    _authSessionSubscription = ref.listenManual(
+      authControllerProvider,
+      _onAuthSessionChanged,
+    );
     unawaited(_bootstrapLiveRoomSplash());
     _registerSocketListeners();
     _joinSessionRoomEarly(widget.gameId ?? widget.initialGame?.sessionId);
@@ -703,7 +842,19 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   @override
   void dispose() {
+    _hostTornDown = true;
+    _removeSocketListeners();
     _loadGeneration++;
+    _authSessionSubscription?.close();
+    _authSessionSubscription = null;
+    // Riverpod forbids provider writes during widget-tree finalization; defer clear.
+    final cartelasNotifier = _activeCartelasNotifier;
+    _activeCartelasNotifier = null;
+    if (cartelasNotifier != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        cartelasNotifier.clear();
+      });
+    }
     WidgetsBinding.instance.removeObserver(this);
     _liveRoomSplashTicker?.cancel();
     _liveCartelaScrollIdle.dispose();
@@ -716,16 +867,17 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     controllers.dispose();
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
-    _removeSocketListeners();
     _applySocketSessionMembership(null);
     LiveGameResumeOwnerRegistry.deactivate();
-    // Clear the active cartelas provider when leaving the screen
-    _syncActiveCartelasToProvider();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!isLiveHostActive) {
+      return;
+    }
+
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
@@ -753,35 +905,42 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+      Future<void>.microtask(() async {
+        _syncCachedAuthSession();
+        if (!isLiveHostActive) {
+          return;
+        }
 
-      if (!hadSession && hasSession) {
-        unawaited(() async {
+        if (!hadSession && hasSession) {
           await _loadInitialState(showLoading: false);
-          if (!mounted) {
+          if (!isLiveHostActive) {
             return;
           }
           _ensureManualMarksReadyForActiveSession();
-        }());
-        return;
-      }
+          return;
+        }
 
-      if (_cn.manualMarkedNumbers.isNotEmpty ||
-          _cn.lastManualMarkedKey != null ||
-          _cn.marksOwnerUserId != null ||
-          _cn.restoredMarksSessionId != null) {
-        setState(() {
-          _cn.manualMarkedNumbers.clear();
-          _cn.lastManualMarkedKey = null;
-          _cn.marksSessionId = null;
-          _cn.marksOwnerUserId = null;
-          _cn.restoredMarksSessionId = null;
-        });
-      }
+        if (_cn.manualMarkedNumbers.isNotEmpty ||
+            _cn.lastManualMarkedKey != null ||
+            _cn.marksOwnerUserId != null ||
+            _cn.restoredMarksSessionId != null) {
+          if (!isLiveHostActive) {
+            return;
+          }
+          setState(() {
+            _cn.manualMarkedNumbers.clear();
+            _cn.lastManualMarkedKey = null;
+            _cn.marksSessionId = null;
+            _cn.marksOwnerUserId = null;
+            _cn.restoredMarksSessionId = null;
+          });
+        }
 
-      unawaited(_loadInitialState(showLoading: false));
+        if (!isLiveHostActive) {
+          return;
+        }
+        await _loadInitialState(showLoading: false);
+      });
     });
   }
 
@@ -900,7 +1059,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   bool get _usesExpandedNoCartelaRegistrationLayout {
     return usesExpandedNoCartelaRegistrationLayout(
-      isGuest: _isGuest,
+      isGuest: isGuest,
       hasCurrentCartelas: _hasVisibleCurrentSessionCartelas,
       showsInlinePlayCartelas: _showsInlinePlayCartelas,
       registrationTarget: _primaryRegistrationTarget,
@@ -1044,7 +1203,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 key: ValueKey(
                   'registration-pulse-${game.sessionId ?? game.id}',
                 ),
-                isGuest: _isGuest,
+                isGuest: isGuest,
                 ruleName: game.localizedRuleName(ref),
                 titleOverride: showRegistrationHandoffPreparing
                     ? game.localizedRuleName(ref)
@@ -1113,7 +1272,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           VGap.sm,
           Expanded(
             child: !uiMode.showRegistrationGrid
-                ? (_isGuest
+                ? (isGuest
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.zero,
@@ -1199,7 +1358,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   }
 
   int _myRegisteredCountForGame(GameModel game) {
-    if (_isGuest) {
+    if (isGuest) {
       return 0;
     }
     if (_isCurrentGameTarget(game)) {
@@ -1529,7 +1688,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ),
         ] else if (!_hasVisibleCurrentSessionCartelas &&
             !_review.postGameSummaryReviewActive)
-          _isGuest
+          isGuest
               ? _GuestSpectatorHint(
                   onSignUp: () => context.go('/register'),
                   onSignIn: () => context.go(loginPathWithRedirect('/games')),
@@ -1666,7 +1825,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   }
 
   Set<String> get _liveLockedCartelaIds {
-    if (_isGuest || !_hasVisibleCurrentSessionCartelas) {
+    if (isGuest || !_hasVisibleCurrentSessionCartelas) {
       return const {};
     }
 
@@ -1691,7 +1850,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       registeredCartelas: registeredCartelas,
       cartelaHoldSeconds: _cartelaHoldSeconds,
       bulkSelectionSeconds: _effectiveBulkSelectionSeconds,
-      isGuest: _isGuest,
+      isGuest: isGuest,
       autoOpenCartelaNumbers: _pendingAutoOpenCartelaNumbers,
       onAutoOpenConsumed: _clearPendingAutoOpenCartelaNumbers,
       onRegistered: _handleCartelasRegistered,
@@ -1721,7 +1880,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       return;
     }
 
-    if (_isGuest) {
+    if (isGuest) {
       await showGuestAuthPromptSheet(context);
       return;
     }
@@ -1792,7 +1951,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
   bool get _showsInlinePlayCartelas => _liveUiMode.showsInlinePlayCartelas;
 
-  bool get _showsGuestSpectator => _isGuest && _showsInlinePlayCartelas;
+  bool get _showsGuestSpectator => isGuest && _showsInlinePlayCartelas;
 
   List<int> get _nextRegisteredCartelaNumbers {
     final numbers =
@@ -1827,7 +1986,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   }
 
   bool get _shouldShowRegistrationPanel {
-    if (_isGuest) {
+    if (isGuest) {
       return false;
     }
 
@@ -2858,7 +3017,7 @@ class _GuestPromoCongratsCard extends StatelessWidget {
                       Text(
                         l10n.guestPromoCongratsAmountWon(amountLabel),
                         textAlign: TextAlign.center,
-                        style: AppBranding.wordmarkBrandAccent(size: 24),
+                        style: AppBranding.wordmarkBrandAccent(context, size: 24),
                       ),
                       VGap.sm,
                       Text(

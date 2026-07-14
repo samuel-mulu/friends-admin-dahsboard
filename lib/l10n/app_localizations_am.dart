@@ -944,6 +944,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exitAppExit => 'ዝጋ';
 
   @override
+  String get developerModeBlockedTitle => 'Security check';
+
+  @override
+  String get developerModeBlockedMessage =>
+      'Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.';
+
+  @override
+  String get developerModeOpenSettings => 'Open settings';
+
+  @override
+  String get developerModeCloseApp => 'Close app';
+
+  @override
   String get winningCartelasTitle => 'የማሸነፊያ ካርቴላዎች';
 
   @override
@@ -1292,6 +1305,30 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get drawerSignInToPlay => 'ለመጫወት እና ካርቴሎ ለመመዝገብ ግባ';
+
+  @override
+  String get drawerSounds => 'ድምፆች';
+
+  @override
+  String get soundSettingsDeviceOnly => 'እነዚህ ቅንብሮች በዚህ መሳሪያ ላይ ብቻ ይቀመጣሉ።';
+
+  @override
+  String get soundMaster => 'የጨዋታ ድምፆች';
+
+  @override
+  String get soundCalledNumber => 'የተጠራ ቁጥር';
+
+  @override
+  String get soundGameStart => 'ጨዋታ መጀመር';
+
+  @override
+  String get soundWinnerWindow => 'የአሸናፊ መስኮት';
+
+  @override
+  String get soundValidBingo => 'ትክክለኛ ቢንጎ';
+
+  @override
+  String get soundVibrate => 'ንዝረት';
 
   @override
   String get drawerBalance => 'ቀሪ';

@@ -974,6 +974,19 @@ class AppLocalizationsOm extends AppLocalizations {
   String get exitAppExit => 'Cufi';
 
   @override
+  String get developerModeBlockedTitle => 'Security check';
+
+  @override
+  String get developerModeBlockedMessage =>
+      'Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.';
+
+  @override
+  String get developerModeOpenSettings => 'Open settings';
+
+  @override
+  String get developerModeCloseApp => 'Close app';
+
+  @override
   String get winningCartelasTitle => 'Kaartelaa mo\'atan';
 
   @override
@@ -1337,6 +1350,31 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get drawerSignInToPlay => 'Taphachuuf fi kaartelaa galmeessuuf seeni';
+
+  @override
+  String get drawerSounds => 'Sagaleewwan';
+
+  @override
+  String get soundSettingsDeviceOnly =>
+      'Qindaa\'inoonni kun meeshaa kana irratti qofa kuufamu.';
+
+  @override
+  String get soundMaster => 'Sagalee taphaa';
+
+  @override
+  String get soundCalledNumber => 'Lakkoofsa waamame';
+
+  @override
+  String get soundGameStart => 'Jalqaba taphaa';
+
+  @override
+  String get soundWinnerWindow => 'Foddaa mo\'ataa';
+
+  @override
+  String get soundValidBingo => 'Biingoo sirrii';
+
+  @override
+  String get soundVibrate => 'Hollannaa';
 
   @override
   String get drawerBalance => 'Haftee';

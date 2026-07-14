@@ -968,6 +968,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exitAppExit => 'Exit';
 
   @override
+  String get developerModeBlockedTitle => 'Security check';
+
+  @override
+  String get developerModeBlockedMessage =>
+      'Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.';
+
+  @override
+  String get developerModeOpenSettings => 'Open settings';
+
+  @override
+  String get developerModeCloseApp => 'Close app';
+
+  @override
   String get winningCartelasTitle => 'Winning cartelas';
 
   @override
@@ -1327,6 +1340,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerSignInToPlay => 'Sign in to play and register cartelas';
+
+  @override
+  String get drawerSounds => 'Sounds';
+
+  @override
+  String get soundSettingsDeviceOnly =>
+      'These settings are saved on this device only.';
+
+  @override
+  String get soundMaster => 'Game sounds';
+
+  @override
+  String get soundCalledNumber => 'Called number';
+
+  @override
+  String get soundGameStart => 'Game start';
+
+  @override
+  String get soundWinnerWindow => 'Winner window';
+
+  @override
+  String get soundValidBingo => 'Valid bingo';
+
+  @override
+  String get soundVibrate => 'Vibrate';
 
   @override
   String get drawerBalance => 'Balance';

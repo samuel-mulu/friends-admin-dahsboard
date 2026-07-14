@@ -1911,6 +1911,7 @@ class _BulkRegisteringBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1919,7 +1920,11 @@ class _BulkRegisteringBanner extends StatelessWidget {
           alpha: theme.brightness == Brightness.dark ? 0.55 : 0.12,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppBranding.gold.withValues(alpha: 0.55)),
+        border: Border.all(
+          color: isDark
+              ? AppBranding.gold.withValues(alpha: 0.55)
+              : AppBranding.brandPurple.withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1931,7 +1936,7 @@ class _BulkRegisteringBanner extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppBranding.gold,
+                  color: AppBranding.brandAccentValue(context),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1949,9 +1954,9 @@ class _BulkRegisteringBanner extends StatelessWidget {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
-            child: const LinearProgressIndicator(
+            child: LinearProgressIndicator(
               minHeight: 6,
-              color: AppBranding.gold,
+              color: AppBranding.brandAccentValue(context),
             ),
           ),
         ],

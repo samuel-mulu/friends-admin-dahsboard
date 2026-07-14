@@ -54,7 +54,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onSocketConnected(dynamic _) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -73,7 +73,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   Future<void> _recoverFromAppResume() async {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -82,6 +82,9 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     );
 
     _countdown.resumeFromAppBackground();
+    if (!isLiveHostActive) {
+      return;
+    }
     _syncWinnerWindowTicker();
     _syncNextBallCountdownTicker();
 
@@ -124,7 +127,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onGameStatusChanged(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -174,7 +177,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     if (action == LiveSyncAction.terminalTransitionSnapshot) {
       _realtime.requestTerminalCanonicalRefetch(
         reason: 'status_changed_terminal',
-        wallet: !_isGuest,
+        wallet: !isGuest,
         registrationSessionId: _game?.sessionId,
         includeCalledNumbers: true,
         includeMyCartelas: false,
@@ -182,6 +185,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       return;
     }
 
+    final priorStatus = _game?.status;
     final patched = applyStatusChangedSocketPatch(
       current: _game,
       payload: normalizedPayload,
@@ -198,6 +202,14 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           _countdown.winnerWindowEndsAt = patched.winnerWindowEndsAt;
         }
       });
+      if (patched.status == GameStatus.playing &&
+          (priorStatus == GameStatus.ready ||
+              priorStatus == GameStatus.next)) {
+        _playGameSound(SoundEvent.gameStart, sessionId: patched.sessionId);
+      }
+      if (patched.status == GameStatus.winnerWindow) {
+        _playGameSound(SoundEvent.winnerWindow, sessionId: patched.sessionId);
+      }
       if (patched.status == GameStatus.winnerWindow ||
           patched.status == GameStatus.finished ||
           patched.status == GameStatus.noWinner) {
@@ -215,7 +227,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onSlotStatusChanged(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -239,7 +251,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onSessionPrizeUpdated(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -263,7 +275,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onSessionCartelasUpdated(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -319,14 +331,14 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onMyCartelaRegistered(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
     final normalizedPayload = _normalizeSocketPayloadForEvent(
       payload,
       eventName: 'my_cartela:registered',
-      wallet: !_isGuest,
+      wallet: !isGuest,
       preferRegistrationSessionRefetch: true,
     );
     if (normalizedPayload == null) {
@@ -362,7 +374,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onGameOperationUpdated(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 
@@ -421,7 +433,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   void _onSlotEntryFeeUpdated(dynamic payload) {
-    if (!mounted) {
+    if (!isLiveHostActive) {
       return;
     }
 

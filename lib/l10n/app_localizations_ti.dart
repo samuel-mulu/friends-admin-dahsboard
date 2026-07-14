@@ -441,14 +441,14 @@ class AppLocalizationsTi extends AppLocalizations {
   String get depositSelectProvider => 'ኣገባብ ክፍሊት';
 
   @override
-  String get depositSendToAccount => 'ናብዚ ሕሳብ ልኣኽ';
+  String get depositSendToAccount => 'ናብዚ ሕሳብ ልኣኽ ኣዘር ባንክ አይካኣልን';
 
   @override
   String get depositShowInstructions => 'መምርሒታት';
 
   @override
   String get depositReceiptReviewLabel =>
-      'ካብ ግብይተይ ዝመጸ መጠንን ቁጽሪ ማጣቀሻን ኣረጋጊጸ ኣለኹ';
+      'ካብ scrrenshot ዝመጸ ኮድ አና መጠን ኣረጋጊጸ ኣለኹ';
 
   @override
   String get depositCopyAccount => 'ሕሳብ ቅዳሕ';
@@ -946,6 +946,19 @@ class AppLocalizationsTi extends AppLocalizations {
   String get exitAppExit => 'ዕጾ';
 
   @override
+  String get developerModeBlockedTitle => 'Security check';
+
+  @override
+  String get developerModeBlockedMessage =>
+      'Developer options are turned on. Turn them off in your phone settings to use Friends Bingo.';
+
+  @override
+  String get developerModeOpenSettings => 'Open settings';
+
+  @override
+  String get developerModeCloseApp => 'Close app';
+
+  @override
   String get winningCartelasTitle => 'ታ ዓዋቲት ካርቴላ';
 
   @override
@@ -1296,6 +1309,30 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String get drawerSignInToPlay => 'ንምጽዋት ኮነ ካርቴላ ንምምዝጋብ እቶ';
+
+  @override
+  String get drawerSounds => 'ድምጽታት';
+
+  @override
+  String get soundSettingsDeviceOnly => 'እዞም ቅንብራት ኣብዚ መሳርሒ ጥራይ ይቕመጡ።';
+
+  @override
+  String get soundMaster => 'ናይ ጸወታ ድምጽታት';
+
+  @override
+  String get soundCalledNumber => 'ዝተጸውዐ ቁጽሪ';
+
+  @override
+  String get soundGameStart => 'ምጅማር ጸወታ';
+
+  @override
+  String get soundWinnerWindow => 'ናይ ተዓዋቲ መስኮት';
+
+  @override
+  String get soundValidBingo => 'ቅኑዕ ቢንጎ';
+
+  @override
+  String get soundVibrate => 'ንዝረት';
 
   @override
   String get drawerBalance => 'ቀሪ';

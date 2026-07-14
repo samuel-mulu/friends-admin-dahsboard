@@ -116,7 +116,7 @@ abstract final class AppBranding {
   }
 
   static Color brandAccentValue(BuildContext context) {
-    return _isDark(context) ? gold : goldAccent;
+    return _isDark(context) ? gold : brandPurple;
   }
 
   static Color headerActionIcon(BuildContext context) {
@@ -255,7 +255,11 @@ abstract final class AppBranding {
   }
 
   static Color balanceAccent(BuildContext context) {
-    return _isDark(context) ? gold : goldAccent;
+    return _isDark(context) ? gold : brandPurple;
+  }
+
+  static Color cartelaChipSelectedForeground(BuildContext context) {
+    return _isDark(context) ? Colors.white : brandPurple;
   }
 
   static Color cartelaChipAvailableBackground(BuildContext context) {
@@ -267,7 +271,9 @@ abstract final class AppBranding {
   }
 
   static Color cartelaChipAvailableBorder(BuildContext context) {
-    return gold.withValues(alpha: _isDark(context) ? 0.55 : 0.65);
+    return _isDark(context)
+        ? gold.withValues(alpha: 0.55)
+        : brandPurple.withValues(alpha: 0.45);
   }
 
   static Color cartelaChipSelectedBackground(BuildContext context) {
@@ -340,12 +346,12 @@ abstract final class AppBranding {
     );
   }
 
-  static TextStyle wordmarkBrandAccent({double size = 28}) {
+  static TextStyle wordmarkBrandAccent(BuildContext context, {double size = 28}) {
     return GoogleFonts.bebasNeue(
       fontSize: size,
       letterSpacing: 2.5,
       height: 1,
-      color: goldAccent,
+      color: _isDark(context) ? goldAccent : brandPurple,
     );
   }
 }

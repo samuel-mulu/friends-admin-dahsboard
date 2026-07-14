@@ -562,6 +562,7 @@ class LiveCalledNumbersController {
     required int generation,
     required bool Function(int generation) isCurrentLoad,
     required void Function(int generation, VoidCallback fn) safeSetState,
+    void Function(CalledNumberModel ball)? onBallRevealed,
   }) async {
     final sorted = normalizeCalledNumbers(incoming);
     final newOnes = sorted
@@ -578,8 +579,14 @@ class LiveCalledNumbersController {
         rebuildCalledNumberTracking();
         isSyncingCalledNumbers = false;
       });
+      if (newOnes.length == 1) {
+        onBallRevealed?.call(newOnes.first);
+      }
       return;
     }
+
+    // Many missed balls on catch-up: sound only the latest to avoid noise.
+    final soundEveryBall = newOnes.length <= 5;
 
     safeSetState(generation, () {
       isSyncingCalledNumbers = true;
@@ -605,6 +612,7 @@ class LiveCalledNumbersController {
         return;
       }
 
+      var revealed = false;
       safeSetState(generation, () {
         if (processedCalledNumberIds.contains(ball.id) ||
             processedCalledNumberOrders.contains(ball.order)) {
@@ -620,7 +628,11 @@ class LiveCalledNumbersController {
           deferred: deferredCalledNumbers,
         );
         rebuildCalledNumberTracking();
+        revealed = true;
       });
+      if (revealed && (soundEveryBall || identical(ball, newOnes.last))) {
+        onBallRevealed?.call(ball);
+      }
     }
 
     if (!isCurrentLoad(generation) || !host.mounted) {

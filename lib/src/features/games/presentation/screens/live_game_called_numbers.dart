@@ -171,6 +171,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       }
 
       if (result.isWinner && result.gameStatus == GameStatus.winnerWindow) {
+        _playGameSound(SoundEvent.validBingo, dedupeKey: result.claim.id);
         setState(() {
           _applyClaimResultState(result: result, gameCartela: gameCartela);
           claimStateAppliedEarly = true;

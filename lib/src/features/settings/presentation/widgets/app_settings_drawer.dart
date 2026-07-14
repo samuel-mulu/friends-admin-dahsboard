@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/app_support.dart';
 import '../../../../core/notifications/notification_preferences.dart';
 import '../../../../core/routing/auth_route_guard.dart';
+import '../../../../core/sound/sound_preferences.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/external_links.dart';
@@ -195,6 +196,21 @@ class AppSettingsDrawer extends ConsumerWidget {
                     ),
                   ),
                   VGap.md,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
+                    child: _DrawerSectionCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: _SoundQuickCard(
+                        onOpenSettings: () => _openSoundSettings(context),
+                      ),
+                    ),
+                  ),
+                  VGap.md,
                   _DrawerSectionCard(
                     child: Column(
                       children: [
@@ -270,19 +286,22 @@ class AppSettingsDrawer extends ConsumerWidget {
                           iconColor: theme.colorScheme.primary,
                           title: AppSupport.contactTitle,
                         ),
-                        _DrawerMenuRow(
-                          icon: Icons.phone_outlined,
-                          label: AppSupport.supportPhoneDisplay,
-                          showChevron: true,
-                          onTap: () {
-                            unawaited(
-                              openExternalUri(
-                                context,
-                                Uri.parse(AppSupport.supportPhoneUri),
-                              ),
-                            );
-                          },
-                        ),
+                        for (var i = 0; i < AppSupport.supportPhoneDisplays.length; i++) ...[
+                          if (i > 0) _DrawerDivider(theme: theme),
+                          _DrawerMenuRow(
+                            icon: Icons.phone_outlined,
+                            label: AppSupport.supportPhoneDisplays[i],
+                            showChevron: true,
+                            onTap: () {
+                              unawaited(
+                                openExternalUri(
+                                  context,
+                                  Uri.parse(AppSupport.supportPhoneUris[i]),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                         _DrawerDivider(theme: theme),
                         _DrawerMenuRow(
                           icon: Icons.send_outlined,
@@ -354,6 +373,15 @@ class AppSettingsDrawer extends ConsumerWidget {
                       label: Text(l10n.drawerLogout),
                     ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                0,
+                AppSpacing.xl,
+                AppSpacing.sm,
+              ),
+              child: _DrawerDeveloperFooter(theme: theme),
+            ),
           ],
         ),
       ),
@@ -383,6 +411,15 @@ class AppSettingsDrawer extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => const _NotificationSettingsSheet(),
+    );
+  }
+
+  void _openSoundSettings(BuildContext context) {
+    Navigator.of(context).pop();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _SoundSettingsSheet(),
     );
   }
 }
@@ -1126,6 +1163,230 @@ class _NotificationSettingsSheet extends ConsumerWidget {
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SoundQuickCard extends ConsumerWidget {
+  const _SoundQuickCard({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final preferences =
+        ref.watch(soundPreferencesControllerProvider).value ??
+        const SoundPreferencesState();
+    final notifier = ref.read(soundPreferencesControllerProvider.notifier);
+    final isEnabled = preferences.soundsEnabled;
+
+    return SizedBox(
+      height: 40,
+      child: Row(
+        children: [
+          Icon(
+            isEnabled
+                ? Icons.volume_up_outlined
+                : Icons.volume_off_outlined,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+          HGap.sm,
+          Expanded(
+            child: Text(
+              l10n.drawerSounds,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Transform.scale(
+            scale: 0.78,
+            child: Switch.adaptive(
+              value: isEnabled,
+              onChanged: (value) {
+                unawaited(notifier.setSoundsEnabled(value));
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Manage sounds',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: onOpenSettings,
+            icon: Icon(
+              Icons.tune_rounded,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SoundSettingsSheet extends ConsumerWidget {
+  const _SoundSettingsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final preferencesAsync = ref.watch(soundPreferencesControllerProvider);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl,
+          AppSpacing.xl,
+          AppSpacing.xxl,
+          AppSpacing.jumbo,
+        ),
+        child: preferencesAsync.when(
+          data: (preferences) {
+            final notifier = ref.read(
+              soundPreferencesControllerProvider.notifier,
+            );
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      l10n.drawerSounds,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                Text(
+                  l10n.soundSettingsDeviceOnly,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                VGap.xl,
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundMaster),
+                  value: preferences.soundsEnabled,
+                  onChanged: (value) {
+                    unawaited(notifier.setSoundsEnabled(value));
+                  },
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundCalledNumber),
+                  value: preferences.calledNumberEnabled,
+                  onChanged: preferences.soundsEnabled
+                      ? (value) {
+                          unawaited(notifier.setCalledNumberEnabled(value));
+                        }
+                      : null,
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundGameStart),
+                  value: preferences.gameStartEnabled,
+                  onChanged: preferences.soundsEnabled
+                      ? (value) {
+                          unawaited(notifier.setGameStartEnabled(value));
+                        }
+                      : null,
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundWinnerWindow),
+                  value: preferences.winnerWindowEnabled,
+                  onChanged: preferences.soundsEnabled
+                      ? (value) {
+                          unawaited(notifier.setWinnerWindowEnabled(value));
+                        }
+                      : null,
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundValidBingo),
+                  value: preferences.validBingoEnabled,
+                  onChanged: preferences.soundsEnabled
+                      ? (value) {
+                          unawaited(notifier.setValidBingoEnabled(value));
+                        }
+                      : null,
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.soundVibrate),
+                  value: preferences.vibrateEnabled,
+                  onChanged: preferences.soundsEnabled
+                      ? (value) {
+                          unawaited(notifier.setVibrateEnabled(value));
+                        }
+                      : null,
+                ),
+              ],
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Text(
+              'Could not load sound settings.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerDeveloperFooter extends StatelessWidget {
+  const _DrawerDeveloperFooter({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.sm),
+        onTap: () {
+          unawaited(
+            openExternalUri(context, AppSupport.developerTelegramUri),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.xs,
+            horizontal: AppSpacing.sm,
+          ),
+          child: Text(
+            '© ${AppSupport.developerName}',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ),

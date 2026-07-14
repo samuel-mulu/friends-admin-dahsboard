@@ -1,25 +1,34 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// State for tracking active registered cartelas
+/// State for tracking active registered cartelas and live-game back handling.
 class ActiveRegisteredCartelasState {
   const ActiveRegisteredCartelasState({
     this.activeSessionId,
     this.registeredCartelaCount = 0,
+    this.requiresLeaveConfirmation = false,
   });
 
   final String? activeSessionId;
   final int registeredCartelaCount;
+  final bool requiresLeaveConfirmation;
 
   bool get hasActiveRegisteredCartelas =>
       activeSessionId != null && registeredCartelaCount > 0;
 
+  bool get shouldConfirmLiveGameBack =>
+      requiresLeaveConfirmation || hasActiveRegisteredCartelas;
+
   ActiveRegisteredCartelasState copyWith({
     String? activeSessionId,
     int? registeredCartelaCount,
+    bool? requiresLeaveConfirmation,
   }) {
     return ActiveRegisteredCartelasState(
       activeSessionId: activeSessionId ?? this.activeSessionId,
-      registeredCartelaCount: registeredCartelaCount ?? this.registeredCartelaCount,
+      registeredCartelaCount:
+          registeredCartelaCount ?? this.registeredCartelaCount,
+      requiresLeaveConfirmation:
+          requiresLeaveConfirmation ?? this.requiresLeaveConfirmation,
     );
   }
 }
@@ -37,10 +46,15 @@ class HasActiveRegisteredCartelasNotifier
   /// - User joins a live game session
   /// - User registers/unregisters cartelas
   /// - User leaves a session (clear by passing null sessionId)
-  void updateSessionState(String? sessionId, int cartelaCount) {
+  void updateSessionState(
+    String? sessionId,
+    int cartelaCount, {
+    bool requiresLeaveConfirmation = false,
+  }) {
     state = state.copyWith(
       activeSessionId: sessionId,
       registeredCartelaCount: cartelaCount,
+      requiresLeaveConfirmation: requiresLeaveConfirmation,
     );
   }
 

@@ -70,7 +70,7 @@ class GameCompactInfoBar extends ConsumerWidget {
             theme: theme,
             isDark: isDark,
             highlighted: true,
-            valueStyle: AppBranding.wordmarkBrandAccent(size: 16),
+            valueStyle: AppBranding.wordmarkBrandAccent(context, size: 16),
           ),
         ),
         _CompactDivider(theme: theme),
@@ -165,7 +165,7 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
             theme: theme,
             isDark: isDark,
             highlighted: true,
-            valueStyle: AppBranding.wordmarkBrandAccent(size: 16),
+            valueStyle: AppBranding.wordmarkBrandAccent(context, size: 16),
           ),
         ),
         _CompactDivider(theme: theme),
@@ -278,7 +278,7 @@ class _RuleStatChip extends StatelessWidget {
                 ruleDisplayName,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppBranding.wordmarkBrandAccent(size: 15).copyWith(
+                style: AppBranding.wordmarkBrandAccent(context, size: 15).copyWith(
                   color: AppBranding.brandHighlightText(context),
                   height: 1.05,
                   shadows: isDark

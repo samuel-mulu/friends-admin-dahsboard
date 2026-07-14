@@ -255,10 +255,10 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
                   const SizedBox(height: 8),
                   Text(
                     walletCartelas > 0 && bonusUsed > 0
-                        ? '$bonusUsed bonus • $walletCartelas wallet • ${formatMoney(totalCost)} ETB'
+                        ? '$bonusUsed bonus • $walletCartelas wallet • ${formatMoney(totalCost)}'
                         : bonusUsed > 0
                         ? '$bonusUsed bonus cartela${bonusUsed == 1 ? '' : 's'}'
-                        : '${formatMoney(totalCost)} ETB total',
+                        : '${formatMoney(totalCost)} total',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
@@ -468,7 +468,9 @@ class _BulkRegisterProgressPanel extends StatelessWidget {
         color: AppBranding.casinoPurple.withValues(alpha: isDark ? 0.42 : 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppBranding.gold.withValues(alpha: isDark ? 0.5 : 0.35),
+          color: isDark
+              ? AppBranding.gold.withValues(alpha: 0.5)
+              : AppBranding.brandPurple.withValues(alpha: 0.25),
         ),
       ),
       child: Column(
@@ -488,7 +490,7 @@ class _BulkRegisterProgressPanel extends StatelessWidget {
                       backgroundColor: AppBranding.brandPurple.withValues(
                         alpha: isDark ? 0.55 : 0.14,
                       ),
-                      color: AppBranding.gold,
+                      color: AppBranding.brandAccentValue(context),
                       strokeCap: StrokeCap.round,
                     ),
                     Text(
@@ -533,7 +535,7 @@ class _BulkRegisterProgressPanel extends StatelessWidget {
                   '$completed/$total',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: AppBranding.gold,
+                    color: AppBranding.brandAccentValue(context),
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -567,10 +569,16 @@ class _BulkRegisterProgressPanel extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [
-                                AppBranding.gold.withValues(alpha: 0.92),
-                                AppBranding.gold,
-                              ],
+                              colors: isDark
+                                  ? [
+                                      AppBranding.gold.withValues(alpha: 0.92),
+                                      AppBranding.gold,
+                                    ]
+                                  : [
+                                      AppBranding.brandPurple
+                                          .withValues(alpha: 0.75),
+                                      AppBranding.brandPurple,
+                                    ],
                             ),
                           ),
                         ),

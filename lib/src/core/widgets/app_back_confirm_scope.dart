@@ -123,12 +123,12 @@ Future<void> handleAppBackPop({
     return;
   }
 
-  // Live game root (/games) — exit or leave-active-cartelas confirmation.
+  // Live game root (/games) — exit or leave-active-session confirmation.
   if (location == '/games') {
     final container = ProviderScope.containerOf(context);
-    final hasCartelas = container.read(hasActiveRegisteredCartelasProvider).hasActiveRegisteredCartelas;
+    final backGuard = container.read(hasActiveRegisteredCartelasProvider);
 
-    final choice = hasCartelas
+    final choice = backGuard.shouldConfirmLiveGameBack
         ? await showLeaveLiveGameDialog(context)
         : await showExitAppDialog(context);
 

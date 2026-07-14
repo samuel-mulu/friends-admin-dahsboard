@@ -319,7 +319,7 @@ class _RegistrationOpenPulseState extends State<RegistrationOpenPulse>
         : null;
     final accentIconColor = isDark
         ? AppBranding.gold.withValues(alpha: 0.9)
-        : AppBranding.goldAccent;
+        : AppBranding.brandPurple;
     final staticTitle = widget.titleOverride ?? widget.ruleName;
 
     return AnimatedBuilder(
