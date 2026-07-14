@@ -591,7 +591,35 @@ class TelebirrReceiptPreviewService {
     String? receiverName,
     String? receiverAccount,
   ) {
-    final configuredLast4 = _digitsOnly(config.receiverPhoneLast4);
+    final accounts = config.accounts.isNotEmpty
+        ? config.accounts
+        : [
+            TelebirrAccountConfig(
+              settlementAccount: '',
+              receiverName: config.receiverName,
+              receiverPhoneLast4: config.receiverPhoneLast4,
+            ),
+          ];
+
+    for (final account in accounts) {
+      if (_accountReceiverMatches(
+        account,
+        receiverName,
+        receiverAccount,
+      )) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _accountReceiverMatches(
+    TelebirrAccountConfig account,
+    String? receiverName,
+    String? receiverAccount,
+  ) {
+    final configuredLast4 = _digitsOnly(account.receiverPhoneLast4);
     final receiverLast4 = _digitsOnly(receiverAccount ?? '');
 
     final last4Matches =
@@ -599,9 +627,9 @@ class TelebirrReceiptPreviewService {
         receiverLast4.length >= 4 &&
         receiverLast4.endsWith(configuredLast4);
     final nameMatches =
-        config.receiverName.trim().isEmpty ||
+        account.receiverName.trim().isEmpty ||
         _normalizeText(receiverName ?? '') ==
-            _normalizeText(config.receiverName);
+            _normalizeText(account.receiverName);
 
     return last4Matches && nameMatches;
   }

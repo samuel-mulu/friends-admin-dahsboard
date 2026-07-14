@@ -444,6 +444,15 @@ class AppLocalizationsTi extends AppLocalizations {
   String get depositSendToAccount => 'ናብዚ ሕሳብ ልኣኽ ኣዘር ባንክ አይካኣልን';
 
   @override
+  String get depositSendToAccounts => 'ናብዞም ሕሳባት ልኣኽ';
+
+  @override
+  String get depositTelebirrAccount1 => 'ሕሳብ 1';
+
+  @override
+  String get depositTelebirrAccount2 => 'ሕሳብ 2';
+
+  @override
   String get depositShowInstructions => 'መምርሒታት';
 
   @override
@@ -478,6 +487,16 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String get depositReceiptScan => 'Scan receipt';
+
+  @override
+  String get depositReceiptScreenshotHelperPrefix => 'ካብ ';
+
+  @override
+  String get depositReceiptScreenshotHelperLink => 'ስክሪንሾት';
+
+  @override
+  String get depositReceiptScreenshotHelperSuffix =>
+      ' ክተመልእ ትኽእል ኢኻ፣ ቅድሚ submit ምግባሮም የረጋግጽ።';
 
   @override
   String get depositReceiptScanSuccess =>
@@ -1410,7 +1429,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get updateAvailableTitle => 'update ኣሎ';
 
   @override
-  String get updateRequiredTitle => 'update የድሊ';
+  String get updateRequiredTitle => ' update ይግበሩ';
 
   @override
   String get updateLater => 'ድሕሪት';
@@ -1419,13 +1438,22 @@ class AppLocalizationsTi extends AppLocalizations {
   String get updateAction => 'ምዕራይ';
 
   @override
+  String get updateVersionInstalled => 'ዝተጭዕ';
+
+  @override
+  String get updateVersionMinimum => 'ዝቐንሰ';
+
+  @override
+  String get updateVersionLatest => 'ናይ ሕጂ';
+
+  @override
   String updateAvailableMessage(String version) {
     return 'update $version ኣሎ።';
   }
 
   @override
   String updateRequiredMessage(String version) {
-    return 'ሓድሽ  ($version) update የድሊ።';
+    return 'እዚ version app ኣይተደገፈን። ንምቀጻልካ version $version update ግበር።';
   }
 
   @override
@@ -1661,7 +1689,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get postGameSummaryTapToViewWinner => 'ናይ ዓወት ካርቴላ ንምርኣይ ጠውቑ';
 
   @override
-  String get postGameSummaryNextGame => 'Continue';
+  String get postGameSummaryNextGame => 'ቀጽል';
 
   @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';

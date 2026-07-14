@@ -455,7 +455,16 @@ class AppLocalizationsOm extends AppLocalizations {
   String get depositSelectProvider => 'Payment method';
 
   @override
-  String get depositSendToAccount => 'Send to this account';
+  String get depositSendToAccount => 'Gara akkaawuntii kanaatti ergi';
+
+  @override
+  String get depositSendToAccounts => 'Gara akkaawuntiiwwan kanaatti ergi';
+
+  @override
+  String get depositTelebirrAccount1 => 'Akkaawuntii 1';
+
+  @override
+  String get depositTelebirrAccount2 => 'Akkaawuntii 2';
 
   @override
   String get depositShowInstructions => 'Instructions';
@@ -493,6 +502,16 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get depositReceiptScan => 'Scan receipt';
+
+  @override
+  String get depositReceiptScreenshotHelperPrefix => 'Can be filled from a ';
+
+  @override
+  String get depositReceiptScreenshotHelperLink => 'screenshot';
+
+  @override
+  String get depositReceiptScreenshotHelperSuffix =>
+      '. Please review before submitting.';
 
   @override
   String get depositReceiptScanSuccess =>
@@ -1460,6 +1479,15 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get updateAction => 'Haaromsi';
+
+  @override
+  String get updateVersionInstalled => 'Installed';
+
+  @override
+  String get updateVersionMinimum => 'Minimum';
+
+  @override
+  String get updateVersionLatest => 'Latest';
 
   @override
   String updateAvailableMessage(String version) {

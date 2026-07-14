@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/utils/uppercase_text_formatter.dart';
 import '../../data/models/payment_provider.dart';
@@ -49,7 +51,7 @@ class DepositFormSection extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: AppSpacing.cardPaddingDense,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -73,7 +75,7 @@ class DepositFormSection extends StatelessWidget {
               onChanged: (_) => onFieldChanged(),
               forceErrorText: amountServerError,
             ),
-            const SizedBox(height: 16),
+            VGap.xl,
             TextFormField(
               controller: transactionRefController,
               textCapitalization: TextCapitalization.characters,
@@ -105,8 +107,15 @@ class DepositFormSection extends StatelessWidget {
               onChanged: (_) => onFieldChanged(),
               forceErrorText: transactionRefServerError,
             ),
+            if (provider == PaymentProvider.telebirr && onScanReceipt != null) ...[
+              VGap.md,
+              _ReceiptScreenshotHelper(
+                onScreenshotTap: onScanReceipt!,
+                enabled: !isScanLoading,
+              ),
+            ],
             if (previewNotice != null) ...[
-              const SizedBox(height: 12),
+              VGap.xl,
               Text(
                 previewNotice!,
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -116,6 +125,48 @@ class DepositFormSection extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ReceiptScreenshotHelper extends StatelessWidget {
+  const _ReceiptScreenshotHelper({
+    required this.onScreenshotTap,
+    required this.enabled,
+  });
+
+  final VoidCallback onScreenshotTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final linkStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.primary,
+      decoration: TextDecoration.underline,
+      decorationColor: theme.colorScheme.primary,
+      fontWeight: FontWeight.w600,
+    );
+    final bodyStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return Text.rich(
+      TextSpan(
+        style: bodyStyle,
+        children: [
+          TextSpan(text: l10n.depositReceiptScreenshotHelperPrefix),
+          TextSpan(
+            text: l10n.depositReceiptScreenshotHelperLink,
+            style: linkStyle,
+            recognizer: enabled
+                ? (TapGestureRecognizer()..onTap = onScreenshotTap)
+                : null,
+          ),
+          TextSpan(text: l10n.depositReceiptScreenshotHelperSuffix),
+        ],
       ),
     );
   }

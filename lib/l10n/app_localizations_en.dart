@@ -457,6 +457,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get depositSendToAccount => 'Send to this account';
 
   @override
+  String get depositSendToAccounts => 'Send to these accounts';
+
+  @override
+  String get depositTelebirrAccount1 => 'Account 1';
+
+  @override
+  String get depositTelebirrAccount2 => 'Account 2';
+
+  @override
   String get depositShowInstructions => 'Instructions';
 
   @override
@@ -492,6 +501,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositReceiptScan => 'Scan receipt';
+
+  @override
+  String get depositReceiptScreenshotHelperPrefix => 'Can be filled from a ';
+
+  @override
+  String get depositReceiptScreenshotHelperLink => 'screenshot';
+
+  @override
+  String get depositReceiptScreenshotHelperSuffix =>
+      '. Please review before submitting.';
 
   @override
   String get depositReceiptScanSuccess =>
@@ -1444,7 +1463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateAvailableTitle => 'Update available';
 
   @override
-  String get updateRequiredTitle => 'Update required';
+  String get updateRequiredTitle => 'Update immediately';
 
   @override
   String get updateLater => 'Later';
@@ -1453,13 +1472,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateAction => 'Update';
 
   @override
+  String get updateVersionInstalled => 'Installed';
+
+  @override
+  String get updateVersionMinimum => 'Minimum';
+
+  @override
+  String get updateVersionLatest => 'Latest';
+
+  @override
   String updateAvailableMessage(String version) {
     return 'Version $version is available.';
   }
 
   @override
   String updateRequiredMessage(String version) {
-    return 'A newer version ($version) is required to continue.';
+    return 'This app version is no longer supported. Please update to version $version to continue.';
   }
 
   @override

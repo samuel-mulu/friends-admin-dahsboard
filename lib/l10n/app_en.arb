@@ -436,6 +436,15 @@
   "depositSendToAccount": "Send to this account",
   "@depositSendToAccount": {},
 
+  "depositSendToAccounts": "Send to these accounts",
+  "@depositSendToAccounts": {},
+
+  "depositTelebirrAccount1": "Account 1",
+  "@depositTelebirrAccount1": {},
+
+  "depositTelebirrAccount2": "Account 2",
+  "@depositTelebirrAccount2": {},
+
   "depositShowInstructions": "Instructions",
   "@depositShowInstructions": {},
 
@@ -470,6 +479,15 @@
 
   "depositReceiptScan": "Scan receipt",
   "@depositReceiptScan": {},
+
+  "depositReceiptScreenshotHelperPrefix": "Can be filled from a ",
+  "@depositReceiptScreenshotHelperPrefix": {},
+
+  "depositReceiptScreenshotHelperLink": "screenshot",
+  "@depositReceiptScreenshotHelperLink": {},
+
+  "depositReceiptScreenshotHelperSuffix": ". Please review before submitting.",
+  "@depositReceiptScreenshotHelperSuffix": {},
 
   "depositReceiptScanSuccess": "Receipt detected. Please review before submitting.",
   "@depositReceiptScanSuccess": {},
@@ -1401,7 +1419,7 @@
   "updateAvailableTitle": "Update available",
   "@updateAvailableTitle": {},
 
-  "updateRequiredTitle": "Update required",
+  "updateRequiredTitle": "Update immediately",
   "@updateRequiredTitle": {},
 
   "updateLater": "Later",
@@ -1410,6 +1428,15 @@
   "updateAction": "Update",
   "@updateAction": {},
 
+  "updateVersionInstalled": "Installed",
+  "@updateVersionInstalled": {},
+
+  "updateVersionMinimum": "Minimum",
+  "@updateVersionMinimum": {},
+
+  "updateVersionLatest": "Latest",
+  "@updateVersionLatest": {},
+
   "updateAvailableMessage": "Version {version} is available.",
   "@updateAvailableMessage": {
     "placeholders": {
@@ -1417,7 +1444,7 @@
     }
   },
 
-  "updateRequiredMessage": "A newer version ({version}) is required to continue.",
+  "updateRequiredMessage": "This app version is no longer supported. Please update to version {version} to continue.",
   "@updateRequiredMessage": {
     "placeholders": {
       "version": { "type": "String" }

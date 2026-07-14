@@ -11,7 +11,25 @@ Color _bannerGoldAccent(BuildContext context) {
       : AppBranding.goldDark;
 }
 
-/// Gentle attention pulse for the post-round Continue action.
+Color _bannerCountdownColor(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? _bannerGoldAccent(context)
+      : AppBranding.brandPurple;
+}
+
+Color _bannerTrophyColor(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? AppBranding.gold
+      : AppBranding.brandPurple;
+}
+
+Color _bannerBorderColor(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? _bannerGoldAccent(context).withValues(alpha: 0.5)
+      : AppBranding.brandPurple.withValues(alpha: 0.22);
+}
+
+/// Heartbeat-style pulse for the post-round Continue action.
 class _SubtlePulseContinueButton extends StatefulWidget {
   const _SubtlePulseContinueButton({
     required this.label,
@@ -31,16 +49,37 @@ class _SubtlePulseContinueButton extends StatefulWidget {
 class _SubtlePulseContinueButtonState extends State<_SubtlePulseContinueButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _pulse;
+  late final Animation<double> _heartbeatScale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1100),
     );
-    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _heartbeatScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 1.1),
+        weight: 12,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.1, end: 1),
+        weight: 12,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 1.06),
+        weight: 10,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.06, end: 1),
+        weight: 10,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(1),
+        weight: 56,
+      ),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _syncAnimation();
   }
 
@@ -59,7 +98,7 @@ class _SubtlePulseContinueButtonState extends State<_SubtlePulseContinueButton>
         ..value = 0;
       return;
     }
-    _controller.repeat(reverse: true);
+    _controller.repeat();
   }
 
   @override
@@ -77,11 +116,14 @@ class _SubtlePulseContinueButtonState extends State<_SubtlePulseContinueButton>
         backgroundColor: AppBranding.goldAccent,
         foregroundColor: AppBranding.brandPurple,
         padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 8,
+          horizontal: 16,
+          vertical: 10,
         ),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
       ),
       child: widget.isAdvancing
           ? SizedBox(
@@ -105,21 +147,22 @@ class _SubtlePulseContinueButtonState extends State<_SubtlePulseContinueButton>
     }
 
     return AnimatedBuilder(
-      animation: _pulse,
+      animation: _heartbeatScale,
       builder: (context, child) {
-        final t = _pulse.value;
+        final scale = _heartbeatScale.value;
+        final glowStrength = ((scale - 1) / 0.1).clamp(0.0, 1.0);
         return Transform.scale(
-          scale: 1 + (t * 0.025),
+          scale: scale,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: AppBranding.goldDark.withValues(
-                    alpha: 0.18 + (t * 0.22),
+                    alpha: 0.2 + (glowStrength * 0.35),
                   ),
-                  blurRadius: 3 + (t * 5),
-                  spreadRadius: t * 0.4,
+                  blurRadius: 4 + (glowStrength * 8),
+                  spreadRadius: glowStrength * 0.8,
                 ),
               ],
             ),
@@ -188,7 +231,8 @@ class RoundFinishedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final goldAccent = _bannerGoldAccent(context);
+    final countdownColor = _bannerCountdownColor(context);
+    final trophyColor = _bannerTrophyColor(context);
     final canOpenDialog =
         !isAdvancing && !isNoWinner && onOpenWinners != null && results.isNotEmpty;
 
@@ -204,7 +248,7 @@ class RoundFinishedBanner extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: goldAccent.withValues(alpha: 0.5),
+              color: _bannerBorderColor(context),
             ),
           ),
           child: Row(
@@ -212,7 +256,7 @@ class RoundFinishedBanner extends StatelessWidget {
             children: [
               Icon(
                 Icons.emoji_events_rounded,
-                color: goldAccent,
+                color: trophyColor,
                 size: 24,
               ),
               const SizedBox(width: 10),
@@ -295,7 +339,7 @@ class RoundFinishedBanner extends StatelessWidget {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: goldAccent,
+                              color: countdownColor,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -303,7 +347,7 @@ class RoundFinishedBanner extends StatelessWidget {
                             child: Text(
                               l10n.postGameSummaryOpeningNextRound,
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: goldAccent,
+                                color: countdownColor,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -314,7 +358,7 @@ class RoundFinishedBanner extends StatelessWidget {
                       Text(
                         l10n.postGameSummaryNextRoundIn(secondsRemaining),
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: goldAccent,
+                          color: countdownColor,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.2,
                         ),

@@ -4,14 +4,14 @@ abstract final class AppSupport {
   static const termsTitle = 'Terms and conditions';
 
   /// Display format shown in the drawer and support modals.
-  static const supportPhoneDisplays = ['0961355799', '0952723287'];
+  static const supportPhoneDisplays = ['0961355799', '0983299318'];
 
   static String get supportPhoneDisplay => supportPhoneDisplays.join(' / ');
 
   /// Dialable phone URIs (Ethiopia +251).
   static const supportPhoneUris = [
     'tel:+251961355799',
-    'tel:+251952723287',
+    'tel:+251983299318',
   ];
 
   /// Telegram handle without @.

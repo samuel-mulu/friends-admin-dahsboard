@@ -442,6 +442,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get depositSendToAccount => 'ወደዚህ ሂሳብ ላክ';
 
   @override
+  String get depositSendToAccounts => 'ወደእነዚህ ሂሳቦች ላክ';
+
+  @override
+  String get depositTelebirrAccount1 => 'ሂሳብ 1';
+
+  @override
+  String get depositTelebirrAccount2 => 'ሂሳብ 2';
+
+  @override
   String get depositShowInstructions => 'መመሪያዎች';
 
   @override
@@ -476,6 +485,16 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get depositReceiptScan => 'Scan receipt';
+
+  @override
+  String get depositReceiptScreenshotHelperPrefix => 'ከ';
+
+  @override
+  String get depositReceiptScreenshotHelperLink => 'ስክሪንሾት';
+
+  @override
+  String get depositReceiptScreenshotHelperSuffix =>
+      ' ሊሞላ ይችላል፣ ከማስገባት በፊት ግን ያረጋግጡ።';
 
   @override
   String get depositReceiptScanSuccess =>
@@ -1406,7 +1425,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateAvailableTitle => 'ዝመና አለ';
 
   @override
-  String get updateRequiredTitle => 'ዝመና ያስፈልጋል';
+  String get updateRequiredTitle => 'ወዲያውኑ ያዘምኑ';
 
   @override
   String get updateLater => 'በኋላ';
@@ -1415,13 +1434,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateAction => 'አዘምን';
 
   @override
+  String get updateVersionInstalled => 'የተጫነ';
+
+  @override
+  String get updateVersionMinimum => 'ዝቅተኛ';
+
+  @override
+  String get updateVersionLatest => 'የቅርብ ጊዜ';
+
+  @override
   String updateAvailableMessage(String version) {
     return 'ስሪት $version አለ።';
   }
 
   @override
   String updateRequiredMessage(String version) {
-    return 'አዲስ ስሪት ($version) ለመቀጠል ያስፈልጋል።';
+    return 'ይህ የመተግበሪያ ስሪት አልተደገፈም። ለመቀጠል እባክዎ ወደ ስሪት $version ያዘምኑ።';
   }
 
   @override
@@ -1657,7 +1685,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get postGameSummaryTapToViewWinner => 'አሸናፊ ካርቴላ ለመመልከት ይንኩ';
 
   @override
-  String get postGameSummaryNextGame => 'Continue';
+  String get postGameSummaryNextGame => 'ቀጥል';
 
   @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';

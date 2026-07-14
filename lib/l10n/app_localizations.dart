@@ -882,6 +882,24 @@ abstract class AppLocalizations {
   /// **'Send to this account'**
   String get depositSendToAccount;
 
+  /// No description provided for @depositSendToAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to these accounts'**
+  String get depositSendToAccounts;
+
+  /// No description provided for @depositTelebirrAccount1.
+  ///
+  /// In en, this message translates to:
+  /// **'Account 1'**
+  String get depositTelebirrAccount1;
+
+  /// No description provided for @depositTelebirrAccount2.
+  ///
+  /// In en, this message translates to:
+  /// **'Account 2'**
+  String get depositTelebirrAccount2;
+
   /// No description provided for @depositShowInstructions.
   ///
   /// In en, this message translates to:
@@ -947,6 +965,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan receipt'**
   String get depositReceiptScan;
+
+  /// No description provided for @depositReceiptScreenshotHelperPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Can be filled from a '**
+  String get depositReceiptScreenshotHelperPrefix;
+
+  /// No description provided for @depositReceiptScreenshotHelperLink.
+  ///
+  /// In en, this message translates to:
+  /// **'screenshot'**
+  String get depositReceiptScreenshotHelperLink;
+
+  /// No description provided for @depositReceiptScreenshotHelperSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'. Please review before submitting.'**
+  String get depositReceiptScreenshotHelperSuffix;
 
   /// No description provided for @depositReceiptScanSuccess.
   ///
@@ -2545,7 +2581,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateRequiredTitle.
   ///
   /// In en, this message translates to:
-  /// **'Update required'**
+  /// **'Update immediately'**
   String get updateRequiredTitle;
 
   /// No description provided for @updateLater.
@@ -2560,6 +2596,24 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get updateAction;
 
+  /// No description provided for @updateVersionInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get updateVersionInstalled;
+
+  /// No description provided for @updateVersionMinimum.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum'**
+  String get updateVersionMinimum;
+
+  /// No description provided for @updateVersionLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get updateVersionLatest;
+
   /// No description provided for @updateAvailableMessage.
   ///
   /// In en, this message translates to:
@@ -2569,7 +2623,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateRequiredMessage.
   ///
   /// In en, this message translates to:
-  /// **'A newer version ({version}) is required to continue.'**
+  /// **'This app version is no longer supported. Please update to version {version} to continue.'**
   String updateRequiredMessage(String version);
 
   /// No description provided for @updateLinkUnavailable.

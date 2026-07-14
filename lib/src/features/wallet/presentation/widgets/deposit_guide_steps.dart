@@ -26,9 +26,9 @@ class DepositGuideSteps extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         for (var index = 0; index < steps.length; index++) ...[
-          if (index > 0) const SizedBox(height: 12),
+          if (index > 0) const SizedBox(height: 8),
           _GuideStepCard(
             stepNumber: index + 1,
             label: steps[index].label(l10n),

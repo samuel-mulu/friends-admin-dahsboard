@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_branding.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/utils/formatters.dart';
 import '../../data/models/deposit_config_model.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/telebirr_client_receipt_payload.dart';
@@ -60,9 +61,24 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   String? _previewNotice;
   bool _ignoreFieldChanges = false;
   bool _isScanningReceipt = false;
+  String? _lastSeenLocation;
+  GoRouter? _router;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (!identical(_router, router)) {
+      _router?.routerDelegate.removeListener(_onRouteChanged);
+      _router = router;
+      _router!.routerDelegate.addListener(_onRouteChanged);
+      _lastSeenLocation ??= router.state.matchedLocation;
+    }
+  }
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_onRouteChanged);
     _autoDismissTimer?.cancel();
     _scrollController.dispose();
     _amountController.dispose();
@@ -97,12 +113,60 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     return true;
   }
 
+  static const _depositRoute = '/wallet/deposit';
+
+  bool _isDepositLocation(String location) {
+    return location == _depositRoute || location.startsWith('$_depositRoute?');
+  }
+
+  void _onRouteChanged() {
+    final location = _router?.state.matchedLocation;
+    if (location == null) {
+      return;
+    }
+
+    final previous = _lastSeenLocation;
+    final onDeposit = _isDepositLocation(location);
+    final wasOffDeposit =
+        previous != null && !_isDepositLocation(previous);
+
+    _lastSeenLocation = location;
+
+    if (!wasOffDeposit || !onDeposit || !mounted) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _resetDepositUi();
+    });
+  }
+
+  void _resetDepositUi() {
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
+    _ignoreFieldChanges = true;
+    _amountController.clear();
+    _transactionRefController.clear();
+    _formKey.currentState?.reset();
+    _ignoreFieldChanges = false;
+    setState(() {
+      _clearOcrReviewState();
+      _clearServerErrors();
+      _confirmation = null;
+      _previewNotice = null;
+      _isSubmitting = false;
+      _isScanningReceipt = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final depositConfig = ref.watch(depositConfigProvider);
     final config = depositConfig.asData?.value;
-    final walletAsync = ref.watch(myWalletProvider);
     final availableProviders = _availableProviders(config);
     final receiptOcrService = ref.watch(receiptOcrServiceProvider);
     final activeProviders = availableProviders
@@ -123,24 +187,24 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     }
     final receiptLabel = _receiptLabel(config, selectedProvider);
     final providerConfig = config?.providerForKey(selectedProvider.apiValue);
+    final settlementAccounts = _settlementAccounts(
+      selectedProvider: selectedProvider,
+      config: config,
+      providerConfig: providerConfig,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.depositScreenTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(20),
+          padding: AppSpacing.screenPadding,
           child: Form(
             key: _formKey,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                walletAsync.maybeWhen(
-                  data: (wallet) => _BalanceStrip(amount: wallet.balance),
-                  orElse: () => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: 16),
                 DepositProviderChips(
                   value: selectedProvider,
                   availableProviders: availableProviders,
@@ -156,16 +220,28 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                     });
                   },
                 ),
-                if (providerConfig != null &&
-                    providerConfig.settlementAccount.trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                if (settlementAccounts.isNotEmpty) ...[
+                  VGap.md,
                   DepositSettlementAccountCard(
-                    settlementAccount: providerConfig.settlementAccount,
-                    receiverName: providerConfig.receiverName,
-                    onShowInstructions: _scrollToDepositGuide,
+                    accounts: [
+                      for (var index = 0; index < settlementAccounts.length; index++)
+                        DepositSettlementAccountItem(
+                          settlementAccount:
+                              settlementAccounts[index].settlementAccount,
+                          receiverName: settlementAccounts[index].receiverName,
+                          accountLabel: _settlementAccountLabel(
+                            l10n,
+                            index: index,
+                            total: settlementAccounts.length,
+                          ),
+                        ),
+                    ],
+                    onShowInstructions: selectedProvider == PaymentProvider.telebirr
+                        ? _scrollToDepositGuide
+                        : null,
                   ),
                 ],
-                const SizedBox(height: 16),
+                VGap.xl,
                 DepositFormSection(
                   provider: selectedProvider,
                   amountController: _amountController,
@@ -184,7 +260,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   scanTooltip: l10n.depositReceiptScan,
                 ),
                 if (_ocrReviewRequired) ...[
-                  const SizedBox(height: 12),
+                  VGap.md,
                   CheckboxListTile(
                     value: _receiptDetailsConfirmed,
                     onChanged: (checked) {
@@ -200,7 +276,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                VGap.xl,
                 FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: _ocrReviewRequired
@@ -226,7 +302,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   child: _confirmation == null
                       ? const SizedBox.shrink()
                       : Padding(
-                          padding: const EdgeInsets.only(top: 20),
+                          padding: const EdgeInsets.only(top: AppSpacing.xl),
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 280),
                             child: DepositConfirmationBanner(
@@ -237,9 +313,9 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                           ),
                         ),
                 ),
-                const SizedBox(height: 28),
+                VGap.xxl,
                 const Divider(),
-                const SizedBox(height: 20),
+                VGap.xl,
                 KeyedSubtree(
                   key: _depositGuideKey,
                   child: DepositGuideSteps(provider: selectedProvider),
@@ -686,55 +762,66 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       return null;
     }
   }
+
+  List<_SettlementAccountDisplay> _settlementAccounts({
+    required PaymentProvider selectedProvider,
+    required DepositConfigModel? config,
+    required DepositProviderConfig? providerConfig,
+  }) {
+    if (selectedProvider == PaymentProvider.telebirr && config != null) {
+      return config.telebirr
+          .resolvedAccounts(
+            fallbackSettlementAccount:
+                providerConfig?.settlementAccount ?? '',
+          )
+          .map(
+            (account) => _SettlementAccountDisplay(
+              settlementAccount: account.settlementAccount,
+              receiverName: account.receiverName,
+            ),
+          )
+          .toList(growable: false);
+    }
+
+    if (providerConfig != null &&
+        providerConfig.settlementAccount.trim().isNotEmpty) {
+      return [
+        _SettlementAccountDisplay(
+          settlementAccount: providerConfig.settlementAccount,
+          receiverName: providerConfig.receiverName,
+        ),
+      ];
+    }
+
+    return const [];
+  }
+
+  String? _settlementAccountLabel(
+    AppLocalizations l10n, {
+    required int index,
+    required int total,
+  }) {
+    if (total <= 1) {
+      return null;
+    }
+
+    if (index == 0) {
+      return l10n.depositTelebirrAccount1;
+    }
+    if (index == 1) {
+      return l10n.depositTelebirrAccount2;
+    }
+
+    return null;
+  }
 }
 
-class _BalanceStrip extends StatelessWidget {
-  const _BalanceStrip({required this.amount});
+class _SettlementAccountDisplay {
+  const _SettlementAccountDisplay({
+    required this.settlementAccount,
+    required this.receiverName,
+  });
 
-  final String amount;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = context.l10n;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppBranding.casinoPurple, AppBranding.casinoPurpleDeep],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.walletAvailableBalance,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                Text(
-                  '${formatMoney(amount)} ETB',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: AppBranding.gold,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final String settlementAccount;
+  final String receiverName;
 }

@@ -33,6 +33,26 @@ class DepositProviderConfig {
   }
 }
 
+class TelebirrAccountConfig {
+  const TelebirrAccountConfig({
+    required this.settlementAccount,
+    required this.receiverName,
+    required this.receiverPhoneLast4,
+  });
+
+  final String settlementAccount;
+  final String receiverName;
+  final String receiverPhoneLast4;
+
+  factory TelebirrAccountConfig.fromJson(Map<String, dynamic> json) {
+    return TelebirrAccountConfig(
+      settlementAccount: json['settlementAccount'] as String? ?? '',
+      receiverName: json['receiverName'] as String? ?? '',
+      receiverPhoneLast4: json['receiverPhoneLast4'] as String? ?? '',
+    );
+  }
+}
+
 class TelebirrDepositConfig {
   const TelebirrDepositConfig({
     required this.providerName,
@@ -40,6 +60,7 @@ class TelebirrDepositConfig {
     required this.receiptBaseUrl,
     required this.receiverPhoneLast4,
     required this.receiverName,
+    required this.accounts,
   });
 
   final String providerName;
@@ -47,18 +68,49 @@ class TelebirrDepositConfig {
   final String receiptBaseUrl;
   final String receiverPhoneLast4;
   final String receiverName;
+  final List<TelebirrAccountConfig> accounts;
 
   factory TelebirrDepositConfig.fromJson(Map<String, dynamic> json) {
     final receiptBaseUrl = (json['receiptBaseUrl'] as String? ?? '').trim();
+    final receiverPhoneLast4 = json['receiverPhoneLast4'] as String? ?? '';
+    final receiverName = json['receiverName'] as String? ?? '';
+    final accountsJson = json['accounts'] as List<dynamic>? ?? const [];
+    final parsedAccounts = accountsJson
+        .whereType<Map<String, dynamic>>()
+        .map(TelebirrAccountConfig.fromJson)
+        .where((account) => account.settlementAccount.trim().isNotEmpty)
+        .toList(growable: false);
+
     return TelebirrDepositConfig(
       providerName: json['providerName'] as String? ?? 'Telebirr',
       receiptHelpText: json['receiptHelpText'] as String? ?? '',
       receiptBaseUrl: receiptBaseUrl.isEmpty
           ? kDefaultTelebirrReceiptBaseUrl
           : receiptBaseUrl,
-      receiverPhoneLast4: json['receiverPhoneLast4'] as String? ?? '',
-      receiverName: json['receiverName'] as String? ?? '',
+      receiverPhoneLast4: receiverPhoneLast4,
+      receiverName: receiverName,
+      accounts: parsedAccounts,
     );
+  }
+
+  List<TelebirrAccountConfig> resolvedAccounts({
+    required String fallbackSettlementAccount,
+  }) {
+    if (accounts.isNotEmpty) {
+      return accounts;
+    }
+
+    if (fallbackSettlementAccount.trim().isEmpty) {
+      return const [];
+    }
+
+    return [
+      TelebirrAccountConfig(
+        settlementAccount: fallbackSettlementAccount,
+        receiverName: receiverName,
+        receiverPhoneLast4: receiverPhoneLast4,
+      ),
+    ];
   }
 }
 
