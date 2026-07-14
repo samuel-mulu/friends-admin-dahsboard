@@ -429,13 +429,13 @@ class AppLocalizationsTi extends AppLocalizations {
   String get depositVerifying => 'ክፍሊትካ ይረጋገጽ ኣሎ…';
 
   @override
-  String get depositApprovedTitle => 'ኣታዊ ተጸዲቑ';
+  String get depositApprovedTitle => 'ኣታዊ ጸዲቑ';
 
   @override
-  String get depositRejectedTitle => 'ኣታዊ ኣይተኻእለን';
+  String get depositRejectedTitle => 'ኣታዊ ምግባር ኣይተኻእለን';
 
   @override
-  String get depositTryAgain => 'ዝተሳሳዕካዮ ኣርምዖም ደጊምካ ፈትን።';
+  String get depositTryAgain => 'ኣይተሳከዐን  ደጊምካ ፈትን።';
 
   @override
   String get depositSelectProvider => 'ኣገባብ ክፍሊት';
@@ -469,7 +469,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get depositGuideImageMissing => 'ስክሪንሾት ኣብ ቀረባ እዋን';
 
   @override
-  String get depositGuideTapToExpand => 'ንምስፍሓት ጠውቕ';
+  String get depositGuideTapToExpand => 'ንምስፍሓ ጠውቕ';
 
   @override
   String get walletQuickDeposit => 'ብሞባይል ገንዘብ ወይ ባንክ ብቐጥታ ገንዘብ ወስኽ';
@@ -1438,10 +1438,10 @@ class AppLocalizationsTi extends AppLocalizations {
   String get updateAction => 'ምዕራይ';
 
   @override
-  String get updateVersionInstalled => 'ዝተጭዕ';
+  String get updateVersionInstalled => 'ዝተፃዓነ';
 
   @override
-  String get updateVersionMinimum => 'ዝቐንሰ';
+  String get updateVersionMinimum => 'ዝተቐነሰ';
 
   @override
   String get updateVersionLatest => 'ናይ ሕጂ';
@@ -1453,7 +1453,7 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String updateRequiredMessage(String version) {
-    return 'እዚ version app ኣይተደገፈን። ንምቀጻልካ version $version update ግበር።';
+    return 'እዚ version app update ኣይተገበረን። ንምቀጻልካ version $version update ግበር።';
   }
 
   @override

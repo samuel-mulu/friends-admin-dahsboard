@@ -40,6 +40,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   WithdrawalConfirmationState? _confirmation;
   String? _trackedWithdrawalId;
   String? _availableBalance;
+  String? _ownPhoneNumber;
   Timer? _autoDismissTimer;
   late final SocketService _socketService;
 
@@ -50,6 +51,12 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     _socketService.on('withdrawal:updated', _onWithdrawalUpdated);
     _amountController.addListener(_onFormFieldChanged);
     _receiverController.addListener(_onFormFieldChanged);
+    final sessionPhone =
+        ref.read(authControllerProvider).session?.user.phoneNumber;
+    if (sessionPhone != null && sessionPhone.trim().isNotEmpty) {
+      _ownPhoneNumber = sessionPhone.trim();
+      _receiverController.text = sessionPhone.trim();
+    }
   }
 
   @override
@@ -159,11 +166,77 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     return true;
   }
 
+  bool get _isOtherTelebirrNumber {
+    if (_provider != PaymentProvider.telebirr) {
+      return false;
+    }
+    final own = _ownPhoneNumber;
+    final entered = _receiverController.text.trim();
+    if (own == null || own.isEmpty || entered.isEmpty) {
+      return false;
+    }
+    return !_phonesMatch(own, entered);
+  }
+
+  String _digitsOnly(String value) => value.replaceAll(RegExp(r'\D'), '');
+
+  bool _phonesMatch(String a, String b) {
+    final left = _normalizePhoneKey(a);
+    final right = _normalizePhoneKey(b);
+    if (left.isEmpty || right.isEmpty) {
+      return false;
+    }
+    return left == right || left.endsWith(right) || right.endsWith(left);
+  }
+
+  String _normalizePhoneKey(String phone) {
+    final digits = _digitsOnly(phone);
+    if (digits.startsWith('251') && digits.length >= 12) {
+      return digits.substring(digits.length - 9);
+    }
+    if (digits.startsWith('0') && digits.length >= 10) {
+      return digits.substring(digits.length - 9);
+    }
+    if (digits.length == 9) {
+      return digits;
+    }
+    return digits;
+  }
+
+  void _useOwnPhoneNumber() {
+    final own = _ownPhoneNumber;
+    if (own == null || own.isEmpty) {
+      return;
+    }
+    setState(() {
+      _receiverController.text = own;
+      _provider = PaymentProvider.telebirr;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final walletAsync = ref.watch(myWalletProvider);
     final withdrawalsAsync = ref.watch(withdrawalHistoryProvider);
+    final sessionPhone =
+        ref.watch(authControllerProvider).session?.user.phoneNumber.trim();
+    if (sessionPhone != null &&
+        sessionPhone.isNotEmpty &&
+        _ownPhoneNumber != sessionPhone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          final hadEmptyReceiver = _receiverController.text.trim().isEmpty;
+          _ownPhoneNumber = sessionPhone;
+          if (_provider == PaymentProvider.telebirr && hadEmptyReceiver) {
+            _receiverController.text = sessionPhone;
+          }
+        });
+      });
+    }
     final availableBalance = walletAsync.asData?.value.balance;
     if (availableBalance != null) {
       _availableBalance = availableBalance;
@@ -201,6 +274,11 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                     setState(() {
                       _provider = provider;
                       _clearConfirmation();
+                      if (provider == PaymentProvider.telebirr &&
+                          (_receiverController.text.trim().isEmpty) &&
+                          _ownPhoneNumber != null) {
+                        _receiverController.text = _ownPhoneNumber!;
+                      }
                     });
                   },
                 ),
@@ -231,9 +309,35 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                   keyboardType: _provider == PaymentProvider.telebirr
                       ? TextInputType.phone
                       : TextInputType.text,
+                  style: _isOtherTelebirrNumber
+                      ? TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        )
+                      : null,
                   decoration: InputDecoration(
                     labelText: _provider.receiverFieldLabel,
-                    hintText: _provider.receiverFieldHint,
+                    hintText: _provider == PaymentProvider.telebirr
+                        ? (_ownPhoneNumber ?? _provider.receiverFieldHint)
+                        : _provider.receiverFieldHint,
+                    helperText: _provider == PaymentProvider.telebirr
+                        ? (_isOtherTelebirrNumber
+                              ? 'Other number — payout goes here (not your account phone).'
+                              : 'Own number (recommended)')
+                        : null,
+                    helperStyle: TextStyle(
+                      color: _isOtherTelebirrNumber
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    suffixIcon: _provider == PaymentProvider.telebirr &&
+                            _ownPhoneNumber != null &&
+                            _isOtherTelebirrNumber
+                        ? TextButton(
+                            onPressed: _useOwnPhoneNumber,
+                            child: const Text('Use mine'),
+                          )
+                        : null,
                   ),
                   validator: _validateReceiver,
                 ),

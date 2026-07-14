@@ -270,9 +270,15 @@ class _MissedRoundFlowCardState extends State<_MissedRoundFlowCard> {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final isDark = theme.brightness == Brightness.dark;
-    const liveAccent = Color(0xFFF59E0B);
-    const nextAccent = AppBranding.gold;
+    // Light mode needs stronger accents — pale gold vanishes on cream surfaces.
+    final liveAccent =
+        isDark ? const Color(0xFFF59E0B) : AppBranding.goldDark;
+    final nextAccent = isDark ? AppBranding.gold : AppBranding.brandPurple;
     final headerAccent = isDark ? AppBranding.gold : AppBranding.brandPurple;
+    final collapsedMissedColor =
+        isDark ? liveAccent.withValues(alpha: 0.95) : const Color(0xFF8A5A00);
+    final collapsedNextColor =
+        isDark ? nextAccent.withValues(alpha: 0.95) : AppBranding.brandPurple;
 
     return Container(
       decoration: _sectionDecoration(
@@ -328,9 +334,9 @@ class _MissedRoundFlowCardState extends State<_MissedRoundFlowCard> {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: liveAccent.withValues(alpha: 0.92),
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
+                                  color: collapsedMissedColor,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.35,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -342,9 +348,9 @@ class _MissedRoundFlowCardState extends State<_MissedRoundFlowCard> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: nextAccent.withValues(alpha: 0.92),
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
+                                color: collapsedNextColor,
+                                fontWeight: FontWeight.w700,
+                                height: 1.35,
                               ),
                             ),
                           ],

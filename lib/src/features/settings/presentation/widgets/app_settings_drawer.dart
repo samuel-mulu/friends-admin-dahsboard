@@ -25,7 +25,7 @@ import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
 import 'terms_conditions_dialog.dart';
 import 'drawer_app_version_card.dart';
-import 'drawer_preferences_card.dart';
+import 'drawer_preference_icons.dart';
 
 class AppSettingsDrawer extends ConsumerWidget {
   const AppSettingsDrawer({required this.navigationShell, super.key});
@@ -67,10 +67,13 @@ class AppSettingsDrawer extends ConsumerWidget {
               child: ListView(
                 padding: AppSpacing.screenPadding,
                 children: [
-                  const DrawerPreferencesCard(),
-                  VGap.md,
                   _DrawerPromoCarousel(isGuest: isGuest, l10n: l10n),
                   if (isGuest) ...[
+                    VGap.md,
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: DrawerPreferenceIcons(),
+                    ),
                     VGap.md,
                     _DrawerSectionCard(
                       padding: const EdgeInsets.symmetric(
@@ -438,59 +441,63 @@ class _DrawerProfileSummary extends ConsumerWidget {
     final theme = Theme.of(context);
     final avatarId = ref.watch(profileAvatarProvider(user.id)).asData?.value;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.xl),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Row(
-            children: [
-              UserProfileAvatar(
-                fullName: user.fullName,
-                avatarId: avatarId,
-                radius: 28,
-                showBorder: true,
-              ),
-              HGap.md,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.fullName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    VGap.xxs,
-                    Text(
-                      user.phoneNumber,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Open profile',
-                visualDensity: VisualDensity.compact,
-                onPressed: onTap,
-                icon: Icon(
-                  Icons.settings_outlined,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          UserProfileAvatar(
+            fullName: user.fullName,
+            avatarId: avatarId,
+            radius: 28,
+            showBorder: true,
           ),
-        ),
+          HGap.sm,
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.md),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      VGap.xxs,
+                      Text(
+                        user.phoneNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const DrawerPreferenceIcons(),
+          IconButton(
+            tooltip: 'Open profile',
+            visualDensity: VisualDensity.compact,
+            onPressed: onTap,
+            icon: Icon(
+              Icons.settings_outlined,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1361,32 +1368,125 @@ class _SoundSettingsSheet extends ConsumerWidget {
   }
 }
 
-class _DrawerDeveloperFooter extends StatelessWidget {
+class _DrawerDeveloperFooter extends StatefulWidget {
   const _DrawerDeveloperFooter({required this.theme});
 
   final ThemeData theme;
 
   @override
+  State<_DrawerDeveloperFooter> createState() => _DrawerDeveloperFooterState();
+}
+
+class _DrawerDeveloperFooterState extends State<_DrawerDeveloperFooter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final scheme = theme.colorScheme;
+
     return Center(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.sm),
-        onTap: () {
-          unawaited(
-            openExternalUri(context, AppSupport.developerTelegramUri),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.xs,
-            horizontal: AppSpacing.sm,
-          ),
-          child: Text(
-            '© ${AppSupport.developerName}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
-            ),
-            textAlign: TextAlign.center,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.md),
+          onTap: () {
+            unawaited(
+              openExternalUri(context, AppSupport.developerTelegramUri),
+            );
+          },
+          child: AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              final lift = 1 + (_pulse.value * 0.04);
+              final hintOpacity = 0.55 + (_pulse.value * 0.45);
+              return Transform.scale(
+                scale: lift,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.sm,
+                    horizontal: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.md),
+                    border: Border.all(
+                      color: scheme.primary.withValues(
+                        alpha: 0.18 + (_pulse.value * 0.28),
+                      ),
+                    ),
+                    color: scheme.primary.withValues(
+                      alpha: 0.04 + (_pulse.value * 0.05),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.touch_app_rounded,
+                            size: 14,
+                            color: scheme.primary.withValues(alpha: hintOpacity),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Tap here',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.primary.withValues(
+                                alpha: hintOpacity,
+                              ),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '© ${AppSupport.developerName}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '@${AppSupport.developerTelegramUsername}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.primary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: scheme.primary.withValues(
+                            alpha: 0.55,
+                          ),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
