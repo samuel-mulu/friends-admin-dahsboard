@@ -822,6 +822,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
+    LiveGameResumeOwnerRegistry.setMasterRefresh(_refresh);
     _activeCartelasNotifier = ref.read(
       hasActiveRegisteredCartelasProvider.notifier,
     );
@@ -868,6 +869,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
     _applySocketSessionMembership(null);
+    LiveGameResumeOwnerRegistry.setMasterRefresh(null);
     LiveGameResumeOwnerRegistry.deactivate();
     super.dispose();
   }
@@ -1468,7 +1470,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       prizeAmountFor: _prizeAmountForGameCartela,
       onMarkedNumberToggled: _toggleMarkedNumber,
       onClaimBingo: _claimBingo,
-      onClearMarksForCartela: _clearMarksForCartela,
       blockedReasonCodeFor: _blockedReasonCodeForCartela,
       blockedServerReasonFor: _blockedServerReasonForCartela,
       onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
@@ -1753,7 +1754,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             prizeAmountFor: _prizeAmountForGameCartela,
             onMarkedNumberToggled: _toggleMarkedNumber,
             onClaimBingo: _claimBingo,
-            onClearMarksForCartela: _clearMarksForCartela,
             blockedReasonCodeFor: _blockedReasonCodeForCartela,
             blockedServerReasonFor: _blockedServerReasonForCartela,
             onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
@@ -2070,7 +2070,6 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     required this.prizeAmountFor,
     required this.onMarkedNumberToggled,
     required this.onClaimBingo,
-    required this.onClearMarksForCartela,
     required this.blockedReasonCodeFor,
     required this.blockedServerReasonFor,
     this.onReorder,
@@ -2098,7 +2097,6 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
   final void Function(GameCartelaModel cartela, String header, String value)
   onMarkedNumberToggled;
   final Future<void> Function(GameCartelaModel) onClaimBingo;
-  final void Function(GameCartelaModel) onClearMarksForCartela;
   final String? Function(GameCartelaModel) blockedReasonCodeFor;
   final String? Function(GameCartelaModel) blockedServerReasonFor;
   final void Function(int fromIndex, int toIndex)? onReorder;
@@ -2145,7 +2143,6 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
             ),
       onMarkedNumberToggled: onMarkedNumberToggled,
       onClaimBingo: () => onClaimBingo(gameCartela),
-      onClearMarks: () => onClearMarksForCartela(gameCartela),
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
       bingoLockListenable: bingoLockListenable,

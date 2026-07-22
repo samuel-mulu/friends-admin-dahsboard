@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,10 +11,19 @@ import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/models/support_message_model.dart';
 import '../providers/support_messages_provider.dart';
+import '../providers/support_unread_provider.dart';
 import '../widgets/send_feedback_form.dart';
 import '../widgets/support_message_tile.dart';
 
 Future<void> showFeedbackHubModal(BuildContext context, WidgetRef ref) {
+  final session = ref.read(authControllerProvider).session;
+  if (session != null) {
+    unawaited(
+      ref.read(supportUnreadCountProvider.notifier).markSeenAndClear(),
+    );
+    ref.invalidate(mySupportMessagesProvider);
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

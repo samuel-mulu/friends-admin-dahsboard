@@ -114,6 +114,12 @@ abstract class AppLocalizations {
   /// **'Hi, '**
   String get appBarHi;
 
+  /// Tooltip for the shell header master refresh icon
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get appBarRefreshTooltip;
+
   /// No description provided for @signIn.
   ///
   /// In en, this message translates to:

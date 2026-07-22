@@ -15,6 +15,9 @@ class AppLocalizationsOm extends AppLocalizations {
   String get appBarHi => 'Akkam, ';
 
   @override
+  String get appBarRefreshTooltip => 'Refresh';
+
+  @override
   String get signIn => 'Seeni';
 
   @override

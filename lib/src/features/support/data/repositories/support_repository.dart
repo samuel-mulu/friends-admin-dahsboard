@@ -49,6 +49,44 @@ class SupportRepository {
     );
   }
 
+  /// Unseen admin replies for the header feedback badge.
+  Future<int> getUnreadReplyCount() {
+    return _apiClient.get<int>(
+      '/support/messages/me/unread-count',
+      decoder: (rawData) {
+        if (rawData is Map<String, dynamic>) {
+          final count = rawData['count'];
+          if (count is int) {
+            return count;
+          }
+          if (count is num) {
+            return count.toInt();
+          }
+        }
+        return 0;
+      },
+    );
+  }
+
+  /// Clears the feedback badge after the player opens the hub.
+  Future<int> markRepliesSeen() {
+    return _apiClient.post<int>(
+      '/support/messages/me/mark-seen',
+      decoder: (rawData) {
+        if (rawData is Map<String, dynamic>) {
+          final updated = rawData['updated'];
+          if (updated is int) {
+            return updated;
+          }
+          if (updated is num) {
+            return updated.toInt();
+          }
+        }
+        return 0;
+      },
+    );
+  }
+
   List<T> _decodeList<T>(
     Object? rawData,
     T Function(Map<String, dynamic> json) decoder,

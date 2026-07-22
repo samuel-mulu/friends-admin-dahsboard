@@ -7,6 +7,9 @@
   "appBarHi": "Hi, ",
   "@appBarHi": { "description": "Greeting prefix in app bar" },
 
+  "appBarRefreshTooltip": "Refresh",
+  "@appBarRefreshTooltip": { "description": "Tooltip for the shell header master refresh icon" },
+
   "signIn": "Sign in",
   "@signIn": {},
 

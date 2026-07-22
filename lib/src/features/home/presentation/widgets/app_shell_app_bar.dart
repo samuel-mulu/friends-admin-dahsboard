@@ -10,12 +10,16 @@ import '../../../../core/widgets/app_back_confirm_scope.dart';
 import '../../../../core/widgets/friends_bingo_wordmark.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../games/domain/live_connection_status.dart';
+import '../../../games/presentation/providers/current_game_operations_provider.dart';
 import '../../../games/presentation/providers/has_active_registered_cartelas_provider.dart';
 import '../../../games/presentation/providers/realtime_connection_provider.dart';
+import '../../../games/presentation/utils/live_game_resume_owner_registry.dart';
 import '../../../games/presentation/widgets/live_status_chip.dart';
-import '../../../support/presentation/widgets/support_feedback_modals.dart';
 import '../../../messages/presentation/providers/broadcasts_provider.dart';
 import '../../../messages/presentation/widgets/admin_messages_modal.dart';
+import '../../../support/presentation/providers/support_unread_provider.dart';
+import '../../../support/presentation/widgets/support_feedback_modals.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const AppShellAppBar({required this.navigationShell, super.key});
@@ -114,6 +118,7 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
               overflow: TextOverflow.ellipsis,
             ),
       actions: [
+        _MasterRefreshButton(headerForeground: headerForeground),
         Padding(
           padding: const EdgeInsets.only(right: 4),
           child: ConnectionStatusDot(
@@ -128,11 +133,14 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ),
         if (!isGuest && !ref.watch(hasActiveForcedBroadcastProvider))
           _BroadcastMessageButton(headerForeground: headerForeground),
-        IconButton(
-          tooltip: l10n.drawerSendFeedback,
-          onPressed: () => showFeedbackHubModal(context, ref),
-          icon: Icon(Icons.comment_outlined, color: headerForeground),
-        ),
+        if (!isGuest)
+          _FeedbackMessageButton(headerForeground: headerForeground)
+        else
+          IconButton(
+            tooltip: l10n.drawerSendFeedback,
+            onPressed: () => showFeedbackHubModal(context, ref),
+            icon: Icon(Icons.comment_outlined, color: headerForeground),
+          ),
         if (isGuest) ...[
           TextButton(
             onPressed: () => context.go(loginPathWithRedirect('/games')),
@@ -162,6 +170,72 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ],
     );
   }
+}
+
+/// Soft master refresh — live sync when the live screen is mounted; otherwise
+/// invalidate shell providers in place (no navigation / hard restart).
+class _MasterRefreshButton extends ConsumerStatefulWidget {
+  const _MasterRefreshButton({required this.headerForeground});
+
+  final Color headerForeground;
+
+  @override
+  ConsumerState<_MasterRefreshButton> createState() =>
+      _MasterRefreshButtonState();
+}
+
+class _MasterRefreshButtonState extends ConsumerState<_MasterRefreshButton> {
+  bool _busy = false;
+
+  Future<void> _onPressed() async {
+    if (_busy) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final ranLive =
+          await LiveGameResumeOwnerRegistry.runMasterRefreshIfActive();
+      if (!ranLive && mounted) {
+        await _softInvalidateShellProviders(ref);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return IconButton(
+      tooltip: l10n.appBarRefreshTooltip,
+      onPressed: _busy ? null : _onPressed,
+      icon: _busy
+          ? SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: widget.headerForeground,
+              ),
+            )
+          : Icon(Icons.refresh_rounded, color: widget.headerForeground),
+    );
+  }
+}
+
+Future<void> _softInvalidateShellProviders(WidgetRef ref) async {
+  ref.invalidate(myWalletProvider);
+  ref.invalidate(broadcastsProvider);
+  try {
+    await ref.read(currentGameOperationsProvider.notifier).refresh();
+  } catch (_) {
+    // Soft refresh — ignore; providers will rebuild on next watch.
+  }
+  try {
+    await ref.read(myWalletProvider.future);
+  } catch (_) {}
 }
 
 Future<void> _handleShellBack({
@@ -241,6 +315,131 @@ class _BroadcastMessageButton extends ConsumerStatefulWidget {
   @override
   ConsumerState<_BroadcastMessageButton> createState() =>
       _BroadcastMessageButtonState();
+}
+
+class _FeedbackMessageButton extends ConsumerStatefulWidget {
+  const _FeedbackMessageButton({required this.headerForeground});
+
+  final Color headerForeground;
+
+  @override
+  ConsumerState<_FeedbackMessageButton> createState() =>
+      _FeedbackMessageButtonState();
+}
+
+class _FeedbackMessageButtonState extends ConsumerState<_FeedbackMessageButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkController;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unreadCount = ref.watch(supportUnreadBadgeCountProvider);
+    final shouldBlink = unreadCount > 0;
+
+    if (shouldBlink && !_blinkController.isAnimating) {
+      _blinkController.repeat(reverse: true);
+    } else if (!shouldBlink && _blinkController.isAnimating) {
+      _blinkController.stop();
+      _blinkController.value = 1;
+    }
+
+    final icon = Icon(
+      Icons.comment_outlined,
+      color: widget.headerForeground,
+    );
+
+    final badged = _FeedbackUnreadBadge(
+      count: unreadCount,
+      child: icon,
+    );
+
+    return IconButton(
+      tooltip: context.l10n.drawerSendFeedback,
+      onPressed: () => showFeedbackHubModal(context, ref),
+      icon: shouldBlink
+          ? FadeTransition(
+              opacity: Tween<double>(begin: 0.55, end: 1).animate(
+                CurvedAnimation(
+                  parent: _blinkController,
+                  curve: Curves.easeInOut,
+                ),
+              ),
+              child: badged,
+            )
+          : badged,
+    );
+  }
+}
+
+class _FeedbackUnreadBadge extends StatelessWidget {
+  const _FeedbackUnreadBadge({
+    required this.count,
+    required this.child,
+  });
+
+  final int count;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) {
+      return child;
+    }
+
+    final label = count > 99 ? '99+' : '$count';
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        Positioned(
+          right: -2,
+          top: -2,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE53935),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.white, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _BroadcastMessageButtonState extends ConsumerState<_BroadcastMessageButton>

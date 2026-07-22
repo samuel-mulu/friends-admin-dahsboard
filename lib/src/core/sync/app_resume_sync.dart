@@ -10,6 +10,7 @@ import '../../features/games/presentation/providers/current_big_game_provider.da
 import '../../features/games/presentation/providers/current_game_operations_provider.dart';
 import '../../features/games/presentation/utils/live_game_resume_owner_registry.dart';
 import '../../features/messages/presentation/providers/broadcasts_provider.dart';
+import '../../features/support/presentation/providers/support_unread_provider.dart';
 import '../../features/wallet/presentation/providers/wallet_provider.dart';
 import '../../core/realtime/socket_service.dart';
 import '../time/server_clock_provider.dart';
@@ -68,5 +69,8 @@ Future<void> syncAppAfterResume(WidgetRef ref) async {
       );
     }
     unawaited(ref.read(broadcastsProvider.notifier).refresh());
+    unawaited(
+      ref.read(supportUnreadCountProvider.notifier).refresh(quiet: true),
+    );
   }
 }

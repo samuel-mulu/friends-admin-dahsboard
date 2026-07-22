@@ -14,7 +14,7 @@ class ThemeModeController extends Notifier<ThemeMode> {
     final storageAsync = ref.watch(appPreferencesStorageProvider);
     return storageAsync.maybeWhen(
       data: (storage) => storage.readThemeMode(),
-      orElse: () => ThemeMode.system,
+      orElse: () => ThemeMode.light,
     );
   }
 

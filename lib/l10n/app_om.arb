@@ -3,6 +3,7 @@
 
   "appTitle": "Friends Bingo-online",
   "appBarHi": "Akkam, ",
+  "appBarRefreshTooltip": "Refresh",
   "signIn": "Seeni",
   "signUp": "Galmaa'i",
   "logout": "Ba'i",

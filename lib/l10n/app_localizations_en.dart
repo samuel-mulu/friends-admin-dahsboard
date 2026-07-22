@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appBarHi => 'Hi, ';
 
   @override
+  String get appBarRefreshTooltip => 'Refresh';
+
+  @override
   String get signIn => 'Sign in';
 
   @override

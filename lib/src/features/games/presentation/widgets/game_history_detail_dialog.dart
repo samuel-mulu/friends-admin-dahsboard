@@ -7,10 +7,13 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/games_repository.dart';
+import '../../data/models/called_number_model.dart';
+import '../../data/models/called_numbers_snapshot.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../../domain/attended_game_history_entry.dart';
 import '../../domain/game_rule_localized_name.dart';
+import 'called_numbers_strip.dart';
 import 'history_cartela_detail_dialog.dart';
 import 'winner_cartela_dialog.dart';
 
@@ -39,11 +42,13 @@ class _GameHistoryDetailDialog extends ConsumerStatefulWidget {
 class _GameHistoryDetailDialogState
     extends ConsumerState<_GameHistoryDetailDialog> {
   Future<List<SessionWinnerResultModel>>? _winnerResultsFuture;
+  Future<CalledNumbersSnapshot>? _calledNumbersFuture;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _winnerResultsFuture ??= _loadWinnerResults();
+    _calledNumbersFuture ??= _loadCalledNumbers();
   }
 
   Future<List<SessionWinnerResultModel>> _loadWinnerResults() {
@@ -55,6 +60,24 @@ class _GameHistoryDetailDialogState
     return ref
         .read(gamesRepositoryProvider)
         .getSessionWinnerResults(sessionId: sessionId);
+  }
+
+  Future<CalledNumbersSnapshot> _loadCalledNumbers() {
+    final sessionId = widget.entry.game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return Future<CalledNumbersSnapshot>.value(
+        CalledNumbersSnapshot(calledNumbers: const [], totalCount: 0),
+      );
+    }
+
+    return ref.read(gamesRepositoryProvider).getCalledNumbers(sessionId);
+  }
+
+  Future<void> _reloadCalledNumbers() async {
+    setState(() {
+      _calledNumbersFuture = _loadCalledNumbers();
+    });
+    await _calledNumbersFuture;
   }
 
   SessionWinnerResultModel? _winnerResultFor(
@@ -79,6 +102,14 @@ class _GameHistoryDetailDialogState
       return 'Blocked';
     }
     return cartela.status.label;
+  }
+
+  List<int> _winnerCartelaNumbers(List<SessionWinnerResultModel> results) {
+    final numbers = <int>{};
+    for (final result in results) {
+      numbers.add(result.cartelaNumber);
+    }
+    return numbers.toList(growable: false)..sort();
   }
 
   @override
@@ -155,6 +186,78 @@ class _GameHistoryDetailDialogState
                           return _SessionWinnersBanner(
                             results: snapshot.data ?? const [],
                             isLoading: false,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.liveCalledNumbersLabel,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FutureBuilder<List<Object?>>(
+                        future: Future.wait<Object?>([
+                          _calledNumbersFuture!,
+                          _winnerResultsFuture!,
+                        ]),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            return _HistoryCalledNumbersError(
+                              onRetry: () {
+                                unawaited(_reloadCalledNumbers());
+                              },
+                            );
+                          }
+
+                          final calledSnapshot =
+                              snapshot.data?[0] as CalledNumbersSnapshot? ??
+                              CalledNumbersSnapshot(
+                                calledNumbers: const [],
+                                totalCount: 0,
+                              );
+                          final winners =
+                              snapshot.data?[1]
+                                  as List<SessionWinnerResultModel>? ??
+                              const <SessionWinnerResultModel>[];
+                          final called = List<CalledNumberModel>.from(
+                            calledSnapshot.calledNumbers,
+                          )..sort((a, b) => a.order.compareTo(b.order));
+
+                          if (called.isEmpty) {
+                            return Text(
+                              l10n.calledNumbersWillAppear,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          }
+
+                          return CalledNumbersStrip(
+                            calledNumbers: called,
+                            winnerCartelaNumbers: _winnerCartelaNumbers(
+                              winners,
+                            ),
+                            onRefreshCalledNumbers: () {
+                              unawaited(_reloadCalledNumbers());
+                            },
                           );
                         },
                       ),
@@ -239,6 +342,40 @@ class _GameHistoryDetailDialogState
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryCalledNumbersError extends StatelessWidget {
+  const _HistoryCalledNumbersError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+
+    return Material(
+      color: theme.colorScheme.errorContainer.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.gameHistoryRetry,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(l10n.gameHistoryRetry),
+            ),
+          ],
         ),
       ),
     );

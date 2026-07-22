@@ -3,6 +3,7 @@
 
   "appTitle": "ፍሬንድስ ቢንጎ",
   "appBarHi": "ሰላም፣ ",
+  "appBarRefreshTooltip": "Refresh",
   "signIn": "ግባ",
   "signUp": "ተመዝገብ",
   "logout": "ውጣ",

@@ -467,26 +467,4 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     unawaited(_persistManualMarks());
   }
 
-  void _clearMarksForCartela(GameCartelaModel cartela) {
-    if (_cartelaMarksFrozenForEvidence) {
-      return;
-    }
-
-    setState(() {
-      final next = clearManualMarksForCartela(
-        manualMarkedNumbers: _cn.manualMarkedNumbers,
-        cartela: cartela,
-      );
-      _cn.manualMarkedNumbers
-        ..clear()
-        ..addAll(next);
-      if (_cn.lastManualMarkedKey != null) {
-        if (!next.contains(_cn.lastManualMarkedKey)) {
-          _cn.lastManualMarkedKey = null;
-        }
-      }
-      _sortMyCartelas();
-    });
-    unawaited(_persistManualMarks());
-  }
 }

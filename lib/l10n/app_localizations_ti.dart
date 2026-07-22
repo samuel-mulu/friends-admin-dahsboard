@@ -15,6 +15,9 @@ class AppLocalizationsTi extends AppLocalizations {
   String get appBarHi => 'ሰላም፣ ';
 
   @override
+  String get appBarRefreshTooltip => 'Refresh';
+
+  @override
   String get signIn => 'እቶ';
 
   @override

@@ -25,7 +25,6 @@ class LiveCartelaCard extends StatelessWidget {
     this.lastManualMarkedKey,
     required this.onMarkedNumberToggled,
     required this.onClaimBingo,
-    this.onClearMarks,
     this.showFinishedOutcome = false,
     this.freezeCartelaMarks = false,
     this.isOneAwayFromWin = false,
@@ -68,7 +67,6 @@ class LiveCartelaCard extends StatelessWidget {
   final void Function(GameCartelaModel cartela, String header, String value)
   onMarkedNumberToggled;
   final VoidCallback onClaimBingo;
-  final VoidCallback? onClearMarks;
 
   @override
   Widget build(BuildContext context) {
@@ -80,13 +78,6 @@ class LiveCartelaCard extends StatelessWidget {
     final trackingOverlay = !readOnlyOutcome || isWinner
         ? winningPatternOverlay
         : const CartelaPatternProgressOverlay();
-    final canClearMarks =
-        onClearMarks != null &&
-        !readOnlyMarks &&
-        !isBlocked &&
-        !isWinner &&
-        !isClaiming &&
-        manualMarkedNumbers.isNotEmpty;
     final isDark = theme.brightness == Brightness.dark;
     final headerOnColor = isBlocked
         ? theme.colorScheme.onError
@@ -248,11 +239,6 @@ class LiveCartelaCard extends StatelessWidget {
                       !readOnlyMarks &&
                       !isBlocked &&
                       !isWinner) ...[
-                    if (canClearMarks)
-                      _ClearMarksButton(
-                        iconColor: headerActionColor,
-                        onPressed: onClearMarks!,
-                      ),
                     _CartelaMarkColorDropdown(iconColor: headerActionColor),
                   ] else
                     const SizedBox(width: 4),
@@ -637,32 +623,6 @@ class _MarkedCartelaGrid extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ClearMarksButton extends StatelessWidget {
-  const _ClearMarksButton({
-    required this.iconColor,
-    required this.onPressed,
-  });
-
-  final Color iconColor;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: context.l10n.cartelaClearMarks,
-      padding: const EdgeInsets.all(2),
-      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      visualDensity: VisualDensity.compact,
-      icon: Icon(
-        Icons.backspace_outlined,
-        size: 18,
-        color: iconColor,
-      ),
     );
   }
 }
