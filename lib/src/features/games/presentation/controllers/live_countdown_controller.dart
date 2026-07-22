@@ -45,6 +45,9 @@ class LiveCountdownController {
   /// BINGO claim button lock during pre-call / awaiting ball — does not dirty the cartela list.
   final ValueNotifier<bool> bingoClaimLocked = ValueNotifier<bool>(false);
 
+  /// When set, BINGO stays locked until this instant (post-call hold).
+  DateTime? bingoPostCallLockUntil;
+
   DateTime? _trackedNextAutoCallAt;
   String? _trackedNextBallSessionScope;
   bool _nextBallScheduleAuthoritativelyNull = false;
@@ -54,8 +57,12 @@ class LiveCountdownController {
   bool _loggedCalledNumbersStaleSync = false;
   bool _loggedCanonicalStaleRefetch = false;
   bool _pausedForAppBackground = false;
+  int? _bingoLockSeenCalledOrder;
+  bool? _lastBingoAutoCallActive;
+  Timer? _bingoPostCallUnlockTimer;
 
   void dispose() {
+    _clearBingoPostCallHold();
     bingoClaimLocked.dispose();
     _stopNextBallTicker(clearDisplay: false);
     winnerWindowTicker?.cancel();
@@ -69,25 +76,37 @@ class LiveCountdownController {
     bingoClaimLocked.value = value;
   }
 
-  /// Recompute BINGO pre-call lock from schedule + called order (ValueNotifier only).
+  /// Recompute BINGO pre-call / post-call lock from schedule + called order.
   void refreshBingoClaimLock({
     required GameModel? game,
     required bool autoCallActive,
     required int highestKnownCalledOrder,
     bool forceUnlock = false,
   }) {
+    _lastBingoAutoCallActive = autoCallActive;
+
     if (forceUnlock || game == null) {
+      _bingoLockSeenCalledOrder = null;
+      _clearBingoPostCallHold();
       updateBingoClaimLocked(false);
       return;
     }
 
     if (game.status == GameStatus.winnerWindow) {
+      _bingoLockSeenCalledOrder = null;
+      _clearBingoPostCallHold();
       updateBingoClaimLocked(false);
       return;
     }
 
-    final target = _effectiveNextAutoCallTarget(game);
     final clock = host.controllers.realtime.serverClock;
+    _noteCalledOrderForBingoLock(
+      highestKnownCalledOrder: highestKnownCalledOrder,
+      autoCallActive: autoCallActive,
+      nowUtc: clock.nowUtc(),
+    );
+
+    final target = _effectiveNextAutoCallTarget(game);
     final resolvedPlayPhase = next_ball_countdown.resolveNextBallPlayPhase(
       gameStatus: game.status,
       autoCallActive: autoCallActive,
@@ -103,6 +122,16 @@ class LiveCountdownController {
     }
     nextBallPlayPhase = resolvedPlayPhase;
 
+    if (!autoCallActive) {
+      _clearBingoPostCallHold();
+    } else if (bingoPostCallLockUntil != null &&
+        !next_ball_countdown.isBingoPostCallHoldActive(
+          postCallLockUntil: bingoPostCallLockUntil,
+          clock: clock,
+        )) {
+      _clearBingoPostCallHold();
+    }
+
     final locked = next_ball_countdown.isBingoClaimCountdownLocked(
       gameStatus: game.status,
       autoCallActive: autoCallActive,
@@ -111,8 +140,63 @@ class LiveCountdownController {
       playPhase: resolvedPlayPhase,
       highestKnownCalledOrder: highestKnownCalledOrder,
       callingPhaseBaselineOrder: callingPhaseBaselineOrder,
+      postCallLockUntil: bingoPostCallLockUntil,
     );
     updateBingoClaimLocked(locked);
+  }
+
+  void _noteCalledOrderForBingoLock({
+    required int highestKnownCalledOrder,
+    required bool autoCallActive,
+    required DateTime nowUtc,
+  }) {
+    final seen = _bingoLockSeenCalledOrder;
+    if (seen == null || highestKnownCalledOrder < seen) {
+      _bingoLockSeenCalledOrder = highestKnownCalledOrder;
+      return;
+    }
+
+    if (highestKnownCalledOrder <= seen) {
+      return;
+    }
+
+    _bingoLockSeenCalledOrder = highestKnownCalledOrder;
+    if (!autoCallActive) {
+      return;
+    }
+    _armBingoPostCallHold(nowUtc);
+  }
+
+  void _armBingoPostCallHold(DateTime nowUtc) {
+    bingoPostCallLockUntil = nowUtc.add(
+      const Duration(seconds: next_ball_countdown.kBingoClaimPostCallUnlockSeconds),
+    );
+    _bingoPostCallUnlockTimer?.cancel();
+    _bingoPostCallUnlockTimer = Timer(
+      const Duration(
+        seconds: next_ball_countdown.kBingoClaimPostCallUnlockSeconds,
+      ),
+      _onBingoPostCallHoldElapsed,
+    );
+  }
+
+  void _onBingoPostCallHoldElapsed() {
+    _bingoPostCallUnlockTimer = null;
+    if (!host.isLiveHostActive) {
+      return;
+    }
+    refreshBingoClaimLock(
+      game: host.game,
+      autoCallActive: _lastBingoAutoCallActive ?? false,
+      highestKnownCalledOrder:
+          host.controllers.calledNumbers.highestKnownCalledOrder,
+    );
+  }
+
+  void _clearBingoPostCallHold() {
+    _bingoPostCallUnlockTimer?.cancel();
+    _bingoPostCallUnlockTimer = null;
+    bingoPostCallLockUntil = null;
   }
 
   @visibleForTesting
@@ -246,6 +330,8 @@ class LiveCountdownController {
     _claimPausesNextBallCountdown = false;
     nextBallPlayPhase = next_ball_countdown.NextBallPlayPhase.counting;
     callingPhaseBaselineOrder = null;
+    _bingoLockSeenCalledOrder = null;
+    _clearBingoPostCallHold();
     _loggedCalledNumbersStaleSync = false;
     _loggedCanonicalStaleRefetch = false;
     LiveRealtimeDebug.resetCountdownDedup();
@@ -445,6 +531,7 @@ class LiveCountdownController {
   }) {
     if (context.isAnyClaimChecking) {
       // Do not freeze lock while checking — claim UI already blocks via isClaiming.
+      _clearBingoPostCallHold();
       updateBingoClaimLocked(false);
       return false;
     }
@@ -695,6 +782,7 @@ class LiveCountdownController {
   }
 
   bool _clearNextBallDisplay() {
+    _clearBingoPostCallHold();
     updateBingoClaimLocked(false);
     if (nextBallCountdownSeconds == null && nextBallZeroForMs == 0) {
       return false;
@@ -724,6 +812,10 @@ class LiveCountdownController {
     DateTime? nextAutoCallAt,
     bool autoCallActive,
   ) {
+    if (bingoPostCallLockUntil != null) {
+      return const Duration(milliseconds: 250);
+    }
+
     if (nextAutoCallAt == null) {
       return const Duration(seconds: 1);
     }
@@ -732,7 +824,7 @@ class LiveCountdownController {
       nextAutoCallAt,
       clock: host.controllers.realtime.serverClock,
     );
-    return raw <= 2
+    return raw <= next_ball_countdown.kBingoClaimLockSeconds
         ? const Duration(milliseconds: 250)
         : const Duration(seconds: 1);
   }

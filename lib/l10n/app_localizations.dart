@@ -339,7 +339,7 @@ abstract class AppLocalizations {
   /// No description provided for @otpEnterCode.
   ///
   /// In en, this message translates to:
-  /// **'Enter the 6-digit verification code.'**
+  /// **'Enter the 4-digit verification code.'**
   String get otpEnterCode;
 
   /// No description provided for @otpSmsBanner.
@@ -2093,6 +2093,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Live'**
   String get calledNumbersSyncLive;
+
+  /// No description provided for @missedPreviewRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining {count}'**
+  String missedPreviewRemaining(int count);
 
   /// No description provided for @calledNumbersSyncCatchingUp.
   ///

@@ -129,7 +129,7 @@
   "otpBackToDetails": "Back to details",
   "@otpBackToDetails": {},
 
-  "otpEnterCode": "Enter the 6-digit verification code.",
+  "otpEnterCode": "Enter the 4-digit verification code.",
   "@otpEnterCode": {},
 
   "otpSmsBanner": "Enter the verification code sent to your phone by SMS.",
@@ -1148,6 +1148,11 @@
 
   "calledNumbersSyncLive": "Live",
   "@calledNumbersSyncLive": {},
+
+  "missedPreviewRemaining": "Remaining {count}",
+  "@missedPreviewRemaining": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "calledNumbersSyncCatchingUp": "Catching up…",
   "@calledNumbersSyncCatchingUp": {},

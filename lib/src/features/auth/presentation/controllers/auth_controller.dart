@@ -70,7 +70,7 @@ class AuthController extends Notifier<AuthState> {
 
     final sessionState = ref.read(sessionManagerProvider);
     if (!sessionState.isInitializing) {
-      _syncSocket(null, sessionState.session);
+      unawaited(_syncSocket(null, sessionState.session));
     }
 
     return AuthState(
@@ -291,7 +291,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void _syncWithSessionState(SessionState? previous, SessionState next) {
-    _syncSocket(previous?.session, next.session);
+    unawaited(_syncSocket(previous?.session, next.session));
 
     if (!ref.mounted) {
       return;
@@ -305,20 +305,21 @@ class AuthController extends Notifier<AuthState> {
     );
   }
 
-  void _syncSocket(AuthSession? previous, AuthSession? next) {
+  Future<void> _syncSocket(AuthSession? previous, AuthSession? next) async {
     final previousToken = previous?.accessToken;
     final nextToken = next?.accessToken;
     if (previousToken == nextToken) {
       return;
     }
 
+    final deviceId = await _sessionManager.ensureDeviceId();
     _socketService.disconnect();
     if (nextToken == null || nextToken.isEmpty) {
-      _socketService.connectAsGuest();
+      _socketService.connectAsGuest(deviceId: deviceId);
       return;
     }
 
-    _socketService.connect(nextToken);
+    _socketService.connect(nextToken, deviceId: deviceId);
   }
 
   String _messageFromError(Object error) {

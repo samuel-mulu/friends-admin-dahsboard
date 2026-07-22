@@ -1,18 +1,39 @@
+/// Whether the player owns [sessionId] via cartela membership only.
+///
+/// Never treats "primary screen session == requested session" as ownership.
+/// That shortcut falsely marked non-registered players as live owners after a
+/// local READY→PLAYING patch and blocked missed-round entry.
+bool ownsSessionByCartelas(
+  String? sessionId,
+  Iterable<String> cartelaSessionIds,
+) {
+  if (sessionId == null || sessionId.isEmpty) {
+    return false;
+  }
+  return cartelaSessionIds.any((id) => id == sessionId);
+}
+
+/// Whether the player owns the given [sessionId].
+///
+/// Cartela membership is authoritative. [primarySessionId] is ignored for
+/// ownership decisions (kept as an optional parameter for call-site compat).
+bool ownsSession(
+  String? sessionId,
+  Iterable<String> cartelaSessionIds, {
+  String? primarySessionId,
+}) {
+  return ownsSessionByCartelas(sessionId, cartelaSessionIds);
+}
+
 /// Whether the player owns cartelas in the live/checking session.
 ///
-/// Prefers an explicit primary session match, but also accepts local cartelas
-/// whose session id matches [liveSessionId] when primary is briefly stale
-/// (READY snapshot while operations already reports PLAYING).
+/// Cartela-backed only. [primarySessionId] is ignored so a patched primary
+/// PLAYING session without cartelas cannot claim live ownership (Player 2
+/// missed-round entry).
 bool ownsLiveSessionCartelas({
   required String? liveSessionId,
   required String? primarySessionId,
   required Iterable<String> cartelaSessionIds,
 }) {
-  if (liveSessionId == null || liveSessionId.isEmpty) {
-    return false;
-  }
-  if (primarySessionId == liveSessionId) {
-    return true;
-  }
-  return cartelaSessionIds.any((id) => id == liveSessionId);
+  return ownsSessionByCartelas(liveSessionId, cartelaSessionIds);
 }

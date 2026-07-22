@@ -14,21 +14,28 @@ class SocketService {
   final Map<String, List<SocketEventListener>> _listeners =
       <String, List<SocketEventListener>>{};
   io.Socket? _socket;
-  String? _activeToken;
+  String? _activeAuthSignature;
 
   bool get isConnected => _socket?.connected ?? false;
 
   bool get hasActiveSocket => _socket != null;
 
-  bool get isGuestConnection => _activeToken == _guestMarker;
+  bool get isGuestConnection =>
+      _activeAuthSignature?.startsWith('guest:') ?? false;
 
-  void connect(String token) {
+  void connect(String token, {String? deviceId}) {
     final normalizedToken = token.trim();
     if (normalizedToken.isEmpty) {
       return;
     }
 
-    if (_socket != null && _activeToken == normalizedToken) {
+    final authSignature = _buildAuthSignature(
+      mode: 'auth',
+      token: normalizedToken,
+      deviceId: deviceId,
+    );
+
+    if (_socket != null && _activeAuthSignature == authSignature) {
       return;
     }
 
@@ -39,7 +46,11 @@ class SocketService {
       io.OptionBuilder()
           .disableAutoConnect()
           .setPath('/socket.io')
-          .setAuth({'token': normalizedToken})
+          .setAuth({
+            'token': normalizedToken,
+            if (deviceId != null && deviceId.trim().isNotEmpty)
+              'deviceId': deviceId.trim(),
+          })
           .enableForceNew()
           .disableMultiplex()
           .enableReconnection()
@@ -47,13 +58,19 @@ class SocketService {
           .build(),
     );
 
-    _activeToken = normalizedToken;
+    _activeAuthSignature = authSignature;
     _attachRegisteredListeners();
     _socket?.connect();
   }
 
-  void connectAsGuest() {
-    if (_socket != null && _activeToken == _guestMarker) {
+  void connectAsGuest({String? deviceId}) {
+    final authSignature = _buildAuthSignature(
+      mode: 'guest',
+      token: _guestMarker,
+      deviceId: deviceId,
+    );
+
+    if (_socket != null && _activeAuthSignature == authSignature) {
       return;
     }
 
@@ -64,6 +81,10 @@ class SocketService {
       io.OptionBuilder()
           .disableAutoConnect()
           .setPath('/socket.io')
+          .setAuth({
+            if (deviceId != null && deviceId.trim().isNotEmpty)
+              'deviceId': deviceId.trim(),
+          })
           .enableForceNew()
           .disableMultiplex()
           .enableReconnection()
@@ -71,14 +92,14 @@ class SocketService {
           .build(),
     );
 
-    _activeToken = _guestMarker;
+    _activeAuthSignature = authSignature;
     _attachRegisteredListeners();
     _socket?.connect();
   }
 
   void disconnect() {
     _disposeSocket();
-    _activeToken = null;
+    _activeAuthSignature = null;
   }
 
   void joinSession(String sessionId) {
@@ -141,6 +162,14 @@ class SocketService {
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
+  }
+
+  String _buildAuthSignature({
+    required String mode,
+    required String token,
+    String? deviceId,
+  }) {
+    return '$mode:$token:${deviceId?.trim() ?? ''}';
   }
 }
 

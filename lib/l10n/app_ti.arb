@@ -44,7 +44,7 @@
   "otpResendInMinutes": "ኣብ {minutes} ደቒቃታት ደጊምካ ስደድ",
   "otpResendInMinutesSeconds": "ኣብ {minutes}ደ {seconds}ሰ ደጊምካ ስደድ",
   "otpBackToDetails": "ናብ ዝርዝር ተመለስ",
-  "otpEnterCode": "6 ቁጽሪ ናይ ምርግጋጽ ኮድ እቶ።",
+  "otpEnterCode": "4 ቁጽሪ ናይ ምርግጋጽ ኮድ እቶ።",
   "otpSmsBanner": "ብSMS ናብ ተሌፎንካ ዝተለኣኸ ኮድ እቶ።",
 
   "resetPasswordTitle": "ሓድሽ ፓሥዎርድ ቃል ኣዳሉ",
@@ -351,6 +351,7 @@
   "calledNumbersDrawnCount": "ዘተጸዉዑ፦ {count}",
   "calledNumbersBallOrder": "#{order}",
   "calledNumbersSyncLive": "ኦንላይን",
+  "missedPreviewRemaining": "ዝተረፈ {count}",
   "calledNumbersSyncCatchingUp": "እየተመሳሰለ…",
   "calledNumbersSyncHelp": "ዝተጸዊዑ ቁጽሪታት ካብ ሰርቨር ይመጹ። ኣብ  ግንኙነት ንእሽቶ ምድንጓይ መደበኛ እዩ።",
   "calledNumbersSyncHelpTitle": "ዝተጸዊዑ ቁጽሪታት ምምሕዳር",

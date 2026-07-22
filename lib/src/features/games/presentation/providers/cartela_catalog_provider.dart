@@ -11,7 +11,7 @@ final cartelaCatalogProvider =
     );
 
 class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
-  static const defaultPageSize = 5000;
+  static const defaultPageSize = 1000;
 
   @override
   Future<CartelaCatalogState> build() async {

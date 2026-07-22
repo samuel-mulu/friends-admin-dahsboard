@@ -44,7 +44,7 @@ OM: dict[str, str] = {
     "otpResendCode": "Koodii irra deebi'ii ergi",
     "otpResendInSeconds": "Sekondii {seconds} keessatti irra deebi'ii ergi",
     "otpBackToDetails": "Gara ibsaatti deebi'i",
-    "otpEnterCode": "Koodii mirkaneessaa dijiitii 6 galchi.",
+    "otpEnterCode": "Koodii mirkaneessaa dijiitii 4 galchi.",
     "otpSmsBanner": "Koodii mirkaneessaa SMS'n gara bilbila keetti ergame galchi.",
     "resetPasswordTitle": "Jecha iccitii haaraa kaa'i",
     "resetPasswordSmsSentTo": "Koodii SMS gara {phone} ergame galchi.",

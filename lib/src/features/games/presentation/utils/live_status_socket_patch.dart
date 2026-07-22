@@ -28,3 +28,24 @@ GameModel? applyStatusChangedSocketPatch({
     return null;
   }
 }
+
+/// Whether to skip painting primary as PLAYING for a player with no cartelas
+/// on that session (Player 2 missed-round entry).
+///
+/// Applying the optimistic patch first causes a one-frame
+/// liveWaitingFirstBall / spectator flash before ops reload selects the
+/// registration game as primary.
+bool shouldSkipOptimisticPlayingPatchForNonOwner({
+  required String? incomingStatus,
+  required GameStatus? priorPrimaryStatus,
+  required bool ownsEventSessionByCartelas,
+}) {
+  if (ownsEventSessionByCartelas) {
+    return false;
+  }
+  if (incomingStatus != 'PLAYING') {
+    return false;
+  }
+  return priorPrimaryStatus == GameStatus.ready ||
+      priorPrimaryStatus == GameStatus.next;
+}

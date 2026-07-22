@@ -134,7 +134,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get otpBackToDetails => 'ወደ ዝርዝር ተመለስ';
 
   @override
-  String get otpEnterCode => '6-አሃዝ የማረጋገጫ ኮድ አስገባ።';
+  String get otpEnterCode => '4-አሃዝ የማረጋገጫ ኮድ አስገባ።';
 
   @override
   String get otpSmsBanner => 'በSMS ወደ ስልክህ የተላከውን ኮድ አስገባ።';
@@ -1149,6 +1149,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get calledNumbersSyncLive => 'ቀጥታ';
+
+  @override
+  String missedPreviewRemaining(int count) {
+    return 'የቀሩ $count';
+  }
 
   @override
   String get calledNumbersSyncCatchingUp => 'እየተመሳሰለ…';

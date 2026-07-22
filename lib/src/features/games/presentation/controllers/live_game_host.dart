@@ -77,6 +77,11 @@ abstract class LiveGameHost {
 
   GamesRepository get gamesRepository;
 
+  /// Ownership test used by the read-only missed-player preview observer.
+  /// True when the player owns cartelas in [sessionId] (never for Player 2's
+  /// observed round).
+  bool ownsSessionForPreview(String? sessionId);
+
   SocketService get socketService;
 
   ServerClockService get serverClock;

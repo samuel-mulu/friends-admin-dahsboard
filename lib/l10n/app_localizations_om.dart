@@ -136,7 +136,7 @@ class AppLocalizationsOm extends AppLocalizations {
   String get otpBackToDetails => 'Gara ibsaatti deebi\'i';
 
   @override
-  String get otpEnterCode => 'Koodii mirkaneessaa dijiitii 6 galchi.';
+  String get otpEnterCode => 'Koodii mirkaneessaa dijiitii 4 galchi.';
 
   @override
   String get otpSmsBanner =>
@@ -1188,6 +1188,11 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get calledNumbersSyncLive => 'Kallattii';
+
+  @override
+  String missedPreviewRemaining(int count) {
+    return 'Kan hafan $count';
+  }
 
   @override
   String get calledNumbersSyncCatchingUp => 'Wal simsiisaa jira…';

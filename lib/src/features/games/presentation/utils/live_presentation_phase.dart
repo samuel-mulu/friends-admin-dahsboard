@@ -119,6 +119,28 @@ const Duration kPostGameSummaryHold = Duration(
   seconds: kPostGameSummaryHoldSeconds,
 );
 
+/// Whether a READY game should present as live-calling.
+///
+/// Uses [GameModel.calledNumbersCount] or strip entries that belong to the
+/// same session. Balls from another session (e.g. missed-player Game A strip
+/// leftovers while primary is Game B registration) must not flip the phase.
+bool readyGameIndicatesLiveCalling({
+  required GameModel game,
+  required List<CalledNumberModel> calledNumbers,
+}) {
+  if (game.status != GameStatus.ready) {
+    return false;
+  }
+  if (game.calledNumbersCount > 0) {
+    return true;
+  }
+  final sessionId = game.sessionId;
+  if (sessionId == null || sessionId.isEmpty) {
+    return false;
+  }
+  return calledNumbers.any((entry) => entry.sessionId == sessionId);
+}
+
 Duration _phaseHoldRemaining({
   required DateTime shownAt,
   required DateTime now,
@@ -326,6 +348,12 @@ class LivePresentationPhaseResolver {
       return true;
     }
 
+    // Backend still allows registration — keep Registration Open (no Preparing
+    // flash after a blocking live round clears with a past scheduledStartAt).
+    if (game.status == GameStatus.ready && game.canRegister) {
+      return false;
+    }
+
     // Stale guard: a deadline that passed long ago belongs to a previous
     // round (e.g. right after advancing). Wait for the canonical refetch
     // instead of snapping into the preparing-game phase.
@@ -333,9 +361,7 @@ class LivePresentationPhaseResolver {
       return false;
     }
 
-    return game.status == GameStatus.ready &&
-        game.canRegister &&
-        !scheduledStartAt.isAfter(currentTime);
+    return !scheduledStartAt.isAfter(currentTime);
   }
 
   static LivePresentationPhase resolve({
@@ -387,8 +413,13 @@ class LivePresentationPhaseResolver {
 
     // Balls are being drawn — leave registration layout even if operations
     // still reports registrationOpen (AUTO start lag or stale snapshot).
+    // Only same-session balls count: foreign/missed-preview leftovers must not
+    // flip a READY next-game into liveCalling (grid-only broken registration).
     if (game.status == GameStatus.ready &&
-        (calledNumbers.isNotEmpty || game.calledNumbersCount > 0)) {
+        readyGameIndicatesLiveCalling(
+          game: game,
+          calledNumbers: calledNumbers,
+        )) {
       return LivePresentationPhase.liveCalling;
     }
 

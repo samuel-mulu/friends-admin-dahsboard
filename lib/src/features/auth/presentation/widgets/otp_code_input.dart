@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_branding.dart';
 
-const kOtpCodeLength = 6;
+const kOtpCodeLength = 4;
 
-/// Six-digit OTP input designed for SMS verification flows.
+/// Four-digit OTP input designed for GeezSMS verification flows.
 class OtpCodeInput extends StatefulWidget {
   const OtpCodeInput({
     required this.onChanged,

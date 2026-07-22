@@ -577,6 +577,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       playPhase: _countdown.nextBallPlayPhase,
       highestKnownCalledOrder: _highestKnownCalledOrder,
       callingPhaseBaselineOrder: _countdown.callingPhaseBaselineOrder,
+      postCallLockUntil: _countdown.bingoPostCallLockUntil,
     );
   }
 
@@ -1344,6 +1345,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             type: 'called_numbers',
             reason: 'no_live_sync_session',
           );
+          // READY registration with no live sync must not keep a previous
+          // session's balls in the shared strip (missed-player Game A → B).
+          if (game.status == GameStatus.ready &&
+              _cn.calledNumbers.isNotEmpty &&
+              _cn.calledNumbers.every(
+                (entry) => entry.sessionId != game.sessionId,
+              )) {
+            _cn.clearSessionScopedState(
+              clearCalledNumbers: true,
+              clearManualMarks: false,
+            );
+          }
         }
       } else if (!effectiveIncludeCalledNumbers &&
           !sessionChanged &&
@@ -1817,25 +1830,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   bool _eventAffectsCurrentGame({String? sessionId, String? slotId}) {
-    if (eventAffectsCurrentGame(
+    return eventAffectsCurrentGame(
       game: _game,
       activeSessionId: _activeSessionId,
       eventSessionId: sessionId,
       eventSlotId: slotId,
       trackedRegistrationSessionId: _trackedRegistrationSessionId,
-    )) {
-      return true;
-    }
-
-    if (sessionId != null && sessionId.isNotEmpty) {
-      final ops = _lastOperations;
-      if (sessionId == ops?.liveGame?.sessionId ||
-          sessionId == ops?.checkingGame?.sessionId) {
-        return true;
-      }
-    }
-
-    return false;
+    );
   }
 
   bool _eventAffectsRegistrationSession({String? sessionId, String? slotId}) {
@@ -2036,6 +2037,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (resumeSync) {
         _realtime.canonicalRefetchInFlight = false;
       }
+      controllers.missedPreview.syncFromCanonical(
+        operations: operations,
+        sharedCalledNumbers: calledNumbers,
+      );
     });
     _syncActiveCartelasToProvider();
     if (!resumeSync || !includeCalledNumbers) {
@@ -2125,6 +2130,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       registrationSessionId: registrationSessionId,
       includeCalledNumbers: includeCalledNumbers,
       includeMyCartelas: includeMyCartelas,
+    );
+  }
+
+  bool _shouldSyncMissedPreviewForForeignSession(String? eventSessionId) {
+    return shouldSyncMissedPreviewForForeignSession(
+      eventSessionId: eventSessionId,
+      primarySessionId: _game?.sessionId,
+      trackedRegistrationSessionId: _trackedRegistrationSessionId,
+      ownsSession: _ownsSessionForPreview,
     );
   }
 
@@ -2304,8 +2318,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                   final ownsLocalLiveCartelas = ownsLiveSessionCartelas(
                     liveSessionId: liveSessionId,
                     primarySessionId: _game?.sessionId,
-                    cartelaSessionIds:
-                        _myCartelas.map((cartela) => cartela.gameId),
+                    cartelaSessionIds: _myCartelas.map(
+                      (cartela) => cartela.gameId,
+                    ),
                   );
                   final ownsLiveCartelas =
                       fetchedCartelas.isNotEmpty || ownsLocalLiveCartelas;
@@ -2331,8 +2346,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                   final ownsLiveCartelas = ownsLiveSessionCartelas(
                     liveSessionId: liveSessionId,
                     primarySessionId: _game?.sessionId,
-                    cartelaSessionIds:
-                        _myCartelas.map((cartela) => cartela.gameId),
+                    cartelaSessionIds: _myCartelas.map(
+                      (cartela) => cartela.gameId,
+                    ),
                   );
                   if (ownsLiveCartelas) {
                     preloadedPrimaryCartelas =
@@ -2525,6 +2541,20 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final eventSessionId = eventSessionIdFromPayload(normalizedPayload);
+    if (_shouldSyncMissedPreviewForForeignSession(eventSessionId)) {
+      MissedPreviewDebug.foreignEvent(
+        event: 'game:number_called',
+        eventSessionId: eventSessionId,
+        primarySessionId: _game?.sessionId,
+        willSync: true,
+      );
+      controllers.missedPreview.onForeignNumberCalled(
+        CalledNumberModel.fromJson(normalizedPayload),
+      );
+      return;
+    }
+
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
@@ -2683,6 +2713,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       includeCalledNumbers: true,
     );
     if (normalizedPayload == null) {
+      return;
+    }
+
+    final eventSessionId = eventSessionIdFromPayload(normalizedPayload);
+    if (_shouldSyncMissedPreviewForForeignSession(eventSessionId)) {
+      controllers.missedPreview.onForeignPhaseEvent(
+        reason: 'missed_preview_bingo_checking',
+      );
       return;
     }
 
@@ -2919,6 +2957,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final eventSessionId = eventSessionIdFromPayload(normalizedPayload);
+    if (_shouldSyncMissedPreviewForForeignSession(eventSessionId)) {
+      controllers.missedPreview.onForeignPhaseEvent(
+        reason: 'missed_preview_winner_window',
+      );
+      return;
+    }
+
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
@@ -2935,6 +2981,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _applyWinnerWindowEventPayload(Map<String, dynamic> payload) {
+    final eventSessionId =
+        payload['sessionId'] as String? ??
+        payload['gameSessionId'] as String? ??
+        payload['id'] as String?;
+    final currentSessionId = _game?.sessionId;
+    if (eventSessionId != null &&
+        eventSessionId.isNotEmpty &&
+        currentSessionId != null &&
+        currentSessionId.isNotEmpty &&
+        eventSessionId != currentSessionId) {
+      controllers.missedPreview.onForeignPhaseEvent(
+        reason: 'missed_preview_winner_window',
+      );
+      return;
+    }
+
     _applyWinnerWindowState(
       winnerWindowEndsAt: _parseWinnerWindowEndsAt(
         payload['winnerWindowEndsAt'],
@@ -3079,9 +3141,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final eventSessionId = eventSessionIdFromPayload(normalizedPayload);
+    if (_shouldSyncMissedPreviewForForeignSession(eventSessionId)) {
+      controllers.missedPreview.onForeignPhaseEvent(
+        reason: 'missed_preview_game_finished',
+      );
+      return;
+    }
+
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+
+    _applyTerminalWinnerResultsFromSocket(normalizedPayload);
 
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'game_finished',
@@ -3099,7 +3171,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _syncCalledNumbersForFinishedReview();
         _maybeAutoShowWinnerCartelaDialog();
         unawaited(
-          _fetchSessionWinnerResultsIfNeeded(force: true).whenComplete(() {
+          _fetchSessionWinnerResultsIfNeeded(
+            force:
+                !_review.sessionWinnerResultsLoaded &&
+                _review.sessionWinnerResults.isEmpty,
+          ).whenComplete(() {
             if (mounted) {
               _maybeAutoShowWinnerCartelaDialog();
             }
@@ -3109,6 +3185,20 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       },
       scheduleAdvanceToNextGame: _scheduleAdvanceToNextGame,
     );
+  }
+
+  void _applyTerminalWinnerResultsFromSocket(Map<String, dynamic> payload) {
+    final winnerResults = SessionWinnerResultModel.parseList(
+      payload['winnerResults'],
+    );
+    if (winnerResults.isEmpty) {
+      return;
+    }
+
+    _review.stopSessionWinnerResultsPolling();
+    _review.sessionWinnerResultsLoaded = true;
+    _review.sessionWinnerResultsLoading = false;
+    _review.applySessionWinnerResults(winnerResults);
   }
 
   void _syncPostGameSummaryCountdownTicker() {

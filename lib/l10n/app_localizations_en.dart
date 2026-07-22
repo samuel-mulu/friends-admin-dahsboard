@@ -135,7 +135,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otpBackToDetails => 'Back to details';
 
   @override
-  String get otpEnterCode => 'Enter the 6-digit verification code.';
+  String get otpEnterCode => 'Enter the 4-digit verification code.';
 
   @override
   String get otpSmsBanner =>
@@ -1181,6 +1181,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calledNumbersSyncLive => 'Live';
+
+  @override
+  String missedPreviewRemaining(int count) {
+    return 'Remaining $count';
+  }
 
   @override
   String get calledNumbersSyncCatchingUp => 'Catching up…';

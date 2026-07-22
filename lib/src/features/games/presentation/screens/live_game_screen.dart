@@ -61,7 +61,11 @@ import '../utils/live_registration_target.dart';
 import '../utils/live_registration_visibility.dart';
 import '../utils/live_registration_metrics_patch.dart';
 import '../utils/live_session_ownership.dart';
+import '../utils/missed_live_preview_numbers.dart';
+import '../utils/missed_preview_foreign_session_sync.dart';
+import '../debug/missed_preview_debug.dart';
 import '../utils/registration_reg_display_count.dart';
+import '../widgets/missed_live_game_preview.dart';
 import '../utils/cartela_display_order.dart';
 import '../utils/merge_registered_cartelas.dart';
 import '../utils/live_game_event_guard.dart';
@@ -343,6 +347,68 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       cartelaSessionIds: _myCartelas.map((cartela) => cartela.gameId),
     );
   }
+
+  /// Cartela session ids used for missed-preview ownership (current + next).
+  Iterable<String> get _ownershipCartelaSessionIds sync* {
+    for (final cartela in _myCartelas) {
+      yield cartela.gameId;
+    }
+    for (final cartela in _nextRegistrationCartelas) {
+      yield cartela.gameId;
+    }
+  }
+
+  Widget _buildMissedLivePreviewSection() {
+    final observer = controllers.missedPreview;
+    return ValueListenableBuilder<int>(
+      valueListenable: observer.revision,
+      builder: (context, _, child) {
+        final previewResolution = observer.resolution;
+        final previewSession = previewResolution.previewSession;
+        if (!previewResolution.showPreview || previewSession == null) {
+          return const SizedBox.shrink();
+        }
+
+        final previewNumbers = filterMissedPreviewCalledNumbers(
+          sharedCalledNumbers: observer.calledNumbers,
+          previewSessionId: previewSession.sessionId,
+        );
+        final previewActiveNumber = missedPreviewActiveNumber(previewNumbers);
+        final previewRemaining = missedPreviewRemainingCount(
+          previewSession: previewSession,
+          filteredPreviewLength: observer.calledNumbers.length,
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            VGap.sm,
+            MissedLiveGamePreview(
+              key: ValueKey(
+                'missed-preview-${previewSession.sessionId}-'
+                '${previewResolution.phase.name}-'
+                '${previewActiveNumber ?? 0}',
+              ),
+              session: previewSession,
+              title: previewSession.localizedRuleName(ref),
+              phase: previewResolution.phase,
+              calledNumbers: previewNumbers,
+              activeNumber: previewActiveNumber,
+              remainingCount: previewRemaining,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  bool ownsSessionForPreview(String? sessionId) =>
+      _ownsSessionForPreview(sessionId);
+
+  bool _ownsSessionForPreview(String? sessionId) =>
+      ownsSessionByCartelas(sessionId, _ownershipCartelaSessionIds);
 
   /// The session currently in play (PLAYING / CHECKING), not the READY queue game.
   GameModel? get _blockingLiveSessionGame =>
@@ -1169,12 +1235,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       registeredCartelas: registeredCartelas,
       isCurrentRound: isCurrentRound,
     );
-    final showMissedRoundWrapper =
-        cartelaActionsEnabled && uiMode.showMissedRoundWrapper;
+    final showMissedRoundWrapper = cartelaActionsEnabled &&
+        controllers.missedPreview.showMissedRoundWrapper &&
+        (uiMode.showMissedRoundWrapper || uiMode.useRegistrationOpenLayout);
     final showRegistrationHandoffPreparing =
-        uiMode.mode == LiveUiMode.handoffOpeningNext;
+        uiMode.mode == LiveUiMode.handoffOpeningNext ||
+        controllers.missedPreview.showHandoffHold;
     final isMissedRoundRegistration =
-        uiMode.mode == LiveUiMode.missedRoundRegistration;
+        controllers.missedPreview.showMissedRoundWrapper;
     // Handoff keeps the registration pulse header so "Opening next round…" is
     // inline — never a modal overlay.
     final showRegistrationPulseHeader =
@@ -1271,6 +1339,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             VGap.sm,
             statusBanner,
           ],
+          _buildMissedLivePreviewSection(),
           VGap.sm,
           Expanded(
             child: !uiMode.showRegistrationGrid
@@ -1538,13 +1607,27 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       isCurrentRound: isCurrentRound,
     );
 
-    // Missed-round players get the same full registration grid used in the
-    // next-game sheet (toolbar + numbers + Taken chips), not a separate flow.
-    if (!isCurrentRound) {
+    // Missed-round overlap: dual Missed + Next card only while observer says so.
+    // After Game A ends (handoff / none), do not keep the stale Missed card.
+    if (!isCurrentRound && controllers.missedPreview.showMissedRoundWrapper) {
       return _buildMissedRoundRegistrationSection(target: target, panel: panel);
     }
 
     final l10n = context.l10n;
+
+    if (!isCurrentRound) {
+      return LiveNextRoundRegistrationSection(
+        gameName: target.localizedRuleName(ref),
+        nextGame: target,
+        sectionTitle: l10n.liveNextRoundRegistrationTitle,
+        helperText: controllers.missedPreview.showHandoffHold
+            ? l10n.postGameSummaryOpeningNextRound
+            : l10n.liveMissedRoundHelper,
+        registeredCartelaNumbers: _nextRegisteredCartelaNumbers,
+        panel: panel,
+        variant: LiveNextRoundSectionVariant.nextQueued,
+      );
+    }
 
     return LiveNextRoundRegistrationSection(
       gameName: target.localizedRuleName(ref),
@@ -1567,7 +1650,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
     return LiveNextRoundRegistrationSection(
       gameName: target.localizedRuleName(ref),
-      currentRoundGame: _blockingLiveSessionGame,
+      currentRoundGame: controllers.missedPreview.blockingLiveGame,
       nextGame: target,
       sectionTitle: l10n.liveNextRoundRegistrationTitle,
       helperText: l10n.liveMissedRoundHelper,

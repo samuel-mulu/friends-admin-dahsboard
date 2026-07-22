@@ -146,6 +146,18 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     final slotId =
         normalizedPayload['gameSlotId'] as String? ??
         normalizedPayload['slotId'] as String?;
+    if (_shouldSyncMissedPreviewForForeignSession(sessionId)) {
+      MissedPreviewDebug.foreignEvent(
+        event: 'game:status_changed',
+        eventSessionId: sessionId,
+        primarySessionId: _game?.sessionId,
+        willSync: true,
+      );
+      controllers.missedPreview.onForeignPhaseEvent(
+        reason: 'missed_preview_status_changed',
+      );
+      return;
+    }
     final affectsCurrent = _eventAffectsCurrentGame(
       sessionId: sessionId,
       slotId: slotId,
@@ -186,6 +198,29 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     }
 
     final priorStatus = _game?.status;
+    final ownsEventSession = ownsSessionByCartelas(
+      sessionId,
+      _ownershipCartelaSessionIds,
+    );
+    if (shouldSkipOptimisticPlayingPatchForNonOwner(
+      incomingStatus: status,
+      priorPrimaryStatus: priorStatus,
+      ownsEventSessionByCartelas: ownsEventSession,
+    )) {
+      MissedPreviewDebug.log(
+        'skip_optimistic_playing session=${sessionId ?? '-'} '
+        'prior=${priorStatus?.name ?? '-'} → canonical missed entry',
+      );
+      unawaited(
+        _refetchCanonicalImmediate(
+          reason: 'status_changed_non_owner_enter_missed',
+          includeCalledNumbers: true,
+          includeMyCartelas: !isGuest,
+        ),
+      );
+      return;
+    }
+
     final patched = applyStatusChangedSocketPatch(
       current: _game,
       payload: normalizedPayload,
@@ -414,6 +449,11 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           slotId: slotId,
         );
         if (!affectsCurrent && !affectsRegistration) {
+          if (_shouldSyncMissedPreviewForForeignSession(sessionId)) {
+            controllers.missedPreview.onForeignPhaseEvent(
+              reason: 'missed_preview_operation_updated',
+            );
+          }
           return;
         }
         if (affectsRegistration && !affectsCurrent) {

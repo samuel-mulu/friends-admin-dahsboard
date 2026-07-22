@@ -130,7 +130,10 @@ int nextBallCountdownSeconds(
 }
 
 /// Seconds before the next auto-call when BINGO claims are disabled.
-const kBingoClaimLockSeconds = 2;
+const kBingoClaimLockSeconds = 1;
+
+/// Seconds to keep BINGO claims disabled after a new ball reaches the strip.
+const kBingoClaimPostCallUnlockSeconds = 1;
 
 /// True while auto-call is overdue and the new ball has not reached the local strip.
 bool isAwaitingAutoCalledBall({
@@ -146,8 +149,23 @@ bool isAwaitingAutoCalledBall({
   return highestKnownCalledOrder <= baseline;
 }
 
-/// True during the last [kBingoClaimLockSeconds] before the next auto-call, and
-/// while waiting for the socket to deliver the ball after the schedule is due.
+/// True while the post-call unlock hold has not expired yet.
+bool isBingoPostCallHoldActive({
+  required DateTime? postCallLockUntil,
+  DateTime? now,
+  ServerClockService? clock,
+}) {
+  if (postCallLockUntil == null) {
+    return false;
+  }
+
+  final effectiveNow = now ?? clock?.nowUtc() ?? DateTime.now().toUtc();
+  return effectiveNow.isBefore(postCallLockUntil.toUtc());
+}
+
+/// True during the last [kBingoClaimLockSeconds] before the next auto-call,
+/// while waiting for the socket to deliver the ball after the schedule is due,
+/// and during the [kBingoClaimPostCallUnlockSeconds] hold after the ball arrives.
 bool isBingoClaimCountdownLocked({
   required GameStatus? gameStatus,
   required bool autoCallActive,
@@ -157,9 +175,18 @@ bool isBingoClaimCountdownLocked({
   NextBallPlayPhase? playPhase,
   int highestKnownCalledOrder = 0,
   int? callingPhaseBaselineOrder,
+  DateTime? postCallLockUntil,
 }) {
   if (gameStatus == GameStatus.winnerWindow) {
     return false;
+  }
+
+  if (isBingoPostCallHoldActive(
+    postCallLockUntil: postCallLockUntil,
+    now: now,
+    clock: clock,
+  )) {
+    return true;
   }
 
   if (!autoCallActive || nextAutoCallAt == null) {

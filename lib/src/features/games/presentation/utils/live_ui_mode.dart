@@ -199,10 +199,12 @@ class LiveUiModeResolver {
     }
 
     final liveGame = operations.liveGame;
+    final checkingGame = operations.checkingGame;
     final registrationGame = operations.registrationOpenGame;
 
     if (_isMissedRoundRegistration(
       liveGame: liveGame,
+      checkingGame: checkingGame,
       registrationGame: registrationGame,
       primary: primaryFromOps,
       ownsLiveSessionCartelas: ownsLiveCartelas,
@@ -378,16 +380,26 @@ class LiveUiModeResolver {
 
   static bool _isMissedRoundRegistration({
     required GameModel? liveGame,
+    required GameModel? checkingGame,
     required GameModel? registrationGame,
     required GameModel primary,
     required bool ownsLiveSessionCartelas,
   }) {
-    if (liveGame == null || registrationGame == null || ownsLiveSessionCartelas) {
+    if (registrationGame == null || ownsLiveSessionCartelas) {
       return false;
     }
-    return primary.status == GameStatus.ready &&
-        primary.sessionId == registrationGame.sessionId &&
-        liveGame.status == GameStatus.playing;
+    if (primary.status != GameStatus.ready ||
+        primary.sessionId != registrationGame.sessionId) {
+      return false;
+    }
+
+    final blocking = liveGame ?? checkingGame;
+    if (blocking == null) {
+      return false;
+    }
+    return blocking.status == GameStatus.playing ||
+        blocking.status == GameStatus.checking ||
+        blocking.status == GameStatus.winnerWindow;
   }
 
   static LiveUiModeState _emptyState(ResolveLiveUiModeInput input) {
