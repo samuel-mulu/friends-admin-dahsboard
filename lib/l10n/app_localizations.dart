@@ -600,6 +600,18 @@ abstract class AppLocalizations {
   /// **'You have {count} bonus cartelas for normal games. Each one registers 1 normal-game cartela without using your ETB balance. Big GOTD and Big Game use wallet money. Bonus cartelas are not withdrawable.'**
   String welcomeBonusBody(int count);
 
+  /// No description provided for @welcomeBonusDeniedDeviceAlreadyClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'This device already received the welcome bonus. Your account is ready, but free cartelas are not available.'**
+  String get welcomeBonusDeniedDeviceAlreadyClaimed;
+
+  /// No description provided for @welcomeBonusDeniedUserAlreadyClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account already received the welcome bonus. Free cartelas are not available again.'**
+  String get welcomeBonusDeniedUserAlreadyClaimed;
+
   /// No description provided for @walletBonusCartelasLabel.
   ///
   /// In en, this message translates to:
@@ -2093,6 +2105,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Live'**
   String get calledNumbersSyncLive;
+
+  /// No description provided for @missedPreviewGameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{gameName} (missed game)'**
+  String missedPreviewGameTitle(String gameName);
 
   /// No description provided for @missedPreviewRemaining.
   ///

@@ -290,6 +290,14 @@ class AppLocalizationsTi extends AppLocalizations {
   }
 
   @override
+  String get welcomeBonusDeniedDeviceAlreadyClaimed =>
+      'እዚ መሳርሒ ቅድም ንቕድም እንቋዕ ብደሓን መጻእካ ቦነስ ተቐቢሉ። ኣካውንትኻ ድልው እዩ፣ ግን ነጻ ካርቴላታት ኣይርከቡን።';
+
+  @override
+  String get welcomeBonusDeniedUserAlreadyClaimed =>
+      'ኣካውንትኻ ቅድም ንቕድም እንቋዕ ብደሓን መጻእካ ቦነስ ተቐቢሉ። ነጻ ካርቴላታት ዳግም ኣይርከቡን።';
+
+  @override
   String get walletBonusCartelasLabel => 'ቦነስ ካርቴላታት (ንቡር ጸወታታት)';
 
   @override
@@ -1153,6 +1161,11 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String get calledNumbersSyncLive => 'ኦንላይን';
+
+  @override
+  String missedPreviewGameTitle(String gameName) {
+    return '$gameName (ዝሓለፈ ጸወታ)';
+  }
 
   @override
   String missedPreviewRemaining(int count) {

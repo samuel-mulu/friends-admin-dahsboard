@@ -2,7 +2,9 @@ import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import 'next_ball_countdown.dart';
 
-const int kMissedPreviewRecentLimit = 5;
+/// How many recent called numbers to show in the missed-player ball strip
+/// (active + recent). Higher fills the tray; ListView still scrolls if needed.
+const int kMissedPreviewRecentLimit = 12;
 
 /// Recent called numbers for the missed-player preview (order preserved).
 List<CalledNumberModel> filterMissedPreviewCalledNumbers({

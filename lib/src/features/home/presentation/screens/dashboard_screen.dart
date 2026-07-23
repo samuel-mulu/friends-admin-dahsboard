@@ -6,7 +6,6 @@ import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
-import '../../../wallet/presentation/widgets/welcome_bonus_banner.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -35,10 +34,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 VGap.md,
-                Text(
-                  l10n.dashboardSubtitle,
-                  style: theme.textTheme.bodyLarge,
-                ),
+                Text(l10n.dashboardSubtitle, style: theme.textTheme.bodyLarge),
                 VGap.xl,
                 FilledButton(
                   onPressed: () => context.go('/games'),
@@ -69,19 +65,6 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         VGap.xl,
-        walletAsync.when(
-          data: (wallet) => wallet.shouldShowWelcomeBonus
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    WelcomeBonusBanner(wallet: wallet),
-                    VGap.xl,
-                  ],
-                )
-              : const SizedBox.shrink(),
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-        ),
         Card(
           child: Padding(
             padding: AppSpacing.cardPaddingDense,

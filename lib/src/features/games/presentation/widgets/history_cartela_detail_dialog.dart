@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
+import '../../data/models/called_number_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
@@ -13,6 +15,7 @@ Future<void> showHistoryCartelaDetailDialog({
   required BuildContext context,
   required GameCartelaModel cartela,
   SessionWinnerResultModel? winnerResult,
+  List<CalledNumberModel> calledNumbers = const [],
 }) {
   return showDialog<void>(
     context: context,
@@ -21,6 +24,7 @@ Future<void> showHistoryCartelaDetailDialog({
       return _HistoryCartelaDetailDialog(
         cartela: cartela,
         winnerResult: winnerResult,
+        calledNumbers: calledNumbers,
       );
     },
   );
@@ -30,10 +34,12 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
   const _HistoryCartelaDetailDialog({
     required this.cartela,
     required this.winnerResult,
+    required this.calledNumbers,
   });
 
   final GameCartelaModel cartela;
   final SessionWinnerResultModel? winnerResult;
+  final List<CalledNumberModel> calledNumbers;
 
   String _statusLabel() {
     if (cartela.isWinner) {
@@ -50,6 +56,8 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final winnerResult = this.winnerResult;
+    final orderedCalls = List<CalledNumberModel>.from(calledNumbers)
+      ..sort((a, b) => a.order.compareTo(b.order));
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -107,6 +115,17 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
                   ),
                 ],
               ],
+              if (orderedCalls.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l10n.liveCalledNumbersLabel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _HistoryCalledNumbersScroller(calledNumbers: orderedCalls),
+              ],
               const SizedBox(height: 12),
               AspectRatio(
                 aspectRatio: CartelaBoardLayout.reviewBoardAspectRatio,
@@ -126,6 +145,87 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryCalledNumbersScroller extends StatelessWidget {
+  const _HistoryCalledNumbersScroller({required this.calledNumbers});
+
+  final List<CalledNumberModel> calledNumbers;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final latestOrder = calledNumbers.isEmpty
+        ? null
+        : calledNumbers.last.order;
+
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: AppBranding.panelBackground(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppBranding.panelBorder(context)),
+      ),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        itemCount: calledNumbers.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final call = calledNumbers[index];
+          final isLatest = call.order == latestOrder;
+          return _HistoryCalledBallChip(
+            label: call.displayValue,
+            isLatest: isLatest,
+            theme: theme,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HistoryCalledBallChip extends StatelessWidget {
+  const _HistoryCalledBallChip({
+    required this.label,
+    required this.isLatest,
+    required this.theme,
+  });
+
+  final String label;
+  final bool isLatest;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isLatest
+            ? AppBranding.gold.withValues(alpha: 0.25)
+            : theme.colorScheme.surfaceContainerHighest,
+        border: Border.all(
+          color: isLatest
+              ? AppBranding.gold
+              : theme.colorScheme.outlineVariant,
+          width: isLatest ? 1.5 : 1,
+        ),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: isLatest
+              ? AppBranding.brandPurple
+              : theme.colorScheme.onSurface,
+          fontSize: 10,
         ),
       ),
     );

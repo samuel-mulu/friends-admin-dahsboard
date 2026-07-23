@@ -98,6 +98,7 @@ enum PaymentProvider {
   String get receiverFieldHint {
     switch (this) {
       case PaymentProvider.cbe:
+        return '1000…';
       case PaymentProvider.boa:
       case PaymentProvider.awash:
         return '1002003004005006';

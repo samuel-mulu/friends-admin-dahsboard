@@ -8,7 +8,6 @@ import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../providers/wallet_provider.dart';
 import '../widgets/wallet_breakdown_card.dart';
-import '../widgets/welcome_bonus_banner.dart';
 import '../widgets/wallet_state_card.dart';
 
 class WalletScreen extends ConsumerWidget {
@@ -31,8 +30,6 @@ class WalletScreen extends ConsumerWidget {
             data: (wallet) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                WelcomeBonusBanner(wallet: wallet),
-                if (wallet.shouldShowWelcomeBonus) VGap.md,
                 WalletBreakdownCard.fromWallet(wallet),
                 VGap.md,
                 Text(

@@ -20,6 +20,8 @@ class AuthState {
     this.isSubmitting = false,
     this.isSendingOtp = false,
     this.errorMessage,
+    this.pendingWelcomeBonusCartelasAwarded = 0,
+    this.pendingWelcomeBonusDeniedReason,
   });
 
   final AuthSession? session;
@@ -27,6 +29,8 @@ class AuthState {
   final bool isSubmitting;
   final bool isSendingOtp;
   final String? errorMessage;
+  final int pendingWelcomeBonusCartelasAwarded;
+  final String? pendingWelcomeBonusDeniedReason;
 
   AuthState copyWith({
     AuthSession? session,
@@ -34,7 +38,11 @@ class AuthState {
     bool? isSubmitting,
     bool? isSendingOtp,
     String? errorMessage,
+    int? pendingWelcomeBonusCartelasAwarded,
+    String? pendingWelcomeBonusDeniedReason,
     bool clearErrorMessage = false,
+    bool clearPendingWelcomeBonusCartelasAwarded = false,
+    bool clearPendingWelcomeBonusDeniedReason = false,
     bool clearSession = false,
   }) {
     return AuthState(
@@ -45,6 +53,15 @@ class AuthState {
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
+      pendingWelcomeBonusCartelasAwarded:
+          clearPendingWelcomeBonusCartelasAwarded
+          ? 0
+          : pendingWelcomeBonusCartelasAwarded ??
+                this.pendingWelcomeBonusCartelasAwarded,
+      pendingWelcomeBonusDeniedReason: clearPendingWelcomeBonusDeniedReason
+          ? null
+          : pendingWelcomeBonusDeniedReason ??
+                this.pendingWelcomeBonusDeniedReason,
     );
   }
 }
@@ -273,6 +290,22 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(clearErrorMessage: true);
   }
 
+  void clearPendingWelcomeBonusCartelasAwarded() {
+    if (!ref.mounted) {
+      return;
+    }
+
+    state = state.copyWith(clearPendingWelcomeBonusCartelasAwarded: true);
+  }
+
+  void clearPendingWelcomeBonusDeniedReason() {
+    if (!ref.mounted) {
+      return;
+    }
+
+    state = state.copyWith(clearPendingWelcomeBonusDeniedReason: true);
+  }
+
   Future<void> _completeAuthentication(
     AuthSession session, {
     required bool clearRegistrationDraft,
@@ -283,6 +316,17 @@ class AuthController extends Notifier<AuthState> {
     }
 
     state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+    if (session.welcomeBonusCartelasAwarded > 0) {
+      state = state.copyWith(
+        pendingWelcomeBonusCartelasAwarded: session.welcomeBonusCartelasAwarded,
+        clearPendingWelcomeBonusDeniedReason: true,
+      );
+    } else if (session.shouldShowWelcomeBonusDenied) {
+      state = state.copyWith(
+        pendingWelcomeBonusDeniedReason: session.welcomeBonusDeniedReason,
+        clearPendingWelcomeBonusCartelasAwarded: true,
+      );
+    }
 
     if (clearRegistrationDraft) {
       ref.read(registrationDraftProvider.notifier).clear();
@@ -301,6 +345,8 @@ class AuthController extends Notifier<AuthState> {
       session: next.session,
       isInitializing: next.isInitializing,
       isSubmitting: false,
+      clearPendingWelcomeBonusCartelasAwarded: next.session == null,
+      clearPendingWelcomeBonusDeniedReason: next.session == null,
       clearSession: next.session == null,
     );
   }

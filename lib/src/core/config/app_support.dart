@@ -15,7 +15,7 @@ abstract final class AppSupport {
   ];
 
   /// Telegram handle without @.
-  static const telegramUsername = 'friendscheweta';
+  static const telegramUsername = 'friendschewata';
 
   static Uri get telegramUri => Uri.parse('https://t.me/$telegramUsername');
 

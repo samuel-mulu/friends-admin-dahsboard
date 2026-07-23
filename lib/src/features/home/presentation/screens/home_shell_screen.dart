@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/realtime/wallet_realtime_sync.dart';
+import '../../../auth/presentation/widgets/auth_status_message_listener.dart';
 import '../../../games/presentation/widgets/game_announcement_banner.dart';
 import '../../../messages/presentation/widgets/broadcast_realtime_sync.dart';
 import '../../../messages/presentation/widgets/broadcast_top_banner.dart';
@@ -18,18 +19,20 @@ class HomeShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ForcedBroadcastOverlay(
-      child: BroadcastRealtimeSync(
-        child: SupportRealtimeSync(
-          child: Scaffold(
-            appBar: AppShellAppBar(navigationShell: navigationShell),
-            drawer: AppSettingsDrawer(navigationShell: navigationShell),
-            body: Column(
-              children: [
-                const BroadcastTopBanner(),
-                const GameAnnouncementBanner(),
-                Expanded(child: WalletRealtimeSync(child: navigationShell)),
-              ],
+    return AuthStatusMessageListener(
+      child: ForcedBroadcastOverlay(
+        child: BroadcastRealtimeSync(
+          child: SupportRealtimeSync(
+            child: Scaffold(
+              appBar: AppShellAppBar(navigationShell: navigationShell),
+              drawer: AppSettingsDrawer(navigationShell: navigationShell),
+              body: Column(
+                children: [
+                  const BroadcastTopBanner(),
+                  const GameAnnouncementBanner(),
+                  Expanded(child: WalletRealtimeSync(child: navigationShell)),
+                ],
+              ),
             ),
           ),
         ),

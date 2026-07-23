@@ -53,7 +53,6 @@ class WalletBreakdownCard extends StatelessWidget {
 
   Widget _buildHeroBreakdown(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -128,11 +127,7 @@ class WalletBreakdownCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.ac_unit_outlined,
-              color: Colors.white,
-              size: 28,
-            ),
+            const Icon(Icons.ac_unit_outlined, color: Colors.white, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -228,7 +223,9 @@ class WalletBreakdownCard extends StatelessWidget {
   Widget _buildPrimaryAmount(BuildContext context, {bool onDark = false}) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final label = _hasLocked ? l10n.walletTotalBalance : l10n.walletAvailableBalance;
+    final label = _hasLocked
+        ? l10n.walletTotalBalance
+        : l10n.walletAvailableBalance;
     final amount = _hasLocked ? _total : balance;
 
     return Column(
@@ -243,13 +240,14 @@ class WalletBreakdownCard extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           formatMoney(amount),
-          style: (onDark
-                  ? theme.textTheme.titleLarge
-                  : theme.textTheme.headlineMedium)
-              ?.copyWith(
-            color: onDark ? AppBranding.gold : AppBranding.gold,
-            fontWeight: FontWeight.w800,
-          ),
+          style:
+              (onDark
+                      ? theme.textTheme.titleLarge
+                      : theme.textTheme.headlineMedium)
+                  ?.copyWith(
+                    color: onDark ? AppBranding.gold : AppBranding.gold,
+                    fontWeight: FontWeight.w800,
+                  ),
         ),
       ],
     );
@@ -306,13 +304,14 @@ class WalletBreakdownCard extends StatelessWidget {
         ),
         Text(
           formatMoney(amount),
-          style: (emphasize
-                  ? theme.textTheme.titleMedium
-                  : theme.textTheme.bodyMedium)
-              ?.copyWith(
-            color: onDark ? Colors.white : Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style:
+              (emphasize
+                      ? theme.textTheme.titleMedium
+                      : theme.textTheme.bodyMedium)
+                  ?.copyWith(
+                    color: onDark ? Colors.white : Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
         ),
       ],
     );

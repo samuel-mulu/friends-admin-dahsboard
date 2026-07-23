@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/realtime/socket_service.dart';
+import '../../../../core/storage/app_preferences_storage.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/local_reauth_dialog.dart';
+import '../../../settings/presentation/providers/theme_mode_provider.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/withdrawal_model.dart';
 import '../../domain/wallet_amount_limits.dart';
@@ -41,7 +43,11 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   String? _trackedWithdrawalId;
   String? _availableBalance;
   String? _ownPhoneNumber;
+  String _savedCbeAccount = AppPreferencesStorage.defaultCbeWithdrawAccount;
+  bool _cbeAccountLoaded = false;
+  String? _loadedCbeUserId;
   Timer? _autoDismissTimer;
+  Timer? _cbeSaveDebounce;
   late final SocketService _socketService;
 
   @override
@@ -51,17 +57,99 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     _socketService.on('withdrawal:updated', _onWithdrawalUpdated);
     _amountController.addListener(_onFormFieldChanged);
     _receiverController.addListener(_onFormFieldChanged);
-    final sessionPhone =
-        ref.read(authControllerProvider).session?.user.phoneNumber;
+    final session = ref.read(authControllerProvider).session;
+    final sessionPhone = session?.user.phoneNumber;
     if (sessionPhone != null && sessionPhone.trim().isNotEmpty) {
       _ownPhoneNumber = sessionPhone.trim();
       _receiverController.text = sessionPhone.trim();
     }
+    final userId = session?.user.id;
+    if (userId != null) {
+      unawaited(_loadSavedCbeAccount(userId));
+    }
+  }
+
+  Future<void> _loadSavedCbeAccount(String userId) async {
+    if (_loadedCbeUserId == userId && _cbeAccountLoaded) {
+      return;
+    }
+    final storage = await ref.read(appPreferencesStorageProvider.future);
+    if (!mounted) {
+      return;
+    }
+    final saved = storage.readCbeWithdrawAccount(userId);
+    setState(() {
+      _savedCbeAccount = saved;
+      _cbeAccountLoaded = true;
+      _loadedCbeUserId = userId;
+      if (_provider == PaymentProvider.cbe) {
+        _receiverController.text = saved;
+      }
+    });
+  }
+
+  Future<void> _persistCbeAccount(String account) async {
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    if (userId == null) {
+      return;
+    }
+    final trimmed = account.trim();
+    if (trimmed.isEmpty || trimmed == _savedCbeAccount) {
+      return;
+    }
+    final storage = await ref.read(appPreferencesStorageProvider.future);
+    await storage.writeCbeWithdrawAccount(userId, trimmed);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _savedCbeAccount = trimmed;
+    });
+  }
+
+  void _schedulePersistCbeAccount(String account) {
+    _cbeSaveDebounce?.cancel();
+    _cbeSaveDebounce = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_persistCbeAccount(account));
+    });
+  }
+
+  void _applyReceiverForProvider(PaymentProvider provider) {
+    if (provider == PaymentProvider.telebirr) {
+      if (_ownPhoneNumber != null && _ownPhoneNumber!.isNotEmpty) {
+        _receiverController.text = _ownPhoneNumber!;
+      } else if (_receiverController.text.trim().startsWith('1000')) {
+        _receiverController.clear();
+      }
+      return;
+    }
+
+    if (provider == PaymentProvider.cbe) {
+      final current = _receiverController.text.trim();
+      if (current.isEmpty || _looksLikePhone(current)) {
+        _receiverController.text = _savedCbeAccount.isNotEmpty
+            ? _savedCbeAccount
+            : AppPreferencesStorage.defaultCbeWithdrawAccount;
+      }
+    }
+  }
+
+  bool _looksLikePhone(String value) {
+    final digits = _digitsOnly(value);
+    if (digits.length < 9 || digits.length > 15) {
+      return false;
+    }
+    return digits.startsWith('09') ||
+        digits.startsWith('9') ||
+        digits.startsWith('251') ||
+        digits.startsWith('07') ||
+        digits.startsWith('7');
   }
 
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _cbeSaveDebounce?.cancel();
     _socketService.off('withdrawal:updated', _onWithdrawalUpdated);
     _amountController.dispose();
     _receiverController.dispose();
@@ -219,8 +307,9 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     final l10n = context.l10n;
     final walletAsync = ref.watch(myWalletProvider);
     final withdrawalsAsync = ref.watch(withdrawalHistoryProvider);
-    final sessionPhone =
-        ref.watch(authControllerProvider).session?.user.phoneNumber.trim();
+    final session = ref.watch(authControllerProvider).session;
+    final sessionPhone = session?.user.phoneNumber.trim();
+    final sessionUserId = session?.user.id;
     if (sessionPhone != null &&
         sessionPhone.isNotEmpty &&
         _ownPhoneNumber != sessionPhone) {
@@ -235,6 +324,15 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
             _receiverController.text = sessionPhone;
           }
         });
+      });
+    }
+    if (sessionUserId != null &&
+        (!_cbeAccountLoaded || _loadedCbeUserId != sessionUserId)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        unawaited(_loadSavedCbeAccount(sessionUserId));
       });
     }
     final availableBalance = walletAsync.asData?.value.balance;
@@ -274,11 +372,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                     setState(() {
                       _provider = provider;
                       _clearConfirmation();
-                      if (provider == PaymentProvider.telebirr &&
-                          (_receiverController.text.trim().isEmpty) &&
-                          _ownPhoneNumber != null) {
-                        _receiverController.text = _ownPhoneNumber!;
-                      }
+                      _applyReceiverForProvider(provider);
                     });
                   },
                 ),
@@ -308,7 +402,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                   controller: _receiverController,
                   keyboardType: _provider == PaymentProvider.telebirr
                       ? TextInputType.phone
-                      : TextInputType.text,
+                      : TextInputType.number,
                   style: _isOtherTelebirrNumber
                       ? TextStyle(
                           color: Theme.of(context).colorScheme.error,
@@ -324,7 +418,9 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                         ? (_isOtherTelebirrNumber
                               ? 'Other number — payout goes here (not your account phone).'
                               : 'Own number (recommended)')
-                        : null,
+                        : (_provider == PaymentProvider.cbe
+                              ? 'Starts with 1000. Your account is saved on this device.'
+                              : null),
                     helperStyle: TextStyle(
                       color: _isOtherTelebirrNumber
                           ? Theme.of(context).colorScheme.error
@@ -340,6 +436,15 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                         : null,
                   ),
                   validator: _validateReceiver,
+                  onChanged: (value) {
+                    if (_provider != PaymentProvider.cbe) {
+                      return;
+                    }
+                    final trimmed = value.trim();
+                    if (trimmed.startsWith('1000') && trimmed.length >= 5) {
+                      _schedulePersistCbeAccount(trimmed);
+                    }
+                  },
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
@@ -458,6 +563,10 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                 : null,
           );
 
+      if (_provider == PaymentProvider.cbe) {
+        await _persistCbeAccount(receiverValue);
+      }
+
       ref.invalidate(myWalletProvider);
       ref.invalidate(withdrawalHistoryProvider);
       ref.invalidate(walletTransactionsProvider);
@@ -538,6 +647,18 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     if (_provider == PaymentProvider.telebirr &&
         !RegExp(r'^\d{10,15}$').hasMatch(trimmed)) {
       return l10n.validatorPhoneInvalid;
+    }
+    if (_provider == PaymentProvider.cbe) {
+      final digits = _digitsOnly(trimmed);
+      if (digits != trimmed) {
+        return 'CBE account must be numbers only.';
+      }
+      if (!digits.startsWith('1000')) {
+        return 'CBE account should start with 1000.';
+      }
+      if (digits.length < 5) {
+        return 'Enter your full CBE account number.';
+      }
     }
     return null;
   }

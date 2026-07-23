@@ -39,11 +39,26 @@ Success response envelope data:
 {
   "accessToken": "short-lived-token",
   "refreshToken": "long-lived-token",
+  "welcomeBonusCartelasAwarded": 10,
+  "welcomeBonusDeniedReason": null,
   "user": {
     "...": "current user profile"
   }
 }
 ```
+
+Behavior:
+
+- `deviceId` should be stable per installed app instance.
+- The backend should award the welcome bonus only once per device.
+- The backend should also avoid awarding the welcome bonus more than once to the same user.
+- `deviceId` is unique in `DeviceWelcomeBonusGrant` so concurrent registrations cannot double-award the same install.
+- Later logins on the same device must still succeed; they should simply return `welcomeBonusCartelasAwarded: 0`.
+- On **register**, when the bonus is not awarded, the response may include `welcomeBonusDeniedReason`:
+  - `DEVICE_ALREADY_CLAIMED` — this install already received the welcome bonus
+  - `USER_ALREADY_CLAIMED` — this user already received the welcome bonus
+  - `DEVICE_ID_MISSING` — no device id was sent
+- The mobile app should show a denial snackbar for `DEVICE_ALREADY_CLAIMED` and `USER_ALREADY_CLAIMED` after registration.
 
 ### `POST /auth/refresh`
 

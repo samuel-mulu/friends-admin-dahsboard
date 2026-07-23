@@ -188,12 +188,12 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String validatorDepositAmountMin(String amount) {
-    return 'ዝቅተኛ ተቀማጭ $amount ብር ነው።';
+    return 'ዝቅተኛ ገቢ $amount ብር ነው።';
   }
 
   @override
   String validatorDepositAmountMax(String amount) {
-    return 'ከፍተኛ ተቀማጭ $amount ብር ነው።';
+    return 'ከፍተኛ ገቢ $amount ብር ነው።';
   }
 
   @override
@@ -208,7 +208,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String depositAmountRangeHelper(String min, String max) {
-    return 'ተቀማጭ ከ $min እስከ $max ብር።';
+    return 'ገቢ ከ $min እስከ $max ብር።';
   }
 
   @override
@@ -264,7 +264,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dashboardWhatIsNextBody =>
-      'ቀጣይ እርምጃዎች ቀጥታ ቁጥሮችን፣ ቢንጎ ጥያቄዎችን፣ ተቀማጭና ሽያጭ ወደዚሁ መሠረት ያካተታሉ።';
+      'ቀጣይ እርምጃዎች ቀጥታ ቁጥሮችን፣ ቢንጎ ጥያቄዎችን፣ ገቢና ወጪ ወደዚሁ መሠረት ያካተታሉ።';
 
   @override
   String get walletAvailableBalance => 'ያለው ቀሪ';
@@ -290,6 +290,14 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get welcomeBonusDeniedDeviceAlreadyClaimed =>
+      'ይህ መሣሪያ ቀደም ሲል የእንኳን ደህና መጡ ቦነስ ተቀብሏል። መለያዎ ዝግጁ ነው፣ ነገር ግን ነፃ ካርቴላዎች አይገኙም።';
+
+  @override
+  String get welcomeBonusDeniedUserAlreadyClaimed =>
+      'መለያዎ ቀደም ሲል የእንኳን ደህና መጡ ቦነስ ተቀብሏል። ነፃ ካርቴላዎች እንደገና አይገኙም።';
+
+  @override
   String get walletBonusCartelasLabel => 'ቦነስ ካርቴላዎች (መደበኛ ጨዋታዎች)';
 
   @override
@@ -298,10 +306,10 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get walletDeposit => 'ተቀማጭ';
+  String get walletDeposit => 'ገቢ';
 
   @override
-  String get walletWithdraw => 'ሽያጭ';
+  String get walletWithdraw => 'ወጪ';
 
   @override
   String get walletTransactionHistory => 'የግብይት ታሪክ';
@@ -310,14 +318,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get walletTransactionHistorySubtitle => 'ሁሉንም የቦርሳ ንቅናቄዎች ያጣጣሉ።';
 
   @override
-  String get walletDepositHistory => 'የተቀማጭ ታሪክ';
+  String get walletDepositHistory => 'የገቢ ታሪክ';
 
   @override
   String get walletDepositHistorySubtitle =>
       'የማረጋገጫ ሂደትን ይከታተሉ እና ሲያስፈልግ ደግም ይሞክሩ።';
 
   @override
-  String get walletWithdrawalHistory => 'የሽያጭ ታሪክ';
+  String get walletWithdrawalHistory => 'የወጪ ታሪክ';
 
   @override
   String get walletWithdrawalHistorySubtitle => 'ጥያቄ፣ ፈቃድ እና ክፍያ ሁኔታዎችን ይከታተሉ።';
@@ -329,7 +337,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get walletTryAgain => 'እንደገና ሞክር';
 
   @override
-  String get depositScreenTitle => 'ተቀማጭ';
+  String get depositScreenTitle => 'ገቢ';
 
   @override
   String get depositAmount => 'መጠን';
@@ -385,10 +393,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get depositUseTestRef => 'ሙከራ ማጣቀሻ ተጠቀም';
 
   @override
-  String get depositSubmit => 'ተቀማጭ አስገባ';
+  String get depositSubmit => 'ገቢ አስገባ';
 
   @override
-  String get depositGuideTitle => 'እንዴት ተቀማጭ እንደሚያደርጉ';
+  String get depositGuideTitle => 'እንዴት ገቢ እንደሚያደርጉ';
 
   @override
   String get depositGuideTelebirrStep1 => 'ቴሌብር ክፈትን ወደ ፈረንድስ ቢንጎ ገንዘብ ላክ';
@@ -430,10 +438,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get depositVerifying => 'ክፍያዎ እየተረጋገጠ ነው…';
 
   @override
-  String get depositApprovedTitle => 'ተቀማጭ ጸድቋል';
+  String get depositApprovedTitle => 'ገቢ ጸድቋል';
 
   @override
-  String get depositRejectedTitle => 'ተቀማጭ አልተሳካም';
+  String get depositRejectedTitle => 'ገቢ አልተሳካም';
 
   @override
   String get depositTryAgain => 'ዝርዝሮችን ያርሙ እና እንደገና ይሞክሩ።';
@@ -476,15 +484,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get walletQuickDeposit => 'በሞባይል ገንዘብ ወይም ባንክ ቀጥታ ገንዘብ ያክሉ';
 
   @override
-  String get depositLatest => 'የቅርቡ ተቀማጭ';
+  String get depositLatest => 'የቅርቡ ገቢ';
 
   @override
   String depositSubmittedStatus(String status) {
-    return 'ተቀማጭ ቀርቧል። ሁኔታ: $status።';
+    return 'ገቢ ቀርቧል። ሁኔታ: $status።';
   }
 
   @override
-  String get depositCouldNotSubmit => 'ተቀማጭ ማስገባት አልተቻለም።';
+  String get depositCouldNotSubmit => 'ገቢ ማስገባት አልተቻለም።';
 
   @override
   String get depositReceiptScan => 'Scan receipt';
@@ -537,16 +545,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get depositHistoryTitle => 'የተቀማጭ ታሪክ';
+  String get depositHistoryTitle => 'የገቢ ታሪክ';
 
   @override
-  String get depositHistoryEmpty => 'ገና ተቀማጭ የለም';
+  String get depositHistoryEmpty => 'ገና ገቢ የለም';
 
   @override
-  String get depositHistoryEmptyMessage => 'የተቀማጭ ጥያቄዎችዎ እዚህ ይታያሉ።';
+  String get depositHistoryEmptyMessage => 'የገቢ ጥያቄዎችዎ እዚህ ይታያሉ።';
 
   @override
-  String get depositHistoryCouldNotLoad => 'የተቀማጭ ታሪክ ማምጣት አልተቻለም።';
+  String get depositHistoryCouldNotLoad => 'የገቢ ታሪክ ማምጣት አልተቻለም።';
 
   @override
   String get depositRetryVerification => 'ማረጋገጫ ደግም ሞክር';
@@ -580,24 +588,24 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get withdrawScreenTitle => 'ሽያጭ';
+  String get withdrawScreenTitle => 'ወጪ';
 
   @override
   String get withdrawAmount => 'መጠን';
 
   @override
-  String get withdrawSubmit => 'ሽያጭ አስገባ';
+  String get withdrawSubmit => 'ወጪ አስገባ';
 
   @override
-  String get withdrawLatest => 'የቅርቡ ሽያጭ';
+  String get withdrawLatest => 'የቅርቡ ወጪ';
 
   @override
   String withdrawSubmittedStatus(String status) {
-    return 'ሽያጭ ቀርቧል። ሁኔታ: $status።';
+    return 'ወጪ ቀርቧል። ሁኔታ: $status።';
   }
 
   @override
-  String get withdrawCouldNotSubmit => 'ሽያጭ ማስገባት አልተቻለም።';
+  String get withdrawCouldNotSubmit => 'ወጪ ማስገባት አልተቻለም።';
 
   @override
   String withdrawStatusLabel(String status) {
@@ -635,16 +643,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get withdrawHistoryTitle => 'የሽያጭ ታሪክ';
+  String get withdrawHistoryTitle => 'የወጪ ታሪክ';
 
   @override
-  String get withdrawHistoryEmpty => 'ገና ሽያጭ የለም';
+  String get withdrawHistoryEmpty => 'ገና ወጪ የለም';
 
   @override
-  String get withdrawHistoryEmptyMessage => 'የሽያጭ ጥያቄዎችዎ እዚህ ይታያሉ።';
+  String get withdrawHistoryEmptyMessage => 'የወጪ ጥያቄዎችዎ እዚህ ይታያሉ።';
 
   @override
-  String get withdrawHistoryCouldNotLoad => 'የሽያጭ ታሪክ ማምጣት አልተቻለም።';
+  String get withdrawHistoryCouldNotLoad => 'የወጪ ታሪክ ማምጣት አልተቻለም።';
 
   @override
   String get withdrawSelectProvider => 'የክፍያ ዘዴ';
@@ -655,7 +663,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get withdrawLockedFundsHint =>
-      'ተቆልፏ የሚገኙ ገንዘቦች ለበመጠባበቅ ላይ ያሉ የሽያጭ ጥያቄዎች ተይዘዋል።';
+      'ተቆልፏ የሚገኙ ገንዘቦች በመጠባበቅ ላይ ያሉ የወጪ ጥያቄዎች ተይዘዋል።';
 
   @override
   String get withdrawAmountLockedHelper =>
@@ -665,24 +673,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get withdrawAmountExceedsAvailable => 'መጠኑ ከሚገኝ ቀሪ ሂሳብዎ በላይ ነው።';
 
   @override
-  String get withdrawPendingTitle => 'ሽያጭ ቀርቧል';
+  String get withdrawPendingTitle => 'ወጪ ቀርቧል';
 
   @override
   String get withdrawPendingMessage =>
       'ጥያቄዎ ለአስተዳዳሪ ግምገማ በመጠባበቅ ላይ ነው። መጠኑ እስኪጸድቅ ወይም እስኪተሰርዝ ድረስ ተቆልፏል።';
 
   @override
-  String get withdrawApprovedTitle => 'ሽያጭ ጸድቋል';
+  String get withdrawApprovedTitle => 'ወጪ ጸድቋል';
 
   @override
   String get withdrawApprovedMessage => 'ክፍያዎ ጸድቆ ተልኳል።';
 
   @override
-  String get withdrawRejectedTitle => 'ሽያጭ ተቀባይነት አላገኘም';
+  String get withdrawRejectedTitle => 'ወጪ ተቀባይነት አላገኘም';
 
   @override
   String get withdrawRejectedMessage =>
-      'ሽያጭዎ ተቀባይነት አላገኘም። ተቆልፏ የነበረው ገንዘብ ወደ ቀሪ ሂሳብዎ ተመልሷል።';
+      'ወጪዎ ተቀባይነት አላገኘም። ተቆልፏ የነበረው ገንዘብ ወደ ቀሪ ሂሳብዎ ተመልሷል።';
 
   @override
   String get withdrawStatusPendingReview => 'ግምገማ በመጠባበቅ ላይ';
@@ -701,10 +709,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get walletLockedBalanceHint =>
-      'ለበመጠባበቅ ላይ ያሉ የሽያጭ ጥያቄዎች የተይዙ ገንዘቦችን ያካትታል።';
+      'ለበመጠባበቅ ላይ ያሉ የወጪ ጥያቄዎች የተይዙ ገንዘቦችን ያካትታል።';
 
   @override
-  String get withdrawRequestsTitle => 'የሽያጭ ጥያቄዎችዎ';
+  String get withdrawRequestsTitle => 'የወጪ ጥያቄዎችዎ';
 
   @override
   String get withdrawTabAll => 'ሁሉም';
@@ -731,13 +739,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get withdrawTableStatus => 'ሁኔታ';
 
   @override
-  String get withdrawPendingEmpty => 'በመጠባበቅ ላይ የሽያጭ ጥያቄ የለም።';
+  String get withdrawPendingEmpty => 'በመጠባበቅ ላይ የወጪ ጥያቄ የለም።';
 
   @override
-  String get withdrawCompletedEmpty => 'ገና የተጠናቀቀ ሽያጭ የለም።';
+  String get withdrawCompletedEmpty => 'ገና የተጠናቀቀ ወጪ የለም።';
 
   @override
-  String get withdrawRejectedEmpty => 'የተቀባይነት አላገኘ ሽያጭ የለም።';
+  String get withdrawRejectedEmpty => 'የተቀባይነት አላገኘ ወጪ የለም።';
 
   @override
   String get txHistoryTitle => 'የቦርሳ ግብይቶች';
@@ -746,8 +754,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get txHistoryEmpty => 'ገና ግብይት የለም';
 
   @override
-  String get txHistoryEmptyMessage =>
-      'ከተቀማጭ፣ ምዝገባ እና ሽያጭ በኋላ የቦርሳ ታሪክዎ እዚህ ይታያል።';
+  String get txHistoryEmptyMessage => 'ከገቢ፣ ምዝገባ እና ወጪ በኋላ የቦርሳ ታሪክዎ እዚህ ይታያል።';
 
   @override
   String txHistoryShowing(int count, int total) {
@@ -872,12 +879,12 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String liveMissedRoundCollapsedMissed(String gameName) {
-    return 'ተሳልፎ · $gameName';
+    return 'ያለፎት ጨዋታ · $gameName';
   }
 
   @override
   String liveMissedRoundCollapsedNextReady(String gameName) {
-    return 'ቀጣይ ዝግጁ · $gameName · አሁን ተመዝገብ';
+    return 'ቀጣይ ዝግጁ · $gameName · አሁን ለቀጣይ ጨዋታ መመዝገብ ይቻላል';
   }
 
   @override
@@ -1151,8 +1158,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get calledNumbersSyncLive => 'ቀጥታ';
 
   @override
+  String missedPreviewGameTitle(String gameName) {
+    return '$gameName (ያለፈ ጨዋታ)';
+  }
+
+  @override
   String missedPreviewRemaining(int count) {
-    return 'የቀሩ $count';
+    return 'ያለፈውን ጨወታ የቀሩ $count Balls';
   }
 
   @override

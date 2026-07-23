@@ -88,7 +88,7 @@ void main() {
         remainingCount: 72,
       );
 
-      expect(find.text('Big T + 2 Squares'), findsOneWidget);
+      expect(find.text('Big T + 2 Squares (missed game)'), findsOneWidget);
       expect(find.text('Live'), findsOneWidget);
       expect(find.text('N-48'), findsOneWidget);
       expect(find.text('I-22'), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
         title: 'ትልቅ ቲ + 2 ካሬ',
       );
 
-      expect(find.text('ትልቅ ቲ + 2 ካሬ'), findsOneWidget);
+      expect(find.text('ትልቅ ቲ + 2 ካሬ (ያለፈ ጨዋታ)'), findsOneWidget);
       expect(find.text('ቀጥታ'), findsOneWidget);
       expect(find.text('I-20'), findsOneWidget);
     });
@@ -131,7 +131,7 @@ void main() {
       expect(find.byType(ElevatedButton), findsNothing);
     });
 
-    testWidgets('winner window shows localized label without continue', (
+    testWidgets('winner window overlays balls with localized label', (
       tester,
     ) async {
       await _pumpPreview(
@@ -141,10 +141,35 @@ void main() {
         activeNumber: 48,
       );
 
-      expect(find.text('Winner Window'), findsOneWidget);
+      // Side status + ball-tray overlay both use gameWinnerWindowOpen.
+      expect(find.text('Winner window open'), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey('missed-preview-winner-window-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('missed-preview-winner-window-label')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('missed-preview-active')), findsOneWidget);
-      expect(find.text('N-48'), findsOneWidget);
       expect(find.text('Continue'), findsNothing);
+    });
+
+    testWidgets('winner window overlay uses Amharic l10n', (tester) async {
+      await _pumpPreview(
+        tester,
+        phase: MissedPreviewPhase.winnerWindow,
+        numbers: [_num('G', 46, 1)],
+        activeNumber: 46,
+        locale: const Locale('am'),
+        title: '1 ዲያጎናል መስመር',
+      );
+
+      expect(find.text('የአሸናፊ መስኮት ክፍት ነው'), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey('missed-preview-winner-window-overlay')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('empty numbers renders waiting ball safely', (tester) async {

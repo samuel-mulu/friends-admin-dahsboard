@@ -292,16 +292,33 @@ class _GameHistoryDetailDialogState
                                     borderRadius: BorderRadius.circular(14),
                                     clipBehavior: Clip.antiAlias,
                                     child: ListTile(
-                                      onTap: () {
-                                        unawaited(
-                                          showHistoryCartelaDetailDialog(
-                                            context: context,
-                                            cartela: cartela,
-                                            winnerResult: _winnerResultFor(
-                                              cartela,
-                                              results,
-                                            ),
+                                      onTap: () async {
+                                        final calledSnapshot =
+                                            await (_calledNumbersFuture ??
+                                                Future.value(
+                                                  CalledNumbersSnapshot(
+                                                    calledNumbers: const [],
+                                                    totalCount: 0,
+                                                  ),
+                                                ));
+                                        if (!context.mounted) {
+                                          return;
+                                        }
+                                        final called =
+                                            List<CalledNumberModel>.from(
+                                          calledSnapshot.calledNumbers,
+                                        )..sort(
+                                              (a, b) =>
+                                                  a.order.compareTo(b.order),
+                                            );
+                                        await showHistoryCartelaDetailDialog(
+                                          context: context,
+                                          cartela: cartela,
+                                          winnerResult: _winnerResultFor(
+                                            cartela,
+                                            results,
                                           ),
+                                          calledNumbers: called,
                                         );
                                       },
                                       leading: CircleAvatar(

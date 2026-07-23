@@ -14,6 +14,8 @@ class AppPreferencesStorage {
   static const _cartelaSortModeKey = 'cartela_sort_mode';
   static const _profileAvatarPrefix = 'profile_avatar_';
   static const _dismissedGameAnnouncementsKey = 'dismissed_game_announcements';
+  static const _cbeWithdrawAccountPrefix = 'cbe_withdraw_account_';
+  static const defaultCbeWithdrawAccount = '1000';
 
   final SharedPreferences _prefs;
 
@@ -100,7 +102,27 @@ class AppPreferencesStorage {
     return _prefs.setStringList(_dismissedGameAnnouncementsKey, ids);
   }
 
+  String readCbeWithdrawAccount(String userId) {
+    final saved = _prefs.getString(_cbeWithdrawAccountKey(userId))?.trim();
+    if (saved == null || saved.isEmpty) {
+      return defaultCbeWithdrawAccount;
+    }
+    return saved;
+  }
+
+  Future<void> writeCbeWithdrawAccount(String userId, String account) {
+    final trimmed = account.trim();
+    if (trimmed.isEmpty) {
+      return _prefs.remove(_cbeWithdrawAccountKey(userId));
+    }
+    return _prefs.setString(_cbeWithdrawAccountKey(userId), trimmed);
+  }
+
   String _profileAvatarKey(String userId) {
     return '$_profileAvatarPrefix$userId';
+  }
+
+  String _cbeWithdrawAccountKey(String userId) {
+    return '$_cbeWithdrawAccountPrefix$userId';
   }
 }

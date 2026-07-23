@@ -1403,91 +1403,73 @@ class _DrawerDeveloperFooterState extends State<_DrawerDeveloperFooter>
     final theme = widget.theme;
     final scheme = theme.colorScheme;
 
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppSpacing.md),
-          onTap: () {
-            unawaited(
-              openExternalUri(context, AppSupport.developerTelegramUri),
-            );
-          },
-          child: AnimatedBuilder(
-            animation: _pulse,
-            builder: (context, child) {
-              final lift = 1 + (_pulse.value * 0.04);
-              final hintOpacity = 0.55 + (_pulse.value * 0.45);
-              return Transform.scale(
-                scale: lift,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.sm,
-                    horizontal: AppSpacing.md,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppSpacing.md),
-                    border: Border.all(
-                      color: scheme.primary.withValues(
-                        alpha: 0.18 + (_pulse.value * 0.28),
-                      ),
-                    ),
-                    color: scheme.primary.withValues(
-                      alpha: 0.04 + (_pulse.value * 0.05),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.touch_app_rounded,
-                            size: 14,
-                            color: scheme.primary.withValues(alpha: hintOpacity),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Tap here',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: scheme.primary.withValues(
-                                alpha: hintOpacity,
-                              ),
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '© ${AppSupport.developerName}',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '@${AppSupport.developerTelegramUsername}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.primary,
-                          decoration: TextDecoration.underline,
-                          decorationColor: scheme.primary.withValues(
-                            alpha: 0.55,
-                          ),
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.sm),
+        onTap: () {
+          unawaited(
+            openExternalUri(context, AppSupport.developerTelegramUri),
+          );
+        },
+        child: AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, _) {
+            final hintOpacity = 0.55 + (_pulse.value * 0.45);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.xs,
+                horizontal: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSpacing.sm),
+                border: Border.all(
+                  color: scheme.primary.withValues(
+                    alpha: 0.16 + (_pulse.value * 0.22),
                   ),
                 ),
-              );
-            },
-          ),
+                color: scheme.primary.withValues(
+                  alpha: 0.04 + (_pulse.value * 0.04),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '© ${AppSupport.developerName}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '@${AppSupport.developerTelegramUsername}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.primary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: scheme.primary.withValues(alpha: 0.55),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'click here',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.primary.withValues(alpha: hintOpacity),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

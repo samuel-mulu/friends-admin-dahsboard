@@ -289,6 +289,12 @@
     "placeholders": { "count": { "type": "int" } }
   },
 
+  "welcomeBonusDeniedDeviceAlreadyClaimed": "This device already received the welcome bonus. Your account is ready, but free cartelas are not available.",
+  "@welcomeBonusDeniedDeviceAlreadyClaimed": {},
+
+  "welcomeBonusDeniedUserAlreadyClaimed": "Your account already received the welcome bonus. Free cartelas are not available again.",
+  "@welcomeBonusDeniedUserAlreadyClaimed": {},
+
   "walletBonusCartelasLabel": "Bonus cartelas (normal games)",
   "@walletBonusCartelasLabel": {},
 
@@ -1148,6 +1154,11 @@
 
   "calledNumbersSyncLive": "Live",
   "@calledNumbersSyncLive": {},
+
+  "missedPreviewGameTitle": "{gameName} (missed game)",
+  "@missedPreviewGameTitle": {
+    "placeholders": { "gameName": { "type": "String" } }
+  },
 
   "missedPreviewRemaining": "Remaining {count}",
   "@missedPreviewRemaining": {

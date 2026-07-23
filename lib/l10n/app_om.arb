@@ -267,6 +267,7 @@
   "calledNumbersDrawnCount": "Baafame: {count}",
   "calledNumbersBallOrder": "#{order}",
   "calledNumbersSyncLive": "Kallattii",
+  "missedPreviewGameTitle": "{gameName} (tapha darbe)",
   "missedPreviewRemaining": "Kan hafan {count}",
   "calledNumbersSyncCatchingUp": "Wal simsiisaa jira…",
   "calledNumbersSyncHelp": "Lakkoofsi waamaman sarvar irraa wal simsiifamu. Qunnamtii suuta irratti xiqqoo dhiibbaa ni ta'a.",

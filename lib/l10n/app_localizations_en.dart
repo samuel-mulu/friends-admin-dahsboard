@@ -294,6 +294,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get welcomeBonusDeniedDeviceAlreadyClaimed =>
+      'This device already received the welcome bonus. Your account is ready, but free cartelas are not available.';
+
+  @override
+  String get welcomeBonusDeniedUserAlreadyClaimed =>
+      'Your account already received the welcome bonus. Free cartelas are not available again.';
+
+  @override
   String get walletBonusCartelasLabel => 'Bonus cartelas (normal games)';
 
   @override
@@ -1181,6 +1189,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calledNumbersSyncLive => 'Live';
+
+  @override
+  String missedPreviewGameTitle(String gameName) {
+    return '$gameName (missed game)';
+  }
 
   @override
   String missedPreviewRemaining(int count) {

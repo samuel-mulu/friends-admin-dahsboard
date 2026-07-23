@@ -45,11 +45,12 @@ class MissedLiveGamePreview extends StatelessWidget {
 
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final displayTitle = (title != null && title!.trim().isNotEmpty)
+    final baseTitle = (title != null && title!.trim().isNotEmpty)
         ? title!.trim()
         : (session.name.isNotEmpty
               ? session.name
               : (session.staticCode.isNotEmpty ? session.staticCode : 'Game'));
+    final displayTitle = l10n.missedPreviewGameTitle(baseTitle);
 
     final active = calledNumbers.isNotEmpty
         ? calledNumbers.last
@@ -108,41 +109,52 @@ class MissedLiveGamePreview extends StatelessWidget {
               _MissedPreviewBallsTray(
                 child: SizedBox(
                   height: _activeBallSize + 4,
-                  child: Row(
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      if (active != null)
-                        _MissedPreviewBall(
-                          key: const ValueKey('missed-preview-active'),
-                          calledNumber: active,
-                          size: _activeBallSize,
-                          isLatest: true,
-                        )
-                      else
-                        const _MissedPreviewBall(
-                          key: ValueKey('missed-preview-waiting'),
-                          calledNumber: null,
-                          size: _activeBallSize,
-                          isLatest: true,
-                        ),
-                      if (recent.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: ListView.separated(
-                            key: const ValueKey('missed-preview-recent'),
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            itemCount: recent.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 5),
-                            itemBuilder: (context, index) {
-                              return _MissedPreviewBall(
-                                calledNumber: recent[index],
-                                size: _recentBallSize,
-                              );
-                            },
+                      Row(
+                        children: [
+                          if (active != null)
+                            _MissedPreviewBall(
+                              key: const ValueKey('missed-preview-active'),
+                              calledNumber: active,
+                              size: _activeBallSize,
+                              isLatest: true,
+                            )
+                          else
+                            const _MissedPreviewBall(
+                              key: ValueKey('missed-preview-waiting'),
+                              calledNumber: null,
+                              size: _activeBallSize,
+                              isLatest: true,
+                            ),
+                          if (recent.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: ListView.separated(
+                                key: const ValueKey('missed-preview-recent'),
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: recent.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 5),
+                                itemBuilder: (context, index) {
+                                  return _MissedPreviewBall(
+                                    calledNumber: recent[index],
+                                    size: _recentBallSize,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (phase == MissedPreviewPhase.winnerWindow)
+                        Positioned.fill(
+                          child: _MissedPreviewWinnerWindowOverlay(
+                            label: l10n.gameWinnerWindowOpen,
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),
@@ -179,9 +191,50 @@ class MissedLiveGamePreview extends StatelessWidget {
     return switch (phase) {
       MissedPreviewPhase.livePlaying => l10n.calledNumbersSyncLive,
       MissedPreviewPhase.checking => l10n.calledNumbersCheckingBingo,
-      MissedPreviewPhase.winnerWindow => l10n.gameStatusWinnerWindow,
+      // Prefer gameWinnerWindowOpen — translated in am/ti/om (gameStatusWinnerWindow is EN-only).
+      MissedPreviewPhase.winnerWindow => l10n.gameWinnerWindowOpen,
       MissedPreviewPhase.none => '',
     };
+  }
+}
+
+class _MissedPreviewWinnerWindowOverlay extends StatelessWidget {
+  const _MissedPreviewWinnerWindowOverlay({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        key: const ValueKey('missed-preview-winner-window-overlay'),
+        decoration: BoxDecoration(
+          color: (isDark ? Colors.black : AppBranding.casinoPurpleDeep)
+              .withValues(alpha: isDark ? 0.72 : 0.78),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              label,
+              key: const ValueKey('missed-preview-winner-window-label'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1.15,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
