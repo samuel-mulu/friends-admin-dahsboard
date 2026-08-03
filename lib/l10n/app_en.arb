@@ -34,6 +34,26 @@
   "theme": "Theme",
   "@theme": {},
 
+  "firstLaunchPreferencesTitle": "Choose your experience",
+  "@firstLaunchPreferencesTitle": {
+    "description": "Title on the first-launch theme and language screen"
+  },
+
+  "firstLaunchPreferencesSubtitle": "Pick a theme and language to get started. You can change these anytime in settings.",
+  "@firstLaunchPreferencesSubtitle": {
+    "description": "Subtitle on the first-launch theme and language screen"
+  },
+
+  "firstLaunchPreferencesContinue": "Continue",
+  "@firstLaunchPreferencesContinue": {
+    "description": "Primary action that saves first-launch theme and language"
+  },
+
+  "firstLaunchPreferencesSkip": "Skip",
+  "@firstLaunchPreferencesSkip": {
+    "description": "Secondary action that keeps default theme and language"
+  },
+
   "loginTitle": "Welcome back",
   "@loginTitle": {},
 
@@ -266,6 +286,71 @@
   "dashboardWhatIsNextBody": "Next steps can plug live called numbers, bingo claims, deposits, and withdrawals into this same foundation.",
   "@dashboardWhatIsNextBody": {},
 
+  "houseChampionsTitle": "House Champions",
+  "@houseChampionsTitle": {},
+
+  "houseChampionsSubtitle": "See who won the most cartelas. Choose a time period below.",
+  "@houseChampionsSubtitle": {},
+
+  "houseChampionsSelectPeriod": "Show rankings for",
+  "@houseChampionsSelectPeriod": {},
+
+  "houseChampionsViewAll": "View all",
+  "@houseChampionsViewAll": {},
+
+  "houseChampionsFairnessNote": "Ranked by winning cartelas, not prize amount.",
+  "@houseChampionsFairnessNote": {},
+
+  "houseChampionsLoadError": "Could not load House Champions right now.",
+  "@houseChampionsLoadError": {},
+
+  "houseChampionsEmpty": "No champions yet for this period. Be the first to win.",
+  "@houseChampionsEmpty": {},
+
+  "houseChampionsPeriodToday": "Today",
+  "@houseChampionsPeriodToday": {},
+
+  "houseChampionsPeriodThisWeek": "This week",
+  "@houseChampionsPeriodThisWeek": {},
+
+  "houseChampionsPeriodLastWeek": "Last week",
+  "@houseChampionsPeriodLastWeek": {},
+
+  "houseChampionsPeriodLast7Days": "Last 7 days",
+  "@houseChampionsPeriodLast7Days": {},
+
+  "houseChampionsPeriodLast30Days": "Last 30 days",
+  "@houseChampionsPeriodLast30Days": {},
+
+  "houseChampionsPeriodAllTime": "All time",
+  "@houseChampionsPeriodAllTime": {},
+
+  "houseChampionsPeriodRange": "{start} – {end}",
+  "@houseChampionsPeriodRange": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+
+  "houseChampionsYourRank": "You are #{rank} with {wins} wins",
+  "@houseChampionsYourRank": {
+    "placeholders": {
+      "rank": { "type": "int" },
+      "wins": { "type": "int" }
+    }
+  },
+
+  "houseChampionsWins": "{count} wins",
+  "@houseChampionsWins": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "houseChampionsGamesWon": "{count} games won",
+  "@houseChampionsGamesWon": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
   "walletAvailableBalance": "Available balance",
   "@walletAvailableBalance": {},
 
@@ -432,6 +517,15 @@
 
   "depositApprovedTitle": "Deposit approved",
   "@depositApprovedTitle": {},
+
+  "depositPendingTitle": "Deposit submitted",
+  "@depositPendingTitle": {},
+
+  "depositPendingMessage": "Your deposit is waiting for admin approval. Your wallet will be credited once it is approved.",
+  "@depositPendingMessage": {},
+
+  "depositRefUnderReview": "This reference is already under admin review.",
+  "@depositRefUnderReview": {},
 
   "depositRejectedTitle": "Deposit failed",
   "@depositRejectedTitle": {},
@@ -1857,6 +1951,36 @@
   "gameBonusMaxCartelas": "Max {count} cartelas",
   "@gameBonusMaxCartelas": {
     "placeholders": { "count": { "type": "int" } }
+  },
+
+  "registrationInsufficientBalance": "Insufficient balance",
+  "@registrationInsufficientBalance": {},
+
+  "registrationInsufficientBalanceRegister": "Insufficient balance to register cartelas",
+  "@registrationInsufficientBalanceRegister": {},
+
+  "registrationInsufficientBalanceSelect": "Insufficient balance to select more cartelas",
+  "@registrationInsufficientBalanceSelect": {},
+
+  "registrationBalanceAllowsUpTo": "Your balance allows up to {max} cartelas",
+  "@registrationBalanceAllowsUpTo": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "registrationBigGotdLimitReached": "You have reached the cartela limit for Big GOTD.",
+  "@registrationBigGotdLimitReached": {},
+
+  "registrationBigGotdAllCartelasUsed": "You have already used all cartelas for Big GOTD.",
+  "@registrationBigGotdAllCartelasUsed": {},
+
+  "registrationBigGotdCanRegisterMore": "You can still register up to {max} more cartelas for Big GOTD.",
+  "@registrationBigGotdCanRegisterMore": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "registrationBigGotdCanSelectMore": "You can still select up to {max} more cartelas for Big GOTD.",
+  "@registrationBigGotdCanSelectMore": {
+    "placeholders": { "max": { "type": "int" } }
   },
 
   "gameStatusRegistrationOpen": "Registration Open",

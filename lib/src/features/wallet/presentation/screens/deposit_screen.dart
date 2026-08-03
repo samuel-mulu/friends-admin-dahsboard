@@ -7,6 +7,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../data/models/deposit_model.dart';
 import '../../data/models/deposit_config_model.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/telebirr_client_receipt_payload.dart';
@@ -21,6 +22,7 @@ import '../providers/wallet_history_providers.dart';
 import '../providers/wallet_provider.dart';
 import '../debug/telebirr_deposit_debug.dart';
 import '../models/deposit_confirmation_state.dart';
+import '../utils/cbe_manual_receipt_reference.dart';
 import '../utils/deposit_receipt_code.dart';
 import '../widgets/deposit_confirmation_banner.dart';
 import '../widgets/deposit_form_section.dart';
@@ -36,8 +38,6 @@ class DepositScreen extends ConsumerStatefulWidget {
 }
 
 class _DepositScreenState extends ConsumerState<DepositScreen> {
-  static const _previewUnavailableMessage =
-      'We could not preview the receipt. Server verification will continue.';
   static const _approvedDismissDelay = Duration(seconds: 8);
   static const _comingSoonProviders = {
     PaymentProvider.awash,
@@ -127,8 +127,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
     final previous = _lastSeenLocation;
     final onDeposit = _isDepositLocation(location);
-    final wasOffDeposit =
-        previous != null && !_isDepositLocation(previous);
+    final wasOffDeposit = previous != null && !_isDepositLocation(previous);
 
     _lastSeenLocation = location;
 
@@ -174,7 +173,9 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         .toList(growable: false);
     final selectedProvider = activeProviders.contains(_provider)
         ? _provider
-        : (activeProviders.isNotEmpty ? activeProviders.first : availableProviders.first);
+        : (activeProviders.isNotEmpty
+              ? activeProviders.first
+              : availableProviders.first);
     if (selectedProvider != _provider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
@@ -224,7 +225,11 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   VGap.md,
                   DepositSettlementAccountCard(
                     accounts: [
-                      for (var index = 0; index < settlementAccounts.length; index++)
+                      for (
+                        var index = 0;
+                        index < settlementAccounts.length;
+                        index++
+                      )
                         DepositSettlementAccountItem(
                           settlementAccount:
                               settlementAccounts[index].settlementAccount,
@@ -236,7 +241,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                           ),
                         ),
                     ],
-                    onShowInstructions: selectedProvider == PaymentProvider.telebirr
+                    onShowInstructions:
+                        selectedProvider == PaymentProvider.telebirr
                         ? _scrollToDepositGuide
                         : null,
                   ),
@@ -248,7 +254,10 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   transactionRefController: _transactionRefController,
                   receiptLabel: receiptLabel,
                   amountValidator: _validateAmount,
-                  transactionRefValidator: _validateTransactionRef,
+                  transactionRefValidator: (value) => _validateTransactionRef(
+                    value,
+                    providerConfig: providerConfig,
+                  ),
                   onFieldChanged: _onFormFieldChanged,
                   amountServerError: _amountServerError,
                   transactionRefServerError: _transactionRefServerError,
@@ -258,6 +267,9 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                       : null,
                   isScanLoading: _isScanningReceipt,
                   scanTooltip: l10n.depositReceiptScan,
+                  preserveTransactionRefCase:
+                      selectedProvider == PaymentProvider.cbe &&
+                      providerConfig?.approvalMode == 'manual',
                 ),
                 if (_ocrReviewRequired) ...[
                   VGap.md,
@@ -474,6 +486,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
       TelebirrReceiptParseStatus? receiptParseStatus;
       TelebirrClientReceiptPayload? clientReceipt;
+      String? cbeManualReceiptUrl;
       late final String transactionRef;
 
       if (_provider == PaymentProvider.telebirr) {
@@ -483,32 +496,73 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         );
 
         final depositConfig = await ref.read(depositConfigProvider.future);
-        final preview = await ref
-            .read(telebirrReceiptPreviewServiceProvider)
-            .preview(
-              transactionRef: transactionRef,
+        final approvalMode = depositConfig
+            .providerForKey(PaymentProvider.telebirr.apiValue)
+            ?.approvalMode;
+        final isLocalMode = approvalMode == 'local';
+
+        // Receipt URL fetch + parse is local-mode only.
+        // Automatic → verify.et on backend. Manual → pending for admin.
+        // Wallet credit always happens on the backend in all modes.
+        if (isLocalMode) {
+          final preview = await ref
+              .read(telebirrReceiptPreviewServiceProvider)
+              .preview(
+                transactionRef: transactionRef,
+                submittedAmount: submittedAmount,
+                config: depositConfig.telebirr,
+              );
+
+          receiptParseStatus = preview.receiptParseStatus;
+          clientReceipt = preview.toClientReceiptPayload();
+
+          if (preview.status != TelebirrReceiptPreviewStatus.valid ||
+              clientReceipt == null) {
+            if (!mounted) {
+              return;
+            }
+
+            _rejectFailedPreview(
+              preview: preview,
               submittedAmount: submittedAmount,
-              config: depositConfig.telebirr,
+              transactionRef: transactionRef,
             );
-
-        receiptParseStatus = preview.receiptParseStatus;
-        clientReceipt = preview.toClientReceiptPayload();
-
-        if (mounted) {
-          if (preview.status ==
-              TelebirrReceiptPreviewStatus.previewUnavailable) {
-            setState(() {
-              _previewNotice = preview.message ?? _previewUnavailableMessage;
-            });
-          } else if (preview.status != TelebirrReceiptPreviewStatus.valid) {
-            final warning = _mapPreviewError(preview);
-            setState(() {
-              _previewNotice = warning;
-            });
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(warning)));
+            return;
           }
+
+          TelebirrDepositDebug.log(
+            'local receipt parsed settled=${preview.settledAmount} '
+            'account=${preview.creditedPartyAccountNo}',
+          );
+        }
+      } else if (_provider == PaymentProvider.cbe) {
+        final depositConfig = await ref.read(depositConfigProvider.future);
+        final cbeConfig = depositConfig.providerForKey(
+          PaymentProvider.cbe.apiValue,
+        );
+        if (cbeConfig?.approvalMode == 'manual') {
+          final normalized = normalizeCbeManualReceiptReference(
+            rawTransactionInput,
+            receiptBaseUrl: cbeConfig!.receiptBaseUrl.isEmpty
+                ? kDefaultCbeReceiptBaseUrl
+                : cbeConfig.receiptBaseUrl,
+          );
+          if (normalized == null) {
+            if (mounted) {
+              setState(() {
+                _transactionRefServerError =
+                    'Enter a valid CBE receipt ID or official receipt URL.';
+              });
+            }
+            return;
+          }
+          transactionRef = normalized;
+          if (isReceiptUrlInput(rawTransactionInput)) {
+            cbeManualReceiptUrl = rawTransactionInput;
+          }
+        } else {
+          // Automatic CBE behavior stays unchanged.
+          transactionRef = rawTransactionInput.toUpperCase();
         }
       } else {
         transactionRef = rawTransactionInput.toUpperCase();
@@ -542,16 +596,34 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       final deposit = await walletRepository.createDeposit(
         provider: _provider,
         amount: submittedAmount,
-        transactionRef: transactionRef,
+        // The backend canonicalizes a CBE manual URL and stores the original
+        // URL separately for admin review.
+        transactionRef: cbeManualReceiptUrl ?? transactionRef,
         receiptParseStatus: receiptParseStatus,
         clientReceipt: clientReceipt,
       );
 
-      ref.invalidate(myWalletProvider);
       ref.invalidate(depositHistoryProvider);
-      ref.invalidate(walletTransactionsProvider);
+
+      if (deposit.status == DepositStatus.approved) {
+        ref.invalidate(myWalletProvider);
+        ref.invalidate(walletTransactionsProvider);
+      }
 
       if (!mounted) {
+        return;
+      }
+
+      if (deposit.status == DepositStatus.pending) {
+        setState(() {
+          _confirmation = DepositConfirmationState(
+            kind: DepositConfirmationKind.pending,
+            provider: deposit.provider,
+            amount: deposit.amount,
+            transactionRef: deposit.transactionRef,
+          );
+        });
+        _clearDepositFormFields();
         return;
       }
 
@@ -606,6 +678,38 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         provider.transactionRefLabel;
   }
 
+  /// Local-mode only: phone already knows the receipt is bad, so do not call
+  /// create. Wallet credit stays on the backend after a valid local submit.
+  void _rejectFailedPreview({
+    required TelebirrReceiptPreview preview,
+    required String submittedAmount,
+    required String transactionRef,
+  }) {
+    final message = _mapPreviewError(preview);
+    final isAmountProblem =
+        preview.status == TelebirrReceiptPreviewStatus.amountMismatch;
+
+    setState(() {
+      _previewNotice = null;
+      if (isAmountProblem) {
+        _amountServerError = message;
+      } else {
+        _transactionRefServerError = message;
+      }
+      _confirmation = DepositConfirmationState(
+        kind: DepositConfirmationKind.rejected,
+        message: message,
+        provider: _provider,
+        amount: submittedAmount,
+        transactionRef: transactionRef,
+      );
+    });
+
+    TelebirrDepositDebug.log(
+      'local submit blocked on client status=${preview.status.name}',
+    );
+  }
+
   String _mapPreviewError(TelebirrReceiptPreview preview) {
     switch (preview.status) {
       case TelebirrReceiptPreviewStatus.amountMismatch:
@@ -619,7 +723,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       case TelebirrReceiptPreviewStatus.invalidReceipt:
         return context.l10n.depositReceiptInvalid;
       case TelebirrReceiptPreviewStatus.previewUnavailable:
-        return preview.message ?? _previewUnavailableMessage;
+        return context.l10n.depositCouldNotSubmit;
       case TelebirrReceiptPreviewStatus.valid:
         return '';
     }
@@ -634,6 +738,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           _amountServerError = message;
           break;
         case 'ALREADY_USED':
+        case 'UNDER_REVIEW':
         case 'INVALID_RECEIPT':
         case 'RECEIVER_MISMATCH':
         case 'SETTLEMENT_MISMATCH':
@@ -673,6 +778,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     switch (code) {
       case 'ALREADY_USED':
         return l10n.depositReceiptDuplicate;
+      case 'UNDER_REVIEW':
+        return l10n.depositRefUnderReview;
       case 'AMOUNT_MISMATCH':
         return l10n.depositAmountMismatch;
       case 'RECEIVER_MISMATCH':
@@ -717,7 +824,10 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     return null;
   }
 
-  String? _validateTransactionRef(String? value) {
+  String? _validateTransactionRef(
+    String? value, {
+    DepositProviderConfig? providerConfig,
+  }) {
     if (_provider == PaymentProvider.telebirr) {
       final normalized = normalizeDepositReceiptCode(value ?? '');
       if (normalized.contains('/')) {
@@ -725,6 +835,20 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       }
       return validateTelebirrReceiptCode(value) != null
           ? context.l10n.depositReceiptCodeInvalid
+          : null;
+    }
+
+    if (_provider == PaymentProvider.cbe &&
+        providerConfig?.approvalMode == 'manual') {
+      final baseUrl = providerConfig!.receiptBaseUrl.isEmpty
+          ? kDefaultCbeReceiptBaseUrl
+          : providerConfig.receiptBaseUrl;
+      return normalizeCbeManualReceiptReference(
+                value ?? '',
+                receiptBaseUrl: baseUrl,
+              ) ==
+              null
+          ? 'Enter a valid CBE receipt ID or official receipt URL.'
           : null;
     }
 
@@ -738,6 +862,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   List<PaymentProvider> _availableProviders(DepositConfigModel? config) {
     final configuredProviders =
         config?.providers
+            .where((provider) => provider.enabled)
             .map((provider) => _providerFromApi(provider.key))
             .whereType<PaymentProvider>()
             .toList(growable: false) ??
@@ -771,8 +896,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     if (selectedProvider == PaymentProvider.telebirr && config != null) {
       return config.telebirr
           .resolvedAccounts(
-            fallbackSettlementAccount:
-                providerConfig?.settlementAccount ?? '',
+            fallbackSettlementAccount: providerConfig?.settlementAccount ?? '',
           )
           .map(
             (account) => _SettlementAccountDisplay(

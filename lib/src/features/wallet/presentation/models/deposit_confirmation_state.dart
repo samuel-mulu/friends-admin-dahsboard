@@ -1,6 +1,6 @@
 import '../../data/models/payment_provider.dart';
 
-enum DepositConfirmationKind { verifying, approved, rejected }
+enum DepositConfirmationKind { verifying, approved, pending, rejected }
 
 class DepositConfirmationState {
   const DepositConfirmationState({
@@ -31,6 +31,7 @@ class DepositConfirmationState {
     DepositConfirmationKind.verifying => 'verifying',
     DepositConfirmationKind.approved =>
       'approved-$transactionRef-$amount',
+    DepositConfirmationKind.pending => 'pending-$transactionRef-$amount',
     DepositConfirmationKind.rejected => 'rejected-$message',
   };
 }

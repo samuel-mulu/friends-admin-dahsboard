@@ -14,6 +14,7 @@ import '../../features/auth/security/app_lock_controller.dart';
 import '../../features/games/presentation/screens/big_game_screen.dart';
 import '../../features/games/presentation/screens/game_history_screen.dart';
 import '../../features/games/presentation/screens/live_game_screen.dart';
+import '../../features/games/presentation/screens/house_champions_screen.dart';
 import '../../features/home/presentation/screens/dashboard_screen.dart';
 import '../../features/home/presentation/screens/home_shell_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -210,6 +211,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: '/home',
                 builder: (context, state) =>
                     appRouteWithBackConfirm(const DashboardScreen()),
+                routes: [
+                  GoRoute(
+                    path: 'champions',
+                    builder: (context, state) => appRouteWithBackConfirm(
+                      const HouseChampionsScreen(),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

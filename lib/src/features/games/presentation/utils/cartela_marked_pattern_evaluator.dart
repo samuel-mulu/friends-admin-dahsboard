@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/game_cartela_model.dart';
 import '../../domain/big_shape_patterns.dart';
+import '../../domain/extended_game_patterns.dart';
 import 'cartela_mark_helpers.dart';
 import 'cartela_pattern_progress_overlay.dart';
 
@@ -356,6 +357,11 @@ class CartelaMarkedPatternEvaluator {
     }
 
     for (final selected in selection) {
+      if (group.disallowContainmentInGroups.contains(selected.groupKey) &&
+          candidate.cells.difference(selected.pattern.cells).isEmpty) {
+        return false;
+      }
+
       final overlaps = selected.pattern.cells
           .intersection(candidate.cells)
           .isNotEmpty;
@@ -407,6 +413,11 @@ class CartelaMarkedPatternEvaluator {
       for (var row = 0; row < 4; row++)
         for (var column = 0; column < 4; column++) _squarePattern(row, column),
     ];
+    final allRectangles = _rectanglePatterns();
+    final allSmallTs = _smallTPatterns();
+    final allTriangle6 = _triangle6Patterns();
+    final allTriangle4x4 = _triangle4x4Patterns();
+    final allCorners = _cornerPatterns();
 
     return {
       'FULL_HOUSE': _singlePatternRule('full_house', _allCellsPattern()),
@@ -639,6 +650,89 @@ class CartelaMarkedPatternEvaluator {
           requiredCount: 1,
         ),
       ]),
+      'BIG_N_OR_Z': _singleChoiceRule('big_n_or_z', _bigNOrZPatterns()),
+      'BIG_M_OR_W': _singleChoiceRule('big_m_or_w', _bigMOrWPatterns()),
+      'THREE_RECTANGLES': _comboRule([
+        _RequiredGroup(
+          key: 'rectangles',
+          candidates: allRectangles,
+          requiredCount: 3,
+          disallowOverlapWithinGroup: true,
+        ),
+      ]),
+      'BIG_T_TWO_LINES': _comboRule([
+        _RequiredGroup(
+          key: 'big_t',
+          candidates: _bigTPatterns(),
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'lines',
+          candidates: allLines,
+          requiredCount: 2,
+          disallowContainmentInGroups: const {'big_t'},
+        ),
+      ]),
+      'ONE_LINE_TWO_TRIANGLES': _comboRule([
+        _RequiredGroup(key: 'lines', candidates: allLines, requiredCount: 1),
+        _RequiredGroup(
+          key: 'triangles',
+          candidates: allTriangle6,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'lines'},
+        ),
+      ]),
+      'SMALL_T_TWO_SQUARES': _comboRule([
+        _RequiredGroup(
+          key: 'small_t',
+          candidates: allSmallTs,
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'small_t'},
+        ),
+      ]),
+      'ONE_LINE_TRIANGLE_4X4': _comboRule([
+        _RequiredGroup(key: 'lines', candidates: allLines, requiredCount: 1),
+        _RequiredGroup(
+          key: 'triangle_4x4',
+          candidates: allTriangle4x4,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'lines'},
+        ),
+      ]),
+      'BIG_L_ONE_RECTANGLE': _comboRule([
+        _RequiredGroup(
+          key: 'big_l',
+          candidates: _bigLPatterns(),
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'rectangles',
+          candidates: allRectangles,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'big_l'},
+        ),
+      ]),
+      'TWO_ANGLES_THREE_LINES': _comboRule([
+        _RequiredGroup(key: 'lines', candidates: allLines, requiredCount: 3),
+        _RequiredGroup(
+          key: 'angles',
+          candidates: allCorners,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'lines'},
+        ),
+      ]),
+      'ONE_ANGLE_ROW_COLUMN_DIAGONAL': _singleChoiceRule(
+        'one_angle_row_col_diag',
+        _oneAngleRowColumnDiagonalPatterns(),
+      ),
     };
   }
 
@@ -807,6 +901,74 @@ class CartelaMarkedPatternEvaluator {
               _CandidatePattern(id: variant.id, cells: variant.cells),
         )
         .toList(growable: false);
+  }
+
+  static List<_CandidatePattern> _bigNOrZPatterns() {
+    return ExtendedGamePatterns.bigNOrZVariants
+        .map(
+          (variant) => _CandidatePattern(id: variant.id, cells: variant.cells),
+        )
+        .toList(growable: false);
+  }
+
+  static List<_CandidatePattern> _bigMOrWPatterns() {
+    return ExtendedGamePatterns.bigMOrWVariants
+        .map(
+          (variant) => _CandidatePattern(id: variant.id, cells: variant.cells),
+        )
+        .toList(growable: false);
+  }
+
+  static List<_CandidatePattern> _oneAngleRowColumnDiagonalPatterns() {
+    return ExtendedGamePatterns.oneAngleRowColumnDiagonalVariants
+        .map(
+          (variant) => _CandidatePattern(id: variant.id, cells: variant.cells),
+        )
+        .toList(growable: false);
+  }
+
+  static List<_CandidatePattern> _rectanglePatterns() {
+    final variants = ExtendedGamePatterns.buildRectangleVariants();
+    return [
+      for (var index = 0; index < variants.length; index++)
+        _CandidatePattern(id: 'rectangle_$index', cells: variants[index]),
+    ];
+  }
+
+  static List<_CandidatePattern> _smallTPatterns() {
+    final variants = ExtendedGamePatterns.buildSmallTVariants();
+    return [
+      for (var index = 0; index < variants.length; index++)
+        _CandidatePattern(id: 'small_t_$index', cells: variants[index]),
+    ];
+  }
+
+  static List<_CandidatePattern> _triangle6Patterns() {
+    final variants = ExtendedGamePatterns.buildTriangle6Variants();
+    return [
+      for (var index = 0; index < variants.length; index++)
+        _CandidatePattern(id: 'triangle6_$index', cells: variants[index]),
+    ];
+  }
+
+  static List<_CandidatePattern> _triangle4x4Patterns() {
+    final variants = ExtendedGamePatterns.buildTriangle4x4Variants();
+    return [
+      for (var index = 0; index < variants.length; index++)
+        _CandidatePattern(id: 'triangle4x4_$index', cells: variants[index]),
+    ];
+  }
+
+  static List<_CandidatePattern> _cornerPatterns() {
+    return [
+      for (var index = 0;
+          index < ExtendedGamePatterns.cornerVariants.length;
+          index++)
+        _CandidatePattern(
+          id: 'corner_$index',
+          cells: ExtendedGamePatterns.cornerVariants[index],
+        ),
+    ];
   }
 
   static _CandidatePattern _bigCrossPattern() {
@@ -989,6 +1151,7 @@ class _RequiredGroup {
     required this.requiredCount,
     this.disallowOverlapWithinGroup = false,
     this.disallowOverlapWithGroups = const {},
+    this.disallowContainmentInGroups = const {},
     this.requireSameOrientation = false,
   });
 
@@ -997,6 +1160,11 @@ class _RequiredGroup {
   final int requiredCount;
   final bool disallowOverlapWithinGroup;
   final Set<String> disallowOverlapWithGroups;
+
+  /// Groups whose chosen pattern must not already contain this candidate.
+  /// Crossing the other pattern stays legal; only being fully swallowed by it
+  /// is rejected, so a big T cannot double as one of the lines it is made of.
+  final Set<String> disallowContainmentInGroups;
   final bool requireSameOrientation;
 }
 

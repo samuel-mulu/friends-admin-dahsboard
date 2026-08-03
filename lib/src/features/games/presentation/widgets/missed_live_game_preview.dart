@@ -45,6 +45,11 @@ class MissedLiveGamePreview extends StatelessWidget {
 
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final isDark = theme.brightness == Brightness.dark;
+    final titleColor = isDark ? AppBranding.gold : AppBranding.brandPurple;
+    final remainingColor = isDark
+        ? theme.colorScheme.onSurfaceVariant
+        : AppBranding.casinoPurpleDeep.withValues(alpha: 0.85);
     final baseTitle = (title != null && title!.trim().isNotEmpty)
         ? title!.trim()
         : (session.name.isNotEmpty
@@ -87,7 +92,7 @@ class MissedLiveGamePreview extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppBranding.casinoPurpleDeep,
+                      color: titleColor,
                       height: 1.1,
                     ),
                   ),
@@ -136,7 +141,7 @@ class MissedLiveGamePreview extends StatelessWidget {
                                 scrollDirection: Axis.horizontal,
                                 physics: const BouncingScrollPhysics(),
                                 itemCount: recent.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const SizedBox(width: 5),
                                 itemBuilder: (context, index) {
                                   return _MissedPreviewBall(
@@ -167,7 +172,7 @@ class MissedLiveGamePreview extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppBranding.casinoPurpleDeep.withValues(alpha: 0.85),
+                    color: remainingColor,
                     height: 1.1,
                   ),
                 ),
@@ -343,7 +348,7 @@ class _MissedPreviewBall extends StatelessWidget {
     final baseColor = isEmpty
         ? theme.colorScheme.surfaceContainerHighest
         : isLatest
-        ? AppBranding.gold
+        ? (isDark ? AppBranding.gold : AppBranding.goldDark)
         : AppBranding.bingoColumnColor(calledNumber!.letter);
 
     final ball = SizedBox(
@@ -397,7 +402,7 @@ class _MissedPreviewBall extends StatelessWidget {
           '${calledNumber!.letter}-${calledNumber!.number}-preview',
         ),
         shape: BoxShape.circle,
-        highlightColor: AppBranding.gold,
+        highlightColor: isDark ? AppBranding.gold : AppBranding.goldDark,
         pulseScale: 0.08,
         child: ball,
       );

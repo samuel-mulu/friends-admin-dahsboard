@@ -23,6 +23,7 @@ import 'features/auth/presentation/widgets/pin_setup_dialog.dart';
 import 'features/auth/security/app_lock_controller.dart';
 import 'features/settings/presentation/providers/locale_provider.dart';
 import 'features/settings/presentation/providers/theme_mode_provider.dart';
+import 'features/settings/presentation/widgets/first_launch_preferences_gate.dart';
 import 'features/games/domain/game_rule_localized_name.dart';
 
 class FriendsBingoApp extends ConsumerStatefulWidget {
@@ -191,7 +192,7 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) => DeviceSecurityGate(
-        child: ForceUpdateGate(child: child),
+        child: ForceUpdateGate(child: FirstLaunchPreferencesGate(child: child)),
       ),
     );
   }

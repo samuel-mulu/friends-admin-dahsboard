@@ -56,6 +56,7 @@ import '../controllers/live_transition_controller.dart';
 import '../utils/cartela_outcome_public_visibility.dart';
 import '../utils/live_ready_transition_lock.dart';
 import '../utils/live_presentation_phase.dart';
+import '../utils/live_primary_game_selection.dart';
 import '../utils/live_ui_mode.dart';
 import '../utils/live_registration_target.dart';
 import '../utils/live_registration_visibility.dart';
@@ -269,7 +270,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   int _loadGeneration = 0;
   ProviderSubscription<AuthState>? _authSessionSubscription;
   LivePresentationPhase? _lastDebugPhase;
-  bool _isSyncingLiveGame = false;
+  final bool _isSyncingLiveGame = false;
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
   final ValueNotifier<bool> _liveCartelaScrollIdle = ValueNotifier<bool>(true);
   Timer? _invalidSocketPayloadRefetchTimer;
@@ -346,6 +347,28 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       primarySessionId: _game?.sessionId,
       cartelaSessionIds: _myCartelas.map((cartela) => cartela.gameId),
     );
+  }
+
+  /// Local round that already advanced to a live status and holds this player's
+  /// cartelas, used only while `operations/current` still lags behind.
+  GameModel? get _ownedLiveGameFallback {
+    if (isGuest) {
+      return null;
+    }
+    final game = _game;
+    if (game == null || !keepsOwnedLiveGamePrimary(game.status)) {
+      return null;
+    }
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return null;
+    }
+    return ownsSessionByCartelas(
+          sessionId,
+          _myCartelas.map((cartela) => cartela.gameId),
+        )
+        ? game
+        : null;
   }
 
   /// Cartela session ids used for missed-preview ownership (current + next).
@@ -441,6 +464,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       ResolveLiveUiModeInput(
         operations: _lastOperations,
         pinnedPrimaryGame: _resolverPinsTerminalSession ? _game : null,
+        ownedLiveGameFallback: _ownedLiveGameFallback,
         ownsLiveSessionCartelas: _ownsLiveSessionCartelas,
         hasPrimarySessionCartelas: _hasVisibleCurrentSessionCartelas,
         calledNumbers: _cn.calledNumbers,
@@ -3228,9 +3252,8 @@ class _PreparingGamePanel extends StatelessWidget {
   const _PreparingGamePanel({
     required this.registeredCartelas,
     required this.isRefetching,
-    this.titleOverride,
     this.messageOverride,
-  });
+  }) : titleOverride = null;
 
   final List<GameCartelaModel> registeredCartelas;
   final bool isRefetching;

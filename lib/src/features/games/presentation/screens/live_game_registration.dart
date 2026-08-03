@@ -208,6 +208,7 @@ class _CartelaRegistrationPanelState
     int? maxAffordable,
     RegistrationLimitKind limitKind,
   ) {
+    final l10n = context.l10n;
     return switch (limitKind) {
       RegistrationLimitKind.bonus =>
         maxAffordable == null || maxAffordable < 1
@@ -215,12 +216,15 @@ class _CartelaRegistrationPanelState
             : 'You can still register up to $maxAffordable more free cartela${maxAffordable == 1 ? '' : 's'} for this bonus game.',
       RegistrationLimitKind.bigGotd =>
         maxAffordable == null || maxAffordable < 1
-            ? 'You have reached the cartela limit for Big GOTD.'
-            : 'You can still register up to $maxAffordable more cartela${maxAffordable == 1 ? '' : 's'} for Big GOTD.',
+            ? (_isBigGotdCartelaLimitReached() &&
+                    !_isBigGotdBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationBigGotdLimitReached
+                : l10n.registrationInsufficientBalance)
+            : l10n.registrationBigGotdCanRegisterMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
-            ? 'Insufficient balance to register cartelas'
-            : 'Your balance allows up to $maxAffordable cartela${maxAffordable == 1 ? '' : 's'}',
+            ? l10n.registrationInsufficientBalanceRegister
+            : l10n.registrationBalanceAllowsUpTo(maxAffordable),
     };
   }
 
@@ -228,6 +232,7 @@ class _CartelaRegistrationPanelState
     int? maxAffordable,
     RegistrationLimitKind limitKind,
   ) {
+    final l10n = context.l10n;
     return switch (limitKind) {
       RegistrationLimitKind.bonus =>
         maxAffordable == null || maxAffordable < 1
@@ -235,12 +240,15 @@ class _CartelaRegistrationPanelState
             : 'You can still register up to $maxAffordable more free cartela${maxAffordable == 1 ? '' : 's'} for this bonus game.',
       RegistrationLimitKind.bigGotd =>
         maxAffordable == null || maxAffordable < 1
-            ? 'You have already used all cartelas for Big GOTD.'
-            : 'You can still register up to $maxAffordable more cartela${maxAffordable == 1 ? '' : 's'} for Big GOTD.',
+            ? (_isBigGotdCartelaLimitReached() &&
+                    !_isBigGotdBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationBigGotdAllCartelasUsed
+                : l10n.registrationInsufficientBalanceSelect)
+            : l10n.registrationBigGotdCanSelectMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
-            ? 'Insufficient balance to select more cartelas'
-            : 'Your balance allows up to $maxAffordable cartela${maxAffordable == 1 ? '' : 's'}',
+            ? l10n.registrationInsufficientBalanceSelect
+            : l10n.registrationBalanceAllowsUpTo(maxAffordable),
     };
   }
 
@@ -521,7 +529,47 @@ class _CartelaRegistrationPanelState
 
     final remaining =
         _parseMoney(walletBalance) - _parseMoney(_selectedTotalCost);
-    return remaining.toStringAsFixed(2);
+    return remaining < 0 ? '0.00' : remaining.toStringAsFixed(2);
+  }
+
+  int? _cartelaLimitRemaining() {
+    if (!_isBonusLike) {
+      return null;
+    }
+    return _bonusRemainingSelections();
+  }
+
+  int? _moneyAffordableSelections(String? walletBalance) {
+    if (_hasFreeEntry) {
+      return null;
+    }
+    if (walletBalance == null) {
+      return null;
+    }
+
+    final entryFee = _parseMoney(widget.entryFee);
+    if (entryFee <= 0) {
+      return null;
+    }
+
+    final moneyAffordable = (_parseMoney(walletBalance) / entryFee).floor();
+    return _usableBonusCartelaBalance + moneyAffordable;
+  }
+
+  bool _isBigGotdCartelaLimitReached() {
+    if (!_isBigGotd) {
+      return false;
+    }
+    final limit = _cartelaLimitRemaining();
+    return limit != null && limit < 1;
+  }
+
+  bool _isBigGotdBalanceLimited(String? walletBalance) {
+    if (!_isBigGotd) {
+      return false;
+    }
+    final money = _moneyAffordableSelections(walletBalance);
+    return money != null && money < 1;
   }
 
   String? _walletBalanceValue() {
@@ -535,20 +583,21 @@ class _CartelaRegistrationPanelState
   }
 
   int? _maxAffordableSelections(String? walletBalance) {
-    if (_isBonusLike) {
-      return _bonusRemainingSelections();
+    if (_isBonus) {
+      return _cartelaLimitRemaining();
     }
-    if (walletBalance == null) {
-      return null;
+    if (_isBigGotd) {
+      final limit = _cartelaLimitRemaining();
+      final money = _moneyAffordableSelections(walletBalance);
+      if (limit == null) {
+        return money;
+      }
+      if (money == null) {
+        return limit;
+      }
+      return money < limit ? money : limit;
     }
-
-    final entryFee = _parseMoney(widget.entryFee);
-    if (entryFee <= 0) {
-      return null;
-    }
-
-    final moneyAffordable = (_parseMoney(walletBalance) / entryFee).floor();
-    return _usableBonusCartelaBalance + moneyAffordable;
+    return _moneyAffordableSelections(walletBalance);
   }
 
   bool _canAddMoreSelections(String? walletBalance) {
@@ -1537,6 +1586,15 @@ class _RegistrationToolbar extends StatelessWidget {
       GameCategory.bigGame,
       isDark: isDark,
     );
+    final bigGotdAccent = isDark ? AppBranding.gold : AppBranding.goldDark;
+    final bigGotdSurface = GameCategoryTheme.surfaceColor(
+      GameCategory.bigGotd,
+      isDark: isDark,
+    );
+    final bigGotdBorder = GameCategoryTheme.borderColor(
+      GameCategory.bigGotd,
+      isDark: isDark,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1584,8 +1642,13 @@ class _RegistrationToolbar extends StatelessWidget {
                     vertical: AppSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
+                    color: isBigGotd
+                        ? bigGotdSurface
+                        : theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(999),
+                    border: isBigGotd
+                        ? Border.all(color: bigGotdBorder)
+                        : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1593,13 +1656,19 @@ class _RegistrationToolbar extends StatelessWidget {
                       Icon(
                         isBigGotd ? Icons.star_rounded : Icons.redeem_rounded,
                         size: 14,
-                        color: theme.colorScheme.onPrimaryContainer,
+                        color: isBigGotd
+                            ? bigGotdAccent
+                            : theme.colorScheme.onPrimaryContainer,
                       ),
                       HGap.xxs,
                       Text(
-                        isBigGotd ? 'Big GOTD' : l10n.gameCategoryBonus,
+                        isBigGotd
+                            ? l10n.gameCategoryBigGotd
+                            : l10n.gameCategoryBonus,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
+                          color: isBigGotd
+                              ? bigGotdAccent
+                              : theme.colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1608,28 +1677,28 @@ class _RegistrationToolbar extends StatelessWidget {
                 ),
                 Text(
                   hasFreeEntry
-                      ? 'Free entry'
-                      : 'Entry ${formatMoney(entryFee)}',
+                      ? l10n.gameBonusFreeEntry
+                      : '${l10n.bigGameEntryFee}: ${formatMoney(entryFee)}',
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 if (fixedPrizeAmount != null)
                   Text(
-                    'Fixed prize: ${formatMoney(fixedPrizeAmount!)}',
+                    l10n.gameBonusFixedPrize(formatMoney(fixedPrizeAmount!)),
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 Text(
-                  'Max $bonusLimit cartelas',
+                  l10n.gameBonusMaxCartelas(bonusLimit),
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 if (remainingBonusCartelas != null)
                   Text(
-                    '$remainingBonusCartelas left',
+                    '$remainingBonusCartelas${l10n.registrationLeft}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
@@ -1678,14 +1747,14 @@ class _RegistrationToolbar extends StatelessWidget {
                 ),
                 if (fixedPrizeAmount != null)
                   Text(
-                    'Fixed prize: ${formatMoney(fixedPrizeAmount!)}',
+                    l10n.gameBonusFixedPrize(formatMoney(fixedPrizeAmount!)),
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 if (maxCartelasPerPlayer != null)
                   Text(
-                    'Max $bonusLimit cartelas',
+                    l10n.gameBonusMaxCartelas(bonusLimit),
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -1797,7 +1866,7 @@ class _RegistrationToolbar extends StatelessWidget {
               maxAffordableSelections! < 1) ...[
             VGap.sm,
             Text(
-              'Insufficient balance',
+              l10n.registrationInsufficientBalance,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.error,
               ),

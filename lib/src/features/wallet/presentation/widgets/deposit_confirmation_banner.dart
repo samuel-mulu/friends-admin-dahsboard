@@ -92,6 +92,14 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                             ),
                           ),
                           if (widget.state.kind ==
+                              DepositConfirmationKind.pending) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.depositPendingMessage,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
+                          if (widget.state.kind ==
                               DepositConfirmationKind.rejected) ...[
                             const SizedBox(height: 8),
                             Text(
@@ -125,7 +133,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                       ),
                   ],
                 ),
-                if (widget.state.kind == DepositConfirmationKind.approved) ...[
+                if (widget.state.kind == DepositConfirmationKind.approved ||
+                    widget.state.kind == DepositConfirmationKind.pending) ...[
                   const SizedBox(height: 16),
                   _DetailRow(
                     label: l10n.depositSelectProvider,
@@ -156,6 +165,7 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
     return switch (widget.state.kind) {
       DepositConfirmationKind.verifying => l10n.depositVerifying,
       DepositConfirmationKind.approved => l10n.depositApprovedTitle,
+      DepositConfirmationKind.pending => l10n.depositPendingTitle,
       DepositConfirmationKind.rejected => l10n.depositRejectedTitle,
     };
   }
@@ -166,6 +176,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
         AppBranding.casinoPurple.withValues(alpha: 0.18),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.14),
+      DepositConfirmationKind.pending =>
+        theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.9),
       DepositConfirmationKind.rejected =>
         theme.colorScheme.error.withValues(alpha: 0.12),
     };
@@ -177,6 +189,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
         AppBranding.casinoPurple.withValues(alpha: 0.35),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.45),
+      DepositConfirmationKind.pending =>
+        theme.colorScheme.outline.withValues(alpha: 0.35),
       DepositConfirmationKind.rejected =>
         theme.colorScheme.error.withValues(alpha: 0.35),
     };
@@ -204,6 +218,7 @@ class _StatusIcon extends StatelessWidget {
     }
 
     final isApproved = kind == DepositConfirmationKind.approved;
+    final isPending = kind == DepositConfirmationKind.pending;
     return Container(
       width: 44,
       height: 44,
@@ -211,10 +226,16 @@ class _StatusIcon extends StatelessWidget {
         shape: BoxShape.circle,
         color: isApproved
             ? AppBranding.feltGreen
+            : isPending
+            ? AppBranding.goldAccent
             : theme.colorScheme.error,
       ),
       child: Icon(
-        isApproved ? Icons.check_rounded : Icons.close_rounded,
+        isApproved
+            ? Icons.check_rounded
+            : isPending
+            ? Icons.schedule_rounded
+            : Icons.close_rounded,
         color: Colors.white,
         size: 28,
       ),

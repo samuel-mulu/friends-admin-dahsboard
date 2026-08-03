@@ -42,6 +42,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get theme => 'ገጽታ';
 
   @override
+  String get firstLaunchPreferencesTitle => 'ልምድዎን ይምረጡ';
+
+  @override
+  String get firstLaunchPreferencesSubtitle =>
+      'ለመጀመር ገጽታ እና ቋንቋ ይምረጡ። በማንኛውም ጊዜ ከቅንብሮች መቀየር ይችላሉ።';
+
+  @override
+  String get firstLaunchPreferencesContinue => 'ቀጥል';
+
+  @override
+  String get firstLaunchPreferencesSkip => 'ዝለል';
+
+  @override
   String get loginTitle => 'እንኳን ተመለስክ';
 
   @override
@@ -267,6 +280,67 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቀጣይ እርምጃዎች ቀጥታ ቁጥሮችን፣ ቢንጎ ጥያቄዎችን፣ ገቢና ወጪ ወደዚሁ መሠረት ያካተታሉ።';
 
   @override
+  String get houseChampionsTitle => 'የቤት አሸናፊዎች';
+
+  @override
+  String get houseChampionsSubtitle =>
+      'በካርቴላ አሸናፊነት ከፍተኛ ተጫዋቾች። ከታች ያለውን ጊዜ ይምረጡ።';
+
+  @override
+  String get houseChampionsSelectPeriod => 'ደረጃ ለማየት';
+
+  @override
+  String get houseChampionsViewAll => 'ሁሉንም ይመልከቱ';
+
+  @override
+  String get houseChampionsFairnessNote =>
+      'በካርቴላ አሸናፊነት ይደረጋል፣ በሽልክ መጠን አይደረገም።';
+
+  @override
+  String get houseChampionsLoadError => 'የቤት አሸናፊዎችን ማስገባት አልተቻለም።';
+
+  @override
+  String get houseChampionsEmpty => 'ለዚህ ጊዜ አሁንም አሸናፊ የለም። የመጀመሪያው ይሁኑ።';
+
+  @override
+  String get houseChampionsPeriodToday => 'ዛሬ';
+
+  @override
+  String get houseChampionsPeriodThisWeek => 'ይህ ሳምንት';
+
+  @override
+  String get houseChampionsPeriodLastWeek => 'ያለፈው ሳምንት';
+
+  @override
+  String get houseChampionsPeriodLast7Days => 'ያለፉ 7 ቀናት';
+
+  @override
+  String get houseChampionsPeriodLast30Days => 'ያለፉ 30 ቀናት';
+
+  @override
+  String get houseChampionsPeriodAllTime => 'ሁሉም ጊዜ';
+
+  @override
+  String houseChampionsPeriodRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String houseChampionsYourRank(int rank, int wins) {
+    return 'ቁጥር $rank ነህ በ $wins አሸናፊነት';
+  }
+
+  @override
+  String houseChampionsWins(int count) {
+    return '$count አሸናፊ';
+  }
+
+  @override
+  String houseChampionsGamesWon(int count) {
+    return '$count ጨዋታዎች አሸንፈዋል';
+  }
+
+  @override
   String get walletAvailableBalance => 'ያለው ቀሪ';
 
   @override
@@ -439,6 +513,16 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get depositApprovedTitle => 'ገቢ ጸድቋል';
+
+  @override
+  String get depositPendingTitle => 'ገቢ ቀርቧል';
+
+  @override
+  String get depositPendingMessage =>
+      'ገቢዎ ለአስተዳዳሪ ፈቃድ በመጠባበቅ ላይ ነው። ከጸደቀ በኋላ ዋሌትዎ ይሞላል።';
+
+  @override
+  String get depositRefUnderReview => 'ይህ ማጣቀሻ ቀድሞውኑ በአስተዳዳሪ ግምገማ ላይ ነው።';
 
   @override
   String get depositRejectedTitle => 'ገቢ አልተሳካም';
@@ -1164,7 +1248,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String missedPreviewRemaining(int count) {
-    return 'ያለፈውን ጨወታ የቀሩ $count Balls';
+    return 'ያለፈውን ጨወታ የቀሩ $count ኳሶች';
   }
 
   @override
@@ -1825,7 +1909,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get bigGameFixedPrize => 'Fixed Prize';
 
   @override
-  String get bigGameEntryFee => 'Entry Fee';
+  String get bigGameEntryFee => 'የመግቢያ ክፍያ';
 
   @override
   String get bigGamePlayStartTime => 'Play Start Time';
@@ -1855,16 +1939,48 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
-  String get gameBonusFreeEntry => 'Free entry';
+  String get gameBonusFreeEntry => 'ነጻ መግቢያ';
 
   @override
   String gameBonusFixedPrize(String amount) {
-    return 'Fixed prize: $amount';
+    return 'ቋሚ ሽልማት፦ $amount';
   }
 
   @override
   String gameBonusMaxCartelas(int count) {
-    return 'Max $count cartelas';
+    return 'ከፍተኛ $count ካርቴላ';
+  }
+
+  @override
+  String get registrationInsufficientBalance => 'በቂ ቀሪ የለም';
+
+  @override
+  String get registrationInsufficientBalanceRegister => 'ካርቴላ ለመመዝገብ በቂ ቀሪ የለም';
+
+  @override
+  String get registrationInsufficientBalanceSelect =>
+      'ተጨማሪ ካርቴላ ለመምረጥ በቂ ቀሪ የለም';
+
+  @override
+  String registrationBalanceAllowsUpTo(int max) {
+    return 'ቀሪዎ እስከ $max ካርቴላ ይፈቅዳል';
+  }
+
+  @override
+  String get registrationBigGotdLimitReached => 'ለ Big GOTD የካርቴላ ገደብ ደርሰዋል።';
+
+  @override
+  String get registrationBigGotdAllCartelasUsed =>
+      'ለ Big GOTD ሁሉንም ካርቴላዎች ተጠቅመዋል።';
+
+  @override
+  String registrationBigGotdCanRegisterMore(int max) {
+    return 'ለ Big GOTD እስከ $max ተጨማሪ ካርቴላ ሊመዘገቡ ይችላሉ።';
+  }
+
+  @override
+  String registrationBigGotdCanSelectMore(int max) {
+    return 'ለ Big GOTD እስከ $max ተጨማሪ ካርቴላ ሊመረጡ ይችላሉ።';
   }
 
   @override

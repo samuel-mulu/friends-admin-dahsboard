@@ -70,4 +70,23 @@ void main() {
       expect(resolved.last.settlementAccount, '0922222222');
     });
   });
+
+  test('parses provider receipt base URL for CBE manual mode', () {
+    final config = DepositConfigModel.fromJson({
+      'providers': [
+        {
+          'key': 'CBE',
+          'name': 'CBE',
+          'receiptCodeLabel': 'Reference number',
+          'approvalMode': 'manual',
+          'receiptBaseUrl': 'https://mbreciept.cbe.com.et/receipt',
+        },
+      ],
+      'telebirr': <String, dynamic>{},
+    });
+
+    final cbe = config.providerForKey('CBE');
+    expect(cbe?.approvalMode, 'manual');
+    expect(cbe?.receiptBaseUrl, 'https://mbreciept.cbe.com.et/receipt');
+  });
 }

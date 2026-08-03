@@ -42,6 +42,19 @@ class AppLocalizationsOm extends AppLocalizations {
   String get theme => 'Dhangii';
 
   @override
+  String get firstLaunchPreferencesTitle => 'Muuxannoo kee filadhu';
+
+  @override
+  String get firstLaunchPreferencesSubtitle =>
+      'Jalqabuuf dhangii fi afaan filadhu. Yeroo barbaadde setting irratti jijjiiruu dandeessa.';
+
+  @override
+  String get firstLaunchPreferencesContinue => 'Itti fufi';
+
+  @override
+  String get firstLaunchPreferencesSkip => 'Irra darbi';
+
+  @override
   String get loginTitle => 'Baga nagaan deebite';
 
   @override
@@ -273,6 +286,69 @@ class AppLocalizationsOm extends AppLocalizations {
       'Tartiiboonni itti aanan lakkoofsa kallattii, gaaffii bingo, galchii fi baasii gara bu\'uura kanaatti ni dabalamu.';
 
   @override
+  String get houseChampionsTitle => 'Mo\'attoota Manaa';
+
+  @override
+  String get houseChampionsSubtitle =>
+      'Taphattoota cartelaan mo\'atan. Yeroo armaan gadi filadhu.';
+
+  @override
+  String get houseChampionsSelectPeriod => 'Sadarkaa ilaaluuf';
+
+  @override
+  String get houseChampionsViewAll => 'Hunda ilaali';
+
+  @override
+  String get houseChampionsFairnessNote =>
+      'Cartelaan mo\'achuun sadarkaa\'ama, qarshii mo\'achuun miti.';
+
+  @override
+  String get houseChampionsLoadError =>
+      'Mo\'attoota Manaa amma fe\'uu hin dandeenye.';
+
+  @override
+  String get houseChampionsEmpty =>
+      'Yeroo kanaaf mo\'ataan hin jiru. Kan jalqabaa ta\'i.';
+
+  @override
+  String get houseChampionsPeriodToday => 'Har\'a';
+
+  @override
+  String get houseChampionsPeriodThisWeek => 'Torban kana';
+
+  @override
+  String get houseChampionsPeriodLastWeek => 'Torban darbe';
+
+  @override
+  String get houseChampionsPeriodLast7Days => 'Guyyaa 7 darban';
+
+  @override
+  String get houseChampionsPeriodLast30Days => 'Guyyaa 30 darban';
+
+  @override
+  String get houseChampionsPeriodAllTime => 'Yeroo hunda';
+
+  @override
+  String houseChampionsPeriodRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String houseChampionsYourRank(int rank, int wins) {
+    return 'Sadarkaa $rank dha, mo\'annoo $wins';
+  }
+
+  @override
+  String houseChampionsWins(int count) {
+    return 'Mo\'annoo $count';
+  }
+
+  @override
+  String houseChampionsGamesWon(int count) {
+    return 'Tapha $count mo\'ate';
+  }
+
+  @override
   String get walletAvailableBalance => 'Haftee jiru';
 
   @override
@@ -454,10 +530,21 @@ class AppLocalizationsOm extends AppLocalizations {
   String get depositVerifying => 'Verifying your payment…';
 
   @override
-  String get depositApprovedTitle => 'Deposit approved';
+  String get depositApprovedTitle => 'Galchi mirkanaa\'e';
 
   @override
-  String get depositRejectedTitle => 'Deposit failed';
+  String get depositPendingTitle => 'Galchi dhiyaate';
+
+  @override
+  String get depositPendingMessage =>
+      'Galchi kee mirkaneessa bulchaa eegaa jira. Yeroo mirkanaa\'u boorsi kee ni guutama.';
+
+  @override
+  String get depositRefUnderReview =>
+      'Wabiin kun dursee mirkaneessa bulchaa jala jira.';
+
+  @override
+  String get depositRejectedTitle => 'Galchiin hin milkoofne';
 
   @override
   String get depositTryAgain => 'You can correct the details and try again.';
@@ -1888,7 +1975,7 @@ class AppLocalizationsOm extends AppLocalizations {
   String get bigGameFixedPrize => 'Fixed Prize';
 
   @override
-  String get bigGameEntryFee => 'Entry Fee';
+  String get bigGameEntryFee => 'Kaffaltii galtee';
 
   @override
   String get bigGamePlayStartTime => 'Play Start Time';
@@ -1918,16 +2005,50 @@ class AppLocalizationsOm extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
-  String get gameBonusFreeEntry => 'Free entry';
+  String get gameBonusFreeEntry => 'Galtee bilisaa';
 
   @override
   String gameBonusFixedPrize(String amount) {
-    return 'Fixed prize: $amount';
+    return 'Badhaasa dhaabbataa: $amount';
   }
 
   @override
   String gameBonusMaxCartelas(int count) {
-    return 'Max $count cartelas';
+    return 'Kaartelaa ol\'aanaa $count';
+  }
+
+  @override
+  String get registrationInsufficientBalance => 'Hafteen gahaa miti';
+
+  @override
+  String get registrationInsufficientBalanceRegister =>
+      'Kaartelaa galmeessuuf hafteen gahaa miti';
+
+  @override
+  String get registrationInsufficientBalanceSelect =>
+      'Kaartelaa dabalataa filachuuf hafteen gahaa miti';
+
+  @override
+  String registrationBalanceAllowsUpTo(int max) {
+    return 'Hafteen kee hanga kaartelaa $max ni eeyyama';
+  }
+
+  @override
+  String get registrationBigGotdLimitReached =>
+      'Daangaa kaartelaa Big GOTD irra ga\'ameera.';
+
+  @override
+  String get registrationBigGotdAllCartelasUsed =>
+      'Kaartelaa Big GOTD hunda fayyadamteetta.';
+
+  @override
+  String registrationBigGotdCanRegisterMore(int max) {
+    return 'Big GOTD irratti hanga kaartelaa $max dabalataa galmeessuu dandeessa.';
+  }
+
+  @override
+  String registrationBigGotdCanSelectMore(int max) {
+    return 'Big GOTD irratti hanga kaartelaa $max dabalataa filachuu dandeessa.';
   }
 
   @override

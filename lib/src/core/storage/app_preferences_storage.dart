@@ -9,6 +9,8 @@ class AppPreferencesStorage {
 
   static const _themeModeKey = 'theme_mode';
   static const _realtimeBrandingSplashSeenKey = 'realtime_branding_splash_seen';
+  static const _firstLaunchPreferencesCompletedKey =
+      'first_launch_preferences_completed';
   static const _localeKey = 'app_locale';
   static const _cartelaMarkColorKey = 'cartela_mark_color';
   static const _cartelaSortModeKey = 'cartela_sort_mode';
@@ -42,6 +44,14 @@ class AppPreferencesStorage {
 
   Future<void> markRealtimeBrandingSplashSeen() {
     return _prefs.setBool(_realtimeBrandingSplashSeenKey, true);
+  }
+
+  bool hasCompletedFirstLaunchPreferences() {
+    return _prefs.getBool(_firstLaunchPreferencesCompletedKey) ?? false;
+  }
+
+  Future<void> markFirstLaunchPreferencesCompleted() {
+    return _prefs.setBool(_firstLaunchPreferencesCompletedKey, true);
   }
 
   Future<void> writeThemeMode(ThemeMode mode) {

@@ -606,9 +606,11 @@ class _BoardCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isLatestCalled = isLatest && isCalled;
+    final latestGold = isDark ? AppBranding.gold : AppBranding.goldDark;
     final backgroundColor = isLatestCalled
-        ? AppBranding.gold
+        ? latestGold
         : (isCalled ? calledColor : idleColor);
     final textColor = isLatestCalled
         ? AppBranding.casinoPurpleDeep
@@ -656,7 +658,7 @@ class _BoardCell extends StatelessWidget {
       return LatestCallPulse(
         key: ValueKey<int>(number),
         borderRadius: 4,
-        highlightColor: AppBranding.gold,
+        highlightColor: latestGold,
         child: cell,
       );
     }
@@ -954,7 +956,7 @@ class _CalledBall extends StatelessWidget {
     final baseColor = isEmpty
         ? theme.colorScheme.surfaceContainerHighest
         : isLatest
-        ? AppBranding.gold
+        ? (isDark ? AppBranding.gold : AppBranding.goldDark)
         : _baseColorForLetter(calledNumber!.letter);
 
     final ball = SizedBox(
@@ -1008,7 +1010,7 @@ class _CalledBall extends StatelessWidget {
           '${calledNumber!.letter}-${calledNumber!.number}-${calledNumber!.order}',
         ),
         shape: BoxShape.circle,
-        highlightColor: AppBranding.gold,
+        highlightColor: isDark ? AppBranding.gold : AppBranding.goldDark,
         child: ball,
       );
     }

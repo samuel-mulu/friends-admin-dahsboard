@@ -53,7 +53,7 @@ bool isTerminalCanonicalRefetchActive({
       reason == 'game_finished';
 
   final recentlyRequested = lastTerminalCanonicalRefetchRequestedAt != null &&
-      now.difference(lastTerminalCanonicalRefetchRequestedAt!) <
+      now.difference(lastTerminalCanonicalRefetchRequestedAt) <
           const Duration(seconds: 3);
 
   return (canonicalRefetchInFlight && reasonLooksTerminal) || recentlyRequested;

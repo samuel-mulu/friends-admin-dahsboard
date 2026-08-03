@@ -21,6 +21,7 @@ class DepositFormSection extends StatelessWidget {
     this.onScanReceipt,
     this.isScanLoading = false,
     this.scanTooltip,
+    this.preserveTransactionRefCase = false,
     super.key,
   });
 
@@ -37,6 +38,7 @@ class DepositFormSection extends StatelessWidget {
   final VoidCallback? onScanReceipt;
   final bool isScanLoading;
   final String? scanTooltip;
+  final bool preserveTransactionRefCase;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +80,12 @@ class DepositFormSection extends StatelessWidget {
             VGap.xl,
             TextFormField(
               controller: transactionRefController,
-              textCapitalization: TextCapitalization.characters,
-              inputFormatters: const [UpperCaseTextFormatter()],
+              textCapitalization: preserveTransactionRefCase
+                  ? TextCapitalization.none
+                  : TextCapitalization.characters,
+              inputFormatters: [
+                if (!preserveTransactionRefCase) const UpperCaseTextFormatter(),
+              ],
               decoration: InputDecoration(
                 labelText: receiptLabel,
                 hintText: provider == PaymentProvider.telebirr
@@ -107,7 +113,8 @@ class DepositFormSection extends StatelessWidget {
               onChanged: (_) => onFieldChanged(),
               forceErrorText: transactionRefServerError,
             ),
-            if (provider == PaymentProvider.telebirr && onScanReceipt != null) ...[
+            if (provider == PaymentProvider.telebirr &&
+                onScanReceipt != null) ...[
               VGap.md,
               _ReceiptScreenshotHelper(
                 onScreenshotTap: onScanReceipt!,

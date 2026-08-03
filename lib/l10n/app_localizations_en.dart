@@ -42,6 +42,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theme => 'Theme';
 
   @override
+  String get firstLaunchPreferencesTitle => 'Choose your experience';
+
+  @override
+  String get firstLaunchPreferencesSubtitle =>
+      'Pick a theme and language to get started. You can change these anytime in settings.';
+
+  @override
+  String get firstLaunchPreferencesContinue => 'Continue';
+
+  @override
+  String get firstLaunchPreferencesSkip => 'Skip';
+
+  @override
   String get loginTitle => 'Welcome back';
 
   @override
@@ -271,6 +284,69 @@ class AppLocalizationsEn extends AppLocalizations {
       'Next steps can plug live called numbers, bingo claims, deposits, and withdrawals into this same foundation.';
 
   @override
+  String get houseChampionsTitle => 'House Champions';
+
+  @override
+  String get houseChampionsSubtitle =>
+      'See who won the most cartelas. Choose a time period below.';
+
+  @override
+  String get houseChampionsSelectPeriod => 'Show rankings for';
+
+  @override
+  String get houseChampionsViewAll => 'View all';
+
+  @override
+  String get houseChampionsFairnessNote =>
+      'Ranked by winning cartelas, not prize amount.';
+
+  @override
+  String get houseChampionsLoadError =>
+      'Could not load House Champions right now.';
+
+  @override
+  String get houseChampionsEmpty =>
+      'No champions yet for this period. Be the first to win.';
+
+  @override
+  String get houseChampionsPeriodToday => 'Today';
+
+  @override
+  String get houseChampionsPeriodThisWeek => 'This week';
+
+  @override
+  String get houseChampionsPeriodLastWeek => 'Last week';
+
+  @override
+  String get houseChampionsPeriodLast7Days => 'Last 7 days';
+
+  @override
+  String get houseChampionsPeriodLast30Days => 'Last 30 days';
+
+  @override
+  String get houseChampionsPeriodAllTime => 'All time';
+
+  @override
+  String houseChampionsPeriodRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String houseChampionsYourRank(int rank, int wins) {
+    return 'You are #$rank with $wins wins';
+  }
+
+  @override
+  String houseChampionsWins(int count) {
+    return '$count wins';
+  }
+
+  @override
+  String houseChampionsGamesWon(int count) {
+    return '$count games won';
+  }
+
+  @override
   String get walletAvailableBalance => 'Available balance';
 
   @override
@@ -454,6 +530,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositApprovedTitle => 'Deposit approved';
+
+  @override
+  String get depositPendingTitle => 'Deposit submitted';
+
+  @override
+  String get depositPendingMessage =>
+      'Your deposit is waiting for admin approval. Your wallet will be credited once it is approved.';
+
+  @override
+  String get depositRefUnderReview =>
+      'This reference is already under admin review.';
 
   @override
   String get depositRejectedTitle => 'Deposit failed';
@@ -1910,6 +1997,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String gameBonusMaxCartelas(int count) {
     return 'Max $count cartelas';
+  }
+
+  @override
+  String get registrationInsufficientBalance => 'Insufficient balance';
+
+  @override
+  String get registrationInsufficientBalanceRegister =>
+      'Insufficient balance to register cartelas';
+
+  @override
+  String get registrationInsufficientBalanceSelect =>
+      'Insufficient balance to select more cartelas';
+
+  @override
+  String registrationBalanceAllowsUpTo(int max) {
+    return 'Your balance allows up to $max cartelas';
+  }
+
+  @override
+  String get registrationBigGotdLimitReached =>
+      'You have reached the cartela limit for Big GOTD.';
+
+  @override
+  String get registrationBigGotdAllCartelasUsed =>
+      'You have already used all cartelas for Big GOTD.';
+
+  @override
+  String registrationBigGotdCanRegisterMore(int max) {
+    return 'You can still register up to $max more cartelas for Big GOTD.';
+  }
+
+  @override
+  String registrationBigGotdCanSelectMore(int max) {
+    return 'You can still select up to $max more cartelas for Big GOTD.';
   }
 
   @override

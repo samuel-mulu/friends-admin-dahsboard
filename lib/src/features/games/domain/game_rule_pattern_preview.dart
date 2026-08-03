@@ -1,4 +1,5 @@
 import 'big_shape_patterns.dart';
+import 'extended_game_patterns.dart';
 
 /// One player-facing sample board for a game-rule winning pattern.
 class GameRulePatternSample {
@@ -45,6 +46,15 @@ class GameRulePatternPreview {
     if (key == 'MIX_04') {
       return _bigTTwoSquaresSamples;
     }
+    if (key == 'BIG_N_OR_Z') {
+      return _bigNOrZSamples;
+    }
+    if (key == 'BIG_M_OR_W') {
+      return _bigMOrWSamples;
+    }
+    if (key == 'ONE_ANGLE_ROW_COLUMN_DIAGONAL') {
+      return _oneAngleRowColumnDiagonalSamples;
+    }
 
     final sample = _samples[key];
     if (sample != null) {
@@ -79,7 +89,10 @@ class GameRulePatternPreview {
         base == 'BIG_H' ||
         base == 'MIX_07' ||
         base == 'BIG_T_ONE_DIAGONAL' ||
-        base == 'MIX_04') {
+        base == 'MIX_04' ||
+        base == 'BIG_N_OR_Z' ||
+        base == 'BIG_M_OR_W' ||
+        base == 'ONE_ANGLE_ROW_COLUMN_DIAGONAL') {
       return base;
     }
 
@@ -513,7 +526,152 @@ class GameRulePatternPreview {
       squarePatterns: [_colRowSquare],
     ),
     'BIG_T_ONE_DIAGONAL': _sample(markedCells: _union([_bigT, _diagAnti()])),
+    'THREE_RECTANGLES': _sample(
+      markedCells: _union([
+        _coords([
+          [0, 0],
+          [0, 1],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+          [2, 1],
+        ]),
+        _coords([
+          [0, 2],
+          [0, 3],
+          [0, 4],
+          [1, 2],
+          [1, 3],
+          [1, 4],
+        ]),
+        _coords([
+          [2, 2],
+          [2, 3],
+          [3, 2],
+          [3, 3],
+          [4, 2],
+          [4, 3],
+        ]),
+      ]),
+    ),
+    'BIG_T_TWO_LINES': _sample(
+      markedCells: _union([_bigT, _row(2), _diagAnti()]),
+      linePatterns: [_row(2), _diagAnti()],
+    ),
+    'ONE_LINE_TWO_TRIANGLES': _sample(
+      markedCells: _union([
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+        ]),
+        _coords([
+          [0, 4],
+          [1, 3],
+          [1, 4],
+          [2, 2],
+          [2, 3],
+          [2, 4],
+        ]),
+        _row(4),
+      ]),
+      linePatterns: [_row(4)],
+    ),
+    'SMALL_T_TWO_SQUARES': _sample(
+      markedCells: _union([
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [1, 2],
+          [2, 2],
+        ]),
+        _square2x2(3, 0),
+        _square2x2(3, 3),
+      ]),
+      squarePatterns: [_square2x2(3, 0), _square2x2(3, 3)],
+    ),
+    'ONE_LINE_TRIANGLE_4X4': _sample(
+      markedCells: _union([
+        _row(4),
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [0, 4],
+          [1, 1],
+          [1, 2],
+          [1, 3],
+          [2, 1],
+          [2, 2],
+          [3, 1],
+        ]),
+      ]),
+      linePatterns: [_row(4)],
+    ),
+    'BIG_L_ONE_RECTANGLE': _sample(
+      markedCells: _union([
+        _bigL,
+        _coords([
+          [0, 2],
+          [0, 3],
+          [1, 2],
+          [1, 3],
+          [2, 2],
+          [2, 3],
+        ]),
+      ]),
+    ),
+    'TWO_ANGLES_THREE_LINES': _sample(
+      markedCells: _union([
+        {0, 24},
+        _row(1),
+        _col(2),
+        _diagAnti(),
+      ]),
+      linePatterns: [_row(1), _col(2), _diagAnti()],
+      anglePatterns: [
+        {0},
+        {24},
+      ],
+    ),
   };
+
+  static final List<GameRulePatternSample> _bigNOrZSamples =
+      ExtendedGamePatterns.bigNOrZVariants
+          .map(
+            (variant) => GameRulePatternSample(
+              label: variant.label,
+              markedCells: variant.cells,
+            ),
+          )
+          .toList(growable: false);
+
+  static final List<GameRulePatternSample> _bigMOrWSamples =
+      ExtendedGamePatterns.bigMOrWVariants
+          .map(
+            (variant) => GameRulePatternSample(
+              label: variant.label,
+              markedCells: variant.cells,
+            ),
+          )
+          .toList(growable: false);
+
+  static final List<GameRulePatternSample> _oneAngleRowColumnDiagonalSamples =
+      ExtendedGamePatterns.oneAngleRowColumnDiagonalVariants
+          .map(
+            (variant) => GameRulePatternSample(
+              label: variant.label,
+              markedCells: variant.cells,
+              linePatterns: [
+                for (final line in variant.orderedPolylines) {...line},
+              ],
+            ),
+          )
+          .toList(growable: false);
 
   static const Map<String, String> _descriptions = {
     'FULL_HOUSE': 'Complete all 25 cells on the cartela.',
@@ -565,5 +723,27 @@ class GameRulePatternPreview {
     'ONE_COLUMN_ONE_ROW_ONE_SQUARE':
         'Complete 1 column, 1 row, and 1 square. Column and row may overlap; square must not overlap the line patterns.',
     'BIG_T_ONE_DIAGONAL': 'Complete a big T and 1 diagonal. Overlap allowed.',
+    'BIG_N_OR_Z': 'Complete the big N or the big Z (2 orientations).',
+    'BIG_M_OR_W':
+        'Complete the big M, big W, or either sideways orientation (4 options).',
+    'THREE_RECTANGLES':
+        'Complete 3 non-overlapping rectangles. Each rectangle is 3x2 or 2x3.',
+    'BIG_T_TWO_LINES':
+        "Complete a big T plus 2 more lines (row, column, or diagonal). The 2 "
+        "lines must be different from the T's own row and column, but they may "
+        'cross it.',
+    'ONE_LINE_TWO_TRIANGLES':
+        'Complete 1 line and 2 triangles. Overlap not allowed.',
+    'SMALL_T_TWO_SQUARES':
+        'Complete 1 small T and 2 squares. Overlap not allowed.',
+    'ONE_LINE_TRIANGLE_4X4':
+        'Complete 1 line and one 4x4 triangle. Overlap not allowed.',
+    'BIG_L_ONE_RECTANGLE':
+        'Complete a big L and 1 rectangle (2x3 or 3x2). Overlap not allowed.',
+    'TWO_ANGLES_THREE_LINES':
+        'Complete 2 of the 4 corner angles and 3 lines. Lines may overlap; angles must not sit on the lines.',
+    'ONE_ANGLE_ROW_COLUMN_DIAGONAL':
+        'Complete the row, column, and diagonal that meet at one of the four '
+        'corner angles (B1, O1, B5, or O5).',
   };
 }

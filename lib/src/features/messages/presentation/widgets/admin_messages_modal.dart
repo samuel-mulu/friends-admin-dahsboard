@@ -50,8 +50,8 @@ class _AdminMessagesSheet extends ConsumerWidget {
           controller: scrollController,
           padding: BroadcastMessageUi.sheetPadding,
           itemCount: 5,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (_, __) => const _NotificationTileSkeleton(),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (_, _) => const _NotificationTileSkeleton(),
         ),
       ),
       error: (error, stackTrace) => _NotificationsFrame(
@@ -109,7 +109,7 @@ class _AdminMessagesSheet extends ConsumerWidget {
                   controller: scrollController,
                   padding: BroadcastMessageUi.sheetPadding,
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final broadcast = items[index];
                     return _NotificationTile(

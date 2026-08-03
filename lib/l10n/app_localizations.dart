@@ -168,6 +168,30 @@ abstract class AppLocalizations {
   /// **'Theme'**
   String get theme;
 
+  /// Title on the first-launch theme and language screen
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your experience'**
+  String get firstLaunchPreferencesTitle;
+
+  /// Subtitle on the first-launch theme and language screen
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a theme and language to get started. You can change these anytime in settings.'**
+  String get firstLaunchPreferencesSubtitle;
+
+  /// Primary action that saves first-launch theme and language
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get firstLaunchPreferencesContinue;
+
+  /// Secondary action that keeps default theme and language
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get firstLaunchPreferencesSkip;
+
   /// No description provided for @loginTitle.
   ///
   /// In en, this message translates to:
@@ -558,6 +582,108 @@ abstract class AppLocalizations {
   /// **'Next steps can plug live called numbers, bingo claims, deposits, and withdrawals into this same foundation.'**
   String get dashboardWhatIsNextBody;
 
+  /// No description provided for @houseChampionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'House Champions'**
+  String get houseChampionsTitle;
+
+  /// No description provided for @houseChampionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See who won the most cartelas. Choose a time period below.'**
+  String get houseChampionsSubtitle;
+
+  /// No description provided for @houseChampionsSelectPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Show rankings for'**
+  String get houseChampionsSelectPeriod;
+
+  /// No description provided for @houseChampionsViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get houseChampionsViewAll;
+
+  /// No description provided for @houseChampionsFairnessNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranked by winning cartelas, not prize amount.'**
+  String get houseChampionsFairnessNote;
+
+  /// No description provided for @houseChampionsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load House Champions right now.'**
+  String get houseChampionsLoadError;
+
+  /// No description provided for @houseChampionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No champions yet for this period. Be the first to win.'**
+  String get houseChampionsEmpty;
+
+  /// No description provided for @houseChampionsPeriodToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get houseChampionsPeriodToday;
+
+  /// No description provided for @houseChampionsPeriodThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get houseChampionsPeriodThisWeek;
+
+  /// No description provided for @houseChampionsPeriodLastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Last week'**
+  String get houseChampionsPeriodLastWeek;
+
+  /// No description provided for @houseChampionsPeriodLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get houseChampionsPeriodLast7Days;
+
+  /// No description provided for @houseChampionsPeriodLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get houseChampionsPeriodLast30Days;
+
+  /// No description provided for @houseChampionsPeriodAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get houseChampionsPeriodAllTime;
+
+  /// No description provided for @houseChampionsPeriodRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} – {end}'**
+  String houseChampionsPeriodRange(String start, String end);
+
+  /// No description provided for @houseChampionsYourRank.
+  ///
+  /// In en, this message translates to:
+  /// **'You are #{rank} with {wins} wins'**
+  String houseChampionsYourRank(int rank, int wins);
+
+  /// No description provided for @houseChampionsWins.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} wins'**
+  String houseChampionsWins(int count);
+
+  /// No description provided for @houseChampionsGamesWon.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} games won'**
+  String houseChampionsGamesWon(int count);
+
   /// No description provided for @walletAvailableBalance.
   ///
   /// In en, this message translates to:
@@ -875,6 +1001,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deposit approved'**
   String get depositApprovedTitle;
+
+  /// No description provided for @depositPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit submitted'**
+  String get depositPendingTitle;
+
+  /// No description provided for @depositPendingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your deposit is waiting for admin approval. Your wallet will be credited once it is approved.'**
+  String get depositPendingMessage;
+
+  /// No description provided for @depositRefUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'This reference is already under admin review.'**
+  String get depositRefUnderReview;
 
   /// No description provided for @depositRejectedTitle.
   ///
@@ -3345,6 +3489,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Max {count} cartelas'**
   String gameBonusMaxCartelas(int count);
+
+  /// No description provided for @registrationInsufficientBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient balance'**
+  String get registrationInsufficientBalance;
+
+  /// No description provided for @registrationInsufficientBalanceRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient balance to register cartelas'**
+  String get registrationInsufficientBalanceRegister;
+
+  /// No description provided for @registrationInsufficientBalanceSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient balance to select more cartelas'**
+  String get registrationInsufficientBalanceSelect;
+
+  /// No description provided for @registrationBalanceAllowsUpTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Your balance allows up to {max} cartelas'**
+  String registrationBalanceAllowsUpTo(int max);
+
+  /// No description provided for @registrationBigGotdLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the cartela limit for Big GOTD.'**
+  String get registrationBigGotdLimitReached;
+
+  /// No description provided for @registrationBigGotdAllCartelasUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already used all cartelas for Big GOTD.'**
+  String get registrationBigGotdAllCartelasUsed;
+
+  /// No description provided for @registrationBigGotdCanRegisterMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still register up to {max} more cartelas for Big GOTD.'**
+  String registrationBigGotdCanRegisterMore(int max);
+
+  /// No description provided for @registrationBigGotdCanSelectMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still select up to {max} more cartelas for Big GOTD.'**
+  String registrationBigGotdCanSelectMore(int max);
 
   /// No description provided for @gameStatusRegistrationOpen.
   ///

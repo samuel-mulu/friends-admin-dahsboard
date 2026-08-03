@@ -191,12 +191,13 @@ class CartelaPatternProgressPainter extends CustomPainter {
     canvas.drawPath(path, linePaint);
   }
 
+  /// Outlines a solid block: a 2x2 square or a 2x3/3x2 rectangle.
   void _paintSquareBorder(
     Canvas canvas,
     Set<int> square,
     Size boardSize,
   ) {
-    if (square.length != 4) {
+    if (square.length < 4) {
       return;
     }
 

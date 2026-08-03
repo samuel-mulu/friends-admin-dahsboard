@@ -280,26 +280,32 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
                 Text(
                   hasFreeEntry
                       ? [
-                          'Free entry',
+                          l10n.gameBonusFreeEntry,
                           if (widget.fixedPrizeAmount != null)
-                            'Fixed prize ${formatMoney(widget.fixedPrizeAmount!)}',
-                          'Max $bonusLimit cartelas',
+                            l10n.gameBonusFixedPrize(
+                              formatMoney(widget.fixedPrizeAmount!),
+                            ),
+                          l10n.gameBonusMaxCartelas(bonusLimit),
                         ].join(' • ')
                       : widget.isBigGotd
                       ? [
                           context.l10n.gameCategoryBigGotd,
-                          '${context.l10n.bigGameEntryFee} ${formatMoney(widget.entryFee)}',
+                          '${context.l10n.bigGameEntryFee}: ${formatMoney(widget.entryFee)}',
                           if (widget.fixedPrizeAmount != null)
-                            'Fixed prize ${formatMoney(widget.fixedPrizeAmount!)}',
-                          'Max $bonusLimit cartelas',
+                            l10n.gameBonusFixedPrize(
+                              formatMoney(widget.fixedPrizeAmount!),
+                            ),
+                          l10n.gameBonusMaxCartelas(bonusLimit),
                         ].join(' • ')
                       : widget.isBigGame
                       ? [
-                          'Big Game',
+                          l10n.gameCategoryBigGame,
                           if (widget.fixedPrizeAmount != null)
-                            'Fixed prize ${formatMoney(widget.fixedPrizeAmount!)}',
+                            l10n.gameBonusFixedPrize(
+                              formatMoney(widget.fixedPrizeAmount!),
+                            ),
                           if (widget.maxCartelasPerPlayer != null)
-                            'Max $bonusLimit cartelas',
+                            l10n.gameBonusMaxCartelas(bonusLimit),
                         ].join(' • ')
                       : l10n.bulkPerCartela(formatMoney(widget.entryFee)),
                   style: theme.textTheme.labelSmall?.copyWith(

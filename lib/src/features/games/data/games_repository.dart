@@ -14,6 +14,7 @@ import 'models/called_numbers_snapshot.dart';
 import 'models/game_cartela_model.dart';
 import 'models/game_model.dart';
 import 'models/game_timing_config_model.dart';
+import 'models/house_champions_model.dart';
 import 'models/registration_state_model.dart';
 import 'models/session_winner_result_model.dart';
 
@@ -32,6 +33,26 @@ class GamesRepository {
         }
 
         return GameTimingConfigModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<HouseChampionsResponse> getCartelaWinsLeaderboard({
+    required String period,
+    int limit = 15,
+  }) {
+    return _apiClient.get<HouseChampionsResponse>(
+      '/games/leaderboard/cartela-wins',
+      queryParameters: {
+        'period': period,
+        'limit': limit,
+      },
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid house champions response.');
+        }
+
+        return HouseChampionsResponse.fromJson(rawData);
       },
     );
   }

@@ -33,6 +33,12 @@ class TelebirrReceiptPreview {
       status == TelebirrReceiptPreviewStatus.valid ||
       status == TelebirrReceiptPreviewStatus.previewUnavailable;
 
+  /// Local approval mode requires a successful client-side receipt parse.
+  /// Automatic mode may continue without one (verify.et handles it).
+  bool get hasParsedClientReceipt =>
+      status == TelebirrReceiptPreviewStatus.valid &&
+      toClientReceiptPayload() != null;
+
   TelebirrReceiptParseStatus get receiptParseStatus {
     switch (status) {
       case TelebirrReceiptPreviewStatus.valid:

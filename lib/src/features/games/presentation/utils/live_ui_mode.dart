@@ -1,6 +1,7 @@
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import 'live_presentation_phase.dart';
+import 'live_primary_game_selection.dart';
 import 'live_ready_atomic_visibility.dart';
 import 'live_ready_transition_lock.dart';
 import 'live_embedded_operations_snapshot.dart';
@@ -68,6 +69,7 @@ class ResolveLiveUiModeInput {
   const ResolveLiveUiModeInput({
     this.operations,
     this.pinnedPrimaryGame,
+    this.ownedLiveGameFallback,
     required this.ownsLiveSessionCartelas,
     required this.hasPrimarySessionCartelas,
     this.calledNumbers = const [],
@@ -83,6 +85,11 @@ class ResolveLiveUiModeInput {
 
   final GameOperationsCurrentResponse? operations;
   final GameModel? pinnedPrimaryGame;
+
+  /// Local session that already advanced to a live status and is backed by the
+  /// player's own cartelas. Only consulted while `operations/current` has not
+  /// caught up yet.
+  final GameModel? ownedLiveGameFallback;
   final bool ownsLiveSessionCartelas;
   final bool hasPrimarySessionCartelas;
   final List<CalledNumberModel> calledNumbers;
@@ -148,6 +155,12 @@ class LiveUiModeResolver {
     final operations = input.operations;
     final hasBlockingLiveGame =
         operations?.liveGame != null || operations?.checkingGame != null;
+
+    final stickyOwnedLive = _stickyOwnedLiveGame(input);
+    if (stickyOwnedLive != null) {
+      return _buildForStickyOwnedLive(input: input, game: stickyOwnedLive);
+    }
+
     final activeLock = _activeTransitionLock(input);
 
     if (activeLock != null) {
@@ -222,6 +235,65 @@ class LiveUiModeResolver {
       operations: operations,
       hasBlockingLiveGame: hasBlockingLiveGame,
       ownsLiveCartelas: ownsLiveCartelas,
+    );
+  }
+
+  /// Owned round that is already live locally while operations still reports
+  /// no live/checking game.
+  ///
+  /// Only fires in that lag window: as soon as operations exposes any
+  /// live/checking game (including the terminal fallback it surfaces after a
+  /// round ends) the canonical path takes over again, so missed-round entry and
+  /// normal live play are untouched.
+  static GameModel? _stickyOwnedLiveGame(ResolveLiveUiModeInput input) {
+    final game = input.ownedLiveGameFallback;
+    if (game == null || !keepsOwnedLiveGamePrimary(game.status)) {
+      return null;
+    }
+
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return null;
+    }
+
+    final holds = input.holds;
+    if (holds.pinTerminalSession || holds.postGameSummaryReviewActive) {
+      return null;
+    }
+
+    final operations = input.operations;
+    if (operations == null ||
+        operations.liveGame != null ||
+        operations.checkingGame != null) {
+      return null;
+    }
+
+    return game;
+  }
+
+  static LiveUiModeState _buildForStickyOwnedLive({
+    required ResolveLiveUiModeInput input,
+    required GameModel game,
+  }) {
+    final operations = input.operations;
+    final registration = operations?.registrationOpenGame;
+    final alignedOps = GameOperationsCurrentResponse(
+      liveGame: game,
+      checkingGame: null,
+      registrationOpenGame: _isSameRound(registration, game)
+          ? null
+          : registration,
+      queue: operations?.queue ?? const [],
+      timestamp: operations?.timestamp ?? input.now,
+      serverNow: operations?.serverNow ?? input.now,
+    );
+
+    return _buildForPrimaryGame(
+      input: input,
+      primary: game,
+      operations: alignedOps,
+      hasBlockingLiveGame: true,
+      ownsLiveCartelas: true,
     );
   }
 
@@ -333,7 +405,7 @@ class LiveUiModeResolver {
         registrationTarget: snapshot,
         presentationPhase: LivePresentationPhase.preparingGame,
         useRegistrationOpenLayout:
-            snapshot != null && !_screenBlocked(input),
+            !_screenBlocked(input),
         showsInlinePlayCartelas: false,
         showCalledNumbersStrip: false,
         showRegistrationGrid: false,

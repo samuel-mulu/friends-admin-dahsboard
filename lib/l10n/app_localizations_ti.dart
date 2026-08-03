@@ -42,6 +42,19 @@ class AppLocalizationsTi extends AppLocalizations {
   String get theme => 'መልክ';
 
   @override
+  String get firstLaunchPreferencesTitle => 'ተመኩሮኹም ምረጹ';
+
+  @override
+  String get firstLaunchPreferencesSubtitle =>
+      'ንምጅማር መልክዐን ቋንቋን ምረጹ። ኣብ ዝኾነ እዋን ካብ ቅንብራት ክትቕይሩ ትኽእሉ ኢኹም።';
+
+  @override
+  String get firstLaunchPreferencesContinue => 'ቀጽል';
+
+  @override
+  String get firstLaunchPreferencesSkip => 'ስገር';
+
+  @override
   String get loginTitle => 'Welcome';
 
   @override
@@ -267,6 +280,66 @@ class AppLocalizationsTi extends AppLocalizations {
       'ዝቕጽሉ ስጉምቲታት ቀጥታ ዝተጸዉዑ ቁጽሪታት፣ ናይ ቢንጎ ጠለባት፣ ክፍሊታትን ወጻኢታትን ናብዚ ቅርጺ ይምልሱ።';
 
   @override
+  String get houseChampionsTitle => 'ናይ ቤት ኣሸናፍቲ';
+
+  @override
+  String get houseChampionsSubtitle =>
+      'ብዝሓለፈ ካርቴላ ዝዓበዩ ተጻወትቲ። ኣብ ታሕቲ ዘሎ ዝርዝር ካብ ምረጽ።';
+
+  @override
+  String get houseChampionsSelectPeriod => 'ደረጃ ንምርኣይ';
+
+  @override
+  String get houseChampionsViewAll => 'ኩሉ ርአ';
+
+  @override
+  String get houseChampionsFairnessNote => 'ብዝሓለፈ ካርቴላ ይደረግ፣ ብመጠን ሽልክ ኣይደረግን።';
+
+  @override
+  String get houseChampionsLoadError => 'ናይ ቤት ኣሸናፍቲ ምጽዓን ኣይተኻእለን።';
+
+  @override
+  String get houseChampionsEmpty => 'ንዚ ግዜ ኣሁን ኣሸናፊ የለን። ቀዳማይ ኩን።';
+
+  @override
+  String get houseChampionsPeriodToday => 'ሎሚ';
+
+  @override
+  String get houseChampionsPeriodThisWeek => 'እዚ ሰሙን';
+
+  @override
+  String get houseChampionsPeriodLastWeek => 'ዝሓለፈ ሰሙን';
+
+  @override
+  String get houseChampionsPeriodLast7Days => 'ዝሓለፉ 7 መዓልቲ';
+
+  @override
+  String get houseChampionsPeriodLast30Days => 'ዝሓለፉ 30 መዓልቲ';
+
+  @override
+  String get houseChampionsPeriodAllTime => 'ኩሉ ግዜ';
+
+  @override
+  String houseChampionsPeriodRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String houseChampionsYourRank(int rank, int wins) {
+    return 'ቁጽሪ $rank ኢኻ ብ $wins ዓወት';
+  }
+
+  @override
+  String houseChampionsWins(int count) {
+    return '$count ዓወት';
+  }
+
+  @override
+  String houseChampionsGamesWon(int count) {
+    return '$count ጸወታታት ዓዊቱ';
+  }
+
+  @override
   String get walletAvailableBalance => 'ዘሎ ቀሪ';
 
   @override
@@ -441,6 +514,16 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String get depositApprovedTitle => 'ኣታዊ ጸዲቑ';
+
+  @override
+  String get depositPendingTitle => 'ኣታዊ ቀሪቡ';
+
+  @override
+  String get depositPendingMessage =>
+      'ኣታዊኻ ንፍቓድ ኣስተዳዳሪ ይጽበ። ኣብ ዝጸድቕ ድሕሪ ክፍሊትካ ክሞላ እዩ።';
+
+  @override
+  String get depositRefUnderReview => 'እዚ ማጣቀሻ እዚ ቀዲሙ ኣብ ግምገማ ኣስተዳዳሪ ኣሎ።';
 
   @override
   String get depositRejectedTitle => 'ኣታዊ ምግባር ኣይተኻእለን';
@@ -1829,7 +1912,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get bigGameFixedPrize => 'Fixed Prize';
 
   @override
-  String get bigGameEntryFee => 'Entry Fee';
+  String get bigGameEntryFee => 'ክፍሊት መእተዊ';
 
   @override
   String get bigGamePlayStartTime => 'Play Start Time';
@@ -1859,16 +1942,50 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
-  String get gameBonusFreeEntry => 'Free entry';
+  String get gameBonusFreeEntry => 'ነጻ መእተዊ';
 
   @override
   String gameBonusFixedPrize(String amount) {
-    return 'Fixed prize: $amount';
+    return 'ቋሚ ሽልማት፦ $amount';
   }
 
   @override
   String gameBonusMaxCartelas(int count) {
-    return 'Max $count cartelas';
+    return 'ከፍተኛ $count ካርቴላ';
+  }
+
+  @override
+  String get registrationInsufficientBalance => 'ብቑዕ ቀሪ የለን';
+
+  @override
+  String get registrationInsufficientBalanceRegister =>
+      'ካርቴላ ንምምዝጋብ ብቑዕ ቀሪ የለን';
+
+  @override
+  String get registrationInsufficientBalanceSelect =>
+      'ተወሳኺ ካርቴላ ንምምራጽ ብቑዕ ቀሪ የለን';
+
+  @override
+  String registrationBalanceAllowsUpTo(int max) {
+    return 'ቀሪኻ ክሳዕ $max ካርቴላ ይፈቅድ';
+  }
+
+  @override
+  String get registrationBigGotdLimitReached =>
+      'ን Big GOTD ናይ ካርቴላ ወሰን በጺሕካ ኣለኻ።';
+
+  @override
+  String get registrationBigGotdAllCartelasUsed =>
+      'ን Big GOTD ኩሉ ካርቴላታት ተጠቒምካ ኣለኻ።';
+
+  @override
+  String registrationBigGotdCanRegisterMore(int max) {
+    return 'ን Big GOTD ክሳዕ $max ተወሳኺ ካርቴላ ክትምዝገብ ትኽእል ኢኻ።';
+  }
+
+  @override
+  String registrationBigGotdCanSelectMore(int max) {
+    return 'ን Big GOTD ክሳዕ $max ተወሳኺ ካርቴላ ክትመርጽ ትኽእል ኢኻ።';
   }
 
   @override

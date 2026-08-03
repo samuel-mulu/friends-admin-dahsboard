@@ -614,24 +614,41 @@ class TelebirrReceiptPreviewService {
     return false;
   }
 
+  /// The masked account number is the only stable identifier on a Telebirr
+  /// receipt. Receiver names are free text and vary in spelling, so they are
+  /// only compared when no last4 is configured for the account.
   bool _accountReceiverMatches(
     TelebirrAccountConfig account,
     String? receiverName,
     String? receiverAccount,
   ) {
-    final configuredLast4 = _digitsOnly(account.receiverPhoneLast4);
-    final receiverLast4 = _digitsOnly(receiverAccount ?? '');
+    final configuredLast4 = _resolveConfiguredLast4(account);
+    if (configuredLast4 != null) {
+      final receiverLast4 = _digitsOnly(receiverAccount ?? '');
+      return receiverLast4.length >= 4 &&
+          receiverLast4.endsWith(configuredLast4);
+    }
 
-    final last4Matches =
-        configuredLast4.isNotEmpty &&
-        receiverLast4.length >= 4 &&
-        receiverLast4.endsWith(configuredLast4);
-    final nameMatches =
-        account.receiverName.trim().isEmpty ||
-        _normalizeText(receiverName ?? '') ==
-            _normalizeText(account.receiverName);
+    final configuredName = _normalizeText(account.receiverName);
+    if (configuredName.isEmpty) {
+      return false;
+    }
 
-    return last4Matches && nameMatches;
+    return _normalizeText(receiverName ?? '') == configuredName;
+  }
+
+  String? _resolveConfiguredLast4(TelebirrAccountConfig account) {
+    for (final candidate in [
+      account.receiverPhoneLast4,
+      account.settlementAccount,
+    ]) {
+      final digits = _digitsOnly(candidate);
+      if (digits.length >= 4) {
+        return digits.substring(digits.length - 4);
+      }
+    }
+
+    return null;
   }
 
   bool _amountMatches(String settledAmount, String submittedAmount) {

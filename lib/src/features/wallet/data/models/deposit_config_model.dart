@@ -10,6 +10,9 @@ class DepositProviderConfig {
     required this.requiresAmount,
     required this.settlementAccount,
     required this.receiverName,
+    this.enabled = true,
+    this.approvalMode = 'automatic',
+    this.receiptBaseUrl = '',
   });
 
   final String key;
@@ -19,6 +22,9 @@ class DepositProviderConfig {
   final bool requiresAmount;
   final String settlementAccount;
   final String receiverName;
+  final bool enabled;
+  final String approvalMode;
+  final String receiptBaseUrl;
 
   factory DepositProviderConfig.fromJson(Map<String, dynamic> json) {
     return DepositProviderConfig(
@@ -29,6 +35,9 @@ class DepositProviderConfig {
       requiresAmount: json['requiresAmount'] as bool? ?? true,
       settlementAccount: json['settlementAccount'] as String? ?? '',
       receiverName: json['receiverName'] as String? ?? '',
+      enabled: json['enabled'] as bool? ?? true,
+      approvalMode: json['approvalMode'] as String? ?? 'automatic',
+      receiptBaseUrl: json['receiptBaseUrl'] as String? ?? '',
     );
   }
 }
@@ -115,10 +124,7 @@ class TelebirrDepositConfig {
 }
 
 class DepositConfigModel {
-  const DepositConfigModel({
-    required this.providers,
-    required this.telebirr,
-  });
+  const DepositConfigModel({required this.providers, required this.telebirr});
 
   final List<DepositProviderConfig> providers;
   final TelebirrDepositConfig telebirr;

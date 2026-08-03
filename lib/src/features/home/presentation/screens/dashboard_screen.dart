@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../games/presentation/screens/house_champions_screen.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
 
@@ -95,6 +96,8 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
         ),
+        VGap.xl,
+        const HouseChampionsDashboardCard(),
         VGap.xl,
         Card(
           child: Padding(

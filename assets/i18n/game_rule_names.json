@@ -209,5 +209,65 @@
     "am": "ትልቅ T በሁሉም አቅጣጫ ከ1 ዲያጎናል መስመር",
     "ti": "ዓባይ T ናብ ኩሉ አንፈት ምስ 1 ዲያጎናል",
     "om": "Big T in all directions and 1 diagonal"
+  },
+  "BIG_N_OR_Z": {
+    "en": "Big N or Z",
+    "am": "ትልቅ N ወይም Z",
+    "ti": "ዓባይ N ወይ Z",
+    "om": "Big N or Z"
+  },
+  "BIG_M_OR_W": {
+    "en": "Big M or W",
+    "am": "ትልቅ M ወይም W",
+    "ti": "ዓባይ M ወይ W",
+    "om": "Big M or W"
+  },
+  "THREE_RECTANGLES": {
+    "en": "3 rectangles",
+    "am": "3 ሬክታንግል የማይገናኙ",
+    "ti": "3 ሬክታንግል ዘይራከቡ",
+    "om": "3 rectangles"
+  },
+  "BIG_T_TWO_LINES": {
+    "en": "Big T in all directions with 2 lines",
+    "am": "ትልቅ T በሁሉም አቅጣጫ ከ2 መስመር",
+    "ti": "ዓባይ T ናብ ኩሉ አንፈት ምስ 2 መስመር",
+    "om": "Big T in all directions with 2 lines"
+  },
+  "ONE_LINE_TWO_TRIANGLES": {
+    "en": "1 line and 2 triangles all separate",
+    "am": "1 መስመር ከ2 ትሪያንግል ሁሉም የማይገናኙ",
+    "ti": "1 መስመር ምስ 2 ትሪያንግል ኩሎም ዘይራከቡ",
+    "om": "1 line and 2 triangles all separate"
+  },
+  "SMALL_T_TWO_SQUARES": {
+    "en": "Small T with 2 squares all separate",
+    "am": "ትንሽ T ከ2 ስኴር ሁሉም የማይገናኙ",
+    "ti": "ንእሽቶ T ምስ 2 ስኴር ኩሎም ዘይራከቡ",
+    "om": "Small T with 2 squares all separate"
+  },
+  "ONE_LINE_TRIANGLE_4X4": {
+    "en": "1 line and triangle 4x4 all separate",
+    "am": "1 መስመር ከ ትሪያንግል 4x4 የማይገናኙ",
+    "ti": "1 መስመር ምስ ትሪያንግል 4x4 ዘይራከቡ",
+    "om": "1 line and triangle 4x4 all separate"
+  },
+  "BIG_L_ONE_RECTANGLE": {
+    "en": "Big L with 1 rectangle all separate",
+    "am": "ትልቅ L ከ1 ሬክታንግል የማይገናኙ",
+    "ti": "ዓባይ L ምስ 1 ሬክታንግል ዘይራከቡ",
+    "om": "Big L with 1 rectangle all separate"
+  },
+  "TWO_ANGLES_THREE_LINES": {
+    "en": "2 angles with 3 lines",
+    "am": "2 ነጥቦች (ማዕዘኖች) ከ3 መስመር",
+    "ti": "2 ነጠብጣብ (አንግል) ምስ 3 መስመር",
+    "om": "2 angles with 3 lines"
+  },
+  "ONE_ANGLE_ROW_COLUMN_DIAGONAL": {
+    "en": "1 angle with 1 row 1 column 1 diagonal",
+    "am": "ከ 1 ነጥብ (ማዕዘን) የሚጀምሩት 1 የተኛ 1 የቆመ 1 ዲያጎናል",
+    "ti": "ካብ 1 ነጠብጣብ (አንግል) ዝጁምሩ 1 ዝደቀሰ 1 ደው ዝበለ 1 ዲያጎናል",
+    "om": "from 1 angle starts 1 row 1 column 1 diagonal"
   }
 }
