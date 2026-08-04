@@ -160,18 +160,29 @@ class GamesRepository {
   Future<GameCartelaModel> registerCartela({
     required String sessionId,
     required String cartelaId,
-  }) {
-    return _apiClient.post<GameCartelaModel>(
-      '/games/sessions/$sessionId/register-cartela',
-      data: {'cartelaId': cartelaId},
-      decoder: (rawData) {
-        if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid cartela registration response.');
-        }
+  }) async {
+    try {
+      return await _apiClient.post<GameCartelaModel>(
+        '/games/sessions/$sessionId/register-cartela',
+        data: {'cartelaId': cartelaId},
+        decoder: (rawData) {
+          if (rawData is! Map<String, dynamic>) {
+            throw StateError('Invalid cartela registration response.');
+          }
 
-        return GameCartelaModel.fromJson(rawData);
-      },
-    );
+          return GameCartelaModel.fromJson(rawData);
+        },
+      );
+    } catch (error) {
+      final recovered = await _recoverCommittedRegistration(
+        cartelaId: cartelaId,
+        sessionId: sessionId,
+      );
+      if (recovered != null) {
+        return recovered;
+      }
+      rethrow;
+    }
   }
 
   // Register a cartela for a slot (works for both NEXT and PLAYING slots).
@@ -179,18 +190,54 @@ class GamesRepository {
   Future<GameCartelaModel> registerCartelaForSlot({
     required String slotId,
     required String cartelaId,
-  }) {
-    return _apiClient.post<GameCartelaModel>(
-      '/games/slots/$slotId/register-cartela',
-      data: {'cartelaId': cartelaId},
-      decoder: (rawData) {
-        if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid cartela registration response.');
-        }
+  }) async {
+    try {
+      return await _apiClient.post<GameCartelaModel>(
+        '/games/slots/$slotId/register-cartela',
+        data: {'cartelaId': cartelaId},
+        decoder: (rawData) {
+          if (rawData is! Map<String, dynamic>) {
+            throw StateError('Invalid cartela registration response.');
+          }
 
-        return GameCartelaModel.fromJson(rawData);
-      },
-    );
+          return GameCartelaModel.fromJson(rawData);
+        },
+      );
+    } catch (error) {
+      final recovered = await _recoverCommittedRegistration(
+        cartelaId: cartelaId,
+        slotId: slotId,
+      );
+      if (recovered != null) {
+        return recovered;
+      }
+      rethrow;
+    }
+  }
+
+  Future<GameCartelaModel?> _recoverCommittedRegistration({
+    required String cartelaId,
+    String? sessionId,
+    String? slotId,
+  }) async {
+    try {
+      final effectiveSessionId =
+          sessionId ?? (slotId == null ? null : (await getSlotDetail(slotId)).sessionId);
+      if (effectiveSessionId == null || effectiveSessionId.isEmpty) {
+        return null;
+      }
+
+      final myCartelas = await getMyGameCartelas(effectiveSessionId);
+      for (final gameCartela in myCartelas) {
+        if (gameCartela.cartelaId == cartelaId) {
+          return gameCartela;
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
   }
 
   Future<BulkRegisterResult> registerCartelasForSlot({
@@ -462,17 +509,36 @@ class GamesRepository {
     );
   }
 
-  Future<GameCartelaModel> confirmReservation(String reservationId) {
-    return _apiClient.post<GameCartelaModel>(
-      '/games/reservations/$reservationId/confirm',
-      decoder: (rawData) {
-        if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid cartela confirmation response.');
-        }
+  Future<GameCartelaModel> confirmReservation(
+    String reservationId, {
+    String? slotId,
+    String? cartelaId,
+    String? sessionId,
+  }) async {
+    try {
+      return await _apiClient.post<GameCartelaModel>(
+        '/games/reservations/$reservationId/confirm',
+        decoder: (rawData) {
+          if (rawData is! Map<String, dynamic>) {
+            throw StateError('Invalid cartela confirmation response.');
+          }
 
-        return GameCartelaModel.fromJson(rawData);
-      },
-    );
+          return GameCartelaModel.fromJson(rawData);
+        },
+      );
+    } catch (error) {
+      if (cartelaId != null) {
+        final recovered = await _recoverCommittedRegistration(
+          cartelaId: cartelaId,
+          sessionId: sessionId,
+          slotId: slotId,
+        );
+        if (recovered != null) {
+          return recovered;
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<void> cancelReservation(String reservationId) {

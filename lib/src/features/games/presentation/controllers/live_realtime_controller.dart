@@ -9,6 +9,7 @@ import '../debug/live_realtime_debug.dart';
 import '../../domain/live_connection_status.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../providers/current_game_operations_provider.dart';
+import '../providers/game_operations_sync_coordinator.dart';
 import '../providers/games_providers.dart';
 import '../utils/live_resume_provider_policy.dart';
 import '../utils/live_resume_terminal_gate.dart';
@@ -414,6 +415,7 @@ class LiveRealtimeController {
     try {
       await host.runResumeSync(
         allowCachedOperations: !requireNetworkOperations,
+        operationsSyncReason: _mapResumeOperationsSyncReason(reason),
       );
 
       if (!host.isGuest &&
@@ -504,6 +506,26 @@ class LiveRealtimeController {
 
   bool _usesResumeDebounce(String reason) {
     return reason == 'app_resume' || reason == 'socket_reconnect';
+  }
+
+  OperationsSyncReason _mapResumeOperationsSyncReason(String reason) {
+    if (reason.contains('manual_refresh')) {
+      return OperationsSyncReason.manualRefresh;
+    }
+    if (reason.contains('socket_reconnect')) {
+      return OperationsSyncReason.socketReconnect;
+    }
+    if (reason.contains('session_restore')) {
+      return OperationsSyncReason.sessionRestore;
+    }
+    return OperationsSyncReason.appResume;
+  }
+
+  OperationsSyncReason _mapCanonicalOperationsSyncReason(String reason) {
+    if (reason.contains('missed_preview') || reason.contains('missing')) {
+      return OperationsSyncReason.missingPayloadRecovery;
+    }
+    return OperationsSyncReason.inconsistencyRecovery;
   }
 
   void _prepareSyncUi({required String reason}) {
@@ -637,6 +659,7 @@ class LiveRealtimeController {
           showLoading: false,
           includeCalledNumbers: includeCalledNumbers,
           includeMyCartelas: includeMyCartelas,
+          operationsSyncReason: _mapCanonicalOperationsSyncReason(reason),
         );
         LiveRealtimeDebug.refreshApplied(
           reason: reason,

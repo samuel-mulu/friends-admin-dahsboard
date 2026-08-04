@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/sync/resume_sync_guard.dart';
 import '../../../../core/time/server_clock_provider.dart';
-import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
 import '../debug/live_realtime_debug.dart';
 import '../utils/game_operations_resume_cache.dart';
 import '../utils/live_game_resume_owner_registry.dart';
+import 'game_operations_sync_coordinator.dart';
 import 'realtime_connection_provider.dart';
 
 final currentGameOperationsProvider =
@@ -44,7 +44,10 @@ class CurrentGameOperationsNotifier
       }
     });
 
-    return _load();
+    return _refreshViaCoordinator(
+      reason: OperationsSyncReason.appStartup,
+      emitLoading: false,
+    );
   }
 
   bool get _isAutoRefreshSuppressed {
@@ -79,10 +82,16 @@ class CurrentGameOperationsNotifier
     }
 
     LiveRealtimeDebug.resumeCacheMiss(type: 'operations_current');
-    return refreshFromNetwork();
+    return _refreshViaCoordinator(
+      reason: OperationsSyncReason.appResume,
+      emitLoading: false,
+    );
   }
 
-  Future<GameOperationsCurrentResponse?> refreshFromNetwork() async {
+  Future<GameOperationsCurrentResponse?> refreshFromNetwork({
+    OperationsSyncReason reason = OperationsSyncReason.manualRefresh,
+    bool force = false,
+  }) async {
     if (_isAutoRefreshSuppressed) {
       LiveRealtimeDebug.providerInvalidateSkipped(
         provider: 'currentGameOperations',
@@ -90,27 +99,58 @@ class CurrentGameOperationsNotifier
       );
       return state.value;
     }
-    LiveRealtimeDebug.providerInvalidated(
-      provider: 'currentGameOperations',
-      reason: 'refresh',
-    );
-    state = const AsyncLoading<GameOperationsCurrentResponse?>();
-    state = await AsyncValue.guard(_load);
-    final snapshot = state.value;
-    if (snapshot != null) {
-      GameOperationsResumeCache.shared.put(snapshot);
+    return _refreshViaCoordinator(reason: reason, force: force);
+  }
+
+  Future<GameOperationsCurrentResponse?> _refreshViaCoordinator({
+    required OperationsSyncReason reason,
+    bool force = false,
+    bool emitLoading = true,
+  }) async {
+    final coordinator = ref.read(gameOperationsSyncCoordinatorProvider);
+    final currentSnapshot = state.value;
+    final shouldShowLoading =
+        emitLoading &&
+        currentSnapshot == null &&
+        !coordinator.hasInFlight &&
+        !coordinator.shouldSkipDueToCooldown(reason, force: force);
+
+    if (shouldShowLoading) {
+      state = const AsyncLoading<GameOperationsCurrentResponse?>();
     }
-    return snapshot;
+
+    try {
+      final result = await coordinator.sync(reason: reason, force: force);
+      if (!ref.mounted) {
+        return currentSnapshot;
+      }
+
+      final snapshot = result.snapshot;
+      if (snapshot == null) {
+        return currentSnapshot;
+      }
+
+      ref.read(serverClockProvider).sync(snapshot.serverNow, snap: false);
+      GameOperationsResumeCache.shared.put(snapshot);
+      state = AsyncData(snapshot);
+      return snapshot;
+    } catch (error, stackTrace) {
+      if (!ref.mounted) {
+        return currentSnapshot;
+      }
+      if (currentSnapshot != null) {
+        state = AsyncData(currentSnapshot);
+        return currentSnapshot;
+      }
+      state = AsyncError(error, stackTrace);
+      return null;
+    }
   }
 
-  Future<GameOperationsCurrentResponse?> _load() async {
-    final response =
-        await ref.read(gamesRepositoryProvider).getCurrentGameOperations();
-    ref.read(serverClockProvider).sync(response.serverNow, snap: false);
-    return response;
-  }
-
-  Future<void> refresh() async {
-    await refreshFromNetwork();
+  Future<void> refresh({
+    OperationsSyncReason reason = OperationsSyncReason.manualRefresh,
+    bool force = false,
+  }) async {
+    await refreshFromNetwork(reason: reason, force: force);
   }
 }

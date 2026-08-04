@@ -397,6 +397,147 @@ void main() {
     });
   });
 
+  group('batch of 11 new combo rules', () {
+    final bigT = _cells([
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [0, 4],
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [4, 2],
+    ]);
+
+    test('BIG_T_ONE_DIAGONAL_ONE_SQUARE draws T, diagonal, and square', () {
+      final result = _evaluate('BIG_T_ONE_DIAGONAL_ONE_SQUARE', {
+        ...bigT,
+        ..._cells([
+          [0, 4],
+          [1, 3],
+          [2, 2],
+          [3, 1],
+          [4, 0],
+        ]),
+        ..._square(3, 3),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.shapePolylines, hasLength(2));
+      expect(result.completedPatternOverlay.lines, hasLength(1));
+      expect(result.completedPatternOverlay.squares, hasLength(1));
+    });
+
+    test('TWO_LINES_TWO_SQUARES draws both lines and both squares', () {
+      final result = _evaluate('TWO_LINES_TWO_SQUARES', {
+        ..._row(0),
+        ..._row(2),
+        ..._square(3, 0),
+        ..._square(3, 3),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.lines, hasLength(2));
+      expect(result.completedPatternOverlay.squares, hasLength(2));
+    });
+
+    test('ONE_LINE_THREE_SQUARES rejects a square on the line', () {
+      final result = _evaluate('ONE_LINE_THREE_SQUARES', {
+        ..._row(4),
+        ..._square(3, 0),
+        ..._square(0, 0),
+        ..._square(0, 3),
+      });
+
+      expect(result.hasLocalPatternComplete, isFalse);
+    });
+
+    test('EIGHT_LINES completes with eight line overlays', () {
+      final result = _evaluate('EIGHT_LINES', {
+        ..._row(0),
+        ..._row(1),
+        ..._row(2),
+        ..._row(3),
+        ..._row(4),
+        ..._cells([
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+        ]),
+        ..._cells([
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [3, 2],
+          [4, 2],
+        ]),
+        ..._cells([
+          [0, 4],
+          [1, 4],
+          [2, 4],
+          [3, 4],
+          [4, 4],
+        ]),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.lines, hasLength(8));
+    });
+
+    test('BIG_CROSS_ONE_SQUARE draws cross and square', () {
+      final result = _evaluate('BIG_CROSS_ONE_SQUARE', {
+        ..._cells([
+          [2, 0],
+          [2, 1],
+          [2, 2],
+          [2, 3],
+          [2, 4],
+          [0, 2],
+          [1, 2],
+          [3, 2],
+          [4, 2],
+        ]),
+        ..._square(0, 0),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.lines, hasLength(2));
+      expect(result.completedPatternOverlay.squares, hasLength(1));
+    });
+
+    test('THREE_SMALL_T draws three small-T stroke pairs', () {
+      final result = _evaluate('THREE_SMALL_T', {
+        ..._cells([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 1],
+          [2, 1],
+        ]),
+        ..._cells([
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [3, 1],
+          [3, 2],
+        ]),
+        ..._cells([
+          [4, 2],
+          [4, 3],
+          [4, 4],
+          [3, 3],
+          [2, 3],
+        ]),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.shapePolylines, hasLength(6));
+    });
+  });
+
   group('BIG_T_TWO_LINES needs 2 lines beyond the T itself', () {
     final bigT = _cells([
       [0, 0],

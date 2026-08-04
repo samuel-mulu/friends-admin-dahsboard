@@ -638,6 +638,149 @@ class GameRulePatternPreview {
         {24},
       ],
     ),
+    'BIG_T_ONE_DIAGONAL_ONE_SQUARE': _sample(
+      markedCells: _union([_bigT, _diagAnti(), _square2x2(3, 3)]),
+      squarePatterns: [_square2x2(3, 3)],
+    ),
+    'TWO_LINES_TWO_SQUARES': _sample(
+      markedCells: _union([
+        _row(0),
+        _row(2),
+        _square2x2(3, 0),
+        _square2x2(3, 3),
+      ]),
+      linePatterns: [_row(0), _row(2)],
+      squarePatterns: [_square2x2(3, 0), _square2x2(3, 3)],
+    ),
+    'ONE_LINE_THREE_SQUARES': _sample(
+      markedCells: _union([
+        _row(4),
+        _square2x2(0, 0),
+        _square2x2(0, 3),
+        _square2x2(2, 1),
+      ]),
+      linePatterns: [_row(4)],
+      squarePatterns: [
+        _square2x2(0, 0),
+        _square2x2(0, 3),
+        _square2x2(2, 1),
+      ],
+    ),
+    'EIGHT_LINES': _sample(
+      markedCells: _union([
+        _row(0),
+        _row(1),
+        _row(2),
+        _row(3),
+        _row(4),
+        _col(0),
+        _col(2),
+        _col(4),
+      ]),
+      linePatterns: [
+        _row(0),
+        _row(1),
+        _row(2),
+        _row(3),
+        _row(4),
+        _col(0),
+        _col(2),
+        _col(4),
+      ],
+    ),
+    'THREE_ROWS_TWO_COLUMNS': _sample(
+      markedCells: _union([_row(0), _row(1), _row(2), _col(0), _col(4)]),
+      linePatterns: [_row(0), _row(1), _row(2), _col(0), _col(4)],
+    ),
+    'FOUR_ANGLES_TWO_RECTANGLES': _sample(
+      markedCells: _union([
+        _fourCorners,
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [1, 1],
+          [1, 2],
+          [1, 3],
+        ]),
+        _coords([
+          [2, 1],
+          [2, 2],
+          [3, 1],
+          [3, 2],
+          [4, 1],
+          [4, 2],
+        ]),
+      ]),
+      squarePatterns: [
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [1, 1],
+          [1, 2],
+          [1, 3],
+        ]),
+        _coords([
+          [2, 1],
+          [2, 2],
+          [3, 1],
+          [3, 2],
+          [4, 1],
+          [4, 2],
+        ]),
+      ],
+    ),
+    'TWO_PARALLEL_LINES_TWO_DIAGONALS': _sample(
+      markedCells: _union([_row(0), _row(4), _diagMain(), _diagAnti()]),
+      linePatterns: [_row(0), _row(4), _diagMain(), _diagAnti()],
+    ),
+    'THREE_PARALLEL_LINES_ONE_DIAGONAL': _sample(
+      markedCells: _union([_row(0), _row(1), _row(2), _diagMain()]),
+      linePatterns: [_row(0), _row(1), _row(2), _diagMain()],
+    ),
+    'BIG_T_THREE_SQUARES': _sample(
+      markedCells: _union([
+        _bigT,
+        _square2x2(1, 0),
+        _square2x2(3, 0),
+        _square2x2(3, 3),
+      ]),
+      squarePatterns: [
+        _square2x2(1, 0),
+        _square2x2(3, 0),
+        _square2x2(3, 3),
+      ],
+    ),
+    'THREE_SMALL_T': _sample(
+      markedCells: _union([
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 1],
+          [2, 1],
+        ]),
+        _coords([
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [3, 1],
+          [3, 2],
+        ]),
+        _coords([
+          [4, 2],
+          [4, 3],
+          [4, 4],
+          [3, 3],
+          [2, 3],
+        ]),
+      ]),
+    ),
+    'BIG_CROSS_ONE_SQUARE': _sample(
+      markedCells: _union([_bigCross, _square2x2(0, 0)]),
+      squarePatterns: [_square2x2(0, 0)],
+    ),
   };
 
   static final List<GameRulePatternSample> _bigNOrZSamples =
@@ -745,5 +888,31 @@ class GameRulePatternPreview {
     'ONE_ANGLE_ROW_COLUMN_DIAGONAL':
         'Complete the row, column, and diagonal that meet at one of the four '
         'corner angles (B1, O1, B5, or O5).',
+    'BIG_T_ONE_DIAGONAL_ONE_SQUARE':
+        'Complete a big T, 1 diagonal, and 1 square. Big T and diagonal may '
+        'overlap; the square must not overlap either.',
+    'TWO_LINES_TWO_SQUARES':
+        'Complete 2 lines and 2 squares. Lines may overlap; squares must not '
+        'overlap each other or the lines.',
+    'ONE_LINE_THREE_SQUARES':
+        'Complete 1 line and 3 squares. Overlap not allowed.',
+    'EIGHT_LINES':
+        'Complete 8 lines (row, column, or diagonal). Overlap allowed.',
+    'THREE_ROWS_TWO_COLUMNS':
+        'Complete 3 rows and 2 columns. Overlap allowed.',
+    'FOUR_ANGLES_TWO_RECTANGLES':
+        'Complete the 4 corner cells and 2 rectangles (2x3 or 3x2). Overlap '
+        'not allowed.',
+    'TWO_PARALLEL_LINES_TWO_DIAGONALS':
+        'Complete 2 parallel lines (all rows or all columns) and both '
+        'diagonals. Overlap allowed.',
+    'THREE_PARALLEL_LINES_ONE_DIAGONAL':
+        'Complete 3 parallel lines (all rows or all columns) and 1 diagonal. '
+        'Overlap allowed.',
+    'BIG_T_THREE_SQUARES':
+        'Complete a big T and 3 squares. Overlap not allowed.',
+    'THREE_SMALL_T': 'Complete 3 small T shapes. Overlap not allowed.',
+    'BIG_CROSS_ONE_SQUARE':
+        'Complete a big cross and 1 square. Overlap not allowed.',
   };
 }

@@ -269,5 +269,71 @@
     "am": "ከ 1 ነጥብ (ማዕዘን) የሚጀምሩት 1 የተኛ 1 የቆመ 1 ዲያጎናል",
     "ti": "ካብ 1 ነጠብጣብ (አንግል) ዝጁምሩ 1 ዝደቀሰ 1 ደው ዝበለ 1 ዲያጎናል",
     "om": "from 1 angle starts 1 row 1 column 1 diagonal"
+  },
+  "BIG_T_ONE_DIAGONAL_ONE_SQUARE": {
+    "en": "Big T with 1 diagonal 1 square",
+    "am": "ትልቅ T ከ1 ዲያጎናል ከ1 ስኴር",
+    "ti": "ዓባይ T ምስ 1 ዲያጎናል ምስ 1 ስኴር",
+    "om": "Big T with 1 diagonal 1 square"
+  },
+  "TWO_LINES_TWO_SQUARES": {
+    "en": "2 lines with 2 squares",
+    "am": "2 መስመር ከ2 ስኴር",
+    "ti": "2 መስመር ምስ 2 ስኴር",
+    "om": "2 lines with 2 squares"
+  },
+  "ONE_LINE_THREE_SQUARES": {
+    "en": "1 line and 3 squares all separate",
+    "am": "1 መስመር ከ3 ስኴር የማይገናኙ",
+    "ti": "1 መስመር ምስ 3 ስኴር ዘይራከቡ",
+    "om": "1 line and 3 squares all separate"
+  },
+  "EIGHT_LINES": {
+    "en": "8 lines",
+    "am": "8 መስመር",
+    "ti": "8 መስመር",
+    "om": "8 lines"
+  },
+  "THREE_ROWS_TWO_COLUMNS": {
+    "en": "3 rows and 2 columns",
+    "am": "3 የተኛ ከ2 የቆመ",
+    "ti": "3 ዝደቀሰ ምስ 2 ደው ዝበለ",
+    "om": "3 rows and 2 columns"
+  },
+  "FOUR_ANGLES_TWO_RECTANGLES": {
+    "en": "4 angles with 2 rectangles all separate",
+    "am": "4 ነጥቦች ከ2 ሬክታንግል የማይገናኙ",
+    "ti": "4 ነጠብጣብ ምስ 2 ሬክታንግል ዘይራከቡ",
+    "om": "4 angles with 2 rectangles all separate"
+  },
+  "TWO_PARALLEL_LINES_TWO_DIAGONALS": {
+    "en": "2 parallel lines and 2 diagonals",
+    "am": "2 ትይዩ መስመር ከ2 ዲያጎናል",
+    "ti": "2 ትይዩ መስመር ምስ 2 ዲያጎናል",
+    "om": "2 parallel lines and 2 diagonals"
+  },
+  "THREE_PARALLEL_LINES_ONE_DIAGONAL": {
+    "en": "3 parallel lines and 1 diagonal",
+    "am": "3 ትይዩ መስመር ከ1 ዲያጎናል",
+    "ti": "3 ትይዩ መስመር ምስ 1 ዲያጎናል",
+    "om": "3 parallel lines and 1 diagonal"
+  },
+  "BIG_T_THREE_SQUARES": {
+    "en": "Big T with 3 squares all separate",
+    "am": "ትልቅ T ከ3 ስኴር የማይገናኙ",
+    "ti": "ዓባይ T ምስ 3 ስኴር ዘይራከቡ",
+    "om": "Big T with 3 squares all separate"
+  },
+  "THREE_SMALL_T": {
+    "en": "3 small T all separate",
+    "am": "3 ትንሽ T የማይገናኙ",
+    "ti": "3 ንእሽቶ T ዘይራከቡ",
+    "om": "3 small T all separate"
+  },
+  "BIG_CROSS_ONE_SQUARE": {
+    "en": "Big cross with 1 square all separate",
+    "am": "ትልቅ መስቀል ከ1 ስኴር የማይገናኙ",
+    "ti": "ዓባይ መስቀል ምስ 1 ስኴር ዘይራከቡ",
+    "om": "Big cross with 1 square all separate"
   }
 }

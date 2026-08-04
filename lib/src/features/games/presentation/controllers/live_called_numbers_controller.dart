@@ -37,6 +37,7 @@ class LiveCalledNumbersController {
   LiveCalledNumbersController(this.host);
 
   final LiveGameHost host;
+  static const _disconnectedPollInterval = Duration(seconds: 10);
 
   List<CalledNumberModel> calledNumbers = const [];
   bool isSyncingCalledNumbers = false;
@@ -651,9 +652,11 @@ class LiveCalledNumbersController {
   }
 
   void startDisconnectedPolling({required bool Function() isSocketConnected}) {
-    disconnectedPollTimer?.cancel();
-    disconnectedPollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!host.mounted || isSocketConnected()) {
+    if (disconnectedPollTimer != null) {
+      return;
+    }
+    disconnectedPollTimer = Timer.periodic(_disconnectedPollInterval, (_) {
+      if (!host.mounted || !host.isAppInForeground || isSocketConnected()) {
         stopDisconnectedPolling();
         return;
       }

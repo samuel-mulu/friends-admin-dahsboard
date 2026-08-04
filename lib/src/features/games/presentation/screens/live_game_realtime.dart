@@ -8,6 +8,9 @@ void _socketDebugLog(String message) {
 
 mixin _LiveGameRealtime on _LiveGameOrchestration {
   void _registerSocketListeners() {
+    if (_listenersRegistered) {
+      return;
+    }
     _socketService.on('connect', _onSocketConnected);
     _socketService.on('disconnect', _onSocketDisconnected);
     _socketService.on('connect_error', _onSocketConnectError);
@@ -28,9 +31,13 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.on('wallet:updated', _onWalletUpdated);
     _socketService.on('game:operation_updated', _onGameOperationUpdated);
     _socketService.on('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
+    _listenersRegistered = true;
   }
 
   void _removeSocketListeners() {
+    if (!_listenersRegistered) {
+      return;
+    }
     _socketService.off('connect', _onSocketConnected);
     _socketService.off('disconnect', _onSocketDisconnected);
     _socketService.off('connect_error', _onSocketConnectError);
@@ -51,6 +58,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.off('wallet:updated', _onWalletUpdated);
     _socketService.off('game:operation_updated', _onGameOperationUpdated);
     _socketService.off('slot:entry_fee_updated', _onSlotEntryFeeUpdated);
+    _listenersRegistered = false;
   }
 
   void _onSocketConnected(dynamic _) {
@@ -250,6 +258,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           patched.status == GameStatus.noWinner) {
         _refreshLocalOperationsSnapshotIfNeeded();
       }
+      markCanonicalSocketStateApplied();
       _syncWinnerWindowTicker();
       _syncNextBallCountdownTicker();
     }
@@ -506,7 +515,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   /// Session guard: Only updates the current visible session or the tracked
   /// READY registration session. This never mutates status, queue order, or
   /// registration target identity.
-  void _applyRegistrationMetricsPayload(
+  bool _applyRegistrationMetricsPayload(
     Map<String, dynamic> payload, {
     String? sessionId,
   }) {
@@ -533,8 +542,10 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           setState(() {
             _nextUpcomingGame = patchedTrackedRegistrationGame;
           });
+          markCanonicalSocketStateApplied();
+          return true;
         }
-        return;
+        return false;
       }
     }
 
@@ -559,13 +570,15 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
 
     if (patchedCurrentGame == _game &&
         patchedTrackedRegistrationGame == _nextUpcomingGame) {
-      return;
+      return false;
     }
 
     setState(() {
       _game = patchedCurrentGame;
       _nextUpcomingGame = patchedTrackedRegistrationGame;
     });
+    markCanonicalSocketStateApplied();
+    return true;
   }
 
   int? _parsePayloadInt(Object? raw) {

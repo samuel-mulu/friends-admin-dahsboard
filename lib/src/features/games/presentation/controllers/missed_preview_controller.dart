@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import '../debug/missed_preview_debug.dart';
+import '../providers/game_operations_sync_coordinator.dart';
 import '../utils/missed_live_preview_numbers.dart';
 import '../utils/missed_live_preview_resolver.dart';
 import '../utils/missed_live_preview_sync.dart';
@@ -25,7 +26,7 @@ class MissedPreviewController {
 
   final LiveGameHost host;
 
-  static const Duration pollInterval = Duration(seconds: 2);
+  static const Duration pollInterval = Duration(seconds: 10);
 
   final ValueNotifier<int> revision = ValueNotifier<int>(0);
 
@@ -38,6 +39,8 @@ class MissedPreviewController {
   bool _fetchInFlight = false;
   bool _pokeQueued = false;
   bool _disposed = false;
+  OperationsSyncReason _queuedSyncReason =
+      OperationsSyncReason.missingPayloadRecovery;
 
   List<CalledNumberModel> get calledNumbers => _calledNumbers;
 
@@ -150,11 +153,14 @@ class MissedPreviewController {
     if (_disposed || !host.mounted) {
       return;
     }
-    _pokePoll(reason: reason);
+    _pokePollWithReason(
+      reason: reason,
+      syncReason: OperationsSyncReason.inconsistencyRecovery,
+    );
   }
 
   void _ensurePolling() {
-    if (_disposed || _pollTimer != null) {
+    if (_disposed || _pollTimer != null || !host.isAppInForeground) {
       return;
     }
     _pollTimer = Timer.periodic(pollInterval, (_) => unawaited(_poll()));
@@ -167,23 +173,50 @@ class MissedPreviewController {
   }
 
   void _pokePoll({required String reason}) {
+    if (!host.isAppInForeground) {
+      _stopPolling();
+      return;
+    }
+    _pokePollWithReason(
+      reason: reason,
+      syncReason: OperationsSyncReason.inconsistencyRecovery,
+    );
+  }
+
+  void _pokePollWithReason({
+    required String reason,
+    required OperationsSyncReason syncReason,
+  }) {
     _ensurePolling();
     if (_fetchInFlight) {
       _pokeQueued = true;
+      _queuedSyncReason = syncReason;
       return;
     }
     MissedPreviewDebug.log('poke reason=$reason');
-    unawaited(_poll());
+    unawaited(_poll(syncReason: syncReason));
   }
 
-  Future<void> _poll() async {
-    if (_disposed || _fetchInFlight || !host.mounted) {
+  Future<void> _poll({
+    OperationsSyncReason syncReason =
+        OperationsSyncReason.missingPayloadRecovery,
+  }) async {
+    if (_disposed || _fetchInFlight || !host.mounted || !host.isAppInForeground) {
+      if (!host.isAppInForeground) {
+        _stopPolling();
+      }
       return;
     }
     _fetchInFlight = true;
     try {
-      final ops = await host.gamesRepository.getCurrentGameOperations();
-      if (_disposed || !host.mounted) {
+      final result = await host.ref
+          .read(gameOperationsSyncCoordinatorProvider)
+          .sync(reason: syncReason);
+      if (_disposed || !host.mounted || !host.isAppInForeground) {
+        return;
+      }
+      final ops = result.snapshot;
+      if (ops == null) {
         return;
       }
       _previewOps = ops;
@@ -225,7 +258,9 @@ class MissedPreviewController {
       _fetchInFlight = false;
       if (_pokeQueued && !_disposed && host.mounted) {
         _pokeQueued = false;
-        unawaited(_poll());
+        final queuedReason = _queuedSyncReason;
+        _queuedSyncReason = OperationsSyncReason.missingPayloadRecovery;
+        unawaited(_poll(syncReason: queuedReason));
       }
     }
   }
@@ -372,5 +407,9 @@ class MissedPreviewController {
     _disposed = true;
     _stopPolling();
     revision.dispose();
+  }
+
+  void stopPollingForBackground() {
+    _stopPolling();
   }
 }

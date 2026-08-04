@@ -733,6 +733,128 @@ class CartelaMarkedPatternEvaluator {
         'one_angle_row_col_diag',
         _oneAngleRowColumnDiagonalPatterns(),
       ),
+      'BIG_T_ONE_DIAGONAL_ONE_SQUARE': _comboRule([
+        _RequiredGroup(
+          key: 'big_t',
+          candidates: _bigTPatterns(),
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'diagonals',
+          candidates: allDiagonals,
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'big_t', 'diagonals'},
+        ),
+      ]),
+      'TWO_LINES_TWO_SQUARES': _comboRule([
+        _RequiredGroup(key: 'lines', candidates: allLines, requiredCount: 2),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'lines'},
+        ),
+      ]),
+      'ONE_LINE_THREE_SQUARES': _comboRule([
+        _RequiredGroup(key: 'lines', candidates: allLines, requiredCount: 1),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 3,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'lines'},
+        ),
+      ]),
+      'EIGHT_LINES': _countedRule('lines', allLines, 8),
+      'THREE_ROWS_TWO_COLUMNS': _comboRule([
+        _RequiredGroup(key: 'rows', candidates: allRows, requiredCount: 3),
+        _RequiredGroup(
+          key: 'columns',
+          candidates: allColumns,
+          requiredCount: 2,
+        ),
+      ]),
+      'FOUR_ANGLES_TWO_RECTANGLES': _comboRule([
+        _RequiredGroup(
+          key: 'angles',
+          candidates: [_fourCornersPattern()],
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'rectangles',
+          candidates: allRectangles,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'angles'},
+        ),
+      ]),
+      'TWO_PARALLEL_LINES_TWO_DIAGONALS': _comboRule([
+        _RequiredGroup(
+          key: 'parallel_lines',
+          candidates: [...allRows, ...allColumns],
+          requiredCount: 2,
+          requireSameOrientation: true,
+        ),
+        _RequiredGroup(
+          key: 'diagonals',
+          candidates: allDiagonals,
+          requiredCount: 2,
+        ),
+      ]),
+      'THREE_PARALLEL_LINES_ONE_DIAGONAL': _comboRule([
+        _RequiredGroup(
+          key: 'parallel_lines',
+          candidates: [...allRows, ...allColumns],
+          requiredCount: 3,
+          requireSameOrientation: true,
+        ),
+        _RequiredGroup(
+          key: 'diagonals',
+          candidates: allDiagonals,
+          requiredCount: 1,
+        ),
+      ]),
+      'BIG_T_THREE_SQUARES': _comboRule([
+        _RequiredGroup(
+          key: 'big_t',
+          candidates: _bigTPatterns(),
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 3,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'big_t'},
+        ),
+      ]),
+      'THREE_SMALL_T': _comboRule([
+        _RequiredGroup(
+          key: 'small_t',
+          candidates: allSmallTs,
+          requiredCount: 3,
+          disallowOverlapWithinGroup: true,
+        ),
+      ]),
+      'BIG_CROSS_ONE_SQUARE': _comboRule([
+        _RequiredGroup(
+          key: 'big_cross',
+          candidates: [_bigCrossPattern()],
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'big_cross'},
+        ),
+      ]),
     };
   }
 

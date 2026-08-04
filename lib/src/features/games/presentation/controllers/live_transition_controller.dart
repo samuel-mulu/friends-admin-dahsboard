@@ -12,6 +12,7 @@ class LiveTransitionController {
   LiveTransitionController(this.host);
 
   final LiveGameHost host;
+  static const _preparingPhasePollInterval = Duration(seconds: 10);
 
   transition_lock.ReadyTransitionLock? readyTransitionLock;
   Timer? readyTransitionLockTimeoutTimer;
@@ -359,8 +360,9 @@ class LiveTransitionController {
     if (preparingPhasePollTimer != null) {
       return;
     }
-    preparingPhasePollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!host.mounted) {
+    preparingPhasePollTimer = Timer.periodic(_preparingPhasePollInterval, (_) {
+      if (!host.mounted || !host.isAppInForeground) {
+        stopPreparingPhasePolling();
         return;
       }
       if (host.liveUiMode.presentationPhase !=

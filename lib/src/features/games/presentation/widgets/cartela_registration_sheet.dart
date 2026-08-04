@@ -558,7 +558,12 @@ class _CartelaRegistrationSheetState
     try {
       final registeredCartela = await ref
           .read(gamesRepositoryProvider)
-          .confirmReservation(reservationId);
+          .confirmReservation(
+            reservationId,
+            slotId: widget.slotId,
+            cartelaId: widget.cartela.id,
+            sessionId: _resolvedSessionId,
+          );
 
       if (!mounted) {
         return;

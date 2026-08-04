@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_branding.dart';
@@ -108,6 +109,7 @@ import '../../domain/cartela_catalog_state.dart';
 import '../../data/cartela_marks_storage.dart';
 import '../providers/cartela_marks_storage_provider.dart';
 import '../providers/current_game_operations_provider.dart';
+import '../providers/game_operations_sync_coordinator.dart';
 import '../providers/has_active_registered_cartelas_provider.dart';
 import '../utils/live_game_resume_owner_registry.dart';
 import '../utils/game_operations_resume_cache.dart';
@@ -125,6 +127,26 @@ part 'live_game_realtime.dart';
 part 'live_game_registration.dart';
 part 'live_game_called_numbers.dart';
 part 'live_game_winner_window.dart';
+
+class _OperationsSyncRequestContext {
+  const _OperationsSyncRequestContext({
+    required this.activeSessionId,
+    required this.registrationSessionId,
+  });
+
+  final String? activeSessionId;
+  final String? registrationSessionId;
+}
+
+class _OperationsSyncSnapshot {
+  const _OperationsSyncSnapshot({
+    required this.fetchResult,
+    required this.requestContext,
+  });
+
+  final OperationsSyncFetchResult fetchResult;
+  final _OperationsSyncRequestContext requestContext;
+}
 
 class LiveGameScreen extends ConsumerStatefulWidget {
   const LiveGameScreen({
@@ -151,6 +173,9 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   @override
   bool get embedded => widget.embedded;
+
+  @override
+  bool get isAppInForeground => _isAppInForeground;
 
   @override
   String? get gameId => widget.gameId;
@@ -288,6 +313,9 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       LiveSocketSessionMembership();
   bool _gameInfoExpanded = false;
   String? _autoExpandedForNextGameSessionId;
+  DateTime? _lastSocketAppliedAt;
+  bool _listenersRegistered = false;
+  bool _isAppInForeground = true;
 
   static const _liveRoomSplashMinimum = Duration(milliseconds: 1500);
   static const _liveRoomSplashMaximum = Duration(seconds: 15);
@@ -773,6 +801,10 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     _cn.markCalledNumbersPanelDirty();
   }
 
+  void markCanonicalSocketStateApplied() {
+    _lastSocketAppliedAt = DateTime.now();
+  }
+
   /// Syncs live-game back-guard state for hardware/app-bar back handling.
   void _syncActiveCartelasToProvider() {
     final notifier = _activeCartelasNotifier;
@@ -974,12 +1006,18 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
+        _isAppInForeground = false;
         _pauseLiveTimersForBackground();
         unawaited(_persistManualMarks());
+        break;
       case AppLifecycleState.hidden:
+        _isAppInForeground = false;
         _pauseLiveTimersForBackground();
+        break;
       case AppLifecycleState.resumed:
+        _isAppInForeground = true;
         unawaited(_recoverFromAppResume());
+        break;
     }
   }
 
@@ -987,6 +1025,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _countdown.pauseForAppBackground();
     _transition.stopPreparingPhasePolling();
     _cn.stopDisconnectedPolling();
+    controllers.missedPreview.stopPollingForBackground();
   }
 
   void _onAuthSessionChanged(AuthState? previous, AuthState next) {
@@ -1004,7 +1043,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         }
 
         if (!hadSession && hasSession) {
-          await _loadInitialState(showLoading: false);
+          await _loadInitialState(
+            showLoading: false,
+            operationsSyncReason: OperationsSyncReason.sessionRestore,
+          );
           if (!isLiveHostActive) {
             return;
           }
@@ -1031,7 +1073,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         if (!isLiveHostActive) {
           return;
         }
-        await _loadInitialState(showLoading: false);
+        await _loadInitialState(
+          showLoading: false,
+          operationsSyncReason: OperationsSyncReason.sessionRestore,
+        );
       });
     });
   }

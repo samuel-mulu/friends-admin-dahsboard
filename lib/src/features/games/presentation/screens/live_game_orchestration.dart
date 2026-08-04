@@ -6,7 +6,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   LiveRealtimeController get _realtime => controllers.realtime;
 
   @override
-  Future<void> runResumeSync({bool allowCachedOperations = true}) {
+  Future<void> runResumeSync({
+    bool allowCachedOperations = true,
+    OperationsSyncReason operationsSyncReason = OperationsSyncReason.appResume,
+  }) {
     return _loadInitialState(
       showLoading: false,
       includeCalledNumbers: true,
@@ -14,6 +17,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       allowTerminalTransition: true,
       resumeSync: true,
       allowCachedOperations: allowCachedOperations,
+      operationsSyncReason: operationsSyncReason,
     );
   }
 
@@ -24,6 +28,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     bool includeMyCartelas = true,
     bool allowTerminalTransition = false,
     GameModel? advanceTarget,
+    OperationsSyncReason operationsSyncReason =
+        OperationsSyncReason.inconsistencyRecovery,
   }) {
     return _loadInitialState(
       showLoading: showLoading,
@@ -31,6 +37,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       includeMyCartelas: includeMyCartelas,
       allowTerminalTransition: allowTerminalTransition,
       advanceTarget: advanceTarget,
+      operationsSyncReason: operationsSyncReason,
     );
   }
 
@@ -827,7 +834,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     try {
-      final operations = await _gamesRepository.getCurrentGameOperations();
+      final operationsSyncSnapshot = await _syncOperationsSnapshot(
+        reason: OperationsSyncReason.inconsistencyRecovery,
+      );
+      if (_shouldSkipOperationsSnapshotApply(
+        operationsSyncSnapshot,
+        context: 'review_prefetch',
+      )) {
+        return;
+      }
+      final operations = operationsSyncSnapshot.fetchResult.snapshot;
+      if (operations == null) {
+        return;
+      }
       if (!mounted || !_review.postGameSummaryReviewActive) {
         return;
       }
@@ -1040,6 +1059,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     GameModel? advanceTarget,
     bool resumeSync = false,
     bool allowCachedOperations = true,
+    OperationsSyncReason operationsSyncReason =
+        OperationsSyncReason.appStartup,
   }) async {
     final generation = ++_loadGeneration;
     final priorSessionId = _game?.sessionId;
@@ -1087,6 +1108,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       GameOperationsCurrentResponse? operations;
+      _OperationsSyncSnapshot? operationsSyncSnapshot;
       final skipOperationsBootstrap =
           !resumeSync &&
           widget.embedded &&
@@ -1095,10 +1117,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (!skipOperationsBootstrap) {
         try {
           if (resumeSync && allowCachedOperations) {
-            operations = await _loadResumeOperationsCurrent();
+            operationsSyncSnapshot = await _loadResumeOperationsCurrent(
+              reason: operationsSyncReason,
+            );
           } else {
-            operations = await _gamesRepository.getCurrentGameOperations();
+            operationsSyncSnapshot = await _syncOperationsSnapshot(
+              reason: operationsSyncReason,
+            );
           }
+          operations = operationsSyncSnapshot.fetchResult.snapshot;
         } catch (_) {
           operations = null;
         }
@@ -1112,7 +1139,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (!_isCurrentLoad(generation)) {
         return;
       }
+      if (operationsSyncSnapshot != null &&
+          _shouldSkipOperationsSnapshotApply(
+            operationsSyncSnapshot,
+            context: resumeSync ? 'resume_sync' : 'initial_load',
+          )) {
+        _safeSetState(generation, () {
+          _isLoading = false;
+          if (resumeSync) {
+            _realtime.canonicalRefetchInFlight = false;
+          }
+        });
+        return;
+      }
       if (operations != null) {
+        GameOperationsResumeCache.shared.put(operations);
         _syncServerClockFromUtc(
           operations.serverNow,
           snap: resumeSync,
@@ -1141,6 +1182,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             : (widget.initialGame ?? advanceTarget),
         allowOwnershipLookup:
             resumeSync || includeMyCartelas || showLoading || _game == null,
+        operationsSyncReason: operationsSyncReason,
       );
       final game = loadSelection.game;
       final preloadedPrimaryCartelas = loadSelection.preloadedPrimaryCartelas;
@@ -1703,17 +1745,111 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     return sessionId;
   }
 
-  Future<GameOperationsCurrentResponse> _loadResumeOperationsCurrent() async {
+  _OperationsSyncRequestContext _captureOperationsSyncRequestContext() {
+    return _OperationsSyncRequestContext(
+      activeSessionId: _activeSessionId,
+      registrationSessionId: _trackedRegistrationSessionId,
+    );
+  }
+
+  Future<_OperationsSyncSnapshot> _syncOperationsSnapshot({
+    required OperationsSyncReason reason,
+    bool force = false,
+  }) async {
+    final requestContext = _captureOperationsSyncRequestContext();
+    final fetchResult = await ref
+        .read(gameOperationsSyncCoordinatorProvider)
+        .sync(reason: reason, force: force);
+    return _OperationsSyncSnapshot(
+      fetchResult: fetchResult,
+      requestContext: requestContext,
+    );
+  }
+
+  String? _resolveOperationsSessionIdentity({
+    String? activeSessionId,
+    String? registrationSessionId,
+  }) {
+    return activeSessionId ?? registrationSessionId;
+  }
+
+  String _formatOperationsSyncReasonLabel(OperationsSyncReason reason) {
+    return switch (reason) {
+      OperationsSyncReason.appStartup => 'appStartup',
+      OperationsSyncReason.sessionRestore => 'sessionRestore',
+      OperationsSyncReason.appResume => 'appResume',
+      OperationsSyncReason.socketReconnect => 'socketReconnect',
+      OperationsSyncReason.manualRefresh => 'manualRefresh',
+      OperationsSyncReason.missingPayloadRecovery => 'missingPayloadRecovery',
+      OperationsSyncReason.inconsistencyRecovery => 'inconsistencyRecovery',
+    };
+  }
+
+  bool _shouldSkipOperationsSnapshotApply(
+    _OperationsSyncSnapshot snapshot, {
+    required String context,
+  }) {
+    if (!mounted) {
+      return true;
+    }
+
+    final requestStartedAt = snapshot.fetchResult.requestStartedAt;
+    final lastSocketAppliedAt = _lastSocketAppliedAt;
+    final requestSessionIdentity = _resolveOperationsSessionIdentity(
+      activeSessionId: snapshot.requestContext.activeSessionId,
+      registrationSessionId: snapshot.requestContext.registrationSessionId,
+    );
+    final currentSessionIdentity = _resolveOperationsSessionIdentity(
+      activeSessionId: _activeSessionId,
+      registrationSessionId: _trackedRegistrationSessionId,
+    );
+    final staleBySocket =
+        lastSocketAppliedAt != null &&
+        lastSocketAppliedAt.isAfter(requestStartedAt);
+    final sessionChanged =
+        requestSessionIdentity != null &&
+        currentSessionIdentity != requestSessionIdentity;
+
+    if (!staleBySocket && !sessionChanged) {
+      return false;
+    }
+
+    AppLogger.debug(
+      'OperationsSync',
+      'operations_snapshot_skipped_stale '
+      'context=$context '
+      'ownerReason=${_formatOperationsSyncReasonLabel(snapshot.fetchResult.ownerReason)} '
+      'requestStartedAt=${requestStartedAt.toIso8601String()} '
+      'lastSocketAppliedAt=${lastSocketAppliedAt?.toIso8601String() ?? '-'} '
+      'requestSession=${requestSessionIdentity ?? '-'} '
+      'currentSession=${currentSessionIdentity ?? '-'}',
+    );
+    return true;
+  }
+
+  Future<_OperationsSyncSnapshot> _loadResumeOperationsCurrent({
+    required OperationsSyncReason reason,
+  }) async {
+    final requestContext = _captureOperationsSyncRequestContext();
     final cached = GameOperationsResumeCache.shared.getIfFresh();
     if (cached != null) {
       LiveRealtimeDebug.resumeCacheHit(type: 'operations_current');
-      return cached;
+      final now = DateTime.now();
+      return _OperationsSyncSnapshot(
+        fetchResult: OperationsSyncFetchResult(
+          snapshot: cached,
+          requestStartedAt: now,
+          completedAt: now,
+          ownerReason: reason,
+          skipped: false,
+          joinedInFlight: false,
+        ),
+        requestContext: requestContext,
+      );
     }
 
     LiveRealtimeDebug.resumeCacheMiss(type: 'operations_current');
-    final response = await _gamesRepository.getCurrentGameOperations();
-    GameOperationsResumeCache.shared.put(response);
-    return response;
+    return _syncOperationsSnapshot(reason: reason);
   }
 
   bool _resumeReconnectGapDetected(GameModel game) {
@@ -2021,6 +2157,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _isLoading = false;
       // Canonical truth is now on screen; feed the reconnect throttle so a
       // socket `connect` right after this apply does not refetch redundantly.
+      markCanonicalSocketStateApplied();
       _realtime.markCanonicalApplied();
       _initialLoadComplete = true;
       if (!_hasCompletedInitialPaint) {
@@ -2264,6 +2401,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     GameOperationsCurrentResponse? operations,
     GameModel? advanceTarget,
     bool allowOwnershipLookup = true,
+    OperationsSyncReason operationsSyncReason =
+        OperationsSyncReason.inconsistencyRecovery,
   }) async {
     if (advanceTarget != null) {
       _joinSessionRoomEarly(advanceTarget.sessionId);
@@ -2287,9 +2426,24 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
     }
 
-    final ops =
-        operations ??
-        await ref.read(gamesRepositoryProvider).getCurrentGameOperations();
+    GameOperationsCurrentResponse? resolvedOperations = operations;
+    if (resolvedOperations == null) {
+      final operationsSyncSnapshot = await _syncOperationsSnapshot(
+        reason: operationsSyncReason,
+      );
+      if (_shouldSkipOperationsSnapshotApply(
+        operationsSyncSnapshot,
+        context: 'load_game_fallback',
+      )) {
+        return (game: _game, preloadedPrimaryCartelas: null);
+      }
+      resolvedOperations = operationsSyncSnapshot.fetchResult.snapshot;
+      if (resolvedOperations == null) {
+        return (game: null, preloadedPrimaryCartelas: null);
+      }
+    }
+
+    final ops = resolvedOperations;
 
     final liveCandidate = ops.liveGame ?? ops.checkingGame;
     final registrationGame = ops.registrationOpenGame;
@@ -2650,6 +2804,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     applyGameSchedule();
+    markCanonicalSocketStateApplied();
 
     if (game != null) {
       final updatedGame = _game!;
@@ -3088,6 +3243,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       game,
       serverNow: _serverClock.nowUtc(),
     );
+    markCanonicalSocketStateApplied();
   }
 
   int _countNewCalledNumbers(List<CalledNumberModel> incoming) =>
@@ -3364,7 +3520,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final currentGame = _game;
     if (currentGame == null) {
-      await _loadInitialState(showLoading: false);
+      await _loadInitialState(
+        showLoading: false,
+        operationsSyncReason: OperationsSyncReason.inconsistencyRecovery,
+      );
       return _game != null;
     }
 
@@ -3379,7 +3538,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _capturePreviousCartelasForAutoOpen();
 
     try {
-      final operations = await _gamesRepository.getCurrentGameOperations();
+      final operationsSyncSnapshot = await _syncOperationsSnapshot(
+        reason: OperationsSyncReason.inconsistencyRecovery,
+      );
+      if (_shouldSkipOperationsSnapshotApply(
+        operationsSyncSnapshot,
+        context: 'finished_advance',
+      )) {
+        return false;
+      }
+      final operations = operationsSyncSnapshot.fetchResult.snapshot;
+      if (operations == null) {
+        return false;
+      }
       if (!mounted) {
         return false;
       }
@@ -3398,6 +3569,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         await _loadInitialState(
           showLoading: false,
           allowTerminalTransition: true,
+          operationsSyncReason: OperationsSyncReason.inconsistencyRecovery,
         );
         return _game == null ||
             (_game?.status == GameStatus.ready &&
@@ -3408,6 +3580,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         showLoading: false,
         allowTerminalTransition: true,
         advanceTarget: nextGame,
+        operationsSyncReason: OperationsSyncReason.inconsistencyRecovery,
       );
       if (_game?.status != GameStatus.finished &&
           _game?.status != GameStatus.noWinner &&
@@ -3590,6 +3763,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoCallIntervalMs: autoCallIntervalMs,
       );
     });
+    markCanonicalSocketStateApplied();
 
     final updatedGame = _game!;
     if (scheduleChanged || autoCallEnabled != null || intervalChanged) {

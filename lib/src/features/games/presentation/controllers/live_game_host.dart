@@ -7,6 +7,7 @@ import '../../data/games_repository.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/game_timing_config_model.dart';
+import '../providers/game_operations_sync_coordinator.dart';
 import '../utils/live_ui_mode.dart';
 import 'live_game_controllers.dart';
 
@@ -23,6 +24,8 @@ abstract class LiveGameHost {
   WidgetRef get ref;
 
   bool get embedded;
+
+  bool get isAppInForeground;
 
   String? get gameId;
 
@@ -103,7 +106,10 @@ abstract class LiveGameHost {
   bool get initialLoadComplete;
 
   /// Full canonical reload after resume/reconnect (backend truth only).
-  Future<void> runResumeSync({bool allowCachedOperations = true});
+  Future<void> runResumeSync({
+    bool allowCachedOperations = true,
+    OperationsSyncReason operationsSyncReason = OperationsSyncReason.appResume,
+  });
 
   /// Invoked by controllers that need a full canonical reload.
   Future<void> runInitialLoad({
@@ -112,5 +118,7 @@ abstract class LiveGameHost {
     bool includeMyCartelas = true,
     bool allowTerminalTransition = false,
     GameModel? advanceTarget,
+    OperationsSyncReason operationsSyncReason =
+        OperationsSyncReason.inconsistencyRecovery,
   });
 }
