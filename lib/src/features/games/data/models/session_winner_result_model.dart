@@ -13,6 +13,7 @@ class SessionWinnerResultModel {
     required this.columns,
     required this.completedPatterns,
     this.owner,
+    this.phoneNumber,
     this.winningBallCellIndex,
     this.lastCalledNumber,
   });
@@ -22,6 +23,7 @@ class SessionWinnerResultModel {
   final int cartelaNumber;
   final String amount;
   final String? owner;
+  final String? phoneNumber;
   final List<List<String>> columns;
   final List<CompletedPatternModel> completedPatterns;
   final int? winningBallCellIndex;
@@ -31,6 +33,7 @@ class SessionWinnerResultModel {
 
   SessionWinnerResultModel copyWith({
     String? amount,
+    String? phoneNumber,
     List<List<String>>? columns,
     List<CompletedPatternModel>? completedPatterns,
     SessionWinnerLastCalledNumber? lastCalledNumber,
@@ -42,6 +45,7 @@ class SessionWinnerResultModel {
       cartelaNumber: cartelaNumber,
       amount: amount ?? this.amount,
       owner: owner,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       columns: columns ?? this.columns,
       completedPatterns: completedPatterns ?? this.completedPatterns,
       winningBallCellIndex: winningBallCellIndex ?? this.winningBallCellIndex,
@@ -101,6 +105,7 @@ class SessionWinnerResultModel {
       cartelaNumber: (json['cartelaNumber'] as num).toInt(),
       amount: json['amount']?.toString() ?? '0',
       owner: json['owner'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
       columns: _parseColumns(json),
       completedPatterns:
           CompletedPatternModel.parseList(json['completedPatterns']),

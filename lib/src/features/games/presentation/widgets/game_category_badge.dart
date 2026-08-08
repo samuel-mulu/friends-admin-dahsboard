@@ -28,10 +28,11 @@ class GameCategoryBadge extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = GameCategoryTheme.accentColor(category, isDark: isDark);
+    // Big GOTD uses the same player-facing label as Normal (category stays BIG_GOTD).
     final label = switch (category) {
       GameCategory.normal => l10n.gameCategoryNormal,
       GameCategory.bonus => l10n.gameCategoryBonus,
-      GameCategory.bigGotd => l10n.gameCategoryBigGotd,
+      GameCategory.bigGotd => l10n.gameCategoryNormal,
       GameCategory.bigGame => l10n.gameCategoryBigGame,
     };
 

@@ -1770,6 +1770,30 @@ abstract class AppLocalizations {
   /// **'You missed this round.'**
   String get liveMissedRoundYouMissedGame;
 
+  /// No description provided for @liveMissedNoNextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You missed this round'**
+  String get liveMissedNoNextTitle;
+
+  /// No description provided for @liveMissedNoNextMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This game is already live and registration is closed. When the next round opens, you can register cartelas here.'**
+  String get liveMissedNoNextMessage;
+
+  /// No description provided for @liveMissedNoNextTipWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the called numbers above to follow the game.'**
+  String get liveMissedNoNextTipWatch;
+
+  /// No description provided for @liveMissedNoNextTipRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull down to refresh when the next round is ready.'**
+  String get liveMissedNoNextTipRefresh;
+
   /// No description provided for @liveMissedRoundOverviewTitle.
   ///
   /// In en, this message translates to:
@@ -3463,7 +3487,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameCategoryBigGotd.
   ///
   /// In en, this message translates to:
-  /// **'Big GOTD'**
+  /// **'Normal Game'**
   String get gameCategoryBigGotd;
 
   /// No description provided for @gameCategoryBigGame.

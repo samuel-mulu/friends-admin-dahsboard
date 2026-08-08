@@ -69,6 +69,7 @@ import '../debug/missed_preview_debug.dart';
 import '../utils/registration_reg_display_count.dart';
 import '../widgets/missed_live_game_preview.dart';
 import '../utils/cartela_display_order.dart';
+import '../utils/current_cartela_snapshot_guard.dart';
 import '../utils/merge_registered_cartelas.dart';
 import '../utils/live_game_event_guard.dart';
 import '../utils/live_game_finish_transition.dart';
@@ -1546,6 +1547,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       return [_LiveErrorState(message: _errorMessage!, onRetry: _refresh)];
     }
     if (_game == null) {
+      if (isGuest) {
+        return [
+          _GuestSpectatorHint(
+            onSignUp: () => context.go('/register'),
+            onSignIn: () => context.go(loginPathWithRedirect('/games')),
+          ),
+        ];
+      }
       return [
         _LiveInfoCard(
           title: context.l10n.liveNoGameTitle,
@@ -1580,9 +1589,18 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
 
     if (!_hasVisibleCurrentSessionCartelas) {
+      final l10n = context.l10n;
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: padding,
+        children: [
+          _MissedNoNextCard(
+            title: l10n.liveMissedNoNextTitle,
+            message: l10n.liveMissedNoNextMessage,
+            tipWatch: l10n.liveMissedNoNextTipWatch,
+            tipRefresh: l10n.liveMissedNoNextTipRefresh,
+          ),
+        ],
       );
     }
 
@@ -3351,6 +3369,88 @@ class _PreparingGamePanel extends StatelessWidget {
           VGap.xl,
           Expanded(child: _RegisteredCartelaList(cartelas: registeredCartelas)),
         ],
+      ],
+    );
+  }
+}
+
+class _MissedNoNextCard extends StatelessWidget {
+  const _MissedNoNextCard({
+    required this.title,
+    required this.message,
+    required this.tipWatch,
+    required this.tipRefresh,
+  });
+
+  final String title;
+  final String message;
+  final String tipWatch;
+  final String tipRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: AppSpacing.cardPaddingDense,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            VGap.md,
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+            VGap.lg,
+            _MissedNoNextTipRow(text: tipWatch),
+            VGap.sm,
+            _MissedNoNextTipRow(text: tipRefresh),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MissedNoNextTipRow extends StatelessWidget {
+  const _MissedNoNextTipRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline_rounded,
+          size: 18,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+        ),
       ],
     );
   }

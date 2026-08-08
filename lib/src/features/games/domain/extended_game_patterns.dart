@@ -390,6 +390,25 @@ class ExtendedGamePatterns {
     return variants;
   }
 
+  /// Small cross (+): center plus four orthogonal neighbors (centers in 1..3).
+  static List<Set<int>> buildSmallCrossVariants() {
+    final variants = <Set<int>>[];
+    for (var row = 1; row <= 3; row++) {
+      for (var col = 1; col <= 3; col++) {
+        variants.add(
+          cellsFromCoords([
+            [row - 1, col],
+            [row, col - 1],
+            [row, col],
+            [row, col + 1],
+            [row + 1, col],
+          ]),
+        );
+      }
+    }
+    return variants;
+  }
+
   static List<Set<int>> buildSmallTVariants() {
     final variants = <Set<int>>[];
     for (var row = 0; row <= 2; row++) {

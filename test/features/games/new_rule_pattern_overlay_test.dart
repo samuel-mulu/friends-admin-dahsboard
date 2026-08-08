@@ -538,6 +538,96 @@ void main() {
     });
   });
 
+  group('batch of 4 new combo rules', () {
+    test('builds 9 small-cross variants', () {
+      expect(ExtendedGamePatterns.buildSmallCrossVariants(), hasLength(9));
+    });
+
+    test('small cross overlay draws plus arms', () {
+      final overlay = CartelaPatternProgressOverlay.classifyCompletedPattern(
+        patternId: 'small_cross_4',
+        cells: _cells([
+          [1, 2],
+          [2, 1],
+          [2, 2],
+          [2, 3],
+          [3, 2],
+        ]),
+      );
+
+      expect(overlay.shapePolylines, hasLength(2));
+    });
+
+    test('TWO_LINES_FREE_TWO_WITHOUT_FREE draws four lines', () {
+      final result = _evaluate('TWO_LINES_FREE_TWO_WITHOUT_FREE', {
+        ..._row(2),
+        ..._cells([
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [3, 2],
+          [4, 2],
+        ]),
+        ..._row(0),
+        ..._row(4),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.lines, hasLength(4));
+    });
+
+    test('FOUR_LINES_WITHOUT_FREE draws four non-free lines', () {
+      final result = _evaluate('FOUR_LINES_WITHOUT_FREE', {
+        ..._row(0),
+        ..._row(1),
+        ..._row(3),
+        ..._row(4),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.lines, hasLength(4));
+    });
+
+    test('SMALL_CROSS_TRIANGLE_SQUARE draws cross, triangle, and square', () {
+      final result = _evaluate('SMALL_CROSS_TRIANGLE_SQUARE', {
+        ..._cells([
+          [1, 2],
+          [2, 1],
+          [2, 2],
+          [2, 3],
+          [3, 2],
+        ]),
+        ..._cells([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+        ]),
+        ..._square(3, 3),
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.shapePolylines, isNotEmpty);
+      expect(result.completedPatternOverlay.squares, hasLength(1));
+    });
+
+    test('THREE_SQUARES_TWO_ANGLES draws squares and corner highlights', () {
+      final result = _evaluate('THREE_SQUARES_TWO_ANGLES', {
+        ..._square(0, 1),
+        ..._square(1, 3),
+        ..._square(3, 1),
+        0,
+        24,
+      });
+
+      expect(result.hasLocalPatternComplete, isTrue);
+      expect(result.completedPatternOverlay.squares, hasLength(3));
+      expect(result.completedPatternOverlay.cornerHighlightCells, {0, 24});
+    });
+  });
+
   group('BIG_T_TWO_LINES needs 2 lines beyond the T itself', () {
     final bigT = _cells([
       [0, 0],

@@ -1,4 +1,5 @@
 import 'cartela_model.dart';
+import '../../domain/winning_ball_cell.dart';
 
 enum GameCartelaStatus {
   registered,
@@ -48,6 +49,8 @@ class GameCartelaModel {
     required this.status,
     required this.isWinner,
     required this.blockedAt,
+    this.blockReason,
+    this.activeNumberWhenBlocked,
     required this.createdAt,
     required this.updatedAt,
     required this.cartela,
@@ -60,6 +63,8 @@ class GameCartelaModel {
   final GameCartelaStatus status;
   final bool isWinner;
   final DateTime? blockedAt;
+  final String? blockReason;
+  final SessionWinnerLastCalledNumber? activeNumberWhenBlocked;
   final DateTime createdAt;
   final DateTime updatedAt;
   final CartelaModel cartela;
@@ -76,6 +81,10 @@ class GameCartelaModel {
       blockedAt: json['blockedAt'] is String
           ? DateTime.tryParse(json['blockedAt'] as String)
           : null,
+      blockReason: json['blockReason'] as String?,
+      activeNumberWhenBlocked: parseSessionWinnerLastCalledNumber(
+        json['activeNumberWhenBlocked'],
+      ),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       cartela: CartelaModel.fromJson(json['cartela'] as Map<String, dynamic>),
@@ -86,6 +95,8 @@ class GameCartelaModel {
     GameCartelaStatus? status,
     bool? isWinner,
     DateTime? blockedAt,
+    String? blockReason,
+    SessionWinnerLastCalledNumber? activeNumberWhenBlocked,
   }) {
     return GameCartelaModel(
       id: id,
@@ -95,6 +106,9 @@ class GameCartelaModel {
       status: status ?? this.status,
       isWinner: isWinner ?? this.isWinner,
       blockedAt: blockedAt,
+      blockReason: blockReason ?? this.blockReason,
+      activeNumberWhenBlocked:
+          activeNumberWhenBlocked ?? this.activeNumberWhenBlocked,
       createdAt: createdAt,
       updatedAt: updatedAt,
       cartela: cartela,

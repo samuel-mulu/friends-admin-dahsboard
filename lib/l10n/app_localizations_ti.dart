@@ -961,6 +961,19 @@ class AppLocalizationsTi extends AppLocalizations {
   String get liveMissedRoundYouMissedGame => 'ነዚ ዙር ሓሊፍካዮ።';
 
   @override
+  String get liveMissedNoNextTitle => 'ነዚ ዙር ሓሊፍካዮ';
+
+  @override
+  String get liveMissedNoNextMessage =>
+      'እዚ ጸወታ ሕጂ ብቀጥታ ይጻወት ኣሎ፣ ምዝገባውን ተዓጽዩ። ዝቕጽል ዙር ምስ ተኸፍተ ካርቴላታት ኣብዚ ክትመዝገብ ትኽእል።';
+
+  @override
+  String get liveMissedNoNextTipWatch => 'ነቲ ጸወታ ንምክትታል ኣብ ላዕሊ ዝወጹ ቁጽርታት ርአ።';
+
+  @override
+  String get liveMissedNoNextTipRefresh => 'ዝቕጽል ዙር ምስ ድልዩ ንታሕቲ ስሓብካ ኣሐድስ።';
+
+  @override
   String get liveMissedRoundOverviewTitle => 'ቀጥታ & ዝቕጽል ዙር';
 
   @override
@@ -1936,7 +1949,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameCategoryBonus => 'ቦነስ ጸወታ';
 
   @override
-  String get gameCategoryBigGotd => 'Big GOTD';
+  String get gameCategoryBigGotd => 'Normal Game';
 
   @override
   String get gameCategoryBigGame => 'Big Game';

@@ -329,10 +329,36 @@ CartelaPatternProgressOverlay overlayFromRulePreview({
   List<Set<int>> linePatterns = const [],
   List<Set<int>> squarePatterns = const [],
   List<Set<int>> anglePatterns = const [],
+  List<Set<int>> shapePieces = const [],
+  List<List<int>> shapePolylines = const [],
 }) {
+  final fromPieces = shapePieces.isEmpty
+      ? const CartelaPatternProgressOverlay()
+      : CartelaPatternProgressOverlay.merge(
+          shapePieces.map((cells) => (patternId: '', cells: cells)),
+        );
+
+  final cornerCells = <int>{
+    for (final angle in anglePatterns)
+      if (angle.length == 1) angle.first,
+    ...fromPieces.cornerHighlightCells,
+  };
+
+  final multiCellAngles = anglePatterns
+      .where((angle) => angle.length >= 2)
+      .toList(growable: false);
+
   return CartelaPatternProgressOverlay(
-    lines: orderedLinePolylines(linePatterns),
-    squares: squarePatterns,
-    shapePolylines: orderedAnglePolylines(anglePatterns),
+    lines: [
+      ...orderedLinePolylines(linePatterns),
+      ...fromPieces.lines,
+    ],
+    squares: [...squarePatterns, ...fromPieces.squares],
+    shapePolylines: [
+      ...shapePolylines,
+      ...fromPieces.shapePolylines,
+      ...orderedAnglePolylines(multiCellAngles),
+    ],
+    cornerHighlightCells: cornerCells,
   );
 }

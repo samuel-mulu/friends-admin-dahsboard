@@ -11,6 +11,8 @@ class RulePatternPreviewGrid extends StatelessWidget {
     this.linePatterns = const [],
     this.squarePatterns = const [],
     this.anglePatterns = const [],
+    this.shapePieces = const [],
+    this.shapePolylines = const [],
     this.size = 160,
     super.key,
   });
@@ -19,6 +21,8 @@ class RulePatternPreviewGrid extends StatelessWidget {
   final List<Set<int>> linePatterns;
   final List<Set<int>> squarePatterns;
   final List<Set<int>> anglePatterns;
+  final List<Set<int>> shapePieces;
+  final List<List<int>> shapePolylines;
   final double size;
 
   @override
@@ -149,7 +153,9 @@ class RulePatternPreviewGrid extends StatelessWidget {
                 ),
                 if (linePatterns.isNotEmpty ||
                     squarePatterns.isNotEmpty ||
-                    anglePatterns.isNotEmpty)
+                    anglePatterns.isNotEmpty ||
+                    shapePieces.isNotEmpty ||
+                    shapePolylines.isNotEmpty)
                   Positioned.fill(
                     child: CustomPaint(
                       painter: CartelaPatternProgressPainter(
@@ -157,6 +163,8 @@ class RulePatternPreviewGrid extends StatelessWidget {
                           linePatterns: linePatterns,
                           squarePatterns: squarePatterns,
                           anglePatterns: anglePatterns,
+                          shapePieces: shapePieces,
+                          shapePolylines: shapePolylines,
                         ),
                         gap: gap,
                         lineStrokeWidth: 2.0,

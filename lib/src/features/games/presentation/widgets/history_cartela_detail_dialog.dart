@@ -89,10 +89,57 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
               Text(
                 _statusLabel(),
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: cartela.status == GameCartelaStatus.blocked
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (cartela.status == GameCartelaStatus.blocked) ...[
+                const SizedBox(height: 8),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer.withValues(
+                      alpha: 0.45,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.error.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (cartela.blockReason != null &&
+                            cartela.blockReason!.trim().isNotEmpty) ...[
+                          Text(
+                            cartela.blockReason!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onErrorContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (cartela.activeNumberWhenBlocked != null)
+                            const SizedBox(height: 6),
+                        ],
+                        if (cartela.activeNumberWhenBlocked != null)
+                          Text(
+                            'Active number: ${cartela.activeNumberWhenBlocked!.displayBall}',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (winnerResult != null) ...[
                 const SizedBox(height: 4),
                 Text(

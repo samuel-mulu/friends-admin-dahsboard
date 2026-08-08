@@ -959,6 +959,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get liveMissedRoundYouMissedGame => 'ይህን ዙር አምልጠሃል።';
 
   @override
+  String get liveMissedNoNextTitle => 'ይህን ዙር አምልጠሃል';
+
+  @override
+  String get liveMissedNoNextMessage =>
+      'ይህ ጨዋታ አሁን በቀጥታ እየተጫወተ ነው፣ ምዝገባም ተዘግቷል። ቀጣዩ ዙር ሲከፈት ካርቴላዎችን እዚህ መመዝገብ ትችላለህ።';
+
+  @override
+  String get liveMissedNoNextTipWatch => 'ጨዋታውን ለመከታተል ከላይ የወጡትን ቁጥሮች ተመልከት።';
+
+  @override
+  String get liveMissedNoNextTipRefresh => 'ቀጣዩ ዙር ሲዘጋጅ ወደ ታች ጎትተህ አድስ።';
+
+  @override
   String get liveMissedRoundOverviewTitle => 'ቀጥታ እና ቀጣይ ዙር';
 
   @override
@@ -1933,7 +1946,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gameCategoryBonus => 'ቦነስ ጨዋታ';
 
   @override
-  String get gameCategoryBigGotd => 'Big GOTD';
+  String get gameCategoryBigGotd => 'Normal Game';
 
   @override
   String get gameCategoryBigGame => 'Big Game';

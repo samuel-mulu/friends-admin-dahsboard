@@ -154,6 +154,8 @@ class _RulePatternSamplesViewState extends State<_RulePatternSamplesView> {
           linePatterns: sample.linePatterns,
           squarePatterns: sample.squarePatterns,
           anglePatterns: sample.anglePatterns,
+          shapePieces: sample.shapePieces,
+          shapePolylines: sample.shapePolylines,
         ),
       ],
     );

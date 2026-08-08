@@ -1059,8 +1059,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     GameModel? advanceTarget,
     bool resumeSync = false,
     bool allowCachedOperations = true,
-    OperationsSyncReason operationsSyncReason =
-        OperationsSyncReason.appStartup,
+    OperationsSyncReason operationsSyncReason = OperationsSyncReason.appStartup,
   }) async {
     final generation = ++_loadGeneration;
     final priorSessionId = _game?.sessionId;
@@ -1186,6 +1185,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       final game = loadSelection.game;
       final preloadedPrimaryCartelas = loadSelection.preloadedPrimaryCartelas;
+      final preloadedPrimaryCartelasToken =
+          loadSelection.preloadedPrimaryCartelasToken;
       if (!_isCurrentLoad(generation)) {
         return;
       }
@@ -1298,6 +1299,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
         _expireReadyTransitionLockIfNeeded();
         _applySocketSessionMembership(null);
+        _registration.resetCurrentCartelaSession(null);
         final waitingForRealtime = !_socketService.isConnected;
         _safeSetState(generation, () {
           _clearReadyTransitionLock();
@@ -1337,6 +1339,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final previousSessionId = _game?.sessionId;
       final sessionChanged =
           game.sessionId != null && game.sessionId != previousSessionId;
+      _registration.resetCurrentCartelaSession(game.sessionId);
 
       if (resumeSync &&
           priorSessionId != null &&
@@ -1433,6 +1436,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       List<CalledNumberModel> calledNumbers = const [];
       List<GameCartelaModel> myCartelas = const [];
       List<GameCartelaModel> nextRegistrationCartelas = const [];
+      CurrentCartelaSnapshotToken? myCartelasSnapshotToken;
 
       if (sessionChanged) {
         effectiveIncludeMyCartelas = true;
@@ -1456,6 +1460,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
       if (game.sessionId != null) {
         if (effectiveIncludeMyCartelas && preloadedPrimaryCartelas != null) {
+          myCartelasSnapshotToken = preloadedPrimaryCartelasToken;
           myCartelas = List<GameCartelaModel>.from(preloadedPrimaryCartelas)
             ..sort((left, right) {
               return left.cartela.number.compareTo(right.cartela.number);
@@ -1492,6 +1497,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
               }(),
               () async {
                 try {
+                  myCartelasSnapshotToken = _registration
+                      .captureCurrentSessionSnapshotToken(game.sessionId!);
                   fetchedMyCartelas = await _gamesRepository.getMyGameCartelas(
                     game.sessionId!,
                   );
@@ -1537,6 +1544,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             effectiveIncludeMyCartelas &&
             preloadedPrimaryCartelas == null) {
           try {
+            myCartelasSnapshotToken = _registration
+                .captureCurrentSessionSnapshotToken(game.sessionId!);
             myCartelas = await _gamesRepository.getMyGameCartelas(
               game.sessionId!,
             );
@@ -1653,6 +1662,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operations: operations,
         calledNumbers: calledNumbers,
         myCartelas: myCartelas,
+        myCartelasSnapshotToken: myCartelasSnapshotToken,
         nextRegistrationCartelas: nextRegistrationCartelas,
         includeCalledNumbers: effectiveIncludeCalledNumbers,
         sessionChanged: sessionChanged,
@@ -1817,12 +1827,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     AppLogger.debug(
       'OperationsSync',
       'operations_snapshot_skipped_stale '
-      'context=$context '
-      'ownerReason=${_formatOperationsSyncReasonLabel(snapshot.fetchResult.ownerReason)} '
-      'requestStartedAt=${requestStartedAt.toIso8601String()} '
-      'lastSocketAppliedAt=${lastSocketAppliedAt?.toIso8601String() ?? '-'} '
-      'requestSession=${requestSessionIdentity ?? '-'} '
-      'currentSession=${currentSessionIdentity ?? '-'}',
+          'context=$context '
+          'ownerReason=${_formatOperationsSyncReasonLabel(snapshot.fetchResult.ownerReason)} '
+          'requestStartedAt=${requestStartedAt.toIso8601String()} '
+          'lastSocketAppliedAt=${lastSocketAppliedAt?.toIso8601String() ?? '-'} '
+          'requestSession=${requestSessionIdentity ?? '-'} '
+          'currentSession=${currentSessionIdentity ?? '-'}',
     );
     return true;
   }
@@ -1999,6 +2009,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     required GameOperationsCurrentResponse? operations,
     required List<CalledNumberModel> calledNumbers,
     required List<GameCartelaModel> myCartelas,
+    required CurrentCartelaSnapshotToken? myCartelasSnapshotToken,
     required List<GameCartelaModel> nextRegistrationCartelas,
     required bool includeCalledNumbers,
     required bool sessionChanged,
@@ -2152,7 +2163,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           }
         }
       }
-      _myCartelas = myCartelas;
+      final shouldReplaceMyCartelas =
+          myCartelasSnapshotToken == null ||
+          _registration.canApplyCurrentSessionSnapshot(
+            myCartelasSnapshotToken,
+            game.sessionId ?? '',
+          );
+      if (shouldReplaceMyCartelas) {
+        _myCartelas = myCartelas;
+      }
       _sortMyCartelas();
       _isLoading = false;
       // Canonical truth is now on screen; feed the reconnect throttle so a
@@ -2316,10 +2335,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
 
         try {
+          final snapshotToken = _registration
+              .captureCurrentSessionSnapshotToken(sessionId);
           final myCartelas = await _gamesRepository.getMyGameCartelas(
             sessionId,
           );
           if (!mounted || _game?.sessionId != sessionId) {
+            return;
+          }
+          if (!_registration.canApplyCurrentSessionSnapshot(
+            snapshotToken,
+            sessionId,
+          )) {
             return;
           }
 
@@ -2396,7 +2423,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   bool _ownsLiveCartelasForOperations(GameOperationsCurrentResponse ops) =>
       _transition.ownsLiveCartelasForOperations(ops);
 
-  Future<({GameModel? game, List<GameCartelaModel>? preloadedPrimaryCartelas})>
+  Future<
+    ({
+      GameModel? game,
+      List<GameCartelaModel>? preloadedPrimaryCartelas,
+      CurrentCartelaSnapshotToken? preloadedPrimaryCartelasToken,
+    })
+  >
   _loadGame({
     GameOperationsCurrentResponse? operations,
     GameModel? advanceTarget,
@@ -2406,7 +2439,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }) async {
     if (advanceTarget != null) {
       _joinSessionRoomEarly(advanceTarget.sessionId);
-      return (game: advanceTarget, preloadedPrimaryCartelas: null);
+      return (
+        game: advanceTarget,
+        preloadedPrimaryCartelas: null,
+        preloadedPrimaryCartelasToken: null,
+      );
     }
 
     final gameId = widget.gameId;
@@ -2417,11 +2454,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         return (
           game: await _gamesRepository.getSessionDetail(gameId),
           preloadedPrimaryCartelas: null,
+          preloadedPrimaryCartelasToken: null,
         );
       } catch (_) {
         return (
           game: await _gamesRepository.getSlotDetail(gameId),
           preloadedPrimaryCartelas: null,
+          preloadedPrimaryCartelasToken: null,
         );
       }
     }
@@ -2435,11 +2474,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operationsSyncSnapshot,
         context: 'load_game_fallback',
       )) {
-        return (game: _game, preloadedPrimaryCartelas: null);
+        return (
+          game: _game,
+          preloadedPrimaryCartelas: null,
+          preloadedPrimaryCartelasToken: null,
+        );
       }
       resolvedOperations = operationsSyncSnapshot.fetchResult.snapshot;
       if (resolvedOperations == null) {
-        return (game: null, preloadedPrimaryCartelas: null);
+        return (
+          game: null,
+          preloadedPrimaryCartelas: null,
+          preloadedPrimaryCartelasToken: null,
+        );
       }
     }
 
@@ -2448,6 +2495,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final liveCandidate = ops.liveGame ?? ops.checkingGame;
     final registrationGame = ops.registrationOpenGame;
     List<GameCartelaModel>? preloadedPrimaryCartelas;
+    CurrentCartelaSnapshotToken? preloadedPrimaryCartelasToken;
 
     // Primary round selection is driven by operations/current plus the
     // authenticated player's live-session ownership from /my-cartelas.
@@ -2460,6 +2508,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             liveCandidate.sessionId!.isNotEmpty
         ? () {
             final liveSessionId = liveCandidate.sessionId!;
+            final snapshotToken = _registration
+                .captureCurrentSessionSnapshotToken(liveSessionId);
             return _gamesRepository
                 .getMyGameCartelas(liveSessionId)
                 .then((fetched) {
@@ -2481,6 +2531,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
                   if (fetchedCartelas.isNotEmpty) {
                     preloadedPrimaryCartelas = fetchedCartelas;
+                    preloadedPrimaryCartelasToken = snapshotToken;
                   } else if (ownsLocalLiveCartelas) {
                     preloadedPrimaryCartelas =
                         List<GameCartelaModel>.from(_myCartelas)
@@ -2531,6 +2582,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     return (
       game: resolvedGame,
       preloadedPrimaryCartelas: preloadedPrimaryCartelas,
+      preloadedPrimaryCartelasToken: preloadedPrimaryCartelasToken,
     );
   }
 

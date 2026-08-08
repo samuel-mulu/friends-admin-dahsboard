@@ -953,6 +953,18 @@
   "liveMissedRoundYouMissedGame": "You missed this round.",
   "@liveMissedRoundYouMissedGame": {},
 
+  "liveMissedNoNextTitle": "You missed this round",
+  "@liveMissedNoNextTitle": {},
+
+  "liveMissedNoNextMessage": "This game is already live and registration is closed. When the next round opens, you can register cartelas here.",
+  "@liveMissedNoNextMessage": {},
+
+  "liveMissedNoNextTipWatch": "Watch the called numbers above to follow the game.",
+  "@liveMissedNoNextTipWatch": {},
+
+  "liveMissedNoNextTipRefresh": "Pull down to refresh when the next round is ready.",
+  "@liveMissedNoNextTipRefresh": {},
+
   "liveMissedRoundOverviewTitle": "Live & next round",
   "@liveMissedRoundOverviewTitle": {},
 
@@ -1934,7 +1946,7 @@
   "gameCategoryBonus": "Bonus Game",
   "@gameCategoryBonus": {},
 
-  "gameCategoryBigGotd": "Big GOTD",
+  "gameCategoryBigGotd": "Normal Game",
   "@gameCategoryBigGotd": {},
 
   "gameCategoryBigGame": "Big Game",

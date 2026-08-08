@@ -217,10 +217,10 @@
     "om": "Big N or Z"
   },
   "BIG_M_OR_W": {
-    "en": "Big M or W",
-    "am": "ትልቅ M ወይም W",
-    "ti": "ዓባይ M ወይ W",
-    "om": "Big M or W"
+    "en": "Big M in 4 directions",
+    "am": "ትልቅ M በ 4 አቅጣጫ",
+    "ti": "ዓባይ M ናብ 4 አንፈት",
+    "om": "Big M in 4 directionFs"
   },
   "THREE_RECTANGLES": {
     "en": "3 rectangles",
@@ -302,20 +302,20 @@
   },
   "FOUR_ANGLES_TWO_RECTANGLES": {
     "en": "4 angles with 2 rectangles all separate",
-    "am": "4 ነጥቦች ከ2 ሬክታንግል የማይገናኙ",
-    "ti": "4 ነጠብጣብ ምስ 2 ሬክታንግል ዘይራከቡ",
+    "am": "4 ነጥቦች (ማዕዘኖች) ከ2 ሬክታንግል የማይገናኙ",
+    "ti": "4 ነጠብጣብ (አንግል) ምስ 2 ሬክታንግል ዘይራከቡ",
     "om": "4 angles with 2 rectangles all separate"
   },
   "TWO_PARALLEL_LINES_TWO_DIAGONALS": {
     "en": "2 parallel lines and 2 diagonals",
-    "am": "2 ትይዩ መስመር ከ2 ዲያጎናል",
-    "ti": "2 ትይዩ መስመር ምስ 2 ዲያጎናል",
+    "am": "2 ማይገናኙ መስመር ከ2 ዲያጎናል",
+    "ti": "2 ዘይራከቡ መስመር ምስ 2 ዲያጎናል",
     "om": "2 parallel lines and 2 diagonals"
   },
   "THREE_PARALLEL_LINES_ONE_DIAGONAL": {
     "en": "3 parallel lines and 1 diagonal",
-    "am": "3 ትይዩ መስመር ከ1 ዲያጎናል",
-    "ti": "3 ትይዩ መስመር ምስ 1 ዲያጎናል",
+    "am": "3 ማይገናኙ መስመር ከ1 ዲያጎናል",
+    "ti": "3 ዘይራከቡ መስመር ምስ 1 ዲያጎናል",
     "om": "3 parallel lines and 1 diagonal"
   },
   "BIG_T_THREE_SQUARES": {
@@ -335,5 +335,29 @@
     "am": "ትልቅ መስቀል ከ1 ስኴር የማይገናኙ",
     "ti": "ዓባይ መስቀል ምስ 1 ስኴር ዘይራከቡ",
     "om": "Big cross with 1 square all separate"
+  },
+  "TWO_LINES_FREE_TWO_WITHOUT_FREE": {
+    "en": "2 free lines + 2 without free",
+    "am": "2 በፍሪ መስመር + 2 ያለ ፍሪ",
+    "ti": "2 ብፍሪ መስመር + 2 ብዘይ ፍሪ",
+    "om": "2 free lines + 2 without free"
+  },
+  "SMALL_CROSS_TRIANGLE_SQUARE": {
+    "en": "Small cross + triangle + square all separate",
+    "am": "ትንሽ መስቀል + ትሪያንግል + ስኴር የማይገናኙ",
+    "ti": "ንእሽቶ መስቀል + ትሪያንግል + ስኴር ዘይራከቡ",
+    "om": "Small cross + triangle + square all separate"
+  },
+  "FOUR_LINES_WITHOUT_FREE": {
+    "en": "4 lines without free",
+    "am": "4 መስመር ያለ ፍሪ",
+    "ti": "4 መስመር ብዘይ ፍሪ",
+    "om": "4 lines without free"
+  },
+  "THREE_SQUARES_TWO_ANGLES": {
+    "en": "3 squares + 2 angles all separate",
+    "am": "3 ስኴር + 2 ማዕዘን የማይገናኙ",
+    "ti": "3 ስኴር + 2 ኩርናዕ ዘይራከቡ",
+    "om": "3 squares + 2 angles all separate"
   }
 }

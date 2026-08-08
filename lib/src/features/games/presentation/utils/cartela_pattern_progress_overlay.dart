@@ -198,6 +198,11 @@ class CartelaPatternProgressOverlay {
       return CartelaPatternProgressOverlay(shapePolylines: smallTPolylines);
     }
 
+    final smallCrossPolylines = _smallCrossPolylines(cells);
+    if (smallCrossPolylines.isNotEmpty) {
+      return CartelaPatternProgressOverlay(shapePolylines: smallCrossPolylines);
+    }
+
     final trianglePolylines = _rightTrianglePolylines(cells);
     if (trianglePolylines.isNotEmpty) {
       return CartelaPatternProgressOverlay(shapePolylines: trianglePolylines);
@@ -262,6 +267,37 @@ class CartelaPatternProgressOverlay {
     }
 
     return true;
+  }
+
+  /// Small cross (+): horizontal and vertical arms through the center cell.
+  static List<List<int>> _smallCrossPolylines(Set<int> cells) {
+    if (cells.length != 5) {
+      return const [];
+    }
+
+    bool has(int row, int col) {
+      return row >= 0 &&
+          row < 5 &&
+          col >= 0 &&
+          col < 5 &&
+          cells.contains(row * 5 + col);
+    }
+
+    for (final center in cells) {
+      final row = center ~/ 5;
+      final col = center % 5;
+      if (has(row - 1, col) &&
+          has(row + 1, col) &&
+          has(row, col - 1) &&
+          has(row, col + 1)) {
+        return [
+          [row * 5 + col - 1, center, row * 5 + col + 1],
+          [(row - 1) * 5 + col, center, (row + 1) * 5 + col],
+        ];
+      }
+    }
+
+    return const [];
   }
 
   /// Small T: a 3-cell bar plus a 2-cell stem, drawn as bar + stem strokes the

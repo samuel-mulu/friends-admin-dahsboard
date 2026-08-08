@@ -986,6 +986,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get liveMissedRoundYouMissedGame => 'You missed this round.';
 
   @override
+  String get liveMissedNoNextTitle => 'You missed this round';
+
+  @override
+  String get liveMissedNoNextMessage =>
+      'This game is already live and registration is closed. When the next round opens, you can register cartelas here.';
+
+  @override
+  String get liveMissedNoNextTipWatch =>
+      'Watch the called numbers above to follow the game.';
+
+  @override
+  String get liveMissedNoNextTipRefresh =>
+      'Pull down to refresh when the next round is ready.';
+
+  @override
   String get liveMissedRoundOverviewTitle => 'Live & next round';
 
   @override
@@ -1981,7 +1996,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameCategoryBonus => 'Bonus Game';
 
   @override
-  String get gameCategoryBigGotd => 'Big GOTD';
+  String get gameCategoryBigGotd => 'Normal Game';
 
   @override
   String get gameCategoryBigGame => 'Big Game';

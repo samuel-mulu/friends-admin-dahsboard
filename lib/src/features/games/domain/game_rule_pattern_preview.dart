@@ -9,6 +9,8 @@ class GameRulePatternSample {
     this.linePatterns = const [],
     this.squarePatterns = const [],
     this.anglePatterns = const [],
+    this.shapePieces = const [],
+    this.shapePolylines = const [],
   });
 
   final String label;
@@ -16,6 +18,13 @@ class GameRulePatternSample {
   final List<Set<int>> linePatterns;
   final List<Set<int>> squarePatterns;
   final List<Set<int>> anglePatterns;
+
+  /// Cell groups classified at paint time into red strokes / blocks
+  /// (small T, small cross, triangles, rectangles, big shapes by geometry).
+  final List<Set<int>> shapePieces;
+
+  /// Explicit ordered strokes when already known (big N/Z, M/W, L/T/H).
+  final List<List<int>> shapePolylines;
 }
 
 /// Builds 5×5 winning-pattern previews for each product rule key.
@@ -131,6 +140,8 @@ class GameRulePatternPreview {
     List<Set<int>> linePatterns = const [],
     List<Set<int>> squarePatterns = const [],
     List<Set<int>> anglePatterns = const [],
+    List<Set<int>> shapePieces = const [],
+    List<List<int>> shapePolylines = const [],
   }) {
     return GameRulePatternSample(
       label: 'Sample',
@@ -138,6 +149,8 @@ class GameRulePatternPreview {
       linePatterns: linePatterns,
       squarePatterns: squarePatterns,
       anglePatterns: anglePatterns,
+      shapePieces: shapePieces,
+      shapePolylines: shapePolylines,
     );
   }
 
@@ -149,6 +162,7 @@ class GameRulePatternPreview {
             (variant) => GameRulePatternSample(
               label: variant.label,
               markedCells: variant.cells,
+              shapePolylines: variant.orderedPolylines,
             ),
           )
           .toList(growable: false);
@@ -159,6 +173,8 @@ class GameRulePatternPreview {
             (variant) => GameRulePatternSample(
               label: variant.label,
               markedCells: _union([variant.cells, _diagMain()]),
+              linePatterns: [_diagMain()],
+              shapePolylines: variant.orderedPolylines,
             ),
           )
           .toList(growable: false);
@@ -169,6 +185,8 @@ class GameRulePatternPreview {
             (variant) => GameRulePatternSample(
               label: variant.label,
               markedCells: _union([variant.cells, _diagAnti()]),
+              linePatterns: [_diagAnti()],
+              shapePolylines: variant.orderedPolylines,
             ),
           )
           .toList(growable: false);
@@ -193,6 +211,7 @@ class GameRulePatternPreview {
             label: variant.label,
             markedCells: _union([variant.cells, squareA, squareB]),
             squarePatterns: [squareA, squareB],
+            shapePolylines: variant.orderedPolylines,
           );
         },
         growable: false,
@@ -401,12 +420,21 @@ class GameRulePatternPreview {
     'MIX_04': _sample(
       markedCells: _union([_bigT, _mix04SquareA, _mix04SquareB]),
       squarePatterns: [_mix04SquareA, _mix04SquareB],
+      shapePieces: [_bigT],
     ),
     'MIX_05': _sample(
       markedCells: _union([_row(0), _row(1), _col(0), _col(1), _diagMain()]),
+      linePatterns: [_row(0), _row(1), _col(0), _col(1), _diagMain()],
     ),
-    'MIX_06': _sample(markedCells: _union([_row(0), _row(1), _row(4)])),
-    'MIX_07': _sample(markedCells: _union([_bigL, _diagMain()])),
+    'MIX_06': _sample(
+      markedCells: _union([_row(0), _row(1), _row(4)]),
+      linePatterns: [_row(0), _row(1), _row(4)],
+    ),
+    'MIX_07': _sample(
+      markedCells: _union([_bigL, _diagMain()]),
+      linePatterns: [_diagMain()],
+      shapePieces: [_bigL],
+    ),
     'MIX_08': _sample(
       markedCells: _union([_row(3), _row(4), _mix08Square]),
       linePatterns: [_row(3), _row(4)],
@@ -414,6 +442,7 @@ class GameRulePatternPreview {
     ),
     'MIX_09': _sample(
       markedCells: _union([_col(0), _row(4), _diagMain()]),
+      linePatterns: [_col(0), _row(4), _diagMain()],
     ),
     'MIX_10': _sample(
       markedCells: _union([
@@ -470,9 +499,13 @@ class GameRulePatternPreview {
       linePatterns: [_row(2), _row(4), _col(1), _col(3)],
     ),
     'HALF_HOUSE_4_DIRECTIONS': _sample(markedCells: _topRightTriangle),
-    'MIX_14': _sample(markedCells: _union([_row(2), _row(0), _row(1)])),
+    'MIX_14': _sample(
+      markedCells: _union([_row(2), _row(0), _row(1)]),
+      linePatterns: [_row(2), _row(0), _row(1)],
+    ),
     'BIG_CROSS_ONE_DIAGONAL': _sample(
       markedCells: _union([_bigCross, _diagMain()]),
+      linePatterns: [_row(2), _col(2), _diagMain()],
     ),
     'TWO_ROWS_ONE_SQUARE_ALT': _sample(
       markedCells: _union([_row(3), _row(4), _twoRowsSquare]),
@@ -497,9 +530,13 @@ class GameRulePatternPreview {
         _sixLinesCol4,
       ],
     ),
-    'THREE_COLUMNS': _sample(markedCells: _union([_col(0), _col(1), _col(2)])),
+    'THREE_COLUMNS': _sample(
+      markedCells: _union([_col(0), _col(1), _col(2)]),
+      linePatterns: [_col(0), _col(1), _col(2)],
+    ),
     'FOUR_PARALLEL_LINES': _sample(
       markedCells: _union([_row(0), _row(1), _row(2), _row(3)]),
+      linePatterns: [_row(0), _row(1), _row(2), _row(3)],
     ),
     'FOUR_ANGLES_TWO_SQUARES': _sample(
       markedCells: _union([
@@ -508,24 +545,39 @@ class GameRulePatternPreview {
         _fourAnglesSquareB,
       ]),
       squarePatterns: [_fourAnglesSquareA, _fourAnglesSquareB],
+      anglePatterns: [
+        {0},
+        {4},
+        {20},
+        {24},
+      ],
     ),
     'FOUR_LINES': _sample(
       markedCells: _union([_row(2), _row(4), _col(1), _col(3)]),
       linePatterns: [_row(2), _row(4), _col(1), _col(3)],
     ),
-    'THREE_ROWS': _sample(markedCells: _union([_row(0), _row(1), _row(2)])),
+    'THREE_ROWS': _sample(
+      markedCells: _union([_row(0), _row(1), _row(2)]),
+      linePatterns: [_row(0), _row(1), _row(2)],
+    ),
     'TWO_ROWS_ONE_COLUMN': _sample(
       markedCells: _union([_row(3), _row(4), _col(0)]),
+      linePatterns: [_row(3), _row(4), _col(0)],
     ),
     'TWO_DIAGONALS': _sample(
       markedCells: _union([_diagMain(), _diagAnti()]),
+      linePatterns: [_diagMain(), _diagAnti()],
     ),
     'ONE_COLUMN_ONE_ROW_ONE_SQUARE': _sample(
       markedCells: _union([_col(0), _row(4), _colRowSquare]),
       linePatterns: [_col(0), _row(4)],
       squarePatterns: [_colRowSquare],
     ),
-    'BIG_T_ONE_DIAGONAL': _sample(markedCells: _union([_bigT, _diagAnti()])),
+    'BIG_T_ONE_DIAGONAL': _sample(
+      markedCells: _union([_bigT, _diagAnti()]),
+      linePatterns: [_diagAnti()],
+      shapePieces: [_bigT],
+    ),
     'THREE_RECTANGLES': _sample(
       markedCells: _union([
         _coords([
@@ -553,10 +605,37 @@ class GameRulePatternPreview {
           [4, 3],
         ]),
       ]),
+      shapePieces: [
+        _coords([
+          [0, 0],
+          [0, 1],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+          [2, 1],
+        ]),
+        _coords([
+          [0, 2],
+          [0, 3],
+          [0, 4],
+          [1, 2],
+          [1, 3],
+          [1, 4],
+        ]),
+        _coords([
+          [2, 2],
+          [2, 3],
+          [3, 2],
+          [3, 3],
+          [4, 2],
+          [4, 3],
+        ]),
+      ],
     ),
     'BIG_T_TWO_LINES': _sample(
       markedCells: _union([_bigT, _row(2), _diagAnti()]),
       linePatterns: [_row(2), _diagAnti()],
+      shapePieces: [_bigT],
     ),
     'ONE_LINE_TWO_TRIANGLES': _sample(
       markedCells: _union([
@@ -579,6 +658,24 @@ class GameRulePatternPreview {
         _row(4),
       ]),
       linePatterns: [_row(4)],
+      shapePieces: [
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+        ]),
+        _coords([
+          [0, 4],
+          [1, 3],
+          [1, 4],
+          [2, 2],
+          [2, 3],
+          [2, 4],
+        ]),
+      ],
     ),
     'SMALL_T_TWO_SQUARES': _sample(
       markedCells: _union([
@@ -593,6 +690,15 @@ class GameRulePatternPreview {
         _square2x2(3, 3),
       ]),
       squarePatterns: [_square2x2(3, 0), _square2x2(3, 3)],
+      shapePieces: [
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [1, 2],
+          [2, 2],
+        ]),
+      ],
     ),
     'ONE_LINE_TRIANGLE_4X4': _sample(
       markedCells: _union([
@@ -611,6 +717,20 @@ class GameRulePatternPreview {
         ]),
       ]),
       linePatterns: [_row(4)],
+      shapePieces: [
+        _coords([
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [0, 4],
+          [1, 1],
+          [1, 2],
+          [1, 3],
+          [2, 1],
+          [2, 2],
+          [3, 1],
+        ]),
+      ],
     ),
     'BIG_L_ONE_RECTANGLE': _sample(
       markedCells: _union([
@@ -624,6 +744,17 @@ class GameRulePatternPreview {
           [2, 3],
         ]),
       ]),
+      shapePieces: [
+        _bigL,
+        _coords([
+          [0, 2],
+          [0, 3],
+          [1, 2],
+          [1, 3],
+          [2, 2],
+          [2, 3],
+        ]),
+      ],
     ),
     'TWO_ANGLES_THREE_LINES': _sample(
       markedCells: _union([
@@ -640,7 +771,9 @@ class GameRulePatternPreview {
     ),
     'BIG_T_ONE_DIAGONAL_ONE_SQUARE': _sample(
       markedCells: _union([_bigT, _diagAnti(), _square2x2(3, 3)]),
+      linePatterns: [_diagAnti()],
       squarePatterns: [_square2x2(3, 3)],
+      shapePieces: [_bigT],
     ),
     'TWO_LINES_TWO_SQUARES': _sample(
       markedCells: _union([
@@ -730,6 +863,12 @@ class GameRulePatternPreview {
           [4, 2],
         ]),
       ],
+      anglePatterns: [
+        {0},
+        {4},
+        {20},
+        {24},
+      ],
     ),
     'TWO_PARALLEL_LINES_TWO_DIAGONALS': _sample(
       markedCells: _union([_row(0), _row(4), _diagMain(), _diagAnti()]),
@@ -751,6 +890,7 @@ class GameRulePatternPreview {
         _square2x2(3, 0),
         _square2x2(3, 3),
       ],
+      shapePieces: [_bigT],
     ),
     'THREE_SMALL_T': _sample(
       markedCells: _union([
@@ -776,10 +916,97 @@ class GameRulePatternPreview {
           [2, 3],
         ]),
       ]),
+      shapePieces: [
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 1],
+          [2, 1],
+        ]),
+        _coords([
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [3, 1],
+          [3, 2],
+        ]),
+        _coords([
+          [4, 2],
+          [4, 3],
+          [4, 4],
+          [3, 3],
+          [2, 3],
+        ]),
+      ],
     ),
     'BIG_CROSS_ONE_SQUARE': _sample(
       markedCells: _union([_bigCross, _square2x2(0, 0)]),
+      linePatterns: [_row(2), _col(2)],
       squarePatterns: [_square2x2(0, 0)],
+    ),
+    'TWO_LINES_FREE_TWO_WITHOUT_FREE': _sample(
+      markedCells: _union([_row(2), _col(2), _row(0), _row(4)]),
+      linePatterns: [_row(2), _col(2), _row(0), _row(4)],
+    ),
+    'SMALL_CROSS_TRIANGLE_SQUARE': _sample(
+      markedCells: _union([
+        _coords([
+          [1, 2],
+          [2, 1],
+          [2, 2],
+          [2, 3],
+          [3, 2],
+        ]),
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+        ]),
+        _square2x2(3, 3),
+      ]),
+      squarePatterns: [_square2x2(3, 3)],
+      shapePieces: [
+        _coords([
+          [1, 2],
+          [2, 1],
+          [2, 2],
+          [2, 3],
+          [3, 2],
+        ]),
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [2, 0],
+        ]),
+      ],
+    ),
+    'FOUR_LINES_WITHOUT_FREE': _sample(
+      markedCells: _union([_row(0), _row(1), _row(3), _row(4)]),
+      linePatterns: [_row(0), _row(1), _row(3), _row(4)],
+    ),
+    'THREE_SQUARES_TWO_ANGLES': _sample(
+      markedCells: _union([
+        _square2x2(0, 1),
+        _square2x2(1, 3),
+        _square2x2(3, 1),
+        {0, 24},
+      ]),
+      squarePatterns: [
+        _square2x2(0, 1),
+        _square2x2(1, 3),
+        _square2x2(3, 1),
+      ],
+      anglePatterns: [
+        {0},
+        {24},
+      ],
     ),
   };
 
@@ -789,6 +1016,7 @@ class GameRulePatternPreview {
             (variant) => GameRulePatternSample(
               label: variant.label,
               markedCells: variant.cells,
+              shapePolylines: variant.orderedPolylines,
             ),
           )
           .toList(growable: false);
@@ -799,6 +1027,7 @@ class GameRulePatternPreview {
             (variant) => GameRulePatternSample(
               label: variant.label,
               markedCells: variant.cells,
+              shapePolylines: variant.orderedPolylines,
             ),
           )
           .toList(growable: false);
@@ -914,5 +1143,15 @@ class GameRulePatternPreview {
     'THREE_SMALL_T': 'Complete 3 small T shapes. Overlap not allowed.',
     'BIG_CROSS_ONE_SQUARE':
         'Complete a big cross and 1 square. Overlap not allowed.',
+    'TWO_LINES_FREE_TWO_WITHOUT_FREE':
+        'Complete 2 lines that pass through FREE and 2 lines that avoid FREE. '
+        'Overlap allowed.',
+    'SMALL_CROSS_TRIANGLE_SQUARE':
+        'Complete 1 small cross, one 6-cell triangle, and 1 square. Overlap not '
+        'allowed.',
+    'FOUR_LINES_WITHOUT_FREE':
+        'Complete 4 lines that do not pass through FREE. Overlap allowed.',
+    'THREE_SQUARES_TWO_ANGLES':
+        'Complete 3 squares and 2 of the 4 corner angles. Overlap not allowed.',
   };
 }

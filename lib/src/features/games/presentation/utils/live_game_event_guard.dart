@@ -50,6 +50,15 @@ bool eventAffectsTrackedRegistrationSession({
       trackedRegistrationSessionId == eventSessionId;
 }
 
+/// Empty live board with no tracked registration: wake on queue/create events
+/// via primary canonical refetch (do not route to missed-preview).
+bool shouldWakeEmptyLiveBoard({
+  required GameModel? game,
+  required String? trackedRegistrationSessionId,
+}) {
+  return game == null && trackedRegistrationSessionId == null;
+}
+
 bool isLivePlayGameStatus(GameStatus status) {
   return status == GameStatus.playing ||
       status == GameStatus.winnerWindow ||

@@ -122,6 +122,16 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              if (result.phoneNumber != null &&
+                  result.phoneNumber!.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  result.phoneNumber!.trim(),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
               const SizedBox(height: 4),
               Text(
                 l10n.winningCartelasPrize(result.amount),

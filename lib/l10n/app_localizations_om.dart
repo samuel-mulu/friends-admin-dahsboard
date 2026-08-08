@@ -991,6 +991,21 @@ class AppLocalizationsOm extends AppLocalizations {
   String get liveMissedRoundYouMissedGame => 'Raawundii kana irra darbite.';
 
   @override
+  String get liveMissedNoNextTitle => 'Raawundii kana irra darbite';
+
+  @override
+  String get liveMissedNoNextMessage =>
+      'Taphaan kun amma kallattiin taphachaa jira, galmeessi immoo cufameera. Raawundii itti aanu yoo banamu kaartelaa asitti galmeessuu dandeessa.';
+
+  @override
+  String get liveMissedNoNextTipWatch =>
+      'Tapha hordofuuf lakkoofsa olitti ba\'an ilaali.';
+
+  @override
+  String get liveMissedNoNextTipRefresh =>
+      'Raawundii itti aanu yeroo qophaa\'u gadi harkisiiti haaromsi.';
+
+  @override
   String get liveMissedRoundOverviewTitle => 'Kallattii & raawundii itti aanu';
 
   @override
@@ -1999,7 +2014,7 @@ class AppLocalizationsOm extends AppLocalizations {
   String get gameCategoryBonus => 'Bonus Game';
 
   @override
-  String get gameCategoryBigGotd => 'Big GOTD';
+  String get gameCategoryBigGotd => 'Normal Game';
 
   @override
   String get gameCategoryBigGame => 'Big Game';

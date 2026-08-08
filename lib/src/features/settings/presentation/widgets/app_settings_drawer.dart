@@ -269,17 +269,6 @@ class AppSettingsDrawer extends ConsumerWidget {
                             '/games/history',
                           ),
                         ),
-                        _DrawerDivider(theme: theme),
-                        _DrawerMenuRow(
-                          icon: Icons.emoji_events_outlined,
-                          label: l10n.houseChampionsTitle,
-                          showChevron: true,
-                          onTap: () => _openProtectedRoute(
-                            context,
-                            ref,
-                            '/home/champions',
-                          ),
-                        ),
                       ],
                     ),
                   ),

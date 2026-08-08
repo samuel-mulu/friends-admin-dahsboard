@@ -16,6 +16,7 @@ import '../providers/games_providers.dart';
 import '../providers/registration_state_patch_provider.dart';
 import '../utils/cartela_display_order.dart';
 import '../providers/current_game_operations_provider.dart';
+import '../utils/current_cartela_snapshot_guard.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/registration_ux_metrics.dart';
 import 'live_game_host.dart';
@@ -40,6 +41,8 @@ class LiveRegistrationController {
   List<int>? pendingAutoOpenCartelaNumbers;
   Timer? myCartelasRefreshDebounceTimer;
   Timer? nextCartelasRefreshDebounceTimer;
+  final CurrentCartelaSnapshotGuard currentCartelaSnapshotGuard =
+      CurrentCartelaSnapshotGuard();
   final Map<String, RegistrationPanelSession> _panelSessions =
       <String, RegistrationPanelSession>{};
 
@@ -113,6 +116,36 @@ class LiveRegistrationController {
 
   void resetPanelSession(String slotId) {
     _panelSessions.remove(slotId)?.dispose();
+  }
+
+  void resetCurrentCartelaSession(String? sessionId) {
+    currentCartelaSnapshotGuard.reset(sessionId);
+  }
+
+  CurrentCartelaSnapshotToken captureCurrentSessionSnapshotToken(
+    String sessionId,
+  ) {
+    return currentCartelaSnapshotGuard.capture(sessionId);
+  }
+
+  bool canApplyCurrentSessionSnapshot(
+    CurrentCartelaSnapshotToken token,
+    String responseSessionId,
+  ) {
+    return currentCartelaSnapshotGuard.canApply(
+      token,
+      responseSessionId: responseSessionId,
+    );
+  }
+
+  void noteConfirmedCurrentSessionRegistrationMutation(String sessionId) {
+    if (host.game?.sessionId != sessionId) {
+      return;
+    }
+    if (currentCartelaSnapshotGuard.currentSessionId != sessionId) {
+      currentCartelaSnapshotGuard.reset(sessionId);
+    }
+    currentCartelaSnapshotGuard.bumpForConfirmedRegistration(sessionId);
   }
 
   String? effectiveSessionIdFor(
@@ -384,7 +417,11 @@ class LiveRegistrationController {
     );
 
     try {
-      final actorUserId = host.ref.read(authControllerProvider).session?.user.id;
+      final actorUserId = host.ref
+          .read(authControllerProvider)
+          .session
+          ?.user
+          .id;
       final result = widgetSessionId != null
           ? await host.gamesRepository.reserveCartelasBulk(
               sessionId: widgetSessionId,
@@ -399,7 +436,8 @@ class LiveRegistrationController {
         'flush_response generation=$reserveGeneration currentGen=${session.bulkReserveGeneration} reservations=[${result.reservations.map((r) => session.selectedCartelaNumbers[r.cartelaId] ?? r.cartelaId).join(',')}] selectMode=${session.selectModeEnabled}',
       );
 
-      final staleGeneration = reserveGeneration != session.bulkReserveGeneration;
+      final staleGeneration =
+          reserveGeneration != session.bulkReserveGeneration;
       final selectModeEnded = !host.mounted || !session.selectModeEnabled;
       if (staleGeneration || selectModeEnded) {
         _bulkDebugLog(
@@ -495,7 +533,9 @@ class LiveRegistrationController {
         );
       }
 
-      final failureIds = result.failures.map((failure) => failure.cartelaId).toSet();
+      final failureIds = result.failures
+          .map((failure) => failure.cartelaId)
+          .toSet();
       final failedIds = cartelaIds
           .where((id) => !reservedIds.contains(id) && !failureIds.contains(id))
           .toSet();
@@ -529,8 +569,7 @@ class LiveRegistrationController {
       RegistrationUxMetrics.bulkReserveFailure(cartelaCount: cartelaIds.length);
 
       if (error is ApiException &&
-          (isRegistrationClosedError(error) ||
-              isSessionNotReadyError(error))) {
+          (isRegistrationClosedError(error) || isSessionNotReadyError(error))) {
         unawaited(
           host.ref.read(currentGameOperationsProvider.notifier).refresh(),
         );
@@ -549,7 +588,9 @@ class LiveRegistrationController {
     }
   }
 
-  Future<void> _cancelStaleReservationIds(Iterable<String> reservationIds) async {
+  Future<void> _cancelStaleReservationIds(
+    Iterable<String> reservationIds,
+  ) async {
     if (reservationIds.isEmpty) {
       return;
     }
@@ -595,8 +636,9 @@ class LiveRegistrationController {
       for (final failure in failures) {
         session.pendingBulkReserveIds.remove(failure.cartelaId);
         session.selectionReservations.remove(failure.cartelaId);
-        final cartelaNumber =
-            session.selectedCartelaNumbers.remove(failure.cartelaId);
+        final cartelaNumber = session.selectedCartelaNumbers.remove(
+          failure.cartelaId,
+        );
         session.selectedCartelaIds.remove(failure.cartelaId);
         if (cartelaNumber == null) {
           continue;
@@ -690,16 +732,15 @@ class LiveRegistrationController {
     );
 
     if (sessionId != null) {
-      host.ref.read(registrationStatePatchProvider.notifier).applyChanges(
-        sessionId,
-        [
-          RegistrationCartelaChange(
-            cartelaId: cartelaId,
-            cartelaNumber: cartelaNumber,
-            owner: 'AVAILABLE',
-          ),
-        ],
-      );
+      host.ref
+          .read(registrationStatePatchProvider.notifier)
+          .applyChanges(sessionId, [
+            RegistrationCartelaChange(
+              cartelaId: cartelaId,
+              cartelaNumber: cartelaNumber,
+              owner: 'AVAILABLE',
+            ),
+          ]);
     }
 
     if (reservation != null) {
@@ -836,6 +877,7 @@ class LiveRegistrationController {
       host.ref.invalidate(myWalletProvider);
 
       if (registeredSessionId == game.sessionId) {
+        noteConfirmedCurrentSessionRegistrationMutation(registeredSessionId);
         unawaited(refreshMyCartelasSilently());
       } else if (registeredSessionId == trackedRegistrationSessionId) {
         unawaited(refreshNextRegistrationCartelasSilently());
@@ -862,10 +904,14 @@ class LiveRegistrationController {
         }
 
         try {
+          final snapshotToken = captureCurrentSessionSnapshotToken(sessionId);
           final cartelas = await host.gamesRepository.getMyGameCartelas(
             sessionId,
           );
           if (!host.mounted || host.game?.sessionId != sessionId) {
+            return;
+          }
+          if (!canApplyCurrentSessionSnapshot(snapshotToken, sessionId)) {
             return;
           }
 
@@ -912,10 +958,10 @@ class LiveRegistrationController {
           }
 
           host.markNeedsBuild(() {
-            nextRegistrationCartelas =
-                List<GameCartelaModel>.from(nextCartelas)..sort((left, right) {
-                  return left.cartela.number.compareTo(right.cartela.number);
-                });
+            nextRegistrationCartelas = List<GameCartelaModel>.from(nextCartelas)
+              ..sort((left, right) {
+                return left.cartela.number.compareTo(right.cartela.number);
+              });
           });
         } catch (_) {
           // Keep current next-registration cartelas if the silent refresh fails.

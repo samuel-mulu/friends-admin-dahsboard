@@ -15,6 +15,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.on('disconnect', _onSocketDisconnected);
     _socketService.on('connect_error', _onSocketConnectError);
     _socketService.on('game:status_changed', _onGameStatusChanged);
+    _socketService.on('slot:created', _onSlotCreated);
     _socketService.on('slot:status_changed', _onSlotStatusChanged);
     _socketService.on('game:number_called', _onNumberCalled);
     _socketService.on('game:bingo_checking', _onBingoChecking);
@@ -42,6 +43,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.off('disconnect', _onSocketDisconnected);
     _socketService.off('connect_error', _onSocketConnectError);
     _socketService.off('game:status_changed', _onGameStatusChanged);
+    _socketService.off('slot:created', _onSlotCreated);
     _socketService.off('slot:status_changed', _onSlotStatusChanged);
     _socketService.off('game:number_called', _onNumberCalled);
     _socketService.off('game:bingo_checking', _onBingoChecking);
@@ -145,6 +147,14 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       includeCalledNumbers: true,
     );
     if (normalizedPayload == null) {
+      return;
+    }
+
+    if (shouldWakeEmptyLiveBoard(
+      game: _game,
+      trackedRegistrationSessionId: _trackedRegistrationSessionId,
+    )) {
+      _scheduleCanonicalRefetch(reason: 'empty_board_queue_wakeup');
       return;
     }
 
@@ -268,6 +278,23 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       registrationSessionId: sessionId,
       includeCalledNumbers: false,
     );
+  }
+
+  void _onSlotCreated(dynamic payload) {
+    if (!isLiveHostActive) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'slot:created',
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    LiveRealtimeDebug.socket('slot:created', normalizedPayload);
+    _scheduleCanonicalRefetch(reason: 'slot_created');
   }
 
   void _onSlotStatusChanged(dynamic payload) {
@@ -447,6 +474,13 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
         }
         return;
       case LiveSyncAction.canonicalSnapshotFetch:
+        if (shouldWakeEmptyLiveBoard(
+          game: _game,
+          trackedRegistrationSessionId: _trackedRegistrationSessionId,
+        )) {
+          _scheduleCanonicalRefetch(reason: 'empty_board_queue_wakeup');
+          return;
+        }
         final sessionId = normalizedPayload['sessionId'] as String?;
         final slotId = normalizedPayload['slotId'] as String?;
         final affectsCurrent = _eventAffectsCurrentGame(

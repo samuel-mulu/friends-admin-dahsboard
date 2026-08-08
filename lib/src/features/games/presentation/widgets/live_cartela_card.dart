@@ -12,6 +12,7 @@ import '../utils/cartela_board_layout.dart';
 import '../utils/cartela_mark_helpers.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
 import 'blocked_cartela_reason_dialog.dart';
+import 'cartela_number_dialog.dart';
 import 'cartela_pattern_progress_painter.dart';
 import 'cartela_number_badge.dart';
 
@@ -156,16 +157,22 @@ class LiveCartelaCard extends StatelessWidget {
               child: Row(
                 children: [
                   if (isBlocked || isWinner)
-                    CartelaNumberHeaderLabel(
+                    CartelaNumberTapTarget(
                       number: gameCartela.cartela.number,
-                      style: theme.textTheme.titleMedium!.copyWith(
-                        color: headerOnColor,
-                        fontWeight: FontWeight.w900,
+                      child: CartelaNumberHeaderLabel(
+                        number: gameCartela.cartela.number,
+                        style: theme.textTheme.titleMedium!.copyWith(
+                          color: headerOnColor,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     )
                   else
-                    CartelaNumberCompactCircleBadge(
+                    CartelaNumberTapTarget(
                       number: gameCartela.cartela.number,
+                      child: CartelaNumberCompactCircleBadge(
+                        number: gameCartela.cartela.number,
+                      ),
                     ),
                   Expanded(
                     child: Center(

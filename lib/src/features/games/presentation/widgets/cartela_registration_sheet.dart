@@ -787,7 +787,7 @@ class _CartelaRegistrationSheetState
                                   _isBonus
                                       ? l10n.gameCategoryBonus
                                       : _isBigGotd
-                                      ? 'Big GOTD'
+                                      ? l10n.gameCategoryNormal
                                       : _isBigGame
                                       ? 'Big Game'
                                       : 'Preview',

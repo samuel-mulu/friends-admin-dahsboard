@@ -415,6 +415,7 @@ class CartelaMarkedPatternEvaluator {
     ];
     final allRectangles = _rectanglePatterns();
     final allSmallTs = _smallTPatterns();
+    final allSmallCrosses = _smallCrossPatterns();
     final allTriangle6 = _triangle6Patterns();
     final allTriangle4x4 = _triangle4x4Patterns();
     final allCorners = _cornerPatterns();
@@ -855,6 +856,57 @@ class CartelaMarkedPatternEvaluator {
           disallowOverlapWithGroups: const {'big_cross'},
         ),
       ]),
+      'TWO_LINES_FREE_TWO_WITHOUT_FREE': _comboRule([
+        _RequiredGroup(
+          key: 'touching_free',
+          candidates: touchingFreeLines,
+          requiredCount: 2,
+        ),
+        _RequiredGroup(
+          key: 'without_free',
+          candidates: withoutFreeLines,
+          requiredCount: 2,
+        ),
+      ]),
+      'SMALL_CROSS_TRIANGLE_SQUARE': _comboRule([
+        _RequiredGroup(
+          key: 'small_cross',
+          candidates: allSmallCrosses,
+          requiredCount: 1,
+        ),
+        _RequiredGroup(
+          key: 'triangle_6',
+          candidates: allTriangle6,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'small_cross'},
+        ),
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 1,
+          disallowOverlapWithGroups: const {'small_cross', 'triangle_6'},
+        ),
+      ]),
+      'FOUR_LINES_WITHOUT_FREE': _countedRule(
+        'lines_without_free',
+        withoutFreeLines,
+        4,
+      ),
+      'THREE_SQUARES_TWO_ANGLES': _comboRule([
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 3,
+          disallowOverlapWithinGroup: true,
+        ),
+        _RequiredGroup(
+          key: 'angles',
+          candidates: allCorners,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+          disallowOverlapWithGroups: const {'squares'},
+        ),
+      ]),
     };
   }
 
@@ -1062,6 +1114,14 @@ class CartelaMarkedPatternEvaluator {
     return [
       for (var index = 0; index < variants.length; index++)
         _CandidatePattern(id: 'small_t_$index', cells: variants[index]),
+    ];
+  }
+
+  static List<_CandidatePattern> _smallCrossPatterns() {
+    final variants = ExtendedGamePatterns.buildSmallCrossVariants();
+    return [
+      for (var index = 0; index < variants.length; index++)
+        _CandidatePattern(id: 'small_cross_$index', cells: variants[index]),
     ];
   }
 

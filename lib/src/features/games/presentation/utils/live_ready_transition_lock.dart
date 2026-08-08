@@ -7,10 +7,7 @@ const Duration kReadyTransitionLockTimeout = Duration(seconds: 9);
 /// Alias for callers that referenced the preparing-pin timeout constant.
 const Duration kPreparingStartTransitionTimeout = kReadyTransitionLockTimeout;
 
-enum ReadyTransitionReason {
-  preparingToPlay,
-  noPlayersHandoff,
-}
+enum ReadyTransitionReason { preparingToPlay, noPlayersHandoff }
 
 /// Local hold while a closing READY session's outcome is unknown.
 class ReadyTransitionLock {
@@ -115,6 +112,31 @@ bool registrationOpenGameSupersedesTransitionLock({
       scheduledStartAt.isAfter(now.add(const Duration(seconds: 5)));
 }
 
+bool isPreparingTransitionLockCanonicallyObsolete({
+  required ReadyTransitionLock lock,
+  required GameOperationsCurrentResponse? operations,
+}) {
+  if (!lock.isPreparingToPlay || operations == null) {
+    return false;
+  }
+
+  final lockSessionId = lock.sessionId;
+  if (operations.liveGame?.sessionId == lockSessionId ||
+      operations.checkingGame?.sessionId == lockSessionId) {
+    return false;
+  }
+
+  final registration = operations.registrationOpenGame;
+  if (registration == null ||
+      registration.sessionId == lockSessionId ||
+      registration.status != GameStatus.ready ||
+      !registration.canRegister) {
+    return false;
+  }
+
+  return true;
+}
+
 bool shouldClearReadyTransitionLock({
   required ReadyTransitionLock? lock,
   required GameOperationsCurrentResponse? operations,
@@ -130,14 +152,21 @@ bool shouldClearReadyTransitionLock({
   }
 
   final lockSessionId = lock.sessionId;
-  final live = operations?.liveGame ?? operations?.checkingGame;
-  if (live != null && live.sessionId == lockSessionId) {
+  if (operations?.liveGame?.sessionId == lockSessionId ||
+      operations?.checkingGame?.sessionId == lockSessionId) {
     return true;
   }
 
   if (pinnedGame != null &&
       pinnedGame.sessionId == lockSessionId &&
       isTransitionLockTerminalStatus(pinnedGame.status)) {
+    return true;
+  }
+
+  if (isPreparingTransitionLockCanonicallyObsolete(
+    lock: lock,
+    operations: operations,
+  )) {
     return true;
   }
 
@@ -232,9 +261,24 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
     );
   }
 
-  final live = operations.liveGame ?? operations.checkingGame;
-  if (live != null && live.sessionId == lockSessionId) {
-    return live;
+  final liveGame = operations.liveGame;
+  if (liveGame != null && liveGame.sessionId == lockSessionId) {
+    return liveGame;
+  }
+
+  final checkingGame = operations.checkingGame;
+  if (checkingGame != null && checkingGame.sessionId == lockSessionId) {
+    return checkingGame;
+  }
+
+  if (isPreparingTransitionLockCanonicallyObsolete(
+    lock: lock,
+    operations: operations,
+  )) {
+    return resolvePrimaryGameForOperations(
+      operations: operations,
+      ownsLiveCartelas: ownsLiveCartelas,
+    );
   }
 
   if (lock.isNoPlayersHandoff &&
@@ -253,7 +297,8 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
   final registration = operations.registrationOpenGame;
   if (registration != null &&
       registration.sessionId != lockSessionId &&
-      live == null) {
+      liveGame == null &&
+      checkingGame == null) {
     return snapshot;
   }
 
