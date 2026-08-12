@@ -473,7 +473,7 @@
   "updateVersionMinimum": "ዝቅተኛ",
   "updateVersionLatest": "የቅርብ ጊዜ",
   "updateAvailableMessage": "ስሪት {version} አለ።",
-  "updateRequiredMessage": "ይህ የመተግበሪያ ስሪት አልተደገፈም። ለመቀጠል እባክዎ ወደ ስሪት {version} ያዘምኑ።",
+  "updateRequiredMessage": "ይህ የመተግበሪያ ስሪት Update አልተደረገም። ለመቀጠል እባክዎ ወደ ስሪት {version} ያዘምኑ።",
   "updateLinkUnavailable": "የዝመና አገናኝ አይገኝም።",
 
   "guestPromptTitle": "ይህን ካርቴሎ ለመመዝገብ መለያ ፍጠር",

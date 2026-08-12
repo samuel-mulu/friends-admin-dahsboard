@@ -1242,6 +1242,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         );
       }
 
+      // Live play cartela list: no pull-to-refresh — swipe-down must only scroll.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1250,10 +1251,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             child: _buildStickyLiveHeader(),
           ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              child: _buildStickyLiveScrollView(),
-            ),
+            child: _buildStickyLiveScrollView(),
           ),
         ],
       );

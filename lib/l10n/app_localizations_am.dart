@@ -1566,7 +1566,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String updateRequiredMessage(String version) {
-    return 'ይህ የመተግበሪያ ስሪት አልተደገፈም። ለመቀጠል እባክዎ ወደ ስሪት $version ያዘምኑ።';
+    return 'ይህ የመተግበሪያ ስሪት Update አልተደረገም። ለመቀጠል እባክዎ ወደ ስሪት $version ያዘምኑ።';
   }
 
   @override

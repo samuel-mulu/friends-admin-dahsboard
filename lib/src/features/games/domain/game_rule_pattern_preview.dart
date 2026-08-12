@@ -801,24 +801,25 @@ class GameRulePatternPreview {
     ),
     'EIGHT_LINES': _sample(
       markedCells: _union([
-        _row(0),
-        _row(1),
-        _row(2),
-        _row(3),
-        _row(4),
         _col(0),
+        _col(1),
         _col(2),
-        _col(4),
+        _col(3),
+        _coords([
+          [2, 4],
+          [3, 4],
+          [4, 4],
+        ]),
       ]),
       linePatterns: [
-        _row(0),
-        _row(1),
+        _col(0),
+        _col(1),
+        _col(2),
+        _col(3),
         _row(2),
         _row(3),
         _row(4),
-        _col(0),
-        _col(2),
-        _col(4),
+        _diagMain(),
       ],
     ),
     'THREE_ROWS_TWO_COLUMNS': _sample(
@@ -871,8 +872,8 @@ class GameRulePatternPreview {
       ],
     ),
     'TWO_PARALLEL_LINES_TWO_DIAGONALS': _sample(
-      markedCells: _union([_row(0), _row(4), _diagMain(), _diagAnti()]),
-      linePatterns: [_row(0), _row(4), _diagMain(), _diagAnti()],
+      markedCells: _union([_col(1), _col(3), _diagMain(), _diagAnti()]),
+      linePatterns: [_col(1), _col(3), _diagMain(), _diagAnti()],
     ),
     'THREE_PARALLEL_LINES_ONE_DIAGONAL': _sample(
       markedCells: _union([_row(0), _row(1), _row(2), _diagMain()]),

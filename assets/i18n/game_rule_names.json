@@ -117,7 +117,7 @@
   "THREE_PARALLEL_LINES": {
     "en": "3 parallel lines",
     "am": "3 የማይገናኙ መስመር",
-    "ti": "3 ዘይራከቡ",
+    "ti": "3 መስመር ዘይራኸቡ ",
     "om": "3 parallel lines"
   },
   "FOUR_LINES_WITHOUT_DIAGONAL": {
@@ -338,8 +338,8 @@
   },
   "TWO_LINES_FREE_TWO_WITHOUT_FREE": {
     "en": "2 free lines + 2 without free",
-    "am": "2 በፍሪ መስመር + 2 ያለ ፍሪ",
-    "ti": "2 ብፍሪ መስመር + 2 ብዘይ ፍሪ",
+    "am": "2 በፍሪ መስመር + 2 ያለ ፍሪ መስመር",
+    "ti": "2 ፍሪ ዝነክእ  ምስ 2 ፍሪ ዘይ ነክእ መስመርእ",
     "om": "2 free lines + 2 without free"
   },
   "SMALL_CROSS_TRIANGLE_SQUARE": {
