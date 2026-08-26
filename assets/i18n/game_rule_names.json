@@ -96,6 +96,18 @@
     "ti": "ፍርቂ ገዛ ናብ 10 አንፈት",
     "om": "Half house in 10 directions"
   },
+  "ONE_LINE": {
+    "en": "1 line",
+    "am": "1 መስመር",
+    "ti": "1 መስመር",
+    "om": "1 line"
+  },
+  "TWO_LINES": {
+    "en": "2 lines",
+    "am": "2 መስመር",
+    "ti": "2 መስመር",
+    "om": "2 lines"
+  },
   "THREE_LINES": {
     "en": "3 lines",
     "am": "3 መስመር",

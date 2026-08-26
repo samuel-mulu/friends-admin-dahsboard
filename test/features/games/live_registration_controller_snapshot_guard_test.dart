@@ -68,7 +68,7 @@ void main() {
     );
 
     testWidgets(
-      'accepts fresh same-session full snapshot reduction without mutation',
+      'accepts newer same-revision remote snapshot reduction without registration bump',
       (tester) async {
         final repository = _FakeGamesRepository();
         final host = _FakeLiveGameHost(
@@ -92,14 +92,27 @@ void main() {
             12,
           ]);
 
-        final freshResponse = Completer<List<GameCartelaModel>>();
-        repository.onGetMyGameCartelas = (_) => freshResponse.future;
+        final firstResponse = Completer<List<GameCartelaModel>>();
+        final secondResponse = Completer<List<GameCartelaModel>>();
+        var fetchCount = 0;
+        repository.onGetMyGameCartelas = (_) {
+          fetchCount += 1;
+          return fetchCount == 1 ? firstResponse.future : secondResponse.future;
+        };
 
         unawaited(controller.refreshMyCartelasSilently());
         await tester.pump(const Duration(milliseconds: 400));
 
-        freshResponse.complete(
+        unawaited(controller.refreshMyCartelasSilently());
+        await tester.pump(const Duration(milliseconds: 400));
+
+        secondResponse.complete(
           _cartelas('session-a', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+        );
+        await tester.pump();
+
+        firstResponse.complete(
+          _cartelas('session-a', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
         );
         await tester.pump();
 
@@ -147,7 +160,7 @@ void main() {
     });
 
     testWidgets(
-      'READY to PLAYING stale snapshot cannot roll cartelas backward',
+      'CS-11 READY to PLAYING stale snapshot cannot roll cartelas backward',
       (tester) async {
         final repository = _FakeGamesRepository();
         final host = _FakeLiveGameHost(
@@ -165,20 +178,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
 
         host.game = _game(sessionId: 'session-a', status: GameStatus.playing);
-        controller.myCartelas = _cartelas('session-a', [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-        ]);
+        controller.applyMyCartelasOptimisticMerge(
+          sessionId: 'session-a',
+          incoming: _cartelas('session-a', [7, 8, 9, 10, 11, 12]),
+        );
         controller.noteConfirmedCurrentSessionRegistrationMutation('session-a');
         readyResponse.complete(_cartelas('session-a', [1, 2, 3, 4, 5, 6]));
 

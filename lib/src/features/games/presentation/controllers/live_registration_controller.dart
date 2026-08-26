@@ -17,6 +17,7 @@ import '../providers/registration_state_patch_provider.dart';
 import '../utils/cartela_display_order.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../utils/current_cartela_snapshot_guard.dart';
+import '../utils/merge_registered_cartelas.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/registration_ux_metrics.dart';
 import 'live_game_host.dart';
@@ -42,6 +43,8 @@ class LiveRegistrationController {
   Timer? myCartelasRefreshDebounceTimer;
   Timer? nextCartelasRefreshDebounceTimer;
   final CurrentCartelaSnapshotGuard currentCartelaSnapshotGuard =
+      CurrentCartelaSnapshotGuard();
+  final CurrentCartelaSnapshotGuard nextRegistrationCartelaSnapshotGuard =
       CurrentCartelaSnapshotGuard();
   final Map<String, RegistrationPanelSession> _panelSessions =
       <String, RegistrationPanelSession>{};
@@ -122,10 +125,24 @@ class LiveRegistrationController {
     currentCartelaSnapshotGuard.reset(sessionId);
   }
 
+  CurrentCartelaSnapshotToken captureCurrentSessionFetchToken(String sessionId) {
+    return currentCartelaSnapshotGuard.captureForFetch(sessionId);
+  }
+
   CurrentCartelaSnapshotToken captureCurrentSessionSnapshotToken(
     String sessionId,
   ) {
     return currentCartelaSnapshotGuard.capture(sessionId);
+  }
+
+  bool canApplyCurrentSessionRemoteSnapshot(
+    CurrentCartelaSnapshotToken token,
+    String responseSessionId,
+  ) {
+    return currentCartelaSnapshotGuard.canApplyRemote(
+      token,
+      responseSessionId: responseSessionId,
+    );
   }
 
   bool canApplyCurrentSessionSnapshot(
@@ -138,6 +155,55 @@ class LiveRegistrationController {
     );
   }
 
+  List<GameCartelaModel> sortedMyCartelas(List<GameCartelaModel> cartelas) {
+    return List<GameCartelaModel>.from(cartelas)
+      ..sort((left, right) {
+        return left.cartela.number.compareTo(right.cartela.number);
+      });
+  }
+
+  bool tryApplyMyCartelasRemoteSnapshot({
+    required CurrentCartelaSnapshotToken token,
+    required String responseSessionId,
+    required List<GameCartelaModel> cartelas,
+  }) {
+    if (!canApplyCurrentSessionRemoteSnapshot(token, responseSessionId)) {
+      return false;
+    }
+
+    host.markNeedsBuild(() {
+      myCartelas = sortedMyCartelas(cartelas);
+    });
+    currentCartelaSnapshotGuard.markRemoteApplied(token);
+    return true;
+  }
+
+  void applyMyCartelasOptimisticMerge({
+    required String sessionId,
+    required List<GameCartelaModel> incoming,
+  }) {
+    if (incoming.isEmpty) {
+      return;
+    }
+
+    host.markNeedsBuild(() {
+      myCartelas = sortedMyCartelas(
+        mergeRegisteredCartelas(
+          current: myCartelas,
+          incoming: incoming,
+          sessionId: sessionId,
+        ),
+      );
+    });
+  }
+
+  void clearMyCartelasForSessionTransition() {
+    host.markNeedsBuild(() {
+      myCartelas = const [];
+      clearMyCartelaDisplayOrder();
+    });
+  }
+
   void noteConfirmedCurrentSessionRegistrationMutation(String sessionId) {
     if (host.game?.sessionId != sessionId) {
       return;
@@ -146,6 +212,59 @@ class LiveRegistrationController {
       currentCartelaSnapshotGuard.reset(sessionId);
     }
     currentCartelaSnapshotGuard.bumpForConfirmedRegistration(sessionId);
+  }
+
+  void resetNextRegistrationCartelaSession(String? sessionId) {
+    nextRegistrationCartelaSnapshotGuard.reset(sessionId);
+  }
+
+  CurrentCartelaSnapshotToken captureNextRegistrationSnapshotToken(
+    String sessionId,
+  ) {
+    return nextRegistrationCartelaSnapshotGuard.capture(sessionId);
+  }
+
+  bool canApplyNextRegistrationSnapshot(
+    CurrentCartelaSnapshotToken token,
+    String responseSessionId,
+  ) {
+    return nextRegistrationCartelaSnapshotGuard.canApply(
+      token,
+      responseSessionId: responseSessionId,
+    );
+  }
+
+  bool shouldApplyNextRegistrationCartelasSnapshot({
+    required CurrentCartelaSnapshotToken? snapshotToken,
+    required String responseSessionId,
+  }) {
+    if (snapshotToken == null) {
+      return true;
+    }
+    return canApplyNextRegistrationSnapshot(snapshotToken, responseSessionId);
+  }
+
+  void noteConfirmedNextRegistrationSessionRegistrationMutation(
+    String sessionId,
+  ) {
+    if (trackedRegistrationSessionId != sessionId) {
+      return;
+    }
+    if (nextRegistrationCartelaSnapshotGuard.currentSessionId != sessionId) {
+      nextRegistrationCartelaSnapshotGuard.reset(sessionId);
+    }
+    nextRegistrationCartelaSnapshotGuard.bumpForConfirmedRegistration(
+      sessionId,
+    );
+  }
+
+  List<GameCartelaModel> sortedNextRegistrationCartelas(
+    List<GameCartelaModel> cartelas,
+  ) {
+    return List<GameCartelaModel>.from(cartelas)
+      ..sort((left, right) {
+        return left.cartela.number.compareTo(right.cartela.number);
+      });
   }
 
   String? effectiveSessionIdFor(
@@ -868,18 +987,36 @@ class LiveRegistrationController {
 
     final registeredSessionId = registeredCartelas.first.gameId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!host.mounted) {
+      if (!host.mounted || host.game == null) {
         return;
       }
 
+      final currentSessionId = host.game?.sessionId;
       host.ref.invalidate(registrationStateProvider(registeredSessionId));
       applyRegistrationPatch(registeredSessionId, registeredCartelas);
       host.ref.invalidate(myWalletProvider);
 
-      if (registeredSessionId == game.sessionId) {
+      if (currentSessionId != null &&
+          registeredSessionId == currentSessionId) {
+        applyMyCartelasOptimisticMerge(
+          sessionId: registeredSessionId,
+          incoming: registeredCartelas,
+        );
         noteConfirmedCurrentSessionRegistrationMutation(registeredSessionId);
         unawaited(refreshMyCartelasSilently());
       } else if (registeredSessionId == trackedRegistrationSessionId) {
+        noteConfirmedNextRegistrationSessionRegistrationMutation(
+          registeredSessionId,
+        );
+        host.markNeedsBuild(() {
+          nextRegistrationCartelas = sortedNextRegistrationCartelas(
+            mergeRegisteredCartelas(
+              current: nextRegistrationCartelas,
+              incoming: registeredCartelas,
+              sessionId: registeredSessionId,
+            ),
+          );
+        });
         unawaited(refreshNextRegistrationCartelasSilently());
       }
     });
@@ -904,23 +1041,18 @@ class LiveRegistrationController {
         }
 
         try {
-          final snapshotToken = captureCurrentSessionSnapshotToken(sessionId);
+          final snapshotToken = captureCurrentSessionFetchToken(sessionId);
           final cartelas = await host.gamesRepository.getMyGameCartelas(
             sessionId,
           );
           if (!host.mounted || host.game?.sessionId != sessionId) {
             return;
           }
-          if (!canApplyCurrentSessionSnapshot(snapshotToken, sessionId)) {
-            return;
-          }
-
-          host.markNeedsBuild(() {
-            myCartelas = cartelas
-              ..sort((left, right) {
-                return left.cartela.number.compareTo(right.cartela.number);
-              });
-          });
+          tryApplyMyCartelasRemoteSnapshot(
+            token: snapshotToken,
+            responseSessionId: sessionId,
+            cartelas: cartelas,
+          );
           onUpdated?.call();
         } catch (_) {
           if (!host.mounted || host.game?.sessionId != sessionId) {
@@ -950,18 +1082,21 @@ class LiveRegistrationController {
         }
 
         try {
+          final snapshotToken = captureNextRegistrationSnapshotToken(sessionId);
           final nextCartelas = await host.gamesRepository.getMyGameCartelas(
             sessionId,
           );
           if (!host.mounted || trackedRegistrationSessionId != sessionId) {
             return;
           }
+          if (!canApplyNextRegistrationSnapshot(snapshotToken, sessionId)) {
+            return;
+          }
 
           host.markNeedsBuild(() {
-            nextRegistrationCartelas = List<GameCartelaModel>.from(nextCartelas)
-              ..sort((left, right) {
-                return left.cartela.number.compareTo(right.cartela.number);
-              });
+            nextRegistrationCartelas = sortedNextRegistrationCartelas(
+              nextCartelas,
+            );
           });
         } catch (_) {
           // Keep current next-registration cartelas if the silent refresh fails.

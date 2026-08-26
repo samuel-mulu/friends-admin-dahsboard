@@ -484,6 +484,11 @@ class GameRulePatternPreview {
       ],
     ),
     'HALF_HOUSE_10_DIRECTIONS': _sample(markedCells: _topRightTriangle),
+    'ONE_LINE': _sample(markedCells: _row(0), linePatterns: [_row(0)]),
+    'TWO_LINES': _sample(
+      markedCells: _union([_row(0), _col(0)]),
+      linePatterns: [_row(0), _col(0)],
+    ),
     'THREE_LINES': _sample(markedCells: _union([_row(0), _row(1), _col(0)])),
     'THREE_ROWS_ONE_DIAGONAL': _sample(
       markedCells: _union([_row(0), _row(1), _row(2), _diagMain()]),
@@ -1064,6 +1069,9 @@ class GameRulePatternPreview {
     'MIX_13': 'Complete 2 columns and 2 rows. Overlap allowed.',
     'BIG_H': 'Complete the big H shape pattern. Overlap allowed.',
     'HALF_HOUSE_10_DIRECTIONS': 'Complete one of the 10 half-house patterns.',
+    'ONE_LINE': 'Complete 1 line (row, column, or diagonal).',
+    'TWO_LINES':
+        'Complete 2 lines (row, column, or diagonal). Overlap allowed.',
     'THREE_LINES':
         'Complete 3 lines (row, column, or diagonal). Overlap allowed.',
     'THREE_ROWS_ONE_DIAGONAL':

@@ -530,6 +530,8 @@ class CartelaMarkedPatternEvaluator {
         'half_house_10',
         _halfHouseTenDirectionPatterns(),
       ),
+      'ONE_LINE': _countedRule('lines', allLines, 1),
+      'TWO_LINES': _countedRule('lines', allLines, 2),
       'THREE_LINES': _countedRule('lines', allLines, 3),
       'THREE_ROWS_ONE_DIAGONAL': _comboRule([
         _RequiredGroup(key: 'rows', candidates: allRows, requiredCount: 3),
