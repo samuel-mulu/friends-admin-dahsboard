@@ -308,6 +308,114 @@ class BigGameLiveElsewhere {
   }
 }
 
+/// Prior finished Big Game round — used for missed Round N → register Round N+1 UI.
+class BigGameRoundWinnerSummary {
+  const BigGameRoundWinnerSummary({
+    required this.userId,
+    required this.fullName,
+    required this.cartelaNumber,
+    required this.amount,
+  });
+
+  final String userId;
+  final String fullName;
+  final int cartelaNumber;
+  final String amount;
+
+  factory BigGameRoundWinnerSummary.fromJson(Map<String, dynamic> json) {
+    return BigGameRoundWinnerSummary(
+      userId: json['userId'] as String? ?? '',
+      fullName: (json['fullName'] as String?)?.trim() ?? '',
+      cartelaNumber: (json['cartelaNumber'] as num?)?.toInt() ?? 0,
+      amount: json['amount']?.toString() ?? '0',
+    );
+  }
+}
+
+class BigGameFinishedRoundSummary {
+  const BigGameFinishedRoundSummary({
+    required this.sessionId,
+    required this.roundIndex,
+    required this.status,
+    this.playCode,
+    this.finishedAt,
+    this.prizeAmount,
+    this.winners = const [],
+  });
+
+  final String sessionId;
+  final int roundIndex;
+  final GameStatus status;
+  final String? playCode;
+  final DateTime? finishedAt;
+  final String? prizeAmount;
+  final List<BigGameRoundWinnerSummary> winners;
+
+  factory BigGameFinishedRoundSummary.fromJson(Map<String, dynamic> json) {
+    final winnersRaw = json['winners'];
+    return BigGameFinishedRoundSummary(
+      sessionId: json['sessionId'] as String,
+      roundIndex: (json['roundIndex'] as num?)?.toInt() ?? 1,
+      status: GameStatus.fromApi(json['status'] as String? ?? 'FINISHED'),
+      playCode: json['playCode'] as String?,
+      finishedAt: json['finishedAt'] is String
+          ? DateTime.tryParse(json['finishedAt'] as String)
+          : null,
+      prizeAmount: json['prizeAmount']?.toString(),
+      winners: winnersRaw is List
+          ? winnersRaw
+                .whereType<Map<String, dynamic>>()
+                .map(BigGameRoundWinnerSummary.fromJson)
+                .toList(growable: false)
+          : const [],
+    );
+  }
+}
+
+class BigGamePreviousRoundSummary {
+  const BigGamePreviousRoundSummary({
+    required this.sessionId,
+    required this.roundIndex,
+    required this.status,
+    this.playCode,
+    this.finishedAt,
+    this.registeredCartelasCount = 0,
+    this.playerOwnedPreviousRound = false,
+    this.winners = const [],
+  });
+
+  final String sessionId;
+  final int roundIndex;
+  final GameStatus status;
+  final String? playCode;
+  final DateTime? finishedAt;
+  final int registeredCartelasCount;
+  final bool playerOwnedPreviousRound;
+  final List<BigGameRoundWinnerSummary> winners;
+
+  factory BigGamePreviousRoundSummary.fromJson(Map<String, dynamic> json) {
+    final winnersRaw = json['winners'];
+    return BigGamePreviousRoundSummary(
+      sessionId: json['sessionId'] as String,
+      roundIndex: (json['roundIndex'] as num?)?.toInt() ?? 1,
+      status: GameStatus.fromApi(json['status'] as String? ?? 'FINISHED'),
+      playCode: json['playCode'] as String?,
+      finishedAt: json['finishedAt'] is String
+          ? DateTime.tryParse(json['finishedAt'] as String)
+          : null,
+      registeredCartelasCount:
+          (json['registeredCartelasCount'] as num?)?.toInt() ?? 0,
+      playerOwnedPreviousRound: json['playerOwnedPreviousRound'] == true,
+      winners: winnersRaw is List
+          ? winnersRaw
+                .whereType<Map<String, dynamic>>()
+                .map(BigGameRoundWinnerSummary.fromJson)
+                .toList(growable: false)
+          : const [],
+    );
+  }
+}
+
 // Model for registered cartela summary from backend
 class RegisteredCartelaSummary {
   const RegisteredCartelaSummary({
@@ -316,6 +424,7 @@ class RegisteredCartelaSummary {
     required this.owner,
     required this.status,
     this.expiresAt,
+    this.paymentSource,
   });
 
   final String cartelaId;
@@ -323,11 +432,16 @@ class RegisteredCartelaSummary {
   final String owner; // ME | OTHER | RESERVED_ME | RESERVED_OTHER
   final String status; // REGISTERED | WINNER | BLOCKED | RESERVED
   final DateTime? expiresAt;
+  final String? paymentSource;
 
   bool get isMine => owner == 'ME';
   bool get isTaken => owner == 'OTHER';
   bool get isReservedByMe => owner == 'RESERVED_ME';
   bool get isReservedByOther => owner == 'RESERVED_OTHER';
+  bool get isCarriedForward {
+    final source = paymentSource?.trim().toUpperCase();
+    return source == 'CARRIED_FORWARD';
+  }
 
   factory RegisteredCartelaSummary.fromJson(Map<String, dynamic> json) {
     return RegisteredCartelaSummary(
@@ -338,6 +452,7 @@ class RegisteredCartelaSummary {
       expiresAt: json['expiresAt'] is String
           ? DateTime.tryParse(json['expiresAt'] as String)
           : null,
+      paymentSource: json['paymentSource'] as String?,
     );
   }
 }
@@ -385,6 +500,16 @@ class GameModel {
     this.heldWaitingForLiveSlot = false,
     this.blockingLiveGame,
     this.latestCalledNumberIdentity,
+    this.roundCount,
+    this.currentRound,
+    this.roundIndex,
+    this.roundPrizes,
+    this.roundPrizeAmount,
+    this.nextRoundStartsAt,
+    this.bigGameTicketBalance,
+    this.previousRound,
+    this.finishedRounds,
+    this.nextRoundRegistration,
   });
 
   final String id;
@@ -430,6 +555,18 @@ class GameModel {
   final bool heldWaitingForLiveSlot;
   final BlockingLiveGameSummary? blockingLiveGame;
   final BackendCalledNumberIdentity? latestCalledNumberIdentity;
+  final int? roundCount;
+  final int? currentRound;
+  final int? roundIndex;
+  final List<String>? roundPrizes;
+  final String? roundPrizeAmount;
+  final DateTime? nextRoundStartsAt;
+  final int? bigGameTicketBalance;
+  final BigGamePreviousRoundSummary? previousRound;
+  /// Finished prior rounds with winners (Round 1…N-1 while on Round N).
+  final List<BigGameFinishedRoundSummary>? finishedRounds;
+  /// READY next round while this session is still live (queue-like overlap).
+  final GameModel? nextRoundRegistration;
 
   /// Simplified player-facing status (combines NEXT + READY into Registration Open)
   PlayerGameStatus get playerStatus => status.playerStatus;
@@ -445,6 +582,63 @@ class GameModel {
   bool get hasFreeEntry => category.hasFreeEntry;
 
   bool get canUseBonusCartelaBalance => category.canUseBonusCartelaBalance;
+
+  int get displayRoundIndex => roundIndex ?? currentRound ?? 1;
+
+  int get displayRoundCount => roundCount ?? 1;
+
+  bool get hasMultipleRounds => displayRoundCount > 1;
+
+  /// Missed-player next-round registration: READY after finish, or READY
+  /// opened while this round is still live.
+  bool get showBigGameMissedRoundRegistration {
+    if (!isBigGame) {
+      return false;
+    }
+
+    final next = nextRoundRegistration;
+    if (next != null &&
+        next.canRegister &&
+        (status == GameStatus.playing ||
+            status == GameStatus.checking ||
+            status == GameStatus.winnerWindow)) {
+      final previous = next.previousRound;
+      if (previous == null) {
+        return false;
+      }
+      return !previous.playerOwnedPreviousRound;
+    }
+
+    if (!canRegister) {
+      return false;
+    }
+    final previous = previousRound;
+    if (previous == null) {
+      return false;
+    }
+    if (displayRoundIndex <= 1) {
+      return false;
+    }
+    if (status != GameStatus.ready && status != GameStatus.next) {
+      return false;
+    }
+    return !previous.playerOwnedPreviousRound;
+  }
+
+  String? get effectiveRoundPrizeAmount {
+    if (roundPrizeAmount != null && roundPrizeAmount!.trim().isNotEmpty) {
+      return roundPrizeAmount;
+    }
+    final prizes = roundPrizes;
+    if (prizes == null || prizes.isEmpty) {
+      return null;
+    }
+    final index = displayRoundIndex - 1;
+    if (index < 0 || index >= prizes.length) {
+      return null;
+    }
+    return prizes[index];
+  }
 
   /// Whether this game shows as "Registration Open" to players
   bool get isRegistrationOpen =>
@@ -493,11 +687,19 @@ class GameModel {
         (json['playCode'] as String).trim().isNotEmpty &&
         gameSlot != null;
 
+    // Session payloads use `id` as sessionId; slot id lives on gameSlotId / gameSlot.id.
+    // GameModel.id must always be the slot id so register-for-slot APIs work.
+    final slotId =
+        (json['gameSlotId'] as String?) ??
+        (gameSlot?['id'] as String?) ??
+        (json['slotId'] as String?) ??
+        (json['id'] as String);
+
     return GameModel(
-      id: json['id'] as String,
+      id: slotId,
       sessionId: isSessionPayload
           ? (json['sessionId'] as String?) ?? json['id'] as String
-          : null,
+          : (json['sessionId'] as String?),
       staticCode:
           (json['staticCode'] as String?) ??
           (gameSlot?['staticCode'] as String?) ??
@@ -575,6 +777,33 @@ class GameModel {
       blockingLiveGame: json['blockingLiveGame'] is Map<String, dynamic>
           ? BlockingLiveGameSummary.fromJson(
               json['blockingLiveGame'] as Map<String, dynamic>,
+            )
+          : null,
+      roundCount: _parseInt(json['roundCount'] ?? gameSlot?['roundCount']),
+      currentRound: _parseInt(
+        json['currentRound'] ?? gameSlot?['currentRound'],
+      ),
+      roundIndex: _parseInt(json['roundIndex']),
+      roundPrizes: _parseRoundPrizes(
+        json['roundPrizes'] ?? gameSlot?['roundPrizes'],
+      ),
+      roundPrizeAmount: _parseOptionalMoney(json['roundPrizeAmount']),
+      nextRoundStartsAt: _parseDate(json['nextRoundStartsAt']),
+      bigGameTicketBalance: _parseInt(json['bigGameTicketBalance']),
+      previousRound: json['previousRound'] is Map<String, dynamic>
+          ? BigGamePreviousRoundSummary.fromJson(
+              json['previousRound'] as Map<String, dynamic>,
+            )
+          : null,
+      finishedRounds: json['finishedRounds'] is List
+          ? (json['finishedRounds'] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(BigGameFinishedRoundSummary.fromJson)
+                .toList(growable: false)
+          : null,
+      nextRoundRegistration: json['nextRoundRegistration'] is Map<String, dynamic>
+          ? GameModel.fromSessionJson(
+              json['nextRoundRegistration'] as Map<String, dynamic>,
             )
           : null,
     );
@@ -667,6 +896,13 @@ class GameModel {
       latestCalledNumberIdentity: BackendCalledNumberIdentity.fromJson(
         json['latestCalledNumber'],
       ),
+      roundCount: _parseInt(json['roundCount']),
+      currentRound: _parseInt(json['currentRound']),
+      roundIndex: _parseInt(json['roundIndex']),
+      roundPrizes: _parseRoundPrizes(json['roundPrizes']),
+      roundPrizeAmount: _parseOptionalMoney(json['roundPrizeAmount']),
+      nextRoundStartsAt: _parseDate(json['nextRoundStartsAt']),
+      bigGameTicketBalance: _parseInt(json['bigGameTicketBalance']),
     );
   }
 
@@ -882,6 +1118,16 @@ class GameModel {
     GameCategory? category,
     Object? fixedPrizeAmount = _copyWithKeep,
     Object? maxCartelasPerPlayer = _copyWithKeep,
+    Object? roundCount = _copyWithKeep,
+    Object? currentRound = _copyWithKeep,
+    Object? roundIndex = _copyWithKeep,
+    Object? roundPrizes = _copyWithKeep,
+    Object? roundPrizeAmount = _copyWithKeep,
+    Object? nextRoundStartsAt = _copyWithKeep,
+    Object? bigGameTicketBalance = _copyWithKeep,
+    Object? previousRound = _copyWithKeep,
+    Object? finishedRounds = _copyWithKeep,
+    Object? nextRoundRegistration = _copyWithKeep,
   }) {
     return GameModel(
       id: id,
@@ -935,6 +1181,39 @@ class GameModel {
       maxCartelasPerPlayer: identical(maxCartelasPerPlayer, _copyWithKeep)
           ? this.maxCartelasPerPlayer
           : maxCartelasPerPlayer as int?,
+      heldWaitingForLiveSlot: heldWaitingForLiveSlot,
+      blockingLiveGame: blockingLiveGame,
+      latestCalledNumberIdentity: latestCalledNumberIdentity,
+      roundCount: identical(roundCount, _copyWithKeep)
+          ? this.roundCount
+          : roundCount as int?,
+      currentRound: identical(currentRound, _copyWithKeep)
+          ? this.currentRound
+          : currentRound as int?,
+      roundIndex: identical(roundIndex, _copyWithKeep)
+          ? this.roundIndex
+          : roundIndex as int?,
+      roundPrizes: identical(roundPrizes, _copyWithKeep)
+          ? this.roundPrizes
+          : roundPrizes as List<String>?,
+      roundPrizeAmount: identical(roundPrizeAmount, _copyWithKeep)
+          ? this.roundPrizeAmount
+          : roundPrizeAmount as String?,
+      nextRoundStartsAt: identical(nextRoundStartsAt, _copyWithKeep)
+          ? this.nextRoundStartsAt
+          : nextRoundStartsAt as DateTime?,
+      bigGameTicketBalance: identical(bigGameTicketBalance, _copyWithKeep)
+          ? this.bigGameTicketBalance
+          : bigGameTicketBalance as int?,
+      previousRound: identical(previousRound, _copyWithKeep)
+          ? this.previousRound
+          : previousRound as BigGamePreviousRoundSummary?,
+      finishedRounds: identical(finishedRounds, _copyWithKeep)
+          ? this.finishedRounds
+          : finishedRounds as List<BigGameFinishedRoundSummary>?,
+      nextRoundRegistration: identical(nextRoundRegistration, _copyWithKeep)
+          ? this.nextRoundRegistration
+          : nextRoundRegistration as GameModel?,
     );
   }
 
@@ -947,7 +1226,20 @@ class GameModel {
     if (value is num) {
       return value.round();
     }
+    if (value is String) {
+      return int.tryParse(value.trim());
+    }
     return null;
+  }
+
+  static List<String>? _parseRoundPrizes(Object? value) {
+    if (value is! List) {
+      return null;
+    }
+    return value
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
   }
 
   static String? _parseOptionalMoney(Object? value) {

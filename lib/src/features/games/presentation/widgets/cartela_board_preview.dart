@@ -15,10 +15,15 @@ List<List<String>> emptyCartelaBoardColumns() => [
 class CartelaBoardPreview extends StatelessWidget {
   const CartelaBoardPreview({
     required this.columns,
+    this.calledNumbers = const <int>{},
     super.key,
   });
 
   final List<List<String>> columns;
+
+  /// Session called ball numbers — cells whose value is in this set are marked
+  /// (same rule as admin game-history cartela expand).
+  final Set<int> calledNumbers;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +63,9 @@ class CartelaBoardPreview extends StatelessWidget {
                       ? columns[columnIndex][rowIndex]
                       : '';
                   final isFree = value == 'FREE';
+                  final cellNumber = int.tryParse(value);
+                  final isCalled = isFree ||
+                      (cellNumber != null && calledNumbers.contains(cellNumber));
 
                   return Expanded(
                     child: Container(
@@ -72,11 +80,11 @@ class CartelaBoardPreview extends StatelessWidget {
                                 .withValues(alpha: isDark ? 0.25 : 0.35)
                             : AppBranding.cellBackground(
                                 context,
-                                marked: false,
+                                marked: isCalled,
                               ),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isFree
+                          color: isFree || isCalled
                               ? AppBranding.gold
                               : theme.colorScheme.outlineVariant
                                   .withValues(alpha: 0.45),
@@ -92,11 +100,18 @@ class CartelaBoardPreview extends StatelessWidget {
                             style: TextStyle(
                               fontSize: isFree ? 22 : 26,
                               fontWeight:
-                                  isFree ? FontWeight.w800 : FontWeight.w700,
+                                  isFree || isCalled
+                                      ? FontWeight.w800
+                                      : FontWeight.w700,
                               height: 1,
                               color: isFree
                                   ? AppBranding.casinoPurpleDeep
-                                  : theme.colorScheme.onSurface,
+                                  : isCalled
+                                      ? AppBranding.cellForeground(
+                                          context,
+                                          marked: true,
+                                        )
+                                      : theme.colorScheme.onSurface,
                             ),
                           ),
                         ),

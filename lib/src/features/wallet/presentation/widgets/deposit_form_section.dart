@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
@@ -18,9 +17,6 @@ class DepositFormSection extends StatelessWidget {
     this.amountServerError,
     this.transactionRefServerError,
     this.previewNotice,
-    this.onScanReceipt,
-    this.isScanLoading = false,
-    this.scanTooltip,
     this.preserveTransactionRefCase = false,
     super.key,
   });
@@ -35,9 +31,6 @@ class DepositFormSection extends StatelessWidget {
   final String? amountServerError;
   final String? transactionRefServerError;
   final String? previewNotice;
-  final VoidCallback? onScanReceipt;
-  final bool isScanLoading;
-  final String? scanTooltip;
   final bool preserveTransactionRefCase;
 
   @override
@@ -92,35 +85,11 @@ class DepositFormSection extends StatelessWidget {
                     ? PaymentProvider.telebirr.transactionRefHint
                     : provider.transactionRefHint,
                 prefixIcon: const Icon(Icons.tag_outlined),
-                suffixIcon: onScanReceipt == null
-                    ? null
-                    : isScanLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        tooltip: scanTooltip,
-                        onPressed: onScanReceipt,
-                        icon: const Icon(Icons.document_scanner_outlined),
-                      ),
               ),
               validator: transactionRefValidator,
               onChanged: (_) => onFieldChanged(),
               forceErrorText: transactionRefServerError,
             ),
-            if (provider == PaymentProvider.telebirr &&
-                onScanReceipt != null) ...[
-              VGap.md,
-              _ReceiptScreenshotHelper(
-                onScreenshotTap: onScanReceipt!,
-                enabled: !isScanLoading,
-              ),
-            ],
             if (previewNotice != null) ...[
               VGap.xl,
               Text(
@@ -132,48 +101,6 @@ class DepositFormSection extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ReceiptScreenshotHelper extends StatelessWidget {
-  const _ReceiptScreenshotHelper({
-    required this.onScreenshotTap,
-    required this.enabled,
-  });
-
-  final VoidCallback onScreenshotTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final linkStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.primary,
-      decoration: TextDecoration.underline,
-      decorationColor: theme.colorScheme.primary,
-      fontWeight: FontWeight.w600,
-    );
-    final bodyStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
-
-    return Text.rich(
-      TextSpan(
-        style: bodyStyle,
-        children: [
-          TextSpan(text: l10n.depositReceiptScreenshotHelperPrefix),
-          TextSpan(
-            text: l10n.depositReceiptScreenshotHelperLink,
-            style: linkStyle,
-            recognizer: enabled
-                ? (TapGestureRecognizer()..onTap = onScreenshotTap)
-                : null,
-          ),
-          TextSpan(text: l10n.depositReceiptScreenshotHelperSuffix),
-        ],
       ),
     );
   }

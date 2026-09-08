@@ -1,5 +1,6 @@
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
+import '../../domain/big_game_phase.dart';
 import '../../../../core/utils/api_date_time.dart';
 
 /// Derived UI-only phases for live game transitions. Backend game statuses are
@@ -372,6 +373,7 @@ class LivePresentationPhaseResolver {
     required List<CalledNumberModel> calledNumbers,
     required Duration staleAfter,
     bool blockingLiveGameExists = false,
+    DateTime? now,
   }) {
     if (game == null) {
       return LivePresentationPhase.noActiveGame;
@@ -429,6 +431,7 @@ class LivePresentationPhaseResolver {
         registrationCountdownClosed: registrationCountdownClosed,
         staleAfter: staleAfter,
         blockingLiveGameExists: blockingLiveGameExists,
+        now: now,
       );
     }
 
@@ -444,7 +447,17 @@ class LivePresentationPhaseResolver {
     required bool registrationCountdownClosed,
     required Duration staleAfter,
     required bool blockingLiveGameExists,
+    DateTime? now,
   }) {
+    final currentTime = now ?? DateTime.now();
+    // Big Game: prefer the same play-window rule as the outer banner so a
+    // stale canRegister=false / local closed latch cannot show "closed" while
+    // Play starts in still has time left.
+    if (game.isBigGame &&
+        isBigGameRegistrationWindowOpen(game, now: currentTime)) {
+      return LivePresentationPhase.registrationOpen;
+    }
+
     if (!game.canRegister) {
       return LivePresentationPhase.preparingGame;
     }
@@ -454,6 +467,7 @@ class LivePresentationPhaseResolver {
       registrationCountdownClosed: registrationCountdownClosed,
       staleAfter: staleAfter,
       blockingLiveGameExists: blockingLiveGameExists,
+      now: currentTime,
     );
 
     if (!countdownElapsed) {

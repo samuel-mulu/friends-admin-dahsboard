@@ -16,11 +16,16 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/domain/user_profile.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/presentation/screens/telegram_phone_link_screen.dart';
+import '../../../auth/presentation/widgets/active_sessions_sheet.dart';
+import '../../../auth/presentation/widgets/security_password_sheet.dart';
 import '../../../profile/presentation/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../../games/domain/big_game_phase.dart';
 import '../../../games/presentation/providers/current_big_game_provider.dart';
 import '../../../games/presentation/utils/big_game_countdown.dart';
+import '../../../games/presentation/providers/cartela_sort_mode_provider.dart';
+import '../../../games/presentation/utils/cartela_marked_pattern_evaluator.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
 import 'terms_conditions_dialog.dart';
@@ -214,6 +219,19 @@ class AppSettingsDrawer extends ConsumerWidget {
                     ),
                   ),
                   VGap.md,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
+                    child: _DrawerSectionCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: const _CartelaLinesSortCard(),
+                    ),
+                  ),
+                  VGap.md,
                   _DrawerSectionCard(
                     child: Column(
                       children: [
@@ -281,6 +299,86 @@ class AppSettingsDrawer extends ConsumerWidget {
                     child: const DrawerAppVersionCard(),
                   ),
                   VGap.md,
+                  if (!isGuest) ...[
+                    _DrawerSectionCard(
+                      child: Column(
+                        children: [
+                          _DrawerSectionHeader(
+                            icon: Icons.security_rounded,
+                            iconColor: theme.colorScheme.primary,
+                            title: l10n.securitySectionTitle,
+                          ),
+                          _DrawerMenuRow(
+                            icon: Icons.lock_outline_rounded,
+                            label: (user?.hasPassword ?? true)
+                                ? l10n.securityChangePassword
+                                : l10n.securitySetPassword,
+                            showChevron: true,
+                            onTap: () {
+                              final scaffoldContext =
+                                  Scaffold.maybeOf(context)?.context ?? context;
+                              Navigator.of(context).pop();
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!scaffoldContext.mounted) {
+                                  return;
+                                }
+                                unawaited(
+                                  showSecurityPasswordSheet(
+                                    scaffoldContext,
+                                    ref,
+                                  ),
+                                );
+                              });
+                            },
+                          ),
+                          _DrawerDivider(theme: theme),
+                          _DrawerMenuRow(
+                            icon: Icons.devices_rounded,
+                            label: l10n.securityActiveSessions,
+                            showChevron: true,
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              unawaited(showActiveSessionsSheet(context));
+                            },
+                          ),
+                          _DrawerDivider(theme: theme),
+                          _DrawerMenuRow(
+                            icon: Icons.send_outlined,
+                            label: (user?.telegramLinked ?? false)
+                                ? l10n.telegramUnlink
+                                : l10n.telegramLink,
+                            showChevron: true,
+                            onTap: () async {
+                              Navigator.of(context).pop();
+                              if (user?.telegramLinked ?? false) {
+                                final ok = await ref
+                                    .read(authControllerProvider.notifier)
+                                    .unlinkTelegram();
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      ok
+                                          ? l10n.telegramUnlinked
+                                          : (ref
+                                                  .read(authControllerProvider)
+                                                  .errorMessage ??
+                                              l10n.telegramOpenFailed),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                await launchTelegramLogin(context, ref);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    VGap.md,
+                  ],
                   _DrawerSectionCard(
                     child: Column(
                       children: [
@@ -838,18 +936,21 @@ class _DrawerBigGameStatus extends ConsumerWidget {
           BigGamePhase.registrationOpen => l10n.bigGameRegistrationOpenTitle,
           BigGamePhase.waitingToPlay => l10n.bigGameReadyTitle,
           BigGamePhase.live => l10n.announcementBigGameLive,
+          BigGamePhase.betweenRounds => l10n.bigGameBetweenRoundsTitle,
           _ => l10n.drawerBigGame,
         };
 
         final countdownTarget = switch (phase) {
           BigGamePhase.beforeRegistrationOpens => game.registrationOpensAt,
           BigGamePhase.registrationOpen => game.scheduledStartAt,
+          BigGamePhase.betweenRounds => game.nextRoundStartsAt,
           _ => null,
         };
         final countdownLabel = switch (phase) {
           BigGamePhase.beforeRegistrationOpens =>
             l10n.bigGameRegistrationOpensIn,
           BigGamePhase.registrationOpen => l10n.bigGamePlayStartsIn,
+          BigGamePhase.betweenRounds => l10n.bigGameNextRoundStartsIn,
           _ => null,
         };
         final countdown = countdownTarget != null
@@ -1173,6 +1274,42 @@ class _NotificationSettingsSheet extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CartelaLinesSortCard extends ConsumerWidget {
+  const _CartelaLinesSortCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final sortMode = ref.watch(cartelaSortModeProvider);
+    final sortEnabled = sortMode.sortsByLines;
+
+    return SwitchListTile.adaptive(
+      contentPadding: EdgeInsets.zero,
+      secondary: Icon(
+        Icons.view_agenda_outlined,
+        color: sortEnabled
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+      ),
+      title: Text(
+        l10n.drawerSortCartelasByLines,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      value: sortEnabled,
+      onChanged: (value) {
+        unawaited(
+          ref.read(cartelaSortModeProvider.notifier).setSortMode(
+                value ? CartelaSortMode.lines : CartelaSortMode.manual,
+              ),
+        );
+      },
     );
   }
 }

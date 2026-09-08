@@ -8,6 +8,15 @@ class DepositGuideStep {
   final String Function(AppLocalizations l10n) label;
 }
 
+/// YouTube guide URL from backend deposit config only (`guideVideoUrl`).
+String? resolveDepositGuideYoutubeUrl({
+  required PaymentProvider provider,
+  String? remoteUrl,
+}) {
+  final fromApi = remoteUrl?.trim() ?? '';
+  return fromApi.isEmpty ? null : fromApi;
+}
+
 String depositGuideAssetPath(PaymentProvider provider, int step) {
   final folder = switch (provider) {
     PaymentProvider.telebirr => 'telebirr',

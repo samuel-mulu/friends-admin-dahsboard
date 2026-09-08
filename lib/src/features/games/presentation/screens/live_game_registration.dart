@@ -136,6 +136,7 @@ class _CartelaRegistrationPanelState
   bool _autoOpenConsumed = false;
   bool _autoOpenScheduled = false;
   List<String>? _shuffledCartelaIds;
+  bool _preferBigGameTicket = true;
 
   final ValueNotifier<int> _gridVisualRevision = ValueNotifier<int>(0);
   final ValueNotifier<int> _selectModeRevision = ValueNotifier<int>(0);
@@ -266,6 +267,28 @@ class _CartelaRegistrationPanelState
   bool get _isBigGame => widget.category == GameCategory.bigGame;
 
   int get _bonusCartelaLimit => widget.maxCartelasPerPlayer ?? 5;
+
+  int get _bigGameTicketBalance {
+    final walletAsync = ref.read(myWalletProvider);
+    return walletAsync is AsyncData<WalletModel>
+        ? walletAsync.value.bigGameTicketBalance
+        : 0;
+  }
+
+  bool get _canChooseBigTicketPayment =>
+      _isBigGame && _bigGameTicketBalance > 0;
+
+  bool get _usingBigGameTicket =>
+      _canChooseBigTicketPayment && _preferBigGameTicket;
+
+  String? get _bigGamePaymentSource {
+    if (!_isBigGame) {
+      return null;
+    }
+    return _usingBigGameTicket
+        ? CartelaPaymentSource.bigGameTicket
+        : CartelaPaymentSource.moneyWallet;
+  }
 
   int _currentMineCount(List<RegisteredCartelaSummary> summary) {
     final mineIds = <String>{
@@ -501,7 +524,7 @@ class _CartelaRegistrationPanelState
 
   String get _selectedTotalCost {
     final count = _session.selectionCount;
-    if (count == 0 || _hasFreeEntry) {
+    if (count == 0 || _hasFreeEntry || _usingBigGameTicket) {
       return '0';
     }
     final bonusCartelas = _usableBonusCartelaBalance;
@@ -520,7 +543,7 @@ class _CartelaRegistrationPanelState
       _canUseBonusCartelaBalance ? _bonusCartelaBalance : 0;
 
   String? _selectedRemainingBalance(String? walletBalance) {
-    if (_hasFreeEntry) {
+    if (_hasFreeEntry || _usingBigGameTicket) {
       return null;
     }
     if (walletBalance == null) {
@@ -533,6 +556,15 @@ class _CartelaRegistrationPanelState
   }
 
   int? _cartelaLimitRemaining() {
+    if (_isBigGame) {
+      final max = widget.maxCartelasPerPlayer;
+      if (max == null) {
+        return null;
+      }
+      final remaining =
+          max - _currentMineCount(_currentRegistrationSummary());
+      return remaining < 0 ? 0 : remaining;
+    }
     if (!_isBonusLike) {
       return null;
     }
@@ -596,6 +628,19 @@ class _CartelaRegistrationPanelState
         return limit;
       }
       return money < limit ? money : limit;
+    }
+    if (_isBigGame) {
+      final limit = _cartelaLimitRemaining();
+      final byPayment = _usingBigGameTicket
+          ? _bigGameTicketBalance
+          : _moneyAffordableSelections(walletBalance);
+      if (limit == null) {
+        return byPayment;
+      }
+      if (byPayment == null) {
+        return limit;
+      }
+      return byPayment < limit ? byPayment : limit;
     }
     return _moneyAffordableSelections(walletBalance);
   }
@@ -888,6 +933,7 @@ class _CartelaRegistrationPanelState
             slotId: widget.slotId,
             sessionId: _effectiveSessionId ?? widget.sessionId,
             cartelas: payload,
+            paymentSource: _bigGamePaymentSource,
             onProgress: onProgress,
           );
 
@@ -1260,6 +1306,13 @@ class _CartelaRegistrationPanelState
           registeredNumbers: registeredNumbers,
           walletBalance: wallet?.balance,
           bonusCartelaBalance: _usableBonusCartelaBalance,
+          bigGameTicketBalance: _bigGameTicketBalance,
+          preferBigGameTicket: _preferBigGameTicket,
+          onPreferBigGameTicketChanged: _canChooseBigTicketPayment
+              ? (value) {
+                  setState(() => _preferBigGameTicket = value);
+                }
+              : null,
           isFirstTimePlayer: wallet?.isFirstTimePlayer ?? false,
           selectModeEnabled: _session.selectModeEnabled,
           maxAffordableSelections: maxAffordable,
@@ -1357,6 +1410,21 @@ class _CartelaRegistrationPanelState
     }
 
     final alreadyOwned = option.availability == CartelaAvailability.mine;
+    var carriedForward = false;
+    if (alreadyOwned) {
+      final sessionId = _effectiveSessionId ?? widget.sessionId;
+      final summaries = sessionId == null
+          ? const <RegisteredCartelaSummary>[]
+          : ref
+                    .read(registrationStateProvider(sessionId))
+                    .asData
+                    ?.value
+                    .registeredCartelasSummary ??
+                const <RegisteredCartelaSummary>[];
+      carriedForward = summaries.any(
+        (s) => s.cartelaId == option.cartela.id && s.isCarriedForward,
+      );
+    }
     if ((!option.resolved.isAvailable && !alreadyOwned) || _cartelaSheetOpen) {
       return;
     }
@@ -1373,6 +1441,7 @@ class _CartelaRegistrationPanelState
         ? walletAsync.value.balance
         : null;
     final bonusCartelaBalance = _usableBonusCartelaBalance;
+    final bigGameTicketBalance = _bigGameTicketBalance;
     final isFirstTimePlayer = walletAsync is AsyncData<WalletModel>
         ? walletAsync.value.isFirstTimePlayer
         : false;
@@ -1394,6 +1463,7 @@ class _CartelaRegistrationPanelState
             entryFee: widget.entryFee,
             walletBalance: walletBalance,
             bonusCartelaBalance: bonusCartelaBalance,
+            bigGameTicketBalance: bigGameTicketBalance,
             isFirstTimePlayer: isFirstTimePlayer,
             slotId: widget.slotId,
             sessionId: widget.sessionId,
@@ -1401,8 +1471,10 @@ class _CartelaRegistrationPanelState
             category: widget.category,
             fixedPrizeAmount: widget.fixedPrizeAmount,
             maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
+            initialPaymentSource: _bigGamePaymentSource,
             onSessionIdResolved: alreadyOwned ? null : _handleSessionIdResolved,
             alreadyOwned: alreadyOwned,
+            carriedForward: carriedForward,
           );
         },
       );
@@ -1522,6 +1594,9 @@ class _RegistrationToolbar extends StatelessWidget {
     required this.registeredNumbers,
     required this.walletBalance,
     required this.bonusCartelaBalance,
+    this.bigGameTicketBalance = 0,
+    this.preferBigGameTicket = true,
+    this.onPreferBigGameTicketChanged,
     this.isFirstTimePlayer = false,
     required this.selectModeEnabled,
     required this.maxAffordableSelections,
@@ -1542,6 +1617,9 @@ class _RegistrationToolbar extends StatelessWidget {
   final List<int> registeredNumbers;
   final String? walletBalance;
   final int bonusCartelaBalance;
+  final int bigGameTicketBalance;
+  final bool preferBigGameTicket;
+  final ValueChanged<bool>? onPreferBigGameTicketChanged;
   final bool isFirstTimePlayer;
   final bool selectModeEnabled;
   final int? maxAffordableSelections;
@@ -1714,40 +1792,17 @@ class _RegistrationToolbar extends StatelessWidget {
               runSpacing: AppSpacing.xs,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bigGameAccent.withValues(
-                      alpha: isDark ? 0.22 : 0.18,
-                    ),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: bigGameBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.emoji_events_rounded,
-                        size: 14,
-                        color: bigGameAccent,
-                      ),
-                      HGap.xxs,
-                      Text(
-                        'Big Game',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: bigGameAccent,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
+                GameCategoryBadge(
+                  category: GameCategory.bigGame,
+                  compact: true,
                 ),
                 if (fixedPrizeAmount != null)
                   Text(
-                    l10n.gameBonusFixedPrize(formatMoney(fixedPrizeAmount!)),
+                    isBigGame
+                        ? '${l10n.bigGameThisRoundPrize}: ${formatMoney(fixedPrizeAmount!)}'
+                        : l10n.gameBonusFixedPrize(
+                            formatMoney(fixedPrizeAmount!),
+                          ),
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -1761,6 +1816,43 @@ class _RegistrationToolbar extends StatelessWidget {
                   ),
               ],
             ),
+            if (!isGuest &&
+                bigGameTicketBalance > 0 &&
+                onPreferBigGameTicketChanged != null) ...[
+              VGap.sm,
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: Text(l10n.registrationUseBigTicket),
+                    icon: const Icon(
+                      Icons.confirmation_number_outlined,
+                      size: 16,
+                    ),
+                  ),
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: Text(l10n.registrationPayEtb),
+                    icon: const Icon(Icons.payments_outlined, size: 16),
+                  ),
+                ],
+                selected: {preferBigGameTicket},
+                onSelectionChanged: (selection) {
+                  if (selection.isEmpty) {
+                    return;
+                  }
+                  onPreferBigGameTicketChanged!(selection.first);
+                },
+              ),
+              VGap.xs,
+              Text(
+                l10n.registrationBigTicketBalance(bigGameTicketBalance),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             VGap.sm,
           ],
           Row(
@@ -1823,7 +1915,16 @@ class _RegistrationToolbar extends StatelessWidget {
             ],
           ),
           if (selectModeEnabled && maxAffordableSelections != null) ...[
-            const SizedBox.shrink(),
+            VGap.sm,
+            Text(
+              l10n.registrationBalanceAllowsUpTo(maxAffordableSelections!),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isBigGame
+                    ? bigGameAccent
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
           if (registeredNumbers.isNotEmpty) ...[
             VGap.md,

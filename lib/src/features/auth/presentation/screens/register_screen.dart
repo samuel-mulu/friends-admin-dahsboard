@@ -14,6 +14,7 @@ import '../widgets/auth_screen_scaffold.dart';
 import '../widgets/auth_validators.dart';
 import '../widgets/register_otp_panel.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
+import 'telegram_phone_link_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -199,6 +200,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         label: l10n.registerContinue,
                         isLoading: authState.isSendingOtp,
                         onPressed: _continueToOtp,
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: authState.isSendingOtp
+                            ? null
+                            : () => launchTelegramLogin(context, ref),
+                        icon: const Icon(Icons.send_rounded),
+                        label: Text(l10n.telegramContinue),
                       ),
                     ],
                   ),

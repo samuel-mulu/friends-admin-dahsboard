@@ -60,6 +60,9 @@ class UserProfile {
     required this.createdAt,
     required this.updatedAt,
     this.wallet,
+    this.hasPassword = true,
+    this.telegramLinked = false,
+    this.telegramUsername,
   });
 
   final String id;
@@ -70,6 +73,9 @@ class UserProfile {
   final DateTime createdAt;
   final DateTime updatedAt;
   final WalletModel? wallet;
+  final bool hasPassword;
+  final bool telegramLinked;
+  final String? telegramUsername;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -83,6 +89,13 @@ class UserProfile {
       wallet: json['wallet'] is Map<String, dynamic>
           ? WalletModel.fromJson(json['wallet'] as Map<String, dynamic>)
           : null,
+      hasPassword: json['hasPassword'] is bool
+          ? json['hasPassword'] as bool
+          : true,
+      telegramLinked: json['telegramLinked'] is bool
+          ? json['telegramLinked'] as bool
+          : json['telegramId'] != null,
+      telegramUsername: json['telegramUsername'] as String?,
     );
   }
 
@@ -95,7 +108,32 @@ class UserProfile {
       'status': status.name.toUpperCase(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'hasPassword': hasPassword,
+      'telegramLinked': telegramLinked,
+      if (telegramUsername != null) 'telegramUsername': telegramUsername,
       if (wallet != null) 'wallet': wallet!.toJson(),
     };
+  }
+
+  UserProfile copyWith({
+    String? fullName,
+    bool? hasPassword,
+    bool? telegramLinked,
+    String? telegramUsername,
+    WalletModel? wallet,
+  }) {
+    return UserProfile(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      phoneNumber: phoneNumber,
+      role: role,
+      status: status,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      wallet: wallet ?? this.wallet,
+      hasPassword: hasPassword ?? this.hasPassword,
+      telegramLinked: telegramLinked ?? this.telegramLinked,
+      telegramUsername: telegramUsername ?? this.telegramUsername,
+    );
   }
 }

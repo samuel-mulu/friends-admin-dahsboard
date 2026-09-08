@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
@@ -12,6 +13,8 @@ class WalletBreakdownCard extends StatelessWidget {
     required this.balance,
     required this.lockedBalance,
     this.bonusCartelaBalance = 0,
+    this.bigGameTicketBalance = 0,
+    this.bigGameName,
     this.totalBalance,
     this.style = WalletBreakdownStyle.hero,
     super.key,
@@ -25,6 +28,8 @@ class WalletBreakdownCard extends StatelessWidget {
       balance: wallet.balance,
       lockedBalance: wallet.lockedBalance,
       bonusCartelaBalance: wallet.bonusCartelaBalance,
+      bigGameTicketBalance: wallet.bigGameTicketBalance,
+      bigGameName: wallet.bigGameName,
       totalBalance: wallet.totalBalance,
       style: style,
     );
@@ -33,6 +38,8 @@ class WalletBreakdownCard extends StatelessWidget {
   final String balance;
   final String lockedBalance;
   final int bonusCartelaBalance;
+  final int bigGameTicketBalance;
+  final String? bigGameName;
   final String? totalBalance;
   final WalletBreakdownStyle style;
 
@@ -41,6 +48,7 @@ class WalletBreakdownCard extends StatelessWidget {
 
   bool get _hasLocked => WalletBalanceMath.isPositive(lockedBalance);
   bool get _hasBonusCartelas => bonusCartelaBalance > 0;
+  bool get _hasBigGameTickets => bigGameTicketBalance > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +113,10 @@ class WalletBreakdownCard extends StatelessWidget {
             if (_hasBonusCartelas) ...[
               const SizedBox(height: 20),
               _buildBonusCartelaRow(context),
+            ],
+            if (_hasBigGameTickets) ...[
+              const SizedBox(height: 20),
+              _buildBigGameTicketRow(context),
             ],
           ],
         ),
@@ -216,6 +228,19 @@ class WalletBreakdownCard extends StatelessWidget {
             ),
           ),
         ],
+        if (_hasBigGameTickets) ...[
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () => _openBigGame(context),
+            child: Text(
+              _bigTicketsLabel(l10n),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -276,6 +301,57 @@ class WalletBreakdownCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildBigGameTicketRow(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+
+    return InkWell(
+      onTap: () => _openBigGame(context),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.confirmation_number_outlined,
+            size: 16,
+            color: Colors.white70,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _bigTicketsLabel(l10n),
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+            ),
+          ),
+          Text(
+            '$bigGameTicketBalance',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right, size: 18, color: Colors.white70),
+        ],
+      ),
+    );
+  }
+
+  String _bigTicketsLabel(AppLocalizations l10n) {
+    final eventName = bigGameName?.trim();
+    if (eventName != null && eventName.isNotEmpty) {
+      return l10n.walletBigTicketsForEvent(eventName);
+    }
+    return l10n.walletBigTicketsLabel;
+  }
+
+  void _openBigGame(BuildContext context) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      return;
+    }
+    router.go('/games/big-game');
   }
 
   Widget _buildSubRow(

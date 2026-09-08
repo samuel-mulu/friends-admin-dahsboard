@@ -16,8 +16,18 @@ GameOperationsCurrentResponse localOperationsSnapshotForGame(
     case GameStatus.playing:
     case GameStatus.winnerWindow:
       liveGame = game;
+      final next = game.nextRoundRegistration;
+      if (next != null && (next.canRegister || next.registrationOpen)) {
+        registrationOpenGame = next;
+      }
     case GameStatus.checking:
       checkingGame = game;
+      final nextWhileChecking = game.nextRoundRegistration;
+      if (nextWhileChecking != null &&
+          (nextWhileChecking.canRegister ||
+              nextWhileChecking.registrationOpen)) {
+        registrationOpenGame = nextWhileChecking;
+      }
     case GameStatus.ready:
       if (game.canRegister || game.registrationOpen) {
         registrationOpenGame = game;

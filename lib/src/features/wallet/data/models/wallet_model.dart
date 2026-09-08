@@ -7,6 +7,9 @@ class WalletModel {
     required this.balance,
     required this.lockedBalance,
     this.bonusCartelaBalance = 0,
+    this.bigGameTicketBalance = 0,
+    this.bigGameTicketSlotId,
+    this.bigGameName,
     this.isFirstTimePlayer = false,
     required this.createdAt,
     required this.updatedAt,
@@ -18,6 +21,9 @@ class WalletModel {
   final String balance;
   final String lockedBalance;
   final int bonusCartelaBalance;
+  final int bigGameTicketBalance;
+  final String? bigGameTicketSlotId;
+  final String? bigGameName;
   final bool isFirstTimePlayer;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -31,6 +37,8 @@ class WalletModel {
   bool get shouldShowWelcomeBonus =>
       isFirstTimePlayer && bonusCartelaBalance > 0;
 
+  bool get hasBigGameTickets => bigGameTicketBalance > 0;
+
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     return WalletModel(
       id: json['id'] as String,
@@ -38,6 +46,9 @@ class WalletModel {
       balance: json['balance'] as String,
       lockedBalance: json['lockedBalance'] as String,
       bonusCartelaBalance: json['bonusCartelaBalance'] as int? ?? 0,
+      bigGameTicketBalance: (json['bigGameTicketBalance'] as num?)?.toInt() ?? 0,
+      bigGameTicketSlotId: json['bigGameTicketSlotId'] as String?,
+      bigGameName: json['bigGameName'] as String?,
       isFirstTimePlayer: json['isFirstTimePlayer'] as bool? ?? false,
       totalBalance: json['totalBalance'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -52,6 +63,9 @@ class WalletModel {
       'balance': balance,
       'lockedBalance': lockedBalance,
       'bonusCartelaBalance': bonusCartelaBalance,
+      'bigGameTicketBalance': bigGameTicketBalance,
+      'bigGameTicketSlotId': bigGameTicketSlotId,
+      'bigGameName': bigGameName,
       'isFirstTimePlayer': isFirstTimePlayer,
       'totalBalance': totalBalance,
       'createdAt': createdAt.toIso8601String(),

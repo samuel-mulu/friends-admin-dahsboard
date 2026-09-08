@@ -28,8 +28,6 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to quickly unlock Friends Bingo on this device.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Select a deposit receipt image so the app can help fill in receipt details for your review.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -51,6 +49,19 @@
 			</array>
 		</dict>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.friendsbingo.telegram</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>friendsbingo</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -12,6 +12,7 @@ class WinningPatternCartelaGrid extends StatelessWidget {
     required this.highlightCellIndexes,
     this.patternOverlay = const CartelaPatternProgressOverlay(),
     this.winningBallCellIndex,
+    this.calledNumbers = const <int>{},
     this.compact = false,
     super.key,
   });
@@ -20,6 +21,10 @@ class WinningPatternCartelaGrid extends StatelessWidget {
   final Set<int> highlightCellIndexes;
   final CartelaPatternProgressOverlay patternOverlay;
   final int? winningBallCellIndex;
+
+  /// Session called ball numbers — non-pattern cells still show as marked
+  /// (same rule as admin game-history cartela expand).
+  final Set<int> calledNumbers;
   final bool compact;
 
   Set<int> get _effectiveHighlightCellIndexes {
@@ -95,12 +100,17 @@ class WinningPatternCartelaGrid extends StatelessWidget {
                                 final isHighlighted =
                                     effectiveHighlights.contains(cellIndex);
                                 final isFree = value == 'FREE';
+                                final cellNumber = int.tryParse(value);
+                                final isCalled = isFree ||
+                                    (cellNumber != null &&
+                                        calledNumbers.contains(cellNumber));
 
                                 return Expanded(
                                   child: _WinningPatternCell(
                                     value: value,
                                     isWinningBall: isWinningBall,
                                     isHighlighted: isHighlighted,
+                                    isCalled: isCalled,
                                     isFree: isFree,
                                   ),
                                 );
@@ -135,12 +145,14 @@ class _WinningPatternCell extends StatelessWidget {
     required this.value,
     required this.isWinningBall,
     required this.isHighlighted,
+    required this.isCalled,
     required this.isFree,
   });
 
   final String value;
   final bool isWinningBall;
   final bool isHighlighted;
+  final bool isCalled;
   final bool isFree;
 
   @override
@@ -154,6 +166,7 @@ class _WinningPatternCell extends StatelessWidget {
     final List<BoxShadow> shadows;
     final Color textColor;
 
+    // Priority matches admin history: winning ball > pattern > called > unmarked.
     if (isFree) {
       fillColor = AppBranding.bingoFreeGreen;
       borderColor = Colors.white.withValues(alpha: 0.22);
@@ -187,6 +200,19 @@ class _WinningPatternCell extends StatelessWidget {
           spreadRadius: 0.5,
         ),
       ];
+    } else if (isCalled) {
+      fillColor = AppBranding.cellBackground(context, marked: true);
+      borderColor = AppBranding.cellBorder(context, marked: true);
+      textColor = AppBranding.cellForeground(context, marked: true);
+      shadows = isDark
+          ? const []
+          : [
+              BoxShadow(
+                color: AppBranding.gold.withValues(alpha: 0.18),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ];
     } else {
       fillColor = AppBranding.cellBackground(context, marked: false);
       borderColor = AppBranding.cellBorder(context, marked: false);

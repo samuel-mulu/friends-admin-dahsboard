@@ -6,6 +6,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/auth_session.dart';
 import '../domain/user_profile.dart';
+import 'device_meta.dart';
 
 class SessionRepository {
   SessionRepository(this._dio);
@@ -17,11 +18,13 @@ class SessionRepository {
     required String deviceId,
   }) async {
     try {
+      final meta = await buildAuthDeviceMeta();
       final response = await _dio.post<Object?>(
         '/auth/refresh',
         data: {
           'refreshToken': refreshToken,
           'deviceId': deviceId,
+          ...meta.toJson(),
         },
       );
 

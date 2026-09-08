@@ -7,13 +7,13 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/realtime/socket_service.dart';
+import '../../../../core/realtime/wallet_entity_realtime.dart';
 import '../../data/models/deposit_model.dart';
 import '../../data/models/deposit_config_model.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/telebirr_client_receipt_payload.dart';
 import '../../data/models/telebirr_receipt_preview.dart';
-import '../../data/receipt_ocr/receipt_ocr_result.dart';
-import '../../data/receipt_ocr/receipt_ocr_service.dart';
 import '../../data/telebirr_receipt_preview_service.dart';
 import '../../data/wallet_repository.dart';
 import '../../domain/wallet_amount_limits.dart';
@@ -29,6 +29,7 @@ import '../widgets/deposit_form_section.dart';
 import '../widgets/deposit_guide_steps.dart';
 import '../widgets/deposit_provider_chips.dart';
 import '../widgets/deposit_settlement_account_card.dart';
+import '../guides/deposit_guide_config.dart';
 
 class DepositScreen extends ConsumerStatefulWidget {
   const DepositScreen({super.key});
@@ -47,22 +48,35 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
   final _depositGuideKey = GlobalKey();
+  final _guideTabIndex = ValueNotifier<int>(0);
   final _amountController = TextEditingController();
   final _transactionRefController = TextEditingController();
 
-  PaymentProvider _provider = PaymentProvider.cbe;
+  PaymentProvider? _provider;
+  bool _isChoosingProvider = true;
   bool _isSubmitting = false;
-  bool _ocrReviewRequired = false;
-  bool _receiptDetailsConfirmed = false;
   DepositConfirmationState? _confirmation;
+  String? _trackedDepositId;
   Timer? _autoDismissTimer;
+  late final SocketService _socketService;
   String? _amountServerError;
   String? _transactionRefServerError;
   String? _previewNotice;
   bool _ignoreFieldChanges = false;
-  bool _isScanningReceipt = false;
   String? _lastSeenLocation;
   GoRouter? _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _socketService = ref.read(socketServiceProvider);
+    _bindDepositSocketListeners();
+  }
+
+  void _bindDepositSocketListeners() {
+    _socketService.off('wallet:updated', _onWalletUpdatedWhilePending);
+    _socketService.on('wallet:updated', _onWalletUpdatedWhilePending);
+  }
 
   @override
   void didChangeDependencies() {
@@ -79,14 +93,17 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   @override
   void dispose() {
     _router?.routerDelegate.removeListener(_onRouteChanged);
+    _socketService.off('wallet:updated', _onWalletUpdatedWhilePending);
     _autoDismissTimer?.cancel();
     _scrollController.dispose();
+    _guideTabIndex.dispose();
     _amountController.dispose();
     _transactionRefController.dispose();
     super.dispose();
   }
 
-  void _scrollToDepositGuide() {
+  void _scrollToDepositGuide({int tabIndex = 1}) {
+    _guideTabIndex.value = tabIndex;
     final guideContext = _depositGuideKey.currentContext;
     if (guideContext == null) {
       return;
@@ -101,10 +118,10 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   }
 
   bool get _canSubmitDeposit {
-    if (_isSubmitting) {
+    if (_provider == null || _isChoosingProvider) {
       return false;
     }
-    if (_ocrReviewRequired && !_receiptDetailsConfirmed) {
+    if (_isSubmitting) {
       return false;
     }
     if (!WalletAmountLimits.isSubmittableDeposit(_amountController.text)) {
@@ -146,53 +163,98 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   void _resetDepositUi() {
     _autoDismissTimer?.cancel();
     _autoDismissTimer = null;
+    _trackedDepositId = null;
     _ignoreFieldChanges = true;
     _amountController.clear();
     _transactionRefController.clear();
     _formKey.currentState?.reset();
     _ignoreFieldChanges = false;
     setState(() {
-      _clearOcrReviewState();
       _clearServerErrors();
       _confirmation = null;
       _previewNotice = null;
       _isSubmitting = false;
-      _isScanningReceipt = false;
+      _provider = null;
+      _isChoosingProvider = true;
+    });
+  }
+
+  void _selectProvider(PaymentProvider provider) {
+    if (_provider == provider && !_isChoosingProvider) {
+      return;
+    }
+    _ignoreFieldChanges = true;
+    _amountController.clear();
+    _transactionRefController.clear();
+    _formKey.currentState?.reset();
+    _ignoreFieldChanges = false;
+    setState(() {
+      _provider = provider;
+      _isChoosingProvider = false;
+      _guideTabIndex.value = 0;
+      _clearServerErrors();
+      _previewNotice = null;
+      _clearConfirmation();
+    });
+  }
+
+  void _changeProvider() {
+    _ignoreFieldChanges = true;
+    _amountController.clear();
+    _transactionRefController.clear();
+    _formKey.currentState?.reset();
+    _ignoreFieldChanges = false;
+    setState(() {
+      _isChoosingProvider = true;
+      _guideTabIndex.value = 0;
+      _clearServerErrors();
+      _previewNotice = null;
+      _clearConfirmation();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<WalletEntityRealtimeState>(walletEntityRealtimeProvider, (
+      previous,
+      next,
+    ) {
+      final update = next.lastUpdate;
+      if (update == null || update.kind != WalletEntityKind.deposit) {
+        return;
+      }
+      _handleDepositEntityUpdate(update);
+    });
+
     final l10n = context.l10n;
     final depositConfig = ref.watch(depositConfigProvider);
     final config = depositConfig.asData?.value;
     final availableProviders = _availableProviders(config);
-    final receiptOcrService = ref.watch(receiptOcrServiceProvider);
     final activeProviders = availableProviders
         .where((p) => !_comingSoonProviders.contains(p))
         .toList(growable: false);
-    final selectedProvider = activeProviders.contains(_provider)
-        ? _provider
-        : (activeProviders.isNotEmpty
-              ? activeProviders.first
-              : availableProviders.first);
-    if (selectedProvider != _provider) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _provider = selectedProvider;
-        });
-      });
-    }
-    final receiptLabel = _receiptLabel(config, selectedProvider);
-    final providerConfig = config?.providerForKey(selectedProvider.apiValue);
-    final settlementAccounts = _settlementAccounts(
-      selectedProvider: selectedProvider,
-      config: config,
-      providerConfig: providerConfig,
-    );
+    final selectedProvider = (_provider != null &&
+            activeProviders.contains(_provider))
+        ? _provider!
+        : null;
+    final showDepositDetails =
+        !_isChoosingProvider && selectedProvider != null;
+    final receiptLabel = selectedProvider == null
+        ? ''
+        : _receiptLabel(config, selectedProvider);
+    final providerConfig = selectedProvider == null
+        ? null
+        : config?.providerForKey(selectedProvider.apiValue);
+    final settlementAccounts = selectedProvider == null
+        ? const <_SettlementAccountDisplay>[]
+        : _settlementAccounts(
+            selectedProvider: selectedProvider,
+            config: config,
+            providerConfig: providerConfig,
+          );
+    final helpText = selectedProvider == null
+        ? null
+        : _localizedDepositInstruction(l10n, selectedProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.depositScreenTitle)),
@@ -207,131 +269,127 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DepositProviderChips(
-                  value: selectedProvider,
+                  value: selectedProvider ?? _provider,
                   availableProviders: availableProviders,
                   depositConfig: config,
                   comingSoonProviders: _comingSoonProviders,
-                  onChanged: (provider) {
-                    setState(() {
-                      _provider = provider;
-                      _clearServerErrors();
-                      _previewNotice = null;
-                      _clearOcrReviewState();
-                      _clearConfirmation();
-                    });
-                  },
+                  isChoosing: _isChoosingProvider || selectedProvider == null,
+                  onChangePressed: _changeProvider,
+                  onChanged: _selectProvider,
                 ),
-                if (settlementAccounts.isNotEmpty) ...[
-                  VGap.md,
-                  DepositSettlementAccountCard(
-                    accounts: [
-                      for (
-                        var index = 0;
-                        index < settlementAccounts.length;
-                        index++
-                      )
-                        DepositSettlementAccountItem(
-                          settlementAccount:
-                              settlementAccounts[index].settlementAccount,
-                          receiverName: settlementAccounts[index].receiverName,
-                          accountLabel: _settlementAccountLabel(
-                            l10n,
-                            index: index,
-                            total: settlementAccounts.length,
+                if (showDepositDetails) ...[
+                  VGap.lg,
+                  if (settlementAccounts.isNotEmpty)
+                    DepositSettlementAccountCard(
+                      providerName: selectedProvider.label,
+                      helpText: helpText,
+                      accounts: [
+                        for (
+                          var index = 0;
+                          index < settlementAccounts.length;
+                          index++
+                        )
+                          DepositSettlementAccountItem(
+                            settlementAccount:
+                                settlementAccounts[index].settlementAccount,
+                            receiverName:
+                                settlementAccounts[index].receiverName,
+                            accountLabel: _settlementAccountLabel(
+                              l10n,
+                              index: index,
+                              total: settlementAccounts.length,
+                            ),
                           ),
-                        ),
-                    ],
-                    onShowInstructions:
-                        selectedProvider == PaymentProvider.telebirr
-                        ? _scrollToDepositGuide
-                        : null,
+                      ],
+                      onShowInstructions: () => _scrollToDepositGuide(tabIndex: 1),
+                    ),
+                  VGap.xl,
+                  _DepositStepHeader(
+                    step: 2,
+                    title: l10n.depositStepSubmitDetails,
                   ),
-                ],
-                VGap.xl,
-                DepositFormSection(
-                  provider: selectedProvider,
-                  amountController: _amountController,
-                  transactionRefController: _transactionRefController,
-                  receiptLabel: receiptLabel,
-                  amountValidator: _validateAmount,
-                  transactionRefValidator: (value) => _validateTransactionRef(
-                    value,
-                    providerConfig: providerConfig,
+                  VGap.sm,
+                  Text(
+                    helpText!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  onFieldChanged: _onFormFieldChanged,
-                  amountServerError: _amountServerError,
-                  transactionRefServerError: _transactionRefServerError,
-                  previewNotice: _previewNotice,
-                  onScanReceipt: receiptOcrService.isAvailable
-                      ? _scanReceipt
-                      : null,
-                  isScanLoading: _isScanningReceipt,
-                  scanTooltip: l10n.depositReceiptScan,
-                  preserveTransactionRefCase:
-                      selectedProvider == PaymentProvider.cbe &&
-                      providerConfig?.approvalMode == 'manual',
-                ),
-                if (_ocrReviewRequired) ...[
                   VGap.md,
-                  CheckboxListTile(
-                    value: _receiptDetailsConfirmed,
-                    onChanged: (checked) {
-                      setState(() {
-                        _receiptDetailsConfirmed = checked ?? false;
-                      });
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      l10n.depositReceiptReviewLabel,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  DepositFormSection(
+                    provider: selectedProvider,
+                    amountController: _amountController,
+                    transactionRefController: _transactionRefController,
+                    receiptLabel: receiptLabel,
+                    amountValidator: _validateAmount,
+                    transactionRefValidator: (value) => _validateTransactionRef(
+                      value,
+                      providerConfig: providerConfig,
+                    ),
+                    onFieldChanged: _onFormFieldChanged,
+                    amountServerError: _amountServerError,
+                    transactionRefServerError: _transactionRefServerError,
+                    previewNotice: _previewNotice,
+                    preserveTransactionRefCase:
+                        selectedProvider == PaymentProvider.cbe &&
+                        providerConfig?.approvalMode == 'manual',
+                  ),
+                  VGap.xl,
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppBranding.goldAccent,
+                      foregroundColor: AppBranding.brandPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: _canSubmitDeposit ? _submit : null,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(l10n.depositSubmit),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _confirmation == null
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.xl),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 280),
+                              child: DepositConfirmationBanner(
+                                key: ValueKey(_confirmation!.switchKey),
+                                state: _confirmation!,
+                                onDismiss: _clearConfirmation,
+                                onRetry: _confirmation!.canRetry
+                                    ? _prepareRetryAfterReject
+                                    : null,
+                              ),
+                            ),
+                          ),
+                  ),
+                  VGap.xxl,
+                  const Divider(),
+                  VGap.xl,
+                  _DepositStepHeader(
+                    step: 3,
+                    title: l10n.depositStepInstructions,
+                  ),
+                  VGap.md,
+                  KeyedSubtree(
+                    key: _depositGuideKey,
+                    child: DepositGuideSteps(
+                      provider: selectedProvider,
+                      youtubeUrl: resolveDepositGuideYoutubeUrl(
+                        provider: selectedProvider,
+                        remoteUrl: providerConfig?.guideVideoUrl,
+                      ),
+                      requestedTabIndex: _guideTabIndex,
                     ),
                   ),
                 ],
-                VGap.xl,
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _ocrReviewRequired
-                        ? Theme.of(context).colorScheme.error
-                        : AppBranding.goldAccent,
-                    foregroundColor: _ocrReviewRequired
-                        ? Theme.of(context).colorScheme.onError
-                        : AppBranding.brandPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: _canSubmitDeposit ? _submit : null,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.depositSubmit),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  child: _confirmation == null
-                      ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xl),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 280),
-                            child: DepositConfirmationBanner(
-                              key: ValueKey(_confirmation!.switchKey),
-                              state: _confirmation!,
-                              onDismiss: _clearConfirmation,
-                            ),
-                          ),
-                        ),
-                ),
-                VGap.xxl,
-                const Divider(),
-                VGap.xl,
-                KeyedSubtree(
-                  key: _depositGuideKey,
-                  child: DepositGuideSteps(provider: selectedProvider),
-                ),
               ],
             ),
           ),
@@ -345,91 +403,199 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       return;
     }
     setState(() {
-      if (_ocrReviewRequired) {
-        _clearOcrReviewState();
-      }
       if (_amountServerError != null || _transactionRefServerError != null) {
         _clearServerErrors();
       }
     });
+    // Keep pending / under-review cards while waiting for admin.
+    if (_confirmation?.kind == DepositConfirmationKind.pending ||
+        _confirmation?.kind == DepositConfirmationKind.underReview) {
+      return;
+    }
     _clearConfirmation();
   }
 
-  Future<void> _scanReceipt() async {
-    if (_isScanningReceipt) {
-      return;
-    }
-
-    final service = ref.read(receiptOcrServiceProvider);
-    if (!service.isAvailable) {
-      return;
-    }
-
-    FocusScope.of(context).unfocus();
-    _clearConfirmation();
+  void _prepareRetryAfterReject() {
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
+    _trackedDepositId = null;
     setState(() {
-      _isScanningReceipt = true;
+      _confirmation = null;
       _clearServerErrors();
       _previewNotice = null;
     });
+  }
+
+  void _handleDepositEntityUpdate(WalletEntityUpdate update) {
+    if (!mounted || !update.isTerminal) {
+      return;
+    }
+
+    final matchesTrackedId =
+        _trackedDepositId != null && update.id == _trackedDepositId;
+    final matchesPendingRef =
+        _confirmation?.kind == DepositConfirmationKind.pending &&
+        update.transactionRef != null &&
+        update.transactionRef!.isNotEmpty &&
+        _confirmation?.transactionRef == update.transactionRef;
+    final matchesConfirmationId =
+        _confirmation?.depositId != null &&
+        _confirmation!.depositId == update.id &&
+        (_confirmation?.kind == DepositConfirmationKind.pending ||
+            _confirmation?.kind == DepositConfirmationKind.underReview);
+
+    if (!matchesTrackedId && !matchesPendingRef && !matchesConfirmationId) {
+      return;
+    }
+
+    PaymentProvider? provider;
+    try {
+      final rawProvider = update.provider;
+      if (rawProvider != null && rawProvider.isNotEmpty) {
+        provider = PaymentProvider.fromApi(rawProvider);
+      }
+    } catch (_) {
+      provider = _provider;
+    }
+
+    if (update.isApproved) {
+      _applyDepositTerminalStatus(
+        kind: DepositConfirmationKind.approved,
+        depositId: update.id,
+        provider: provider ?? _provider,
+        amount: update.amount,
+        transactionRef: update.transactionRef,
+      );
+      return;
+    }
+
+    if (update.isRejected) {
+      _applyDepositTerminalStatus(
+        kind: DepositConfirmationKind.rejected,
+        depositId: update.id,
+        provider: provider ?? _provider,
+        amount: update.amount,
+        transactionRef: update.transactionRef,
+        message: update.message?.trim().isNotEmpty == true
+            ? update.message
+            : null,
+        canRetry: true,
+      );
+    }
+  }
+
+  void _consumeCachedDepositUpdate() {
+    final update = ref.read(walletEntityRealtimeProvider).find(
+      kind: WalletEntityKind.deposit,
+      id: _trackedDepositId,
+      transactionRef: _confirmation?.transactionRef,
+    );
+    if (update != null) {
+      _handleDepositEntityUpdate(update);
+    }
+  }
+
+  void _onWalletUpdatedWhilePending(dynamic _) {
+    if (!mounted ||
+        _confirmation?.kind != DepositConfirmationKind.pending ||
+        _trackedDepositId == null) {
+      return;
+    }
+    unawaited(_refreshTrackedDepositFromServer());
+  }
+
+  Future<void> _refreshTrackedDepositFromServer() async {
+    final depositId = _trackedDepositId;
+    if (!mounted ||
+        depositId == null ||
+        _confirmation?.kind != DepositConfirmationKind.pending) {
+      return;
+    }
 
     try {
-      final result = await service.scanReceipt(provider: _provider);
-      if (!mounted || result == null) {
+      final page = await ref
+          .read(walletRepositoryProvider)
+          .getMyDeposits(page: 1, pageSize: 20);
+      DepositModel? match;
+      for (final item in page.items) {
+        if (item.id == depositId) {
+          match = item;
+          break;
+        }
+      }
+      if (!mounted || match == null) {
         return;
       }
 
-      if (!result.hasDetectedValue || result.isLowConfidence) {
-        _showReceiptScanSnackBar(context.l10n.depositReceiptScanFailure);
-        return;
+      if (match.status == DepositStatus.approved) {
+        _applyDepositTerminalStatus(
+          kind: DepositConfirmationKind.approved,
+          depositId: match.id,
+          provider: match.provider,
+          amount: match.amount,
+          transactionRef: match.transactionRef,
+        );
+        ref.invalidate(myWalletProvider);
+        ref.invalidate(walletTransactionsProvider);
+        ref.invalidate(depositHistoryProvider);
+      } else if (match.status == DepositStatus.rejected) {
+        _applyDepositTerminalStatus(
+          kind: DepositConfirmationKind.rejected,
+          depositId: match.id,
+          provider: match.provider,
+          amount: match.amount,
+          transactionRef: match.transactionRef,
+          message: match.rejectionReason,
+          canRetry: true,
+        );
+        ref.invalidate(depositHistoryProvider);
       }
-
-      _applyReceiptOcrResult(result);
-      _showReceiptScanSnackBar(
-        result.hasReference && result.hasAmount
-            ? context.l10n.depositReceiptScanSuccess
-            : context.l10n.depositReceiptScanPartial,
-      );
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showReceiptScanSnackBar(context.l10n.depositReceiptScanFailure);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isScanningReceipt = false;
-        });
-      }
+      // Keep pending card; socket event may still arrive.
     }
   }
 
-  void _applyReceiptOcrResult(ReceiptOcrResult result) {
-    _ignoreFieldChanges = true;
-    if (result.hasAmount) {
-      _amountController.text = result.amount!;
-    }
-    if (result.hasReference) {
-      final rawReference = result.reference!.trim();
-      _transactionRefController.text = _provider == PaymentProvider.telebirr
-          ? normalizeDepositReceiptCode(rawReference)
-          : rawReference.toUpperCase();
-    }
-    _ignoreFieldChanges = false;
-    setState(() {
-      _receiptDetailsConfirmed = false;
-      _ocrReviewRequired = result.hasAmount && result.hasReference;
-    });
-  }
-
-  void _showReceiptScanSnackBar(String message) {
+  void _applyDepositTerminalStatus({
+    required DepositConfirmationKind kind,
+    required String depositId,
+    PaymentProvider? provider,
+    String? amount,
+    String? transactionRef,
+    String? message,
+    bool canRetry = false,
+  }) {
     if (!mounted) {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    void apply() {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _trackedDepositId = kind == DepositConfirmationKind.approved
+            ? depositId
+            : null;
+        _confirmation = DepositConfirmationState(
+          kind: kind,
+          depositId: depositId,
+          provider: provider,
+          amount: amount ?? _confirmation?.amount,
+          transactionRef: transactionRef ?? _confirmation?.transactionRef,
+          message: message,
+          canRetry: canRetry,
+          verifiedAt: kind == DepositConfirmationKind.approved
+              ? DateTime.now()
+              : null,
+        );
+      });
+      if (kind == DepositConfirmationKind.approved) {
+        _scheduleApprovedDismiss();
+      }
+    }
+
+    // Socket callbacks can arrive mid-frame; apply on the next frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => apply());
   }
 
   void _clearDepositFormFields() {
@@ -438,17 +604,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     _transactionRefController.clear();
     _formKey.currentState?.reset();
     _ignoreFieldChanges = false;
-    setState(_clearOcrReviewState);
-  }
-
-  void _clearOcrReviewState() {
-    _ocrReviewRequired = false;
-    _receiptDetailsConfirmed = false;
   }
 
   void _clearConfirmation() {
     _autoDismissTimer?.cancel();
     _autoDismissTimer = null;
+    _trackedDepositId = null;
     if (_confirmation != null) {
       setState(() => _confirmation = null);
     }
@@ -467,6 +628,10 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   }
 
   Future<void> _submit() async {
+    final provider = _provider;
+    if (provider == null || _isChoosingProvider) {
+      return;
+    }
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -489,7 +654,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       String? cbeManualReceiptUrl;
       late final String transactionRef;
 
-      if (_provider == PaymentProvider.telebirr) {
+      if (provider == PaymentProvider.telebirr) {
         transactionRef = normalizeDepositReceiptCode(rawTransactionInput);
         TelebirrDepositDebug.log(
           'submit start ref=${TelebirrDepositDebug.maskRef(transactionRef)} amountSet=${submittedAmount.isNotEmpty}',
@@ -535,7 +700,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
             'account=${preview.creditedPartyAccountNo}',
           );
         }
-      } else if (_provider == PaymentProvider.cbe) {
+      } else if (provider == PaymentProvider.cbe) {
         final depositConfig = await ref.read(depositConfigProvider.future);
         final cbeConfig = depositConfig.providerForKey(
           PaymentProvider.cbe.apiValue,
@@ -569,7 +734,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       }
 
       final checkResult = await walletRepository.checkDepositReference(
-        provider: _provider,
+        provider: provider,
         transactionRef: transactionRef,
       );
 
@@ -580,21 +745,26 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
         final message =
             _mapDepositCodeToMessage(checkResult.code) ?? checkResult.message;
+        final isUnderReview = checkResult.code == 'UNDER_REVIEW';
+        final isAlreadyUsed = checkResult.code == 'ALREADY_USED';
         setState(() {
           _transactionRefServerError = message;
           _confirmation = DepositConfirmationState(
-            kind: DepositConfirmationKind.rejected,
+            kind: isUnderReview
+                ? DepositConfirmationKind.underReview
+                : DepositConfirmationKind.rejected,
             message: message,
-            provider: _provider,
+            provider: provider,
             amount: submittedAmount,
             transactionRef: transactionRef,
+            canRetry: !isUnderReview && !isAlreadyUsed,
           );
         });
         return;
       }
 
       final deposit = await walletRepository.createDeposit(
-        provider: _provider,
+        provider: provider,
         amount: submittedAmount,
         // The backend canonicalizes a CBE manual URL and stores the original
         // URL separately for admin review.
@@ -616,20 +786,25 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
       if (deposit.status == DepositStatus.pending) {
         setState(() {
+          _trackedDepositId = deposit.id;
           _confirmation = DepositConfirmationState(
             kind: DepositConfirmationKind.pending,
+            depositId: deposit.id,
             provider: deposit.provider,
             amount: deposit.amount,
             transactionRef: deposit.transactionRef,
           );
         });
         _clearDepositFormFields();
+        _consumeCachedDepositUpdate();
         return;
       }
 
       setState(() {
+        _trackedDepositId = deposit.id;
         _confirmation = DepositConfirmationState(
           kind: DepositConfirmationKind.approved,
+          depositId: deposit.id,
           provider: deposit.provider,
           amount: deposit.amount,
           transactionRef: deposit.transactionRef,
@@ -639,7 +814,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       _clearDepositFormFields();
       _scheduleApprovedDismiss();
     } catch (error) {
-      if (_provider == PaymentProvider.telebirr) {
+      if (provider == PaymentProvider.telebirr) {
         TelebirrDepositDebug.error('submit failed', error);
       }
       if (!mounted) {
@@ -649,14 +824,20 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       final message = error is ApiException
           ? _handleDepositError(error)
           : context.l10n.depositCouldNotSubmit;
+      final code = error is ApiException ? error.code : null;
+      final canRetry = code != 'ALREADY_USED' && code != 'UNDER_REVIEW';
 
       setState(() {
+        _trackedDepositId = null;
         _confirmation = DepositConfirmationState(
-          kind: DepositConfirmationKind.rejected,
+          kind: code == 'UNDER_REVIEW'
+              ? DepositConfirmationKind.underReview
+              : DepositConfirmationKind.rejected,
           message: message,
-          provider: _provider,
+          provider: provider,
           amount: _amountController.text.trim(),
           transactionRef: _transactionRefController.text.trim().toUpperCase(),
+          canRetry: canRetry,
         );
       });
     } finally {
@@ -671,6 +852,18 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   void _clearServerErrors() {
     _amountServerError = null;
     _transactionRefServerError = null;
+  }
+
+  String _localizedDepositInstruction(
+    AppLocalizations l10n,
+    PaymentProvider provider,
+  ) {
+    return switch (provider) {
+      PaymentProvider.cbe => l10n.depositInstructionCbe,
+      PaymentProvider.telebirr => l10n.depositInstructionTelebirr,
+      PaymentProvider.awash => l10n.depositInstructionAwash,
+      PaymentProvider.boa => l10n.depositInstructionBoa,
+    };
   }
 
   String _receiptLabel(DepositConfigModel? config, PaymentProvider provider) {
@@ -702,6 +895,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         provider: _provider,
         amount: submittedAmount,
         transactionRef: transactionRef,
+        canRetry: true,
       );
     });
 
@@ -937,6 +1131,50 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     }
 
     return null;
+  }
+}
+
+class _DepositStepHeader extends StatelessWidget {
+  const _DepositStepHeader({
+    required this.step,
+    required this.title,
+  });
+
+  final int step;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppBranding.casinoPurple,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$step',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

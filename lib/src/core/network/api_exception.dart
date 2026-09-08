@@ -6,15 +6,18 @@ class ApiException implements Exception {
     this.statusCode,
     this.code,
     this.details,
+    this.reason,
   });
 
   static const rateLimitMessage =
       'Too many attempts. Please wait a moment.';
+  static const userBlockedCode = 'USER_BLOCKED';
 
   final String message;
   final int? statusCode;
   final String? code;
   final Object? details;
+  final String? reason;
 
   factory ApiException.fromCaughtError(Object error) {
     if (error is ApiException) {
@@ -39,6 +42,7 @@ class ApiException implements Exception {
               error['statusCode'] as int? ?? exception.response?.statusCode,
           code: error['code'] as String?,
           details: error['details'],
+          reason: _extractReason(error),
         );
       }
     }
@@ -70,11 +74,33 @@ class ApiException implements Exception {
     return 'Something went wrong.';
   }
 
+  static String? _extractReason(Map<String, dynamic> error) {
+    final topLevel = error['reason'];
+    if (topLevel is String && topLevel.trim().isNotEmpty) {
+      return topLevel.trim();
+    }
+
+    final details = error['details'];
+    if (details is Map) {
+      final nested = details['reason'];
+      if (nested is String && nested.trim().isNotEmpty) {
+        return nested.trim();
+      }
+    }
+
+    return null;
+  }
+
   bool get isConnectivityFailure =>
       statusCode == null &&
       message == 'Could not reach the server. Please try again.';
 
   bool get isRateLimited => statusCode == 429;
+
+  bool get isUserBlocked =>
+      code == userBlockedCode ||
+      (statusCode == 403 &&
+          message.toLowerCase().contains('account is blocked'));
 
   String get displayMessage =>
       isRateLimited ? rateLimitMessage : message;

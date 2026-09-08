@@ -19,6 +19,9 @@ import 'core/version/app_update_dialog.dart';
 import 'core/version/version_check_controller.dart';
 import 'core/version/version_update_resume_recheck.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
+import 'features/auth/presentation/providers/telegram_deep_link_provider.dart';
+import 'features/auth/presentation/widgets/account_ban_overlay.dart';
+import 'features/auth/presentation/widgets/account_ban_realtime_sync.dart';
 import 'features/auth/presentation/widgets/pin_setup_dialog.dart';
 import 'features/auth/security/app_lock_controller.dart';
 import 'features/settings/presentation/providers/locale_provider.dart';
@@ -131,6 +134,8 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     ref.watch(gameRuleNamesRepositoryProvider);
+    ref.watch(telegramDeepLinkListenerProvider);
+    ref.watch(telegramDeepLinkListenerProvider);
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (next.isInitializing) {
@@ -192,7 +197,15 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) => DeviceSecurityGate(
-        child: ForceUpdateGate(child: FirstLaunchPreferencesGate(child: child)),
+        child: ForceUpdateGate(
+          child: FirstLaunchPreferencesGate(
+            child: AccountBanOverlay(
+              child: AccountBanRealtimeSync(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

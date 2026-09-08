@@ -11,6 +11,7 @@ import '../widgets/auth_home_back_button.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_screen_scaffold.dart';
 import '../widgets/auth_validators.dart';
+import 'telegram_phone_link_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({this.initialMessage, super.key});
@@ -126,6 +127,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 label: l10n.loginSignIn,
                 isLoading: isSubmitting,
                 onPressed: _submit,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: isSubmitting
+                    ? null
+                    : () => launchTelegramLogin(context, ref),
+                icon: const Icon(Icons.send_rounded),
+                label: Text(l10n.telegramContinue),
               ),
             ],
           ),

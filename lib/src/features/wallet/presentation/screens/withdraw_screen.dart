@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/realtime/socket_service.dart';
+import '../../../../core/realtime/wallet_entity_realtime.dart';
 import '../../../../core/storage/app_preferences_storage.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
@@ -37,7 +37,8 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   final _amountController = TextEditingController();
   final _receiverController = TextEditingController();
 
-  PaymentProvider _provider = PaymentProvider.telebirr;
+  PaymentProvider? _provider;
+  bool _isChoosingProvider = true;
   bool _isSubmitting = false;
   WithdrawalConfirmationState? _confirmation;
   String? _trackedWithdrawalId;
@@ -48,20 +49,16 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   String? _loadedCbeUserId;
   Timer? _autoDismissTimer;
   Timer? _cbeSaveDebounce;
-  late final SocketService _socketService;
 
   @override
   void initState() {
     super.initState();
-    _socketService = ref.read(socketServiceProvider);
-    _socketService.on('withdrawal:updated', _onWithdrawalUpdated);
     _amountController.addListener(_onFormFieldChanged);
     _receiverController.addListener(_onFormFieldChanged);
     final session = ref.read(authControllerProvider).session;
     final sessionPhone = session?.user.phoneNumber;
     if (sessionPhone != null && sessionPhone.trim().isNotEmpty) {
       _ownPhoneNumber = sessionPhone.trim();
-      _receiverController.text = sessionPhone.trim();
     }
     final userId = session?.user.id;
     if (userId != null) {
@@ -82,7 +79,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       _savedCbeAccount = saved;
       _cbeAccountLoaded = true;
       _loadedCbeUserId = userId;
-      if (_provider == PaymentProvider.cbe) {
+      if (_provider == PaymentProvider.cbe && !_isChoosingProvider) {
         _receiverController.text = saved;
       }
     });
@@ -134,6 +131,25 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     }
   }
 
+  void _selectWithdrawProvider(PaymentProvider provider) {
+    setState(() {
+      _provider = provider;
+      _isChoosingProvider = false;
+      _clearConfirmation();
+      _amountController.clear();
+      _applyReceiverForProvider(provider);
+    });
+  }
+
+  void _changeWithdrawProvider() {
+    setState(() {
+      _isChoosingProvider = true;
+      _clearConfirmation();
+      _amountController.clear();
+      _receiverController.clear();
+    });
+  }
+
   bool _looksLikePhone(String value) {
     final digits = _digitsOnly(value);
     if (digits.length < 9 || digits.length > 15) {
@@ -150,56 +166,80 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   void dispose() {
     _autoDismissTimer?.cancel();
     _cbeSaveDebounce?.cancel();
-    _socketService.off('withdrawal:updated', _onWithdrawalUpdated);
     _amountController.dispose();
     _receiverController.dispose();
     super.dispose();
   }
 
-  void _onWithdrawalUpdated(dynamic payload) {
-    if (!mounted || payload is! Map) {
+  void _handleWithdrawalEntityUpdate(WalletEntityUpdate update) {
+    if (!mounted || !update.isTerminal) {
       return;
     }
 
-    ref.invalidate(withdrawalHistoryProvider);
-
-    final withdrawalId = payload['id']?.toString();
-    if (withdrawalId == null ||
-        (_trackedWithdrawalId != null && withdrawalId != _trackedWithdrawalId)) {
+    if (_trackedWithdrawalId == null || update.id != _trackedWithdrawalId) {
       return;
     }
 
-    final status = payload['status']?.toString().toUpperCase();
-    final adminNote = payload['adminNote']?.toString();
-
-    if (status == 'PAID') {
-      setState(() {
-        _confirmation = WithdrawalConfirmationState(
-          kind: WithdrawalConfirmationKind.approved,
-          provider: _provider,
-          amount: payload['amount']?.toString(),
-          withdrawalId: withdrawalId,
-        );
-      });
-      _scheduleApprovedDismiss();
-      ref.invalidate(myWalletProvider);
-      ref.invalidate(withdrawalHistoryProvider);
-      ref.invalidate(walletTransactionsProvider);
-    } else if (status == 'REJECTED') {
-      setState(() {
-        _confirmation = WithdrawalConfirmationState(
-          kind: WithdrawalConfirmationKind.rejected,
-          provider: _provider,
-          amount: payload['amount']?.toString(),
-          withdrawalId: withdrawalId,
-          message: adminNote,
-        );
-        _trackedWithdrawalId = null;
-      });
-      ref.invalidate(myWalletProvider);
-      ref.invalidate(withdrawalHistoryProvider);
-      ref.invalidate(walletTransactionsProvider);
+    if (update.isApproved) {
+      _applyWithdrawalTerminalStatus(
+        kind: WithdrawalConfirmationKind.approved,
+        withdrawalId: update.id,
+        amount: update.amount,
+      );
+      return;
     }
+
+    if (update.isRejected) {
+      _applyWithdrawalTerminalStatus(
+        kind: WithdrawalConfirmationKind.rejected,
+        withdrawalId: update.id,
+        amount: update.amount,
+        message: update.message,
+      );
+    }
+  }
+
+  void _consumeCachedWithdrawalUpdate() {
+    final update = ref.read(walletEntityRealtimeProvider).find(
+      kind: WalletEntityKind.withdrawal,
+      id: _trackedWithdrawalId,
+    );
+    if (update != null) {
+      _handleWithdrawalEntityUpdate(update);
+    }
+  }
+
+  void _applyWithdrawalTerminalStatus({
+    required WithdrawalConfirmationKind kind,
+    required String withdrawalId,
+    String? amount,
+    String? message,
+  }) {
+    if (!mounted) {
+      return;
+    }
+
+    void apply() {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _trackedWithdrawalId =
+            kind == WithdrawalConfirmationKind.approved ? withdrawalId : null;
+        _confirmation = WithdrawalConfirmationState(
+          kind: kind,
+          provider: _provider,
+          amount: amount ?? _confirmation?.amount,
+          withdrawalId: withdrawalId,
+          message: message,
+        );
+      });
+      if (kind == WithdrawalConfirmationKind.approved) {
+        _scheduleApprovedDismiss();
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => apply());
   }
 
   void _scheduleApprovedDismiss() {
@@ -227,6 +267,10 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     if (!mounted) {
       return;
     }
+    // Keep the pending admin-review card while waiting for approval.
+    if (_confirmation?.kind == WithdrawalConfirmationKind.pending) {
+      return;
+    }
     setState(() {
       if (_confirmation != null) {
         _autoDismissTimer?.cancel();
@@ -237,6 +281,9 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   }
 
   bool get _canSubmitWithdraw {
+    if (_provider == null || _isChoosingProvider) {
+      return false;
+    }
     if (_isSubmitting) {
       return false;
     }
@@ -299,11 +346,23 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     setState(() {
       _receiverController.text = own;
       _provider = PaymentProvider.telebirr;
+      _isChoosingProvider = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<WalletEntityRealtimeState>(walletEntityRealtimeProvider, (
+      previous,
+      next,
+    ) {
+      final update = next.lastUpdate;
+      if (update == null || update.kind != WalletEntityKind.withdrawal) {
+        return;
+      }
+      _handleWithdrawalEntityUpdate(update);
+    });
+
     final l10n = context.l10n;
     final walletAsync = ref.watch(myWalletProvider);
     final withdrawalsAsync = ref.watch(withdrawalHistoryProvider);
@@ -368,16 +427,23 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                 const SizedBox(height: 16),
                 WithdrawProviderChips(
                   value: _provider,
-                  onChanged: (provider) {
-                    setState(() {
-                      _provider = provider;
-                      _clearConfirmation();
-                      _applyReceiverForProvider(provider);
-                    });
-                  },
+                  isChoosing: _isChoosingProvider || _provider == null,
+                  onChangePressed: _changeWithdrawProvider,
+                  onChanged: _selectWithdrawProvider,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
+                if (!_isChoosingProvider && _provider != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _provider == PaymentProvider.telebirr
+                        ? l10n.withdrawTelebirrOnlyHint
+                        : l10n.withdrawCbeOnlyHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -410,10 +476,10 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                         )
                       : null,
                   decoration: InputDecoration(
-                    labelText: _provider.receiverFieldLabel,
+                    labelText: _provider!.receiverFieldLabel,
                     hintText: _provider == PaymentProvider.telebirr
-                        ? (_ownPhoneNumber ?? _provider.receiverFieldHint)
-                        : _provider.receiverFieldHint,
+                        ? (_ownPhoneNumber ?? _provider!.receiverFieldHint)
+                        : _provider!.receiverFieldHint,
                     helperText: _provider == PaymentProvider.telebirr
                         ? (_isOtherTelebirrNumber
                               ? 'Other number — payout goes here (not your account phone).'
@@ -479,6 +545,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                           ),
                         ),
                 ),
+                ],
                 const SizedBox(height: 28),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -530,6 +597,10 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   }
 
   Future<void> _submit() async {
+    final provider = _provider;
+    if (provider == null || _isChoosingProvider) {
+      return;
+    }
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -553,17 +624,17 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       final withdrawal = await ref
           .read(walletRepositoryProvider)
           .createWithdrawal(
-            provider: _provider,
+            provider: provider,
             amount: amount,
-            receiverPhone: _provider == PaymentProvider.telebirr
+            receiverPhone: provider == PaymentProvider.telebirr
                 ? receiverValue
                 : null,
-            receiverAccount: _provider == PaymentProvider.cbe
+            receiverAccount: provider == PaymentProvider.cbe
                 ? receiverValue
                 : null,
           );
 
-      if (_provider == PaymentProvider.cbe) {
+      if (provider == PaymentProvider.cbe) {
         await _persistCbeAccount(receiverValue);
       }
 
@@ -578,11 +649,12 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       setState(() {
         _trackedWithdrawalId = withdrawal.id;
         _confirmation = WithdrawalConfirmationState.pending(
-          provider: _provider,
+          provider: provider,
           amount: amount,
           withdrawalId: withdrawal.id,
         );
       });
+      _consumeCachedWithdrawalUpdate();
     } catch (error) {
       if (!mounted) {
         return;
@@ -639,16 +711,20 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   }
 
   String? _validateReceiver(String? value) {
+    final provider = _provider;
+    if (provider == null) {
+      return null;
+    }
     final l10n = context.l10n;
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) {
-      return '${_provider.receiverFieldLabel} ${l10n.validatorPhoneRequired.replaceFirst('Phone number', '').trim()}';
+      return '${provider.receiverFieldLabel} ${l10n.validatorPhoneRequired.replaceFirst('Phone number', '').trim()}';
     }
-    if (_provider == PaymentProvider.telebirr &&
+    if (provider == PaymentProvider.telebirr &&
         !RegExp(r'^\d{10,15}$').hasMatch(trimmed)) {
       return l10n.validatorPhoneInvalid;
     }
-    if (_provider == PaymentProvider.cbe) {
+    if (provider == PaymentProvider.cbe) {
       final digits = _digitsOnly(trimmed);
       if (digits != trimmed) {
         return 'CBE account must be numbers only.';

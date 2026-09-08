@@ -861,7 +861,7 @@ abstract class AppLocalizations {
   /// No description provided for @depositReceiptDuplicate.
   ///
   /// In en, this message translates to:
-  /// **'This receipt has already been used.'**
+  /// **'This receipt has already been used and credited. Submit a new payment receipt.'**
   String get depositReceiptDuplicate;
 
   /// No description provided for @depositReceiptInvalid.
@@ -917,6 +917,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How to deposit'**
   String get depositGuideTitle;
+
+  /// No description provided for @depositGuideTabSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get depositGuideTabSteps;
+
+  /// No description provided for @depositGuideTabVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get depositGuideTabVideo;
+
+  /// No description provided for @depositGuideVideoMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Video guide is not available yet for this payment method.'**
+  String get depositGuideVideoMissing;
+
+  /// No description provided for @depositGuideVideoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the player controls to play, pause, seek, and change volume.'**
+  String get depositGuideVideoHint;
+
+  /// No description provided for @depositGuideOpenOnYoutube.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on YouTube'**
+  String get depositGuideOpenOnYoutube;
 
   /// No description provided for @depositGuideTelebirrStep1.
   ///
@@ -1017,14 +1047,44 @@ abstract class AppLocalizations {
   /// No description provided for @depositRefUnderReview.
   ///
   /// In en, this message translates to:
-  /// **'This reference is already under admin review.'**
+  /// **'This receipt is already under admin review. Wait for approval or rejection—do not clear the app.'**
   String get depositRefUnderReview;
+
+  /// No description provided for @depositUnderReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Already under review'**
+  String get depositUnderReviewTitle;
+
+  /// No description provided for @depositUnderReviewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This receipt was already submitted and is waiting for admin. You cannot submit it again until it is approved or rejected.'**
+  String get depositUnderReviewMessage;
 
   /// No description provided for @depositRejectedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Deposit failed'**
+  /// **'Deposit rejected'**
   String get depositRejectedTitle;
+
+  /// No description provided for @depositRejectedCanRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'You can fix the details and submit again. Clearing the app is not required.'**
+  String get depositRejectedCanRetry;
+
+  /// No description provided for @depositFixAndResubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix and submit again'**
+  String get depositFixAndResubmit;
+
+  /// No description provided for @depositAlreadyCreditedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This receipt was already credited. Use a new payment receipt.'**
+  String get depositAlreadyCreditedHint;
 
   /// No description provided for @depositTryAgain.
   ///
@@ -1037,6 +1097,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payment method'**
   String get depositSelectProvider;
+
+  /// No description provided for @depositChooseProviderFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Choose how you will send money'**
+  String get depositChooseProviderFirst;
+
+  /// No description provided for @depositChooseProviderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick one provider first. Only that provider’s account and form will appear.'**
+  String get depositChooseProviderHint;
+
+  /// No description provided for @depositSelectedMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected payment method'**
+  String get depositSelectedMethod;
+
+  /// No description provided for @depositChangeProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get depositChangeProvider;
+
+  /// No description provided for @depositOnlyUseProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Send only with {provider}. Do not mix with another bank or Telebirr.'**
+  String depositOnlyUseProvider(String provider);
+
+  /// No description provided for @depositInstructionCbe.
+  ///
+  /// In en, this message translates to:
+  /// **'Send money with CBE, then enter the payment reference number and exact transferred amount.'**
+  String get depositInstructionCbe;
+
+  /// No description provided for @depositInstructionTelebirr.
+  ///
+  /// In en, this message translates to:
+  /// **'Send money with Telebirr, then enter the receipt ID and exact transferred amount.'**
+  String get depositInstructionTelebirr;
+
+  /// No description provided for @depositInstructionAwash.
+  ///
+  /// In en, this message translates to:
+  /// **'Send money with Awash Bank, then enter the payment reference and exact transferred amount.'**
+  String get depositInstructionAwash;
+
+  /// No description provided for @depositInstructionBoa.
+  ///
+  /// In en, this message translates to:
+  /// **'Send money with Bank of Abyssinia, then enter the payment reference and exact transferred amount.'**
+  String get depositInstructionBoa;
+
+  /// No description provided for @depositSendToOneOfAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to one of these accounts'**
+  String get depositSendToOneOfAccounts;
+
+  /// No description provided for @depositCopyThenSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the number, then send from the same provider you selected.'**
+  String get depositCopyThenSend;
+
+  /// No description provided for @depositStepSubmitDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'2. Enter amount and receipt'**
+  String get depositStepSubmitDetails;
+
+  /// No description provided for @depositStepInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'3. How to send'**
+  String get depositStepInstructions;
 
   /// No description provided for @depositSendToAccount.
   ///
@@ -1067,12 +1205,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Instructions'**
   String get depositShowInstructions;
-
-  /// No description provided for @depositReceiptReviewLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'I have checked the amount and reference number from my transaction'**
-  String get depositReceiptReviewLabel;
 
   /// No description provided for @depositCopyAccount.
   ///
@@ -1121,48 +1253,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not submit deposit.'**
   String get depositCouldNotSubmit;
-
-  /// No description provided for @depositReceiptScan.
-  ///
-  /// In en, this message translates to:
-  /// **'Scan receipt'**
-  String get depositReceiptScan;
-
-  /// No description provided for @depositReceiptScreenshotHelperPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'Can be filled from a '**
-  String get depositReceiptScreenshotHelperPrefix;
-
-  /// No description provided for @depositReceiptScreenshotHelperLink.
-  ///
-  /// In en, this message translates to:
-  /// **'screenshot'**
-  String get depositReceiptScreenshotHelperLink;
-
-  /// No description provided for @depositReceiptScreenshotHelperSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **'. Please review before submitting.'**
-  String get depositReceiptScreenshotHelperSuffix;
-
-  /// No description provided for @depositReceiptScanSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Receipt detected. Please review before submitting.'**
-  String get depositReceiptScanSuccess;
-
-  /// No description provided for @depositReceiptScanPartial.
-  ///
-  /// In en, this message translates to:
-  /// **'Some details detected. Please review.'**
-  String get depositReceiptScanPartial;
-
-  /// No description provided for @depositReceiptScanFailure.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not read receipt. Please type manually.'**
-  String get depositReceiptScanFailure;
 
   /// No description provided for @depositProvider.
   ///
@@ -1367,6 +1457,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payout method'**
   String get withdrawSelectProvider;
+
+  /// No description provided for @withdrawChooseProviderFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Choose payout method'**
+  String get withdrawChooseProviderFirst;
+
+  /// No description provided for @withdrawChooseProviderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Telebirr or CBE first. Then enter details for that method only.'**
+  String get withdrawChooseProviderHint;
+
+  /// No description provided for @withdrawSelectedMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected payout method'**
+  String get withdrawSelectedMethod;
+
+  /// No description provided for @withdrawChangeProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get withdrawChangeProvider;
+
+  /// No description provided for @withdrawTelebirrOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout will be sent by Telebirr only.'**
+  String get withdrawTelebirrOnlyHint;
+
+  /// No description provided for @withdrawCbeOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout will be sent to a CBE account only.'**
+  String get withdrawCbeOnlyHint;
 
   /// No description provided for @withdrawMaxWithdrawableHint.
   ///
@@ -2598,6 +2724,18 @@ abstract class AppLocalizations {
   /// **'Sounds'**
   String get drawerSounds;
 
+  /// No description provided for @drawerSortCartelasByLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort cartelas by lines'**
+  String get drawerSortCartelasByLines;
+
+  /// No description provided for @drawerSortCartelasByLinesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cartelas with more completed rows, columns, and diagonals rise to the top. Uses your marks, including one-away progress.'**
+  String get drawerSortCartelasByLinesSubtitle;
+
   /// No description provided for @soundSettingsDeviceOnly.
   ///
   /// In en, this message translates to:
@@ -2961,6 +3099,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logout'**
   String get drawerLogout;
+
+  /// No description provided for @securitySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securitySectionTitle;
+
+  /// No description provided for @securityChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get securityChangePassword;
+
+  /// No description provided for @securitySetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set password'**
+  String get securitySetPassword;
+
+  /// No description provided for @securitySetPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'We will send an SMS code to verify your phone before setting a password.'**
+  String get securitySetPasswordHint;
+
+  /// No description provided for @securityCurrentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get securityCurrentPassword;
+
+  /// No description provided for @securityNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get securityNewPassword;
+
+  /// No description provided for @securityConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get securityConfirmPassword;
+
+  /// No description provided for @securityPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get securityPasswordMismatch;
+
+  /// No description provided for @securitySavePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Save password'**
+  String get securitySavePassword;
+
+  /// No description provided for @securitySendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send verification code'**
+  String get securitySendCode;
+
+  /// No description provided for @securityPasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated successfully.'**
+  String get securityPasswordChanged;
+
+  /// No description provided for @securityActiveSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Active sessions'**
+  String get securityActiveSessions;
+
+  /// No description provided for @securityThisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get securityThisDevice;
+
+  /// No description provided for @securityCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get securityCurrent;
+
+  /// No description provided for @securityLogoutDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get securityLogoutDevice;
+
+  /// No description provided for @securityLogoutOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out other devices'**
+  String get securityLogoutOthers;
+
+  /// No description provided for @securityOthersLoggedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Other devices were logged out.'**
+  String get securityOthersLoggedOut;
+
+  /// No description provided for @securityNoSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'No active sessions found.'**
+  String get securityNoSessions;
+
+  /// No description provided for @securitySessionsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load sessions.'**
+  String get securitySessionsLoadFailed;
+
+  /// No description provided for @telegramContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Telegram'**
+  String get telegramContinue;
+
+  /// No description provided for @telegramLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Telegram'**
+  String get telegramLink;
+
+  /// No description provided for @telegramUnlink.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink Telegram'**
+  String get telegramUnlink;
+
+  /// No description provided for @telegramUnlinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Telegram unlinked.'**
+  String get telegramUnlinked;
+
+  /// No description provided for @telegramOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Telegram login.'**
+  String get telegramOpenFailed;
+
+  /// No description provided for @telegramLinkPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your phone'**
+  String get telegramLinkPhoneTitle;
+
+  /// No description provided for @telegramLinkPhoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your phone number. If it is already registered, we will link Telegram and sign you in. If it is new, we will create your account.'**
+  String get telegramLinkPhoneSubtitle;
+
+  /// No description provided for @telegramCompleteSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify and continue'**
+  String get telegramCompleteSignIn;
 
   /// No description provided for @drawerJoinGame.
   ///
@@ -3472,6 +3772,108 @@ abstract class AppLocalizations {
   /// **'Waiting for current round to finish.'**
   String get bigGameWaitingBody;
 
+  /// No description provided for @bigGameWaitingBodyWithBlocker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {gameCode} to finish.'**
+  String bigGameWaitingBodyWithBlocker(String gameCode);
+
+  /// No description provided for @bigGameStartingSoonBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting soon…'**
+  String get bigGameStartingSoonBody;
+
+  /// No description provided for @bigGameCartelaCarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried from previous round'**
+  String get bigGameCartelaCarried;
+
+  /// No description provided for @bigGameRoundOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {current} of {total}'**
+  String bigGameRoundOf(int current, int total);
+
+  /// No description provided for @bigGameThisRoundPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'This Round Prize'**
+  String get bigGameThisRoundPrize;
+
+  /// No description provided for @bigGameTotalPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Prize'**
+  String get bigGameTotalPrize;
+
+  /// No description provided for @bigGameRoundPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round} Prize'**
+  String bigGameRoundPrize(int round);
+
+  /// No description provided for @bigGameShowDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get bigGameShowDetails;
+
+  /// No description provided for @bigGameHideDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get bigGameHideDetails;
+
+  /// No description provided for @bigGameBetweenRoundsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Between rounds'**
+  String get bigGameBetweenRoundsTitle;
+
+  /// No description provided for @bigGameNextRoundStartsIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Next round starts in:'**
+  String get bigGameNextRoundStartsIn;
+
+  /// No description provided for @walletBigTicketsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Tickets'**
+  String get walletBigTicketsLabel;
+
+  /// No description provided for @walletBigTicketsForEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Tickets · {eventName}'**
+  String walletBigTicketsForEvent(String eventName);
+
+  /// No description provided for @registrationUseBigTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Big Ticket'**
+  String get registrationUseBigTicket;
+
+  /// No description provided for @registrationPayEtb.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay ETB'**
+  String get registrationPayEtb;
+
+  /// No description provided for @registrationBigTicketBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Tickets: {count}'**
+  String registrationBigTicketBalance(int count);
+
+  /// No description provided for @registrationUsesBigTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses 1 Big Ticket'**
+  String get registrationUsesBigTicket;
+
   /// No description provided for @gameCategoryNormal.
   ///
   /// In en, this message translates to:
@@ -3814,6 +4216,12 @@ abstract class AppLocalizations {
   /// **'Big Game ready — waiting for current round'**
   String get announcementBigGameWaiting;
 
+  /// No description provided for @announcementBigGameStartingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Game ready — starting soon'**
+  String get announcementBigGameStartingSoon;
+
   /// No description provided for @announcementBigGameLive.
   ///
   /// In en, this message translates to:
@@ -3825,6 +4233,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Big Game is in progress — Go to Big Game'**
   String get bigGameLivePrompt;
+
+  /// No description provided for @bigGameHeldPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Game is ready — waiting for current round — Go to Big Game'**
+  String get bigGameHeldPrompt;
+
+  /// No description provided for @bigGameRegistrationOpenPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Big Game Round {round} registration is open — Go to Big Game'**
+  String bigGameRegistrationOpenPrompt(int round);
+
+  /// No description provided for @bigGameMissedRoundRegistrationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Register for Round {round}'**
+  String bigGameMissedRoundRegistrationTitle(int round);
+
+  /// No description provided for @bigGameMissedRoundHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'You missed Round {missedRound}. Register for Round {nextRound} with money or a Big Ticket.'**
+  String bigGameMissedRoundHelper(int missedRound, int nextRound);
+
+  /// No description provided for @bigGameMissedPreviousRoundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed Round {round}'**
+  String bigGameMissedPreviousRoundLabel(int round);
+
+  /// No description provided for @bigGameMissedNextRoundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round} registration'**
+  String bigGameMissedNextRoundLabel(int round);
 
   /// No description provided for @bigGameGoAction.
   ///
@@ -3885,6 +4329,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The app will reopen when the admin removes this notice.'**
   String get adminMessagesForcedHint;
+
+  /// Title on the forced overlay when an admin bans the player
+  ///
+  /// In en, this message translates to:
+  /// **'Account banned'**
+  String get accountBannedTitle;
+
+  /// Prompt under the ban reason directing the player to support
+  ///
+  /// In en, this message translates to:
+  /// **'Please contact us for help.'**
+  String get accountBannedPleaseContact;
+
+  /// Button that dismisses the ban overlay after the player has read it
+  ///
+  /// In en, this message translates to:
+  /// **'Acknowledge'**
+  String get accountBannedAcknowledge;
 
   /// No description provided for @close.
   ///

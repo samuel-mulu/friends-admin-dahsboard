@@ -120,10 +120,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       return;
     }
 
-    if (_isBingoClaimCountdownLocked) {
-      return;
-    }
-
+    // Once pressed: commit to claiming and always submit. Do not abort for the
+    // countdown lock race — the button gate already disables presses; a fired
+    // press must get a real winner / blocked / error answer, not gold-ready again.
     final claimStartedAt = DateTime.now();
     final preClaimNextAutoCallAt = _game?.nextAutoCallAt;
     final shouldOptimisticPause =
@@ -145,11 +144,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     var claimStateAppliedEarly = false;
 
     try {
-      if (_isBingoClaimCountdownLocked) {
-        claimFailed = true;
-        return;
-      }
-
       final result = await _gamesRepository.claimBingo(
         sessionId: sessionId,
         gameCartelaId: gameCartela.id,

@@ -11,6 +11,7 @@ import '../../../../core/realtime/socket_service.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/auth_session.dart';
 import '../../session/session_manager.dart';
+import '../providers/account_ban_provider.dart';
 import '../providers/auth_flow_provider.dart';
 
 class AuthState {
@@ -118,10 +119,14 @@ class AuthController extends Notifier<AuthState> {
         return;
       }
 
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: _messageFromError(error),
-      );
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
     }
   }
 
@@ -172,10 +177,14 @@ class AuthController extends Notifier<AuthState> {
         return;
       }
 
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: _messageFromError(error),
-      );
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
     }
   }
 
@@ -200,10 +209,14 @@ class AuthController extends Notifier<AuthState> {
         return null;
       }
 
-      state = state.copyWith(
-        isSendingOtp: false,
-        errorMessage: _messageFromError(error),
-      );
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSendingOtp: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
       return null;
     }
   }
@@ -231,10 +244,14 @@ class AuthController extends Notifier<AuthState> {
         return null;
       }
 
-      state = state.copyWith(
-        isSendingOtp: false,
-        errorMessage: _messageFromError(error),
-      );
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSendingOtp: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
       return null;
     }
   }
@@ -266,11 +283,276 @@ class AuthController extends Notifier<AuthState> {
         return null;
       }
 
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: _messageFromError(error),
-      );
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
       return null;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+    try {
+      final refreshToken = state.session?.refreshToken;
+      await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        refreshToken: refreshToken,
+      );
+      if (!ref.mounted) {
+        return false;
+      }
+      state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      return true;
+    } catch (error) {
+      if (!ref.mounted) {
+        return false;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<String?> requestSetPasswordOtp() async {
+    state = state.copyWith(isSendingOtp: true, clearErrorMessage: true);
+    try {
+      final message = await _authRepository.requestSetPasswordOtp();
+      if (!ref.mounted) {
+        return null;
+      }
+      state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      return message;
+    } catch (error) {
+      if (!ref.mounted) {
+        return null;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSendingOtp: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<bool> setPassword({
+    required String otp,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+    try {
+      final refreshToken = state.session?.refreshToken;
+      await _authRepository.setPassword(
+        otp: otp,
+        newPassword: newPassword,
+        refreshToken: refreshToken,
+      );
+      if (!ref.mounted) {
+        return false;
+      }
+      final session = state.session;
+      if (session != null) {
+        await _sessionManager.updateSession(
+          session.copyWith(
+            user: session.user.copyWith(hasPassword: true),
+          ),
+        );
+      }
+      state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      return true;
+    } catch (error) {
+      if (!ref.mounted) {
+        return false;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> completeTelegramAuth(AuthSession session) async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+    try {
+      await _completeAuthentication(session, clearRegistrationDraft: true);
+    } catch (error) {
+      if (!ref.mounted) {
+        return;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+    }
+  }
+
+  Future<TelegramStartResult?> telegramStart(
+    Map<String, dynamic> telegram,
+  ) async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+    try {
+      final deviceId = await _sessionManager.ensureDeviceId();
+      final result = await _authRepository.telegramStart(
+        telegram: telegram,
+        deviceId: deviceId,
+      );
+      if (!ref.mounted) {
+        return null;
+      }
+
+      if (result is TelegramAuthenticated) {
+        await _completeAuthentication(
+          result.session,
+          clearRegistrationDraft: true,
+        );
+        return result;
+      }
+
+      state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      return result;
+    } catch (error) {
+      if (!ref.mounted) {
+        return null;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<String?> telegramRequestOtp({
+    required String ticket,
+    required String phoneNumber,
+  }) async {
+    state = state.copyWith(isSendingOtp: true, clearErrorMessage: true);
+    try {
+      final message = await _authRepository.telegramRequestOtp(
+        ticket: ticket,
+        phoneNumber: phoneNumber,
+      );
+      if (!ref.mounted) {
+        return null;
+      }
+      state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      return message;
+    } catch (error) {
+      if (!ref.mounted) {
+        return null;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSendingOtp: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSendingOtp: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> telegramComplete({
+    required String ticket,
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+    try {
+      final deviceId = await _sessionManager.ensureDeviceId();
+      final session = await _authRepository.telegramComplete(
+        ticket: ticket,
+        phoneNumber: phoneNumber,
+        otp: otp,
+        deviceId: deviceId,
+      );
+      await _completeAuthentication(session, clearRegistrationDraft: true);
+    } catch (error) {
+      if (!ref.mounted) {
+        return;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(isSubmitting: false, clearErrorMessage: true);
+      } else {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: _messageFromError(error),
+        );
+      }
+    }
+  }
+
+  Future<bool> linkTelegramAccount(Map<String, dynamic> telegram) async {
+    try {
+      final user = await _authRepository.linkTelegram(telegram: telegram);
+      final session = state.session;
+      if (session != null) {
+        await _sessionManager.updateSession(session.copyWith(user: user));
+      }
+      return true;
+    } catch (error) {
+      if (!ref.mounted) {
+        return false;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(clearErrorMessage: true);
+      } else {
+        state = state.copyWith(errorMessage: _messageFromError(error));
+      }
+      return false;
+    }
+  }
+
+  Future<bool> unlinkTelegram() async {
+    try {
+      final user = await _authRepository.unlinkTelegram();
+      final session = state.session;
+      if (session != null) {
+        await _sessionManager.updateSession(session.copyWith(user: user));
+      }
+      return true;
+    } catch (error) {
+      if (!ref.mounted) {
+        return false;
+      }
+      if (_handleUserBlocked(error)) {
+        state = state.copyWith(clearErrorMessage: true);
+      } else {
+        state = state.copyWith(errorMessage: _messageFromError(error));
+      }
+      return false;
     }
   }
 
@@ -374,6 +656,16 @@ class AuthController extends Notifier<AuthState> {
     }
 
     return 'Something went wrong. Please try again.';
+  }
+
+  /// Shows the ban overlay and suppresses snackbar errors for blocked accounts.
+  bool _handleUserBlocked(Object error) {
+    if (error is! ApiException || !error.isUserBlocked) {
+      return false;
+    }
+
+    ref.read(accountBanProvider.notifier).show(reason: error.reason);
+    return true;
   }
 
   void _log(String message) {

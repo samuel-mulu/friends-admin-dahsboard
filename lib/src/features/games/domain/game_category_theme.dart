@@ -18,8 +18,11 @@ abstract final class GameCategoryTheme {
     return switch (category) {
       GameCategory.normal => AppBranding.bingoB,
       GameCategory.bonus => AppBranding.bingoFreeGreen,
-      GameCategory.bigGotd => AppBranding.gold,
-      GameCategory.bigGame => AppBranding.gold,
+      // Cream surface uses darker gold for readable contrast in light mode.
+      GameCategory.bigGotd => isDark ? AppBranding.gold : AppBranding.goldDark,
+      // Lavender surface: purple label in light mode (gold washes out).
+      GameCategory.bigGame =>
+        isDark ? AppBranding.gold : AppBranding.brandPurple,
     };
   }
 
@@ -37,10 +40,8 @@ abstract final class GameCategoryTheme {
   }
 
   static Color borderColor(GameCategory category, {required bool isDark}) {
-    return accentColor(
-      category,
-      isDark: isDark,
-    ).withValues(alpha: isDark ? 0.45 : 0.55);
+    final accent = accentColor(category, isDark: isDark);
+    return accent.withValues(alpha: isDark ? 0.55 : 0.65);
   }
 
   static GameCategory categoryFor(GameModel game) {
@@ -63,7 +64,7 @@ abstract final class GameCategoryTheme {
 
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
-        primary: AppBranding.gold,
+        primary: isDark ? AppBranding.gold : AppBranding.brandPurple,
         secondary: isDark ? AppBranding.casinoPurpleDeep : AppBranding.brandPurple,
         surface: surface,
       ),

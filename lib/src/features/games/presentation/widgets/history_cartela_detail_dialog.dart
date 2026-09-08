@@ -58,6 +58,9 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
     final winnerResult = this.winnerResult;
     final orderedCalls = List<CalledNumberModel>.from(calledNumbers)
       ..sort((a, b) => a.order.compareTo(b.order));
+    final calledNumberSet = <int>{
+      for (final call in orderedCalls) call.number,
+    };
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -187,8 +190,12 @@ class _HistoryCartelaDetailDialog extends StatelessWidget {
                             ),
                         winningBallCellIndex:
                             winnerResult.resolvedWinningBallCellIndex,
+                        calledNumbers: calledNumberSet,
                       )
-                    : CartelaBoardPreview(columns: cartela.cartela.columns),
+                    : CartelaBoardPreview(
+                        columns: cartela.cartela.columns,
+                        calledNumbers: calledNumberSet,
+                      ),
               ),
             ],
           ),

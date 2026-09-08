@@ -7,7 +7,9 @@ const notificationCategoryBigGameRegistrationOpen = 'BIG_GAME_REGISTRATION_OPEN'
 const notificationCategoryWinnerWindowStarted = 'WINNER_WINDOW_STARTED';
 const notificationCategoryBigGameTomorrow = 'BIG_GAME_TOMORROW';
 const notificationCategoryBigGameToday = 'BIG_GAME_TODAY';
+const notificationCategoryBigGameTicketGranted = 'BIG_GAME_TICKET_GRANTED';
 const notificationCategoryDepositApproved = 'DEPOSIT_APPROVED';
+const notificationCategoryDepositRejected = 'DEPOSIT_REJECTED';
 const notificationCategoryWithdrawalApproved = 'WITHDRAWAL_APPROVED';
 const notificationCategoryWithdrawalCompleted = 'WITHDRAWAL_COMPLETED';
 const notificationCategoryWithdrawalRejected = 'WITHDRAWAL_REJECTED';
@@ -23,7 +25,9 @@ const notificationCategories = <String>{
   notificationCategoryWinnerWindowStarted,
   notificationCategoryBigGameTomorrow,
   notificationCategoryBigGameToday,
+  notificationCategoryBigGameTicketGranted,
   notificationCategoryDepositApproved,
+  notificationCategoryDepositRejected,
   notificationCategoryWithdrawalApproved,
   notificationCategoryWithdrawalCompleted,
   notificationCategoryWithdrawalRejected,

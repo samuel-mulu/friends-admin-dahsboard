@@ -1,6 +1,12 @@
 import '../../data/models/payment_provider.dart';
 
-enum DepositConfirmationKind { verifying, approved, pending, rejected }
+enum DepositConfirmationKind {
+  verifying,
+  approved,
+  pending,
+  underReview,
+  rejected,
+}
 
 class DepositConfirmationState {
   const DepositConfirmationState({
@@ -10,6 +16,8 @@ class DepositConfirmationState {
     this.amount,
     this.transactionRef,
     this.verifiedAt,
+    this.depositId,
+    this.canRetry = false,
   });
 
   const DepositConfirmationState.verifying()
@@ -18,7 +26,9 @@ class DepositConfirmationState {
       provider = null,
       amount = null,
       transactionRef = null,
-      verifiedAt = null;
+      verifiedAt = null,
+      depositId = null,
+      canRetry = false;
 
   final DepositConfirmationKind kind;
   final String? message;
@@ -26,12 +36,20 @@ class DepositConfirmationState {
   final String? amount;
   final String? transactionRef;
   final DateTime? verifiedAt;
+  final String? depositId;
+
+  /// When true, rejected card shows "Fix and submit again".
+  final bool canRetry;
 
   String get switchKey => switch (kind) {
     DepositConfirmationKind.verifying => 'verifying',
     DepositConfirmationKind.approved =>
-      'approved-$transactionRef-$amount',
-    DepositConfirmationKind.pending => 'pending-$transactionRef-$amount',
-    DepositConfirmationKind.rejected => 'rejected-$message',
+      'approved-${depositId ?? transactionRef}-$amount',
+    DepositConfirmationKind.pending =>
+      'pending-${depositId ?? transactionRef}-$amount',
+    DepositConfirmationKind.underReview =>
+      'underReview-${transactionRef ?? depositId}',
+    DepositConfirmationKind.rejected =>
+      'rejected-${depositId ?? transactionRef}-$message-$canRetry',
   };
 }

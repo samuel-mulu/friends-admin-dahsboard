@@ -7,6 +7,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_rule_localized_name.dart';
 import 'bonus_game_info_strip.dart';
+import 'big_game_info_strip.dart';
 import 'game_rule_detail_dialog.dart';
 
 enum GameCompactInfoBarLayout { live, registrationOpen }
@@ -27,12 +28,21 @@ class GameCompactInfoBar extends ConsumerWidget {
   final bool embedded;
   final int? myRegisteredCartelasCount;
 
+  String _displayPrizeAmount(GameModel game) {
+    if (game.isBigGame) {
+      return game.effectiveRoundPrizeAmount ??
+          game.prizeAmount;
+    }
+    return game.prizeAmount;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final localizedRuleName = game.localizedRuleName(ref);
+    final prizeAmount = _displayPrizeAmount(game);
 
     final regCount = myRegisteredCartelasCount ?? 0;
 
@@ -44,6 +54,7 @@ class GameCompactInfoBar extends ConsumerWidget {
         isDark: isDark,
         embedded: embedded,
         myRegisteredCartelasCount: regCount,
+        prizeAmount: prizeAmount,
       );
     }
 
@@ -66,7 +77,7 @@ class GameCompactInfoBar extends ConsumerWidget {
           flex: 3,
           child: _CompactInfoChip(
             label: l10n.gameInfoPrize,
-            value: formatMoney(game.prizeAmount),
+            value: formatMoney(prizeAmount),
             theme: theme,
             isDark: isDark,
             highlighted: true,
@@ -92,6 +103,9 @@ class GameCompactInfoBar extends ConsumerWidget {
         if (game.isBonusLike) ...[
           const SizedBox(height: 8),
           BonusGameInfoStrip(game: game),
+        ] else if (game.isBigGame) ...[
+          const SizedBox(height: 8),
+          BigGameInfoStrip(game: game),
         ],
       ],
     );
@@ -122,6 +136,7 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
     required this.theme,
     required this.isDark,
     required this.myRegisteredCartelasCount,
+    required this.prizeAmount,
     this.embedded = false,
   });
 
@@ -130,6 +145,7 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
   final ThemeData theme;
   final bool isDark;
   final int myRegisteredCartelasCount;
+  final String prizeAmount;
   final bool embedded;
 
   @override
@@ -161,7 +177,7 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
           flex: 3,
           child: _CompactInfoChip(
             label: context.l10n.gameInfoPrize,
-            value: formatMoney(game.prizeAmount),
+            value: formatMoney(prizeAmount),
             theme: theme,
             isDark: isDark,
             highlighted: true,
@@ -187,6 +203,9 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
         if (game.isBonusLike) ...[
           const SizedBox(height: 8),
           BonusGameInfoStrip(game: game),
+        ] else if (game.isBigGame) ...[
+          const SizedBox(height: 8),
+          BigGameInfoStrip(game: game),
         ],
       ],
     );

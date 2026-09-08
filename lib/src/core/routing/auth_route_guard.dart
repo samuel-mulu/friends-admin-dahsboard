@@ -8,6 +8,7 @@ const kAuthLocations = {
   '/login',
   '/register',
   '/forgot-password',
+  '/auth/telegram-phone',
 };
 
 const kGuestLocations = {

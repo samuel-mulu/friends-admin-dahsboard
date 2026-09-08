@@ -3,6 +3,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../models/withdrawal_confirmation_state.dart';
+import 'wallet_review_status_icon.dart';
 
 class WithdrawalConfirmationBanner extends StatefulWidget {
   const WithdrawalConfirmationBanner({
@@ -123,7 +124,9 @@ class _WithdrawalConfirmationBannerState
                 ),
                 if (widget.state.kind == WithdrawalConfirmationKind.approved ||
                     widget.state.kind ==
-                        WithdrawalConfirmationKind.pending) ...[
+                        WithdrawalConfirmationKind.pending ||
+                    widget.state.kind ==
+                        WithdrawalConfirmationKind.rejected) ...[
                   const SizedBox(height: 16),
                   _DetailRow(
                     label: l10n.withdrawSelectProvider,
@@ -133,7 +136,7 @@ class _WithdrawalConfirmationBannerState
                   _DetailRow(
                     label: l10n.withdrawAmount,
                     value: widget.state.amount != null
-                        ? '${formatMoney(widget.state.amount!)} ETB'
+                        ? formatMoney(widget.state.amount!)
                         : '',
                   ),
                 ],
@@ -191,33 +194,12 @@ class _StatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (kind == WithdrawalConfirmationKind.pending) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: CircularProgressIndicator(
-          strokeWidth: 3,
-          color: AppBranding.goldAccent,
-        ),
-      );
-    }
-
-    final isApproved = kind == WithdrawalConfirmationKind.approved;
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isApproved ? AppBranding.feltGreen : theme.colorScheme.error,
-      ),
-      child: Icon(
-        isApproved ? Icons.check_rounded : Icons.close_rounded,
-        color: Colors.white,
-        size: 28,
-      ),
-    );
+    final status = switch (kind) {
+      WithdrawalConfirmationKind.pending => WalletReviewVisualStatus.loading,
+      WithdrawalConfirmationKind.approved => WalletReviewVisualStatus.approved,
+      WithdrawalConfirmationKind.rejected => WalletReviewVisualStatus.rejected,
+    };
+    return WalletReviewStatusIcon(status: status);
   }
 }
 

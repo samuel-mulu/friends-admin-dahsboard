@@ -16,6 +16,7 @@ import '../../data/models/game_model.dart';
 import '../../domain/game_category_theme.dart';
 import '../../domain/cartela_availability.dart';
 import '../../domain/cartela_board_preview_cache.dart';
+import '../../domain/cartela_payment_source.dart';
 import '../../domain/registration_state_patch.dart';
 import '../providers/registration_state_patch_provider.dart';
 import '../providers/games_providers.dart';
@@ -32,6 +33,7 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
     required this.entryFee,
     required this.walletBalance,
     this.bonusCartelaBalance = 0,
+    this.bigGameTicketBalance = 0,
     this.isFirstTimePlayer = false,
     required this.slotId,
     required this.cartelaHoldSeconds,
@@ -45,6 +47,8 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
     /// When true, opens as a read-only preview for an already-registered cartela
     /// (no hold / register). Shows a "This is yours" label instead.
     this.alreadyOwned = false,
+    this.carriedForward = false,
+    this.initialPaymentSource,
     super.key,
   });
 
@@ -52,6 +56,7 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
   final String entryFee;
   final String? walletBalance;
   final int bonusCartelaBalance;
+  final int bigGameTicketBalance;
   final bool isFirstTimePlayer;
   final String slotId;
   final String? sessionId;
@@ -63,6 +68,8 @@ class CartelaRegistrationSheet extends ConsumerStatefulWidget {
   final int? maxCartelasPerPlayer;
   final ValueChanged<String>? onSessionIdResolved;
   final bool alreadyOwned;
+  final bool carriedForward;
+  final String? initialPaymentSource;
 
   @override
   ConsumerState<CartelaRegistrationSheet> createState() =>
@@ -78,6 +85,7 @@ class _CartelaRegistrationSheetState
   bool _released = false;
   bool _holdReady = false;
   late final GamesRepository _repository;
+  late String _paymentSource;
 
   String? _reservationId;
   String? _resolvedSessionId;
@@ -107,6 +115,7 @@ class _CartelaRegistrationSheetState
     _secondsRemaining = widget.cartelaHoldSeconds;
     _resolvedSessionId = widget.sessionId;
     _previewCartela = _initialPreviewCartela();
+    _paymentSource = _resolveInitialPaymentSource();
 
     if (widget.alreadyOwned) {
       if (_previewCartela?.hasBoardValues != true) {
@@ -143,6 +152,26 @@ class _CartelaRegistrationSheetState
 
     unawaited(_prepareHold());
   }
+
+  String _resolveInitialPaymentSource() {
+    if (widget.category != GameCategory.bigGame ||
+        widget.bigGameTicketBalance <= 0) {
+      return CartelaPaymentSource.moneyWallet;
+    }
+    final preferred = widget.initialPaymentSource;
+    if (preferred == CartelaPaymentSource.moneyWallet ||
+        preferred == CartelaPaymentSource.bigGameTicket) {
+      return preferred!;
+    }
+    return CartelaPaymentSource.bigGameTicket;
+  }
+
+  bool get _canChooseBigTicketPayment =>
+      _isBigGame && widget.bigGameTicketBalance > 0;
+
+  bool get _usingBigTicket =>
+      _canChooseBigTicketPayment &&
+      _paymentSource == CartelaPaymentSource.bigGameTicket;
 
   static const _holdCountdownInterval = Duration(milliseconds: 250);
 
@@ -399,6 +428,9 @@ class _CartelaRegistrationSheetState
     if (_hasFreeEntry) {
       return true;
     }
+    if (_usingBigTicket) {
+      return widget.bigGameTicketBalance > 0;
+    }
     if (_canUseBonusCartelaBalance && widget.bonusCartelaBalance > 0) {
       return true;
     }
@@ -412,6 +444,9 @@ class _CartelaRegistrationSheetState
   String get _entryPaymentLabel {
     if (_hasFreeEntry) {
       return 'Free entry';
+    }
+    if (_usingBigTicket) {
+      return context.l10n.registrationUsesBigTicket;
     }
     if (_canUseBonusCartelaBalance && widget.bonusCartelaBalance > 0) {
       if (widget.isFirstTimePlayer) {
@@ -556,14 +591,36 @@ class _CartelaRegistrationSheetState
     setState(() => _isSubmitting = true);
 
     try {
-      final registeredCartela = await ref
-          .read(gamesRepositoryProvider)
-          .confirmReservation(
-            reservationId,
-            slotId: widget.slotId,
-            cartelaId: widget.cartela.id,
-            sessionId: _resolvedSessionId,
-          );
+      final GameCartelaModel registeredCartela;
+      if (_isBigGame) {
+        final sessionId = _resolvedSessionId ?? widget.sessionId;
+        if (sessionId != null && sessionId.isNotEmpty) {
+          registeredCartela = await ref
+              .read(gamesRepositoryProvider)
+              .registerCartela(
+                sessionId: sessionId,
+                cartelaId: widget.cartela.id,
+                paymentSource: _paymentSource,
+              );
+        } else {
+          registeredCartela = await ref
+              .read(gamesRepositoryProvider)
+              .registerCartelaForSlot(
+                slotId: widget.slotId,
+                cartelaId: widget.cartela.id,
+                paymentSource: _paymentSource,
+              );
+        }
+      } else {
+        registeredCartela = await ref
+            .read(gamesRepositoryProvider)
+            .confirmReservation(
+              reservationId,
+              slotId: widget.slotId,
+              cartelaId: widget.cartela.id,
+              sessionId: _resolvedSessionId,
+            );
+      }
 
       if (!mounted) {
         return;
@@ -696,7 +753,9 @@ class _CartelaRegistrationSheetState
 
   String get _holdStatusLabel {
     if (widget.alreadyOwned) {
-      return 'Already registered to you';
+      return widget.carriedForward
+          ? context.l10n.bigGameCartelaCarried
+          : 'Already registered to you';
     }
     if (_isSubmitting) {
       return 'Registering...';
@@ -872,6 +931,41 @@ class _CartelaRegistrationSheetState
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                       child: CartelaBoardPreview(columns: _displayColumns),
                     ),
+                    if (!widget.alreadyOwned && _canChooseBigTicketPayment)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment<String>(
+                              value: CartelaPaymentSource.bigGameTicket,
+                              label: Text(l10n.registrationUseBigTicket),
+                              icon: const Icon(
+                                Icons.confirmation_number_outlined,
+                                size: 16,
+                              ),
+                            ),
+                            ButtonSegment<String>(
+                              value: CartelaPaymentSource.moneyWallet,
+                              label: Text(l10n.registrationPayEtb),
+                              icon: const Icon(
+                                Icons.payments_outlined,
+                                size: 16,
+                              ),
+                            ),
+                          ],
+                          selected: {_paymentSource},
+                          onSelectionChanged: (selection) {
+                            if (_isSubmitting ||
+                                _registered ||
+                                selection.isEmpty) {
+                              return;
+                            }
+                            setState(() {
+                              _paymentSource = selection.first;
+                            });
+                          },
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                       child: Container(

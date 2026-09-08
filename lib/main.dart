@@ -6,7 +6,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'src/core/notifications/firebase_notification_service.dart';
 import 'src/app.dart';
-import 'src/features/wallet/data/receipt_ocr/receipt_ocr_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,13 +15,8 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
   runApp(
-    ProviderScope(
-      overrides: [
-        receiptOcrServiceProvider.overrideWithValue(
-          createDefaultReceiptOcrService(),
-        ),
-      ],
-      child: const FriendsBingoApp(),
+    const ProviderScope(
+      child: FriendsBingoApp(),
     ),
   );
 }

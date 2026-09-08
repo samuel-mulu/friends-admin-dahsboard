@@ -13,6 +13,7 @@ class DepositProviderConfig {
     this.enabled = true,
     this.approvalMode = 'automatic',
     this.receiptBaseUrl = '',
+    this.guideVideoUrl = '',
   });
 
   final String key;
@@ -25,6 +26,7 @@ class DepositProviderConfig {
   final bool enabled;
   final String approvalMode;
   final String receiptBaseUrl;
+  final String guideVideoUrl;
 
   factory DepositProviderConfig.fromJson(Map<String, dynamic> json) {
     return DepositProviderConfig(
@@ -38,6 +40,7 @@ class DepositProviderConfig {
       enabled: json['enabled'] as bool? ?? true,
       approvalMode: json['approvalMode'] as String? ?? 'automatic',
       receiptBaseUrl: json['receiptBaseUrl'] as String? ?? '',
+      guideVideoUrl: json['guideVideoUrl'] as String? ?? '',
     );
   }
 }

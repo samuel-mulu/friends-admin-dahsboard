@@ -70,8 +70,10 @@ class NotificationPreferencesState {
       case notificationCategoryBigGameRegistrationOpen:
       case notificationCategoryBigGameTomorrow:
       case notificationCategoryBigGameToday:
+      case notificationCategoryBigGameTicketGranted:
         return gameStartedEnabled;
       case notificationCategoryDepositApproved:
+      case notificationCategoryDepositRejected:
         return depositApprovedEnabled;
       case notificationCategoryWithdrawalApproved:
       case notificationCategoryWithdrawalCompleted:

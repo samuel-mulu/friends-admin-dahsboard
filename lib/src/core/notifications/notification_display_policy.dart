@@ -12,6 +12,7 @@ const _dedupeWindowMs = 2 * 60 * 1000;
 
 const _rateExemptCategories = <String>{
   notificationCategoryDepositApproved,
+  notificationCategoryDepositRejected,
   notificationCategoryWithdrawalApproved,
   notificationCategoryWithdrawalCompleted,
   notificationCategoryWithdrawalRejected,

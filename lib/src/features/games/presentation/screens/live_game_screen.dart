@@ -22,8 +22,11 @@ import '../../../../core/utils/api_date_time.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../domain/bulk_register_result.dart';
 import '../../domain/cartela_availability.dart';
+import '../../domain/cartela_payment_source.dart';
 import '../../domain/game_rule_localized_name.dart';
 import '../../domain/game_category_theme.dart';
+import '../../domain/big_game_phase.dart';
+import '../widgets/game_category_badge.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/cartela_mark_helpers.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
@@ -106,6 +109,7 @@ import '../../data/models/session_winner_result_model.dart';
 import '../../data/models/session_outcome_summary_model.dart';
 import '../providers/games_providers.dart';
 import '../providers/cartela_catalog_provider.dart';
+import '../providers/cartela_sort_mode_provider.dart';
 import '../../domain/cartela_catalog_state.dart';
 import '../../data/cartela_marks_storage.dart';
 import '../providers/cartela_marks_storage_provider.dart';
@@ -155,6 +159,7 @@ class LiveGameScreen extends ConsumerStatefulWidget {
     this.showAppBar = false,
     this.initialGame,
     this.embedded = false,
+    this.showBigGameMissedRoundRegistration = false,
     super.key,
   });
 
@@ -162,6 +167,9 @@ class LiveGameScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
   final GameModel? initialGame;
   final bool embedded;
+
+  /// Embedded Big Game Round 2+: show missed-style next-round registration UI.
+  final bool showBigGameMissedRoundRegistration;
 
   @override
   ConsumerState<LiveGameScreen> createState() => _LiveGameScreenState();
@@ -411,6 +419,11 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   }
 
   Widget _buildMissedLivePreviewSection() {
+    // Big Game embeds LiveGameScreen; never show other-game missed preview there.
+    if (widget.embedded) {
+      return const SizedBox.shrink();
+    }
+
     final observer = controllers.missedPreview;
     return ValueListenableBuilder<int>(
       valueListenable: observer.revision,
@@ -873,10 +886,22 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   LivePresentationPhase get _livePresentationPhase =>
       _liveUiMode.presentationPhase;
 
-  List<GameCartelaModel> get _orderedMyCartelas => applyCartelaDisplayOrder(
-    cartelas: _myCartelas,
-    orderIds: _myCartelaDisplayOrderIds,
-  );
+  List<GameCartelaModel> _orderedMyCartelas([CartelaSortMode? sortMode]) {
+    final mode = sortMode ?? CartelaSortMode.manual;
+    final baseOrder = applyCartelaDisplayOrder(
+      cartelas: _myCartelas,
+      orderIds: _myCartelaDisplayOrderIds,
+    );
+    if (mode.allowsManualReorder) {
+      return baseOrder;
+    }
+
+    return CartelaMarkedPatternEvaluator.sortCartelas(
+      cartelas: baseOrder,
+      resultsByCartelaId: _cn.cartelaSortResults,
+      sortMode: mode,
+    );
+  }
 
   void _clearMyCartelaDisplayOrder() {
     _myCartelaDisplayOrderIds = const [];
@@ -901,7 +926,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       return;
     }
 
-    final ordered = _orderedMyCartelas;
+    final ordered = _orderedMyCartelas(CartelaSortMode.manual);
     if (fromIndex < 0 ||
         toIndex < 0 ||
         fromIndex >= ordered.length ||
@@ -938,6 +963,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _warmCartelaMarksStorage();
     if (widget.initialGame != null) {
       _game = widget.initialGame;
+      _nextUpcomingGame = widget.initialGame!.nextRoundRegistration;
       _isLoading = false;
       _awaitingLiveRoom = false;
       _hasCompletedInitialPaint = true;
@@ -1290,6 +1316,15 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     final cartelaActionsEnabled = isCurrentRound
         ? phase.cartelaActionsEnabled
         : game.canRegister;
+    // Embedded Big Game: keep the selection grid while the play-start window
+    // is still open, even if a stale canRegister/preparing latch would hide it.
+    final allowEmbeddedBigGameRegistration =
+        widget.embedded &&
+        game.isBigGame &&
+        (game.canRegister ||
+            isBigGameRegistrationWindowOpen(game, now: _countdownNow()));
+    final showRegistrationActions =
+        cartelaActionsEnabled || allowEmbeddedBigGameRegistration;
     final registeredCartelas = isCurrentRound
         ? _myCartelas
         : _nextRegistrationCartelas;
@@ -1303,14 +1338,24 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       registeredCartelas: registeredCartelas,
       isCurrentRound: isCurrentRound,
     );
-    final showMissedRoundWrapper = cartelaActionsEnabled &&
-        controllers.missedPreview.showMissedRoundWrapper &&
-        (uiMode.showMissedRoundWrapper || uiMode.useRegistrationOpenLayout);
+    final showMissedRoundWrapper =
+        showRegistrationActions &&
+        ((widget.showBigGameMissedRoundRegistration &&
+                widget.embedded &&
+                game.isBigGame) ||
+            (!widget.embedded &&
+                controllers.missedPreview.showMissedRoundWrapper &&
+                (uiMode.showMissedRoundWrapper ||
+                    uiMode.useRegistrationOpenLayout)));
     final showRegistrationHandoffPreparing =
-        uiMode.mode == LiveUiMode.handoffOpeningNext ||
-        controllers.missedPreview.showHandoffHold;
+        !widget.embedded &&
+        (uiMode.mode == LiveUiMode.handoffOpeningNext ||
+            controllers.missedPreview.showHandoffHold);
     final isMissedRoundRegistration =
-        controllers.missedPreview.showMissedRoundWrapper;
+        (widget.showBigGameMissedRoundRegistration &&
+            widget.embedded &&
+            game.isBigGame) ||
+        (!widget.embedded && controllers.missedPreview.showMissedRoundWrapper);
     // Handoff keeps the registration pulse header so "Opening next round…" is
     // inline — never a modal overlay.
     final showRegistrationPulseHeader =
@@ -1427,8 +1472,12 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                       : const Center(
                           child: FriendsBingoLoader.inline(compact: true),
                         ))
-                : cartelaActionsEnabled
+                : showRegistrationActions
                 ? registrationBody
+                : widget.embedded && game.isBigGame
+                ? _BigGameEmbeddedWaitingPanel(
+                    isRefetching: _isLoading,
+                  )
                 : _PreparingGamePanel(
                     registeredCartelas: registeredCartelas,
                     isRefetching: showRegistrationHandoffPreparing,
@@ -1602,8 +1651,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       );
     }
 
+    final cartelaSortMode = ref.watch(cartelaSortModeProvider);
+    final orderedCartelas = _orderedMyCartelas(cartelaSortMode);
     final cartelaList = _InlineRegisteredCartelaList(
-      cartelas: _orderedMyCartelas,
+      cartelas: orderedCartelas,
       sortResultsByCartelaId: _cn.cartelaSortResults,
       canClaimBingoFor: _canClaimBingoForCartela,
       claimingCartelaIds: _cn.claimingCartelaIds,
@@ -1626,7 +1677,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       onClaimBingo: _claimBingo,
       blockedReasonCodeFor: _blockedReasonCodeForCartela,
       blockedServerReasonFor: _blockedServerReasonForCartela,
-      onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
+      onReorder: cartelaSortMode.allowsManualReorder && _myCartelas.length > 1
+          ? _reorderMyCartela
+          : null,
       bingoLockListenable: _countdown.bingoClaimLocked,
       decorativeMotionAllowedListenable: _liveCartelaScrollIdle,
     );
@@ -1694,7 +1747,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
     // Missed-round overlap: dual Missed + Next card only while observer says so.
     // After Game A ends (handoff / none), do not keep the stale Missed card.
-    if (!isCurrentRound && controllers.missedPreview.showMissedRoundWrapper) {
+    // Embedded Big Game uses [showBigGameMissedRoundRegistration] instead of
+    // the standard missed-preview observer.
+    if (!isCurrentRound &&
+        (controllers.missedPreview.showMissedRoundWrapper ||
+            (widget.showBigGameMissedRoundRegistration && target.isBigGame))) {
       return _buildMissedRoundRegistrationSection(target: target, panel: panel);
     }
 
@@ -1732,14 +1789,39 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     required Widget panel,
   }) {
     final l10n = context.l10n;
+    final previous = target.previousRound;
+    final isBigGameMissed =
+        widget.showBigGameMissedRoundRegistration && target.isBigGame;
+    final previousRoundLabel = previous == null
+        ? null
+        : l10n.bigGameMissedPreviousRoundLabel(previous.roundIndex);
+    final nextRoundLabel = l10n.bigGameMissedNextRoundLabel(
+      target.displayRoundIndex,
+    );
 
     return LiveNextRoundRegistrationSection(
-      gameName: target.localizedRuleName(ref),
-      currentRoundGame: controllers.missedPreview.blockingLiveGame,
+      gameName: isBigGameMissed ? nextRoundLabel : target.localizedRuleName(ref),
+      currentRoundGameName: isBigGameMissed
+          ? previousRoundLabel
+          : controllers.missedPreview.blockingLiveGame?.localizedRuleName(ref),
+      currentRoundGame: isBigGameMissed
+          ? null
+          : controllers.missedPreview.blockingLiveGame,
       nextGame: target,
-      sectionTitle: l10n.liveNextRoundRegistrationTitle,
-      helperText: l10n.liveMissedRoundHelper,
-      registeredCartelaNumbers: _nextRegisteredCartelaNumbers,
+      sectionTitle: isBigGameMissed
+          ? l10n.bigGameMissedRoundRegistrationTitle(
+              target.displayRoundIndex,
+            )
+          : l10n.liveNextRoundRegistrationTitle,
+      helperText: isBigGameMissed
+          ? l10n.bigGameMissedRoundHelper(
+              previous?.roundIndex ?? (target.displayRoundIndex - 1),
+              target.displayRoundIndex,
+            )
+          : l10n.liveMissedRoundHelper,
+      registeredCartelaNumbers: isBigGameMissed
+          ? _myCartelas.map((c) => c.cartela.number).toList(growable: false)
+          : _nextRegisteredCartelaNumbers,
       panel: panel,
       variant: LiveNextRoundSectionVariant.missedCurrentRound,
     );
@@ -1899,33 +1981,42 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                       : 'Registration is closed for this live game right now.',
                 )
         else if (_showsInlinePlayCartelas) ...[
-          _InlineRegisteredCartelaList(
-            cartelas: _orderedMyCartelas,
-            sortResultsByCartelaId: _cn.cartelaSortResults,
-            canClaimBingoFor: _canClaimBingoForCartela,
-            claimingCartelaIds: _cn.claimingCartelaIds,
-            pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
-            showPendingClaimState: !_showsPostGameSummary,
-            showFinishedOutcome: _showFinishedCartelaOutcome,
-            freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
-            manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-            lastManualMarkedKey: _cn.lastManualMarkedKey,
-            markedNumbersFor: _markedNumbersForCartela,
-            sortResultFor: _sortResultForCartela,
-            winningPatternCellsByGameCartelaId:
-                _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
-            winningPatternOverlayByGameCartelaId:
-                _review.winnerCartelaDisplay.overlayByGameCartelaId,
-            winningBallCellIndexByGameCartelaId: _review
-                .winnerCartelaDisplay
-                .winningBallCellIndexByGameCartelaId,
-            prizeAmountFor: _prizeAmountForGameCartela,
-            onMarkedNumberToggled: _toggleMarkedNumber,
-            onClaimBingo: _claimBingo,
-            blockedReasonCodeFor: _blockedReasonCodeForCartela,
-            blockedServerReasonFor: _blockedServerReasonForCartela,
-            onReorder: _myCartelas.length > 1 ? _reorderMyCartela : null,
-            bingoLockListenable: _countdown.bingoClaimLocked,
+          Builder(
+            builder: (context) {
+              final cartelaSortMode = ref.watch(cartelaSortModeProvider);
+              return _InlineRegisteredCartelaList(
+                cartelas: _orderedMyCartelas(cartelaSortMode),
+                sortResultsByCartelaId: _cn.cartelaSortResults,
+                canClaimBingoFor: _canClaimBingoForCartela,
+                claimingCartelaIds: _cn.claimingCartelaIds,
+                pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
+                showPendingClaimState: !_showsPostGameSummary,
+                showFinishedOutcome: _showFinishedCartelaOutcome,
+                freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
+                manualMarkedNumbers: _cn.effectiveMarkedNumbers,
+                lastManualMarkedKey: _cn.lastManualMarkedKey,
+                markedNumbersFor: _markedNumbersForCartela,
+                sortResultFor: _sortResultForCartela,
+                winningPatternCellsByGameCartelaId:
+                    _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
+                winningPatternOverlayByGameCartelaId:
+                    _review.winnerCartelaDisplay.overlayByGameCartelaId,
+                winningBallCellIndexByGameCartelaId: _review
+                    .winnerCartelaDisplay
+                    .winningBallCellIndexByGameCartelaId,
+                prizeAmountFor: _prizeAmountForGameCartela,
+                onMarkedNumberToggled: _toggleMarkedNumber,
+                onClaimBingo: _claimBingo,
+                blockedReasonCodeFor: _blockedReasonCodeForCartela,
+                blockedServerReasonFor: _blockedServerReasonForCartela,
+                onReorder:
+                    cartelaSortMode.allowsManualReorder &&
+                        _myCartelas.length > 1
+                    ? _reorderMyCartela
+                    : null,
+                bingoLockListenable: _countdown.bingoClaimLocked,
+              );
+            },
           ),
           if (_shouldShowInlineRegistrationPanel &&
               !_review.postGameSummaryReviewActive) ...[
@@ -1933,7 +2024,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             _buildRegistrationTargetSection(),
           ],
         ] else if (_hasVisibleCurrentSessionCartelas)
-          _RegisteredCartelaList(cartelas: _myCartelas),
+          widget.embedded && (_game?.isBigGame ?? false)
+              ? _BigGameEmbeddedWaitingPanel(
+                  isRefetching: _isLoading,
+                )
+              : _RegisteredCartelaList(cartelas: _myCartelas),
       ],
     );
   }
@@ -2013,7 +2108,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       entryFee: target.entryFee,
       prizePerCartela: target.prizePerCartela,
       category: target.category,
-      fixedPrizeAmount: target.fixedPrizeAmount,
+      fixedPrizeAmount: target.isBigGame
+          ? (target.effectiveRoundPrizeAmount ?? target.fixedPrizeAmount)
+          : target.fixedPrizeAmount,
       maxCartelasPerPlayer: target.maxCartelasPerPlayer,
       registeredCartelas: registeredCartelas,
       cartelaHoldSeconds: _cartelaHoldSeconds,
@@ -3368,6 +3465,49 @@ class _PreparingGamePanel extends StatelessWidget {
           Expanded(child: _RegisteredCartelaList(cartelas: registeredCartelas)),
         ],
       ],
+    );
+  }
+}
+
+/// Compact waiting state for embedded Big Game (no registered-cartela list).
+class _BigGameEmbeddedWaitingPanel extends StatelessWidget {
+  const _BigGameEmbeddedWaitingPanel({required this.isRefetching});
+
+  final bool isRefetching;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+
+    return Center(
+      child: Padding(
+        padding: AppSpacing.cardPaddingDense,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isRefetching) ...[
+              const FriendsBingoLoader.inline(compact: true),
+              VGap.lg,
+            ],
+            Text(
+              l10n.registrationClosedPreparing,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            VGap.sm,
+            Text(
+              l10n.preparingGameNoCartelas,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

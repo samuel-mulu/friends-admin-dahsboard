@@ -9,6 +9,7 @@ import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/telegram_phone_link_screen.dart';
 import '../../features/auth/presentation/screens/unlock_screen.dart';
 import '../../features/auth/security/app_lock_controller.dart';
 import '../../features/games/presentation/screens/big_game_screen.dart';
@@ -158,6 +159,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/forgot-password',
         builder: (context, state) =>
             appRouteWithBackConfirm(const ForgotPasswordScreen()),
+      ),
+      GoRoute(
+        path: '/auth/telegram-phone',
+        builder: (context, state) {
+          final ticket = state.uri.queryParameters['ticket'] ?? '';
+          return appRouteWithBackConfirm(
+            TelegramPhoneLinkScreen(ticket: ticket),
+          );
+        },
       ),
       GoRoute(
         path: '/unlock',

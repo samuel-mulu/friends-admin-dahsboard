@@ -445,7 +445,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get depositSuccessApproved => 'Deposit successful. Wallet updated.';
 
   @override
-  String get depositReceiptDuplicate => 'This receipt has already been used.';
+  String get depositReceiptDuplicate =>
+      'This receipt has already been used and credited. Submit a new payment receipt.';
 
   @override
   String get depositReceiptInvalid => 'Receipt could not be verified.';
@@ -479,6 +480,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositGuideTitle => 'How to deposit';
+
+  @override
+  String get depositGuideTabSteps => 'Steps';
+
+  @override
+  String get depositGuideTabVideo => 'Video';
+
+  @override
+  String get depositGuideVideoMissing =>
+      'Video guide is not available yet for this payment method.';
+
+  @override
+  String get depositGuideVideoHint =>
+      'Use the player controls to play, pause, seek, and change volume.';
+
+  @override
+  String get depositGuideOpenOnYoutube => 'Open on YouTube';
 
   @override
   String get depositGuideTelebirrStep1 =>
@@ -540,16 +558,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositRefUnderReview =>
-      'This reference is already under admin review.';
+      'This receipt is already under admin review. Wait for approval or rejection—do not clear the app.';
 
   @override
-  String get depositRejectedTitle => 'Deposit failed';
+  String get depositUnderReviewTitle => 'Already under review';
+
+  @override
+  String get depositUnderReviewMessage =>
+      'This receipt was already submitted and is waiting for admin. You cannot submit it again until it is approved or rejected.';
+
+  @override
+  String get depositRejectedTitle => 'Deposit rejected';
+
+  @override
+  String get depositRejectedCanRetry =>
+      'You can fix the details and submit again. Clearing the app is not required.';
+
+  @override
+  String get depositFixAndResubmit => 'Fix and submit again';
+
+  @override
+  String get depositAlreadyCreditedHint =>
+      'This receipt was already credited. Use a new payment receipt.';
 
   @override
   String get depositTryAgain => 'You can correct the details and try again.';
 
   @override
   String get depositSelectProvider => 'Payment method';
+
+  @override
+  String get depositChooseProviderFirst => '1. Choose how you will send money';
+
+  @override
+  String get depositChooseProviderHint =>
+      'Pick one provider first. Only that provider’s account and form will appear.';
+
+  @override
+  String get depositSelectedMethod => 'Selected payment method';
+
+  @override
+  String get depositChangeProvider => 'Change';
+
+  @override
+  String depositOnlyUseProvider(String provider) {
+    return 'Send only with $provider. Do not mix with another bank or Telebirr.';
+  }
+
+  @override
+  String get depositInstructionCbe =>
+      'Send money with CBE, then enter the payment reference number and exact transferred amount.';
+
+  @override
+  String get depositInstructionTelebirr =>
+      'Send money with Telebirr, then enter the receipt ID and exact transferred amount.';
+
+  @override
+  String get depositInstructionAwash =>
+      'Send money with Awash Bank, then enter the payment reference and exact transferred amount.';
+
+  @override
+  String get depositInstructionBoa =>
+      'Send money with Bank of Abyssinia, then enter the payment reference and exact transferred amount.';
+
+  @override
+  String get depositSendToOneOfAccounts => 'Send to one of these accounts';
+
+  @override
+  String get depositCopyThenSend =>
+      'Copy the number, then send from the same provider you selected.';
+
+  @override
+  String get depositStepSubmitDetails => '2. Enter amount and receipt';
+
+  @override
+  String get depositStepInstructions => '3. How to send';
 
   @override
   String get depositSendToAccount => 'Send to this account';
@@ -565,10 +648,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositShowInstructions => 'Instructions';
-
-  @override
-  String get depositReceiptReviewLabel =>
-      'I have checked the amount and reference number from my transaction';
 
   @override
   String get depositCopyAccount => 'Copy account';
@@ -596,31 +675,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositCouldNotSubmit => 'Could not submit deposit.';
-
-  @override
-  String get depositReceiptScan => 'Scan receipt';
-
-  @override
-  String get depositReceiptScreenshotHelperPrefix => 'Can be filled from a ';
-
-  @override
-  String get depositReceiptScreenshotHelperLink => 'screenshot';
-
-  @override
-  String get depositReceiptScreenshotHelperSuffix =>
-      '. Please review before submitting.';
-
-  @override
-  String get depositReceiptScanSuccess =>
-      'Receipt detected. Please review before submitting.';
-
-  @override
-  String get depositReceiptScanPartial =>
-      'Some details detected. Please review.';
-
-  @override
-  String get depositReceiptScanFailure =>
-      'Could not read receipt. Please type manually.';
 
   @override
   String depositProvider(String provider) {
@@ -762,6 +816,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get withdrawSelectProvider => 'Payout method';
+
+  @override
+  String get withdrawChooseProviderFirst => '1. Choose payout method';
+
+  @override
+  String get withdrawChooseProviderHint =>
+      'Pick Telebirr or CBE first. Then enter details for that method only.';
+
+  @override
+  String get withdrawSelectedMethod => 'Selected payout method';
+
+  @override
+  String get withdrawChangeProvider => 'Change';
+
+  @override
+  String get withdrawTelebirrOnlyHint =>
+      'Payout will be sent by Telebirr only.';
+
+  @override
+  String get withdrawCbeOnlyHint =>
+      'Payout will be sent to a CBE account only.';
 
   @override
   String get withdrawMaxWithdrawableHint =>
@@ -1487,6 +1562,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerSounds => 'Sounds';
 
   @override
+  String get drawerSortCartelasByLines => 'Sort cartelas by lines';
+
+  @override
+  String get drawerSortCartelasByLinesSubtitle =>
+      'Cartelas with more completed rows, columns, and diagonals rise to the top. Uses your marks, including one-away progress.';
+
+  @override
   String get soundSettingsDeviceOnly =>
       'These settings are saved on this device only.';
 
@@ -1689,6 +1771,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerLogout => 'Logout';
+
+  @override
+  String get securitySectionTitle => 'Security';
+
+  @override
+  String get securityChangePassword => 'Change password';
+
+  @override
+  String get securitySetPassword => 'Set password';
+
+  @override
+  String get securitySetPasswordHint =>
+      'We will send an SMS code to verify your phone before setting a password.';
+
+  @override
+  String get securityCurrentPassword => 'Current password';
+
+  @override
+  String get securityNewPassword => 'New password';
+
+  @override
+  String get securityConfirmPassword => 'Confirm password';
+
+  @override
+  String get securityPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get securitySavePassword => 'Save password';
+
+  @override
+  String get securitySendCode => 'Send verification code';
+
+  @override
+  String get securityPasswordChanged => 'Password updated successfully.';
+
+  @override
+  String get securityActiveSessions => 'Active sessions';
+
+  @override
+  String get securityThisDevice => 'This device';
+
+  @override
+  String get securityCurrent => 'Current';
+
+  @override
+  String get securityLogoutDevice => 'Log out';
+
+  @override
+  String get securityLogoutOthers => 'Log out other devices';
+
+  @override
+  String get securityOthersLoggedOut => 'Other devices were logged out.';
+
+  @override
+  String get securityNoSessions => 'No active sessions found.';
+
+  @override
+  String get securitySessionsLoadFailed => 'Could not load sessions.';
+
+  @override
+  String get telegramContinue => 'Continue with Telegram';
+
+  @override
+  String get telegramLink => 'Link Telegram';
+
+  @override
+  String get telegramUnlink => 'Unlink Telegram';
+
+  @override
+  String get telegramUnlinked => 'Telegram unlinked.';
+
+  @override
+  String get telegramOpenFailed => 'Could not open Telegram login.';
+
+  @override
+  String get telegramLinkPhoneTitle => 'Confirm your phone';
+
+  @override
+  String get telegramLinkPhoneSubtitle =>
+      'Enter your phone number. If it is already registered, we will link Telegram and sign you in. If it is new, we will create your account.';
+
+  @override
+  String get telegramCompleteSignIn => 'Verify and continue';
 
   @override
   String get drawerJoinGame => 'Join the game';
@@ -1990,6 +2155,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bigGameWaitingBody => 'Waiting for current round to finish.';
 
   @override
+  String bigGameWaitingBodyWithBlocker(String gameCode) {
+    return 'Waiting for $gameCode to finish.';
+  }
+
+  @override
+  String get bigGameStartingSoonBody => 'Starting soon…';
+
+  @override
+  String get bigGameCartelaCarried => 'Carried from previous round';
+
+  @override
+  String bigGameRoundOf(int current, int total) {
+    return 'Round $current of $total';
+  }
+
+  @override
+  String get bigGameThisRoundPrize => 'This Round Prize';
+
+  @override
+  String get bigGameTotalPrize => 'Total Prize';
+
+  @override
+  String bigGameRoundPrize(int round) {
+    return 'Round $round Prize';
+  }
+
+  @override
+  String get bigGameShowDetails => 'Details';
+
+  @override
+  String get bigGameHideDetails => 'Hide';
+
+  @override
+  String get bigGameBetweenRoundsTitle => 'Between rounds';
+
+  @override
+  String get bigGameNextRoundStartsIn => 'Next round starts in:';
+
+  @override
+  String get walletBigTicketsLabel => 'Big Tickets';
+
+  @override
+  String walletBigTicketsForEvent(String eventName) {
+    return 'Big Tickets · $eventName';
+  }
+
+  @override
+  String get registrationUseBigTicket => 'Use Big Ticket';
+
+  @override
+  String get registrationPayEtb => 'Pay ETB';
+
+  @override
+  String registrationBigTicketBalance(int count) {
+    return 'Big Tickets: $count';
+  }
+
+  @override
+  String get registrationUsesBigTicket => 'Uses 1 Big Ticket';
+
+  @override
   String get gameCategoryNormal => 'Normal Game';
 
   @override
@@ -2184,10 +2410,43 @@ class AppLocalizationsEn extends AppLocalizations {
       'Big Game ready — waiting for current round';
 
   @override
+  String get announcementBigGameStartingSoon =>
+      'Big Game ready — starting soon';
+
+  @override
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
   String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+
+  @override
+  String get bigGameHeldPrompt =>
+      'Big Game is ready — waiting for current round — Go to Big Game';
+
+  @override
+  String bigGameRegistrationOpenPrompt(int round) {
+    return 'Big Game Round $round registration is open — Go to Big Game';
+  }
+
+  @override
+  String bigGameMissedRoundRegistrationTitle(int round) {
+    return 'Register for Round $round';
+  }
+
+  @override
+  String bigGameMissedRoundHelper(int missedRound, int nextRound) {
+    return 'You missed Round $missedRound. Register for Round $nextRound with money or a Big Ticket.';
+  }
+
+  @override
+  String bigGameMissedPreviousRoundLabel(int round) {
+    return 'Missed Round $round';
+  }
+
+  @override
+  String bigGameMissedNextRoundLabel(int round) {
+    return 'Round $round registration';
+  }
 
   @override
   String get bigGameGoAction => 'Go to Big Game';
@@ -2228,6 +2487,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adminMessagesForcedHint =>
       'The app will reopen when the admin removes this notice.';
+
+  @override
+  String get accountBannedTitle => 'Account banned';
+
+  @override
+  String get accountBannedPleaseContact => 'Please contact us for help.';
+
+  @override
+  String get accountBannedAcknowledge => 'Acknowledge';
 
   @override
   String get close => 'Close';

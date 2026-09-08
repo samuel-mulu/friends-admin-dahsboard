@@ -446,7 +446,8 @@ class AppLocalizationsOm extends AppLocalizations {
   String get depositSuccessApproved => 'Galchiin milkaa\'e. Boorsi haaromfame.';
 
   @override
-  String get depositReceiptDuplicate => 'Nagaheen kun dursee fayyadameera.';
+  String get depositReceiptDuplicate =>
+      'Nagaheen kun dursee fayyadameera fi herregaatti galteera. Nagahee haaraa galchi.';
 
   @override
   String get depositReceiptInvalid => 'Nagaheen mirkanaa\'uu hin dandeenye.';
@@ -480,6 +481,23 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get depositGuideTitle => 'How to deposit';
+
+  @override
+  String get depositGuideTabSteps => 'Tarkaanfiiwwan';
+
+  @override
+  String get depositGuideTabVideo => 'Viidiyoo';
+
+  @override
+  String get depositGuideVideoMissing =>
+      'Viidiyoon qajeelfamaa mala kaffaltii kanaaf amma hin jiru.';
+
+  @override
+  String get depositGuideVideoHint =>
+      'Taphachiisuuf, dhaabuuf, barbaaduuf fi sagalee jijjiiruuf to\'annoo taphataa fayyadami.';
+
+  @override
+  String get depositGuideOpenOnYoutube => 'YouTube irratti banii';
 
   @override
   String get depositGuideTelebirrStep1 =>
@@ -541,16 +559,83 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get depositRefUnderReview =>
-      'Wabiin kun dursee mirkaneessa bulchaa jala jira.';
+      'Nagaheen kun dursee mirkaneessa bulchaa jala jira. Mirkanaa\'uu ykn dhiisamuu eegi—app hin qulleessin.';
 
   @override
-  String get depositRejectedTitle => 'Galchiin hin milkoofne';
+  String get depositUnderReviewTitle => 'Mirkaneessa jala jira';
+
+  @override
+  String get depositUnderReviewMessage =>
+      'Nagaheen kun dursee dhiyaateera. Hanga mirkanaa\'u ykn dhiisamuutti irra deebi\'anii galchuu hin dandeessan.';
+
+  @override
+  String get depositRejectedTitle => 'Galchiin hin fudhatamne';
+
+  @override
+  String get depositRejectedCanRetry =>
+      'Odeeffannoo fooyyessuun irra deebi\'anii galchuu dandeessu. App qulleessuun hin barbaachisu.';
+
+  @override
+  String get depositFixAndResubmit => 'Fooyyessiitii irra deebi\'ii galchi';
+
+  @override
+  String get depositAlreadyCreditedHint =>
+      'Nagaheen kun dursee herregaatti galteera. Nagahee kaffaltii haaraa fayyadami.';
 
   @override
   String get depositTryAgain => 'You can correct the details and try again.';
 
   @override
-  String get depositSelectProvider => 'Payment method';
+  String get depositSelectProvider => 'Mala kaffaltii';
+
+  @override
+  String get depositChooseProviderFirst =>
+      '1. Akkaataa ati ittiin erguu filadhu';
+
+  @override
+  String get depositChooseProviderHint =>
+      'Dura dhiyeessaa tokko filadhu. Akkaawuntii fi unka dhiyeessaa sanaa qofa ni mul\'ata.';
+
+  @override
+  String get depositSelectedMethod => 'Mala kaffaltii filatame';
+
+  @override
+  String get depositChangeProvider => 'Jijjiiri';
+
+  @override
+  String depositOnlyUseProvider(String provider) {
+    return 'Kan $provider qofa fayyadami. Banki biroo ykn Telebirr waliin hin makamsiinis.';
+  }
+
+  @override
+  String get depositInstructionCbe =>
+      'CBE fayyadamuun ergi, sana booda lakkoofsa wabii kaffaltii fi hanga sirrii ergame galchi.';
+
+  @override
+  String get depositInstructionTelebirr =>
+      'Telebirr fayyadamuun ergi, sana booda eenyummaa nagahee fi hanga sirrii ergame galchi.';
+
+  @override
+  String get depositInstructionAwash =>
+      'Awash Bank fayyadamuun ergi, sana booda wabii kaffaltii fi hanga sirrii galchi.';
+
+  @override
+  String get depositInstructionBoa =>
+      'Bank of Abyssinia fayyadamuun ergi, sana booda wabii kaffaltii fi hanga sirrii galchi.';
+
+  @override
+  String get depositSendToOneOfAccounts =>
+      'Gara akkaawuntiiwwan kanaa keessaa tokkotti ergi';
+
+  @override
+  String get depositCopyThenSend =>
+      'Lakkoofsa copy godhi, sana booda dhiyeessaa filatte qofa irraa ergi.';
+
+  @override
+  String get depositStepSubmitDetails => '2. Hanga fi nagahee galchi';
+
+  @override
+  String get depositStepInstructions => '3. Akkaataa erguu';
 
   @override
   String get depositSendToAccount => 'Gara akkaawuntii kanaatti ergi';
@@ -565,11 +650,7 @@ class AppLocalizationsOm extends AppLocalizations {
   String get depositTelebirrAccount2 => 'Akkaawuntii 2';
 
   @override
-  String get depositShowInstructions => 'Instructions';
-
-  @override
-  String get depositReceiptReviewLabel =>
-      'I have checked the amount and reference number from my transaction';
+  String get depositShowInstructions => 'Qajeelfama';
 
   @override
   String get depositCopyAccount => 'Copy account';
@@ -597,31 +678,6 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get depositCouldNotSubmit => 'Galchi galchuu hin dandeenye.';
-
-  @override
-  String get depositReceiptScan => 'Scan receipt';
-
-  @override
-  String get depositReceiptScreenshotHelperPrefix => 'Can be filled from a ';
-
-  @override
-  String get depositReceiptScreenshotHelperLink => 'screenshot';
-
-  @override
-  String get depositReceiptScreenshotHelperSuffix =>
-      '. Please review before submitting.';
-
-  @override
-  String get depositReceiptScanSuccess =>
-      'Receipt detected. Please review before submitting.';
-
-  @override
-  String get depositReceiptScanPartial =>
-      'Some details detected. Please review.';
-
-  @override
-  String get depositReceiptScanFailure =>
-      'Could not read receipt. Please type manually.';
 
   @override
   String depositProvider(String provider) {
@@ -764,7 +820,27 @@ class AppLocalizationsOm extends AppLocalizations {
       'Seenaa baasii fe\'uu hin dandeenye.';
 
   @override
-  String get withdrawSelectProvider => 'Payout method';
+  String get withdrawSelectProvider => 'Mala baasii';
+
+  @override
+  String get withdrawChooseProviderFirst => '1. Mala baasii filadhu';
+
+  @override
+  String get withdrawChooseProviderHint =>
+      'Dura Telebirr ykn CBE filadhu. Ergasii odeeffannoo mala sanaa qofa galchi.';
+
+  @override
+  String get withdrawSelectedMethod => 'Mala baasii filatame';
+
+  @override
+  String get withdrawChangeProvider => 'Jijjiiri';
+
+  @override
+  String get withdrawTelebirrOnlyHint => 'Baasiin Telebirr qofaan ni ergama.';
+
+  @override
+  String get withdrawCbeOnlyHint =>
+      'Baasiin gara akkaawuntii CBE qofaatti ni ergama.';
 
   @override
   String get withdrawMaxWithdrawableHint =>
@@ -1497,6 +1573,14 @@ class AppLocalizationsOm extends AppLocalizations {
   String get drawerSounds => 'Sagaleewwan';
 
   @override
+  String get drawerSortCartelasByLines =>
+      'Kaartelaalee karaa sararaatiin tarreessi';
+
+  @override
+  String get drawerSortCartelasByLinesSubtitle =>
+      'Kaartelaalee sarara, tarree fi digonaal guutuu baay\'ee qaban olitti dhufu. Mallattoo kee fi tarkaanfii tokko-hafuu fayyadama.';
+
+  @override
   String get soundSettingsDeviceOnly =>
       'Qindaa\'inoonni kun meeshaa kana irratti qofa kuufamu.';
 
@@ -1699,6 +1783,89 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get drawerLogout => 'Ba\'i';
+
+  @override
+  String get securitySectionTitle => 'Security';
+
+  @override
+  String get securityChangePassword => 'Change password';
+
+  @override
+  String get securitySetPassword => 'Set password';
+
+  @override
+  String get securitySetPasswordHint =>
+      'We will send an SMS code to verify your phone before setting a password.';
+
+  @override
+  String get securityCurrentPassword => 'Current password';
+
+  @override
+  String get securityNewPassword => 'New password';
+
+  @override
+  String get securityConfirmPassword => 'Confirm password';
+
+  @override
+  String get securityPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get securitySavePassword => 'Save password';
+
+  @override
+  String get securitySendCode => 'Send verification code';
+
+  @override
+  String get securityPasswordChanged => 'Password updated successfully.';
+
+  @override
+  String get securityActiveSessions => 'Active sessions';
+
+  @override
+  String get securityThisDevice => 'This device';
+
+  @override
+  String get securityCurrent => 'Current';
+
+  @override
+  String get securityLogoutDevice => 'Log out';
+
+  @override
+  String get securityLogoutOthers => 'Log out other devices';
+
+  @override
+  String get securityOthersLoggedOut => 'Other devices were logged out.';
+
+  @override
+  String get securityNoSessions => 'No active sessions found.';
+
+  @override
+  String get securitySessionsLoadFailed => 'Could not load sessions.';
+
+  @override
+  String get telegramContinue => 'Continue with Telegram';
+
+  @override
+  String get telegramLink => 'Link Telegram';
+
+  @override
+  String get telegramUnlink => 'Unlink Telegram';
+
+  @override
+  String get telegramUnlinked => 'Telegram unlinked.';
+
+  @override
+  String get telegramOpenFailed => 'Could not open Telegram login.';
+
+  @override
+  String get telegramLinkPhoneTitle => 'Confirm your phone';
+
+  @override
+  String get telegramLinkPhoneSubtitle =>
+      'Enter your phone number. If it is already registered, we will link Telegram and sign you in. If it is new, we will create your account.';
+
+  @override
+  String get telegramCompleteSignIn => 'Verify and continue';
 
   @override
   String get drawerJoinGame => 'Taphaatti makami';
@@ -2008,6 +2175,67 @@ class AppLocalizationsOm extends AppLocalizations {
   String get bigGameWaitingBody => 'Waiting for current round to finish.';
 
   @override
+  String bigGameWaitingBodyWithBlocker(String gameCode) {
+    return 'Waiting for $gameCode to finish.';
+  }
+
+  @override
+  String get bigGameStartingSoonBody => 'Starting soon…';
+
+  @override
+  String get bigGameCartelaCarried => 'Carried from previous round';
+
+  @override
+  String bigGameRoundOf(int current, int total) {
+    return 'Round $current of $total';
+  }
+
+  @override
+  String get bigGameThisRoundPrize => 'This Round Prize';
+
+  @override
+  String get bigGameTotalPrize => 'Total Prize';
+
+  @override
+  String bigGameRoundPrize(int round) {
+    return 'Round $round Prize';
+  }
+
+  @override
+  String get bigGameShowDetails => 'Details';
+
+  @override
+  String get bigGameHideDetails => 'Hide';
+
+  @override
+  String get bigGameBetweenRoundsTitle => 'Between rounds';
+
+  @override
+  String get bigGameNextRoundStartsIn => 'Next round starts in:';
+
+  @override
+  String get walletBigTicketsLabel => 'Big Tickets';
+
+  @override
+  String walletBigTicketsForEvent(String eventName) {
+    return 'Big Tickets · $eventName';
+  }
+
+  @override
+  String get registrationUseBigTicket => 'Use Big Ticket';
+
+  @override
+  String get registrationPayEtb => 'Pay ETB';
+
+  @override
+  String registrationBigTicketBalance(int count) {
+    return 'Big Tickets: $count';
+  }
+
+  @override
+  String get registrationUsesBigTicket => 'Uses 1 Big Ticket';
+
+  @override
   String get gameCategoryNormal => 'Normal Game';
 
   @override
@@ -2202,10 +2430,43 @@ class AppLocalizationsOm extends AppLocalizations {
       'Big Game ready — waiting for current round';
 
   @override
+  String get announcementBigGameStartingSoon =>
+      'Big Game ready — starting soon';
+
+  @override
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
   String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+
+  @override
+  String get bigGameHeldPrompt =>
+      'Big Game is ready — waiting for current round — Go to Big Game';
+
+  @override
+  String bigGameRegistrationOpenPrompt(int round) {
+    return 'Big Game Round $round registration is open — Go to Big Game';
+  }
+
+  @override
+  String bigGameMissedRoundRegistrationTitle(int round) {
+    return 'Register for Round $round';
+  }
+
+  @override
+  String bigGameMissedRoundHelper(int missedRound, int nextRound) {
+    return 'You missed Round $missedRound. Register for Round $nextRound with money or a Big Ticket.';
+  }
+
+  @override
+  String bigGameMissedPreviousRoundLabel(int round) {
+    return 'Missed Round $round';
+  }
+
+  @override
+  String bigGameMissedNextRoundLabel(int round) {
+    return 'Round $round registration';
+  }
 
   @override
   String get bigGameGoAction => 'Go to Big Game';
@@ -2246,6 +2507,15 @@ class AppLocalizationsOm extends AppLocalizations {
   @override
   String get adminMessagesForcedHint =>
       'The app will reopen when the admin removes this notice.';
+
+  @override
+  String get accountBannedTitle => 'Account banned';
+
+  @override
+  String get accountBannedPleaseContact => 'Please contact us for help.';
+
+  @override
+  String get accountBannedAcknowledge => 'Acknowledge';
 
   @override
   String get close => 'Close';

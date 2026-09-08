@@ -803,8 +803,13 @@ class LiveUiModeResolver {
     if (registration == null) {
       return null;
     }
-    if (mode == LiveUiMode.liveOwned &&
-        primary.status == GameStatus.playing &&
+    if ((mode == LiveUiMode.liveOwned ||
+            mode == LiveUiMode.liveSpectator ||
+            mode == LiveUiMode.checking ||
+            mode == LiveUiMode.winnerWindow) &&
+        (primary.status == GameStatus.playing ||
+            primary.status == GameStatus.checking ||
+            primary.status == GameStatus.winnerWindow) &&
         !_isSameRound(registration, primary)) {
       return registration;
     }

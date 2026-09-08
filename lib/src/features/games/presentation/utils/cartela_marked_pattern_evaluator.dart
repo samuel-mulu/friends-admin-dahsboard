@@ -7,6 +7,8 @@ import 'cartela_mark_helpers.dart';
 import 'cartela_pattern_progress_overlay.dart';
 
 enum CartelaSortMode {
+  /// Classic bingo lines (rows + columns + diagonals), then one-away proximity.
+  lines,
   smart,
   markedCells,
   manual,
@@ -14,6 +16,7 @@ enum CartelaSortMode {
 
   static CartelaSortMode? tryParse(String? raw) {
     return switch (raw) {
+      'lines' => CartelaSortMode.lines,
       'smart' => CartelaSortMode.smart,
       'markedCells' => CartelaSortMode.markedCells,
       'manual' => CartelaSortMode.manual,
@@ -23,10 +26,16 @@ enum CartelaSortMode {
 
   bool get isUserSelectable => this != CartelaSortMode.reviewSmart;
 
+  /// Sidebar on/off: lines sort enabled.
+  bool get sortsByLines => this == CartelaSortMode.lines;
+
+  bool get allowsManualReorder => this == CartelaSortMode.manual;
+
   String get storageKey => name;
 
   String get label {
     return switch (this) {
+      CartelaSortMode.lines => 'Lines',
       CartelaSortMode.smart => 'Smart',
       CartelaSortMode.markedCells => 'Marked',
       CartelaSortMode.manual => 'Manual',
@@ -46,6 +55,7 @@ class CartelaPatternUiResult {
     required this.oneAwayCellIndexes,
     required this.missingCellCount,
     required this.markedCellCount,
+    required this.completedClassicLineCount,
     required this.sortScore,
   });
 
@@ -59,6 +69,9 @@ class CartelaPatternUiResult {
   final Set<int> oneAwayCellIndexes;
   final int missingCellCount;
   final int markedCellCount;
+
+  /// Fully marked classic lines: 5 rows + 5 columns + 2 diagonals.
+  final int completedClassicLineCount;
   final int sortScore;
 }
 
@@ -81,6 +94,7 @@ class CartelaMarkedPatternEvaluator {
       manualMarkedNumbers: manualMarkedNumbers,
     );
     final markedCount = markedIndexes.length;
+    final classicLineCount = countClassicCompletedLines(markedIndexes);
 
     final definition = _ruleDefinitions[ruleKey.trim().toUpperCase()];
     if (definition == null) {
@@ -93,11 +107,13 @@ class CartelaMarkedPatternEvaluator {
         oneAwayCellIndexes: const {},
         missingCellCount: 25,
         markedCellCount: markedCount,
+        completedClassicLineCount: classicLineCount,
         sortScore: _sortScore(
           hasLocalPatternComplete: false,
           isOneAway: false,
           missingCellCount: 25,
           markedCellCount: markedCount,
+          completedClassicLineCount: classicLineCount,
         ),
       );
     }
@@ -129,11 +145,13 @@ class CartelaMarkedPatternEvaluator {
       oneAwayCellIndexes: oneAwayCellIndexes,
       missingCellCount: missingCellCount,
       markedCellCount: markedCount,
+      completedClassicLineCount: classicLineCount,
       sortScore: _sortScore(
         hasLocalPatternComplete: hasLocalPatternComplete,
         isOneAway: isOneAway,
         missingCellCount: missingCellCount,
         markedCellCount: markedCount,
+        completedClassicLineCount: classicLineCount,
       ),
     );
   }
@@ -171,6 +189,12 @@ class CartelaMarkedPatternEvaluator {
         }
 
         return switch (sortMode) {
+          CartelaSortMode.lines => _compareLines(
+            left: left,
+            right: right,
+            leftResult: leftResult,
+            rightResult: rightResult,
+          ),
           CartelaSortMode.smart => _compareSmart(
             left: left,
             right: right,
@@ -194,6 +218,55 @@ class CartelaMarkedPatternEvaluator {
       });
 
     return sorted;
+  }
+
+  /// Count fully marked classic bingo lines (5 rows + 5 columns + 2 diagonals).
+  static int countClassicCompletedLines(Set<int> markedIndexes) {
+    var count = 0;
+    for (var row = 0; row < 5; row++) {
+      final cells = {for (var column = 0; column < 5; column++) (row * 5) + column};
+      if (cells.difference(markedIndexes).isEmpty) {
+        count++;
+      }
+    }
+    for (var column = 0; column < 5; column++) {
+      final cells = {for (var row = 0; row < 5; row++) (row * 5) + column};
+      if (cells.difference(markedIndexes).isEmpty) {
+        count++;
+      }
+    }
+    final mainDiagonal = {for (var index = 0; index < 5; index++) (index * 5) + index};
+    if (mainDiagonal.difference(markedIndexes).isEmpty) {
+      count++;
+    }
+    final antiDiagonal = {
+      for (var index = 0; index < 5; index++) (index * 5) + (4 - index),
+    };
+    if (antiDiagonal.difference(markedIndexes).isEmpty) {
+      count++;
+    }
+    return count;
+  }
+
+  static int _compareLines({
+    required GameCartelaModel left,
+    required GameCartelaModel right,
+    required CartelaPatternUiResult leftResult,
+    required CartelaPatternUiResult rightResult,
+  }) {
+    if (leftResult.completedClassicLineCount !=
+        rightResult.completedClassicLineCount) {
+      return rightResult.completedClassicLineCount.compareTo(
+        leftResult.completedClassicLineCount,
+      );
+    }
+
+    return _compareSmart(
+      left: left,
+      right: right,
+      leftResult: leftResult,
+      rightResult: rightResult,
+    );
   }
 
   static int _compareSmart({
@@ -382,18 +455,24 @@ class CartelaMarkedPatternEvaluator {
     required bool isOneAway,
     required int missingCellCount,
     required int markedCellCount,
+    required int completedClassicLineCount,
   }) {
     final completionScore = hasLocalPatternComplete ? 1000000000 : 0;
-    final oneAwayScore = isOneAway ? 100000000 : 0;
+    final lineScore = completedClassicLineCount.clamp(0, 12) * 100000000;
+    final oneAwayScore = isOneAway ? 10000000 : 0;
     final normalizedMissingCount = missingCellCount < 0
         ? 0
         : missingCellCount > 25
         ? 25
         : missingCellCount;
-    final missingScore = (25 - normalizedMissingCount) * 1000000;
+    final missingScore = (25 - normalizedMissingCount) * 100000;
     final markedScore = markedCellCount * 1000;
 
-    return completionScore + oneAwayScore + missingScore + markedScore;
+    return completionScore +
+        lineScore +
+        oneAwayScore +
+        missingScore +
+        markedScore;
   }
 
   static Map<String, _RuleDefinition> _buildRuleDefinitions() {

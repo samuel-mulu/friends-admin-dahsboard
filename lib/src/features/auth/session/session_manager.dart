@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../data/session_repository.dart';
 import '../domain/auth_session.dart';
+import '../presentation/providers/account_ban_provider.dart';
 
 @immutable
 class SessionState {
@@ -116,6 +117,9 @@ class SessionManager extends Notifier<SessionState> {
         completer.complete(true);
       } on ApiException catch (error) {
         _log('refresh failed: ${error.message}');
+        if (error.isUserBlocked && ref.mounted) {
+          ref.read(accountBanProvider.notifier).show(reason: error.reason);
+        }
         if (_shouldClearSessionForRefreshError(error)) {
           await clearLocalSession();
         } else if (ref.mounted) {

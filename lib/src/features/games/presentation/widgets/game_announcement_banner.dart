@@ -60,8 +60,18 @@ class GameAnnouncementBanner extends ConsumerWidget {
     const accent = Color(0xFFF5C542);
 
     final subtitle = switch (phase) {
-      BigGamePhase.waitingToPlay => l10n.announcementBigGameWaiting,
+      BigGamePhase.waitingToPlay => bigGame.heldWaitingForLiveSlot
+          ? l10n.announcementBigGameWaiting
+          : l10n.announcementBigGameStartingSoon,
+      BigGamePhase.live
+          when bigGame.nextRoundRegistration != null &&
+              bigGame.nextRoundRegistration!.canRegister =>
+        l10n.bigGameRegistrationOpenPrompt(
+          bigGame.nextRoundRegistration!.displayRoundIndex,
+        ),
       BigGamePhase.live => l10n.announcementBigGameLive,
+      BigGamePhase.registrationOpen when bigGame.displayRoundIndex > 1 =>
+        l10n.bigGameRegistrationOpenPrompt(bigGame.displayRoundIndex),
       _ => l10n.announcementBigGamePrize(formatMoney(prize)),
     };
     final target = phase == BigGamePhase.beforeRegistrationOpens

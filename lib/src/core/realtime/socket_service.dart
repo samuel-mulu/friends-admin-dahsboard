@@ -13,6 +13,7 @@ class SocketService {
   final AppConfig _config;
   final Map<String, List<SocketEventListener>> _listeners =
       <String, List<SocketEventListener>>{};
+  final Set<String> _boundDispatchEvents = <String>{};
   io.Socket? _socket;
   String? _activeAuthSignature;
 
@@ -128,7 +129,7 @@ class SocketService {
     }
 
     listeners.add(listener);
-    _socket?.on(event, listener);
+    _ensureDispatchBound(event);
   }
 
   void off(String event, [SocketEventListener? listener]) {
@@ -136,29 +137,61 @@ class SocketService {
       _listeners[event]?.remove(listener);
       if (_listeners[event]?.isEmpty ?? false) {
         _listeners.remove(event);
+        _unbindDispatch(event);
       }
-      _socket?.off(event, listener);
       return;
     }
 
     _listeners.remove(event);
-    _socket?.off(event);
+    _unbindDispatch(event);
   }
 
-  void _attachRegisteredListeners() {
+  void _ensureDispatchBound(String event) {
     final socket = _socket;
-    if (socket == null) {
+    if (socket == null || _boundDispatchEvents.contains(event)) {
       return;
     }
 
-    for (final entry in _listeners.entries) {
-      for (final listener in entry.value) {
-        socket.on(entry.key, listener);
+    socket.on(event, (dynamic data) => _dispatch(event, data));
+    _boundDispatchEvents.add(event);
+  }
+
+  void _unbindDispatch(String event) {
+    if (!_boundDispatchEvents.remove(event)) {
+      return;
+    }
+    _socket?.off(event);
+  }
+
+  void _dispatch(String event, dynamic data) {
+    final listeners = _listeners[event];
+    if (listeners == null || listeners.isEmpty) {
+      return;
+    }
+
+    // Copy so listeners can safely register/unregister during dispatch.
+    for (final listener in List<SocketEventListener>.from(listeners)) {
+      try {
+        listener(data);
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint(
+            '[SocketService] Listener error for $event: $error\n$stackTrace',
+          );
+        }
       }
     }
   }
 
+  void _attachRegisteredListeners() {
+    _boundDispatchEvents.clear();
+    for (final event in _listeners.keys) {
+      _ensureDispatchBound(event);
+    }
+  }
+
   void _disposeSocket() {
+    _boundDispatchEvents.clear();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;

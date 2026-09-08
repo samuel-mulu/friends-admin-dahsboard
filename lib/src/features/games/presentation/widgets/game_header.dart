@@ -116,7 +116,14 @@ class _GameHeaderMetadata extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final rows = <_MetaRow>[
-      if (game.fixedPrizeAmount != null)
+      if (game.isBigGame && game.effectiveRoundPrizeAmount != null)
+        _MetaRow(
+          label: game.hasMultipleRounds
+              ? l10n.bigGameThisRoundPrize
+              : l10n.bigGameFixedPrize,
+          value: '${formatMoney(game.effectiveRoundPrizeAmount!)} ETB',
+        )
+      else if (game.fixedPrizeAmount != null)
         _MetaRow(
           label: l10n.bigGameFixedPrize,
           value: '${formatMoney(game.fixedPrizeAmount!)} ETB',

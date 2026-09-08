@@ -160,11 +160,15 @@ class GamesRepository {
   Future<GameCartelaModel> registerCartela({
     required String sessionId,
     required String cartelaId,
+    String? paymentSource,
   }) async {
     try {
       return await _apiClient.post<GameCartelaModel>(
         '/games/sessions/$sessionId/register-cartela',
-        data: {'cartelaId': cartelaId},
+        data: {
+          'cartelaId': cartelaId,
+          ?'paymentSource': paymentSource,
+        },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
             throw StateError('Invalid cartela registration response.');
@@ -190,11 +194,15 @@ class GamesRepository {
   Future<GameCartelaModel> registerCartelaForSlot({
     required String slotId,
     required String cartelaId,
+    String? paymentSource,
   }) async {
     try {
       return await _apiClient.post<GameCartelaModel>(
         '/games/slots/$slotId/register-cartela',
-        data: {'cartelaId': cartelaId},
+        data: {
+          'cartelaId': cartelaId,
+          ?'paymentSource': paymentSource,
+        },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
             throw StateError('Invalid cartela registration response.');
@@ -244,6 +252,7 @@ class GamesRepository {
     required String slotId,
     required List<({String cartelaId, int cartelaNumber})> cartelas,
     String? sessionId,
+    String? paymentSource,
     void Function(int completed, int total)? onProgress,
   }) async {
     final total = cartelas.length;
@@ -260,6 +269,7 @@ class GamesRepository {
                 'cartelaNumber': cartela.cartelaNumber,
               },
           ],
+          ?'paymentSource': paymentSource,
         },
         receiveTimeout: _bulkOperationTimeout,
         decoder: (rawData) => _decodeBulkRegisterResult(rawData),

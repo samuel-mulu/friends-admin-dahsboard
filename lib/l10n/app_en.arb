@@ -442,7 +442,7 @@
   "depositSuccessApproved": "Deposit successful. Wallet updated.",
   "@depositSuccessApproved": {},
 
-  "depositReceiptDuplicate": "This receipt has already been used.",
+  "depositReceiptDuplicate": "This receipt has already been used and credited. Submit a new payment receipt.",
   "@depositReceiptDuplicate": {},
 
   "depositReceiptInvalid": "Receipt could not be verified.",
@@ -475,6 +475,21 @@
 
   "depositGuideTitle": "How to deposit",
   "@depositGuideTitle": {},
+
+  "depositGuideTabSteps": "Steps",
+  "@depositGuideTabSteps": {},
+
+  "depositGuideTabVideo": "Video",
+  "@depositGuideTabVideo": {},
+
+  "depositGuideVideoMissing": "Video guide is not available yet for this payment method.",
+  "@depositGuideVideoMissing": {},
+
+  "depositGuideVideoHint": "Use the player controls to play, pause, seek, and change volume.",
+  "@depositGuideVideoHint": {},
+
+  "depositGuideOpenOnYoutube": "Open on YouTube",
+  "@depositGuideOpenOnYoutube": {},
 
   "depositGuideTelebirrStep1": "Open Telebirr and send money to Friends Bingo",
   "@depositGuideTelebirrStep1": {},
@@ -524,17 +539,77 @@
   "depositPendingMessage": "Your deposit is waiting for admin approval. Your wallet will be credited once it is approved.",
   "@depositPendingMessage": {},
 
-  "depositRefUnderReview": "This reference is already under admin review.",
+  "depositRefUnderReview": "This receipt is already under admin review. Wait for approval or rejection—do not clear the app.",
   "@depositRefUnderReview": {},
 
-  "depositRejectedTitle": "Deposit failed",
+  "depositUnderReviewTitle": "Already under review",
+  "@depositUnderReviewTitle": {},
+
+  "depositUnderReviewMessage": "This receipt was already submitted and is waiting for admin. You cannot submit it again until it is approved or rejected.",
+  "@depositUnderReviewMessage": {},
+
+  "depositRejectedTitle": "Deposit rejected",
   "@depositRejectedTitle": {},
+
+  "depositRejectedCanRetry": "You can fix the details and submit again. Clearing the app is not required.",
+  "@depositRejectedCanRetry": {},
+
+  "depositFixAndResubmit": "Fix and submit again",
+  "@depositFixAndResubmit": {},
+
+  "depositAlreadyCreditedHint": "This receipt was already credited. Use a new payment receipt.",
+  "@depositAlreadyCreditedHint": {},
 
   "depositTryAgain": "You can correct the details and try again.",
   "@depositTryAgain": {},
 
   "depositSelectProvider": "Payment method",
   "@depositSelectProvider": {},
+
+  "depositChooseProviderFirst": "1. Choose how you will send money",
+  "@depositChooseProviderFirst": {},
+
+  "depositChooseProviderHint": "Pick one provider first. Only that provider’s account and form will appear.",
+  "@depositChooseProviderHint": {},
+
+  "depositSelectedMethod": "Selected payment method",
+  "@depositSelectedMethod": {},
+
+  "depositChangeProvider": "Change",
+  "@depositChangeProvider": {},
+
+  "depositOnlyUseProvider": "Send only with {provider}. Do not mix with another bank or Telebirr.",
+  "@depositOnlyUseProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+
+  "depositInstructionCbe": "Send money with CBE, then enter the payment reference number and exact transferred amount.",
+  "@depositInstructionCbe": {},
+
+  "depositInstructionTelebirr": "Send money with Telebirr, then enter the receipt ID and exact transferred amount.",
+  "@depositInstructionTelebirr": {},
+
+  "depositInstructionAwash": "Send money with Awash Bank, then enter the payment reference and exact transferred amount.",
+  "@depositInstructionAwash": {},
+
+  "depositInstructionBoa": "Send money with Bank of Abyssinia, then enter the payment reference and exact transferred amount.",
+  "@depositInstructionBoa": {},
+
+  "depositSendToOneOfAccounts": "Send to one of these accounts",
+  "@depositSendToOneOfAccounts": {},
+
+  "depositCopyThenSend": "Copy the number, then send from the same provider you selected.",
+  "@depositCopyThenSend": {},
+
+  "depositStepSubmitDetails": "2. Enter amount and receipt",
+  "@depositStepSubmitDetails": {},
+
+  "depositStepInstructions": "3. How to send",
+  "@depositStepInstructions": {},
 
   "depositSendToAccount": "Send to this account",
   "@depositSendToAccount": {},
@@ -550,9 +625,6 @@
 
   "depositShowInstructions": "Instructions",
   "@depositShowInstructions": {},
-
-  "depositReceiptReviewLabel": "I have checked the amount and reference number from my transaction",
-  "@depositReceiptReviewLabel": {},
 
   "depositCopyAccount": "Copy account",
   "@depositCopyAccount": {},
@@ -579,27 +651,6 @@
 
   "depositCouldNotSubmit": "Could not submit deposit.",
   "@depositCouldNotSubmit": {},
-
-  "depositReceiptScan": "Scan receipt",
-  "@depositReceiptScan": {},
-
-  "depositReceiptScreenshotHelperPrefix": "Can be filled from a ",
-  "@depositReceiptScreenshotHelperPrefix": {},
-
-  "depositReceiptScreenshotHelperLink": "screenshot",
-  "@depositReceiptScreenshotHelperLink": {},
-
-  "depositReceiptScreenshotHelperSuffix": ". Please review before submitting.",
-  "@depositReceiptScreenshotHelperSuffix": {},
-
-  "depositReceiptScanSuccess": "Receipt detected. Please review before submitting.",
-  "@depositReceiptScanSuccess": {},
-
-  "depositReceiptScanPartial": "Some details detected. Please review.",
-  "@depositReceiptScanPartial": {},
-
-  "depositReceiptScanFailure": "Could not read receipt. Please type manually.",
-  "@depositReceiptScanFailure": {},
 
   "depositProvider": "Provider: {provider}",
   "@depositProvider": {
@@ -738,6 +789,24 @@
 
   "withdrawSelectProvider": "Payout method",
   "@withdrawSelectProvider": {},
+
+  "withdrawChooseProviderFirst": "1. Choose payout method",
+  "@withdrawChooseProviderFirst": {},
+
+  "withdrawChooseProviderHint": "Pick Telebirr or CBE first. Then enter details for that method only.",
+  "@withdrawChooseProviderHint": {},
+
+  "withdrawSelectedMethod": "Selected payout method",
+  "@withdrawSelectedMethod": {},
+
+  "withdrawChangeProvider": "Change",
+  "@withdrawChangeProvider": {},
+
+  "withdrawTelebirrOnlyHint": "Payout will be sent by Telebirr only.",
+  "@withdrawTelebirrOnlyHint": {},
+
+  "withdrawCbeOnlyHint": "Payout will be sent to a CBE account only.",
+  "@withdrawCbeOnlyHint": {},
 
   "withdrawMaxWithdrawableHint": "You can withdraw up to your available balance. The rest stays usable for cartelas.",
   "@withdrawMaxWithdrawableHint": {},
@@ -1447,6 +1516,12 @@
   "drawerSounds": "Sounds",
   "@drawerSounds": {},
 
+  "drawerSortCartelasByLines": "Sort cartelas by lines",
+  "@drawerSortCartelasByLines": {},
+
+  "drawerSortCartelasByLinesSubtitle": "Cartelas with more completed rows, columns, and diagonals rise to the top. Uses your marks, including one-away progress.",
+  "@drawerSortCartelasByLinesSubtitle": {},
+
   "soundSettingsDeviceOnly": "These settings are saved on this device only.",
   "@soundSettingsDeviceOnly": {},
 
@@ -1656,6 +1731,87 @@
 
   "drawerLogout": "Logout",
   "@drawerLogout": {},
+
+  "securitySectionTitle": "Security",
+  "@securitySectionTitle": {},
+
+  "securityChangePassword": "Change password",
+  "@securityChangePassword": {},
+
+  "securitySetPassword": "Set password",
+  "@securitySetPassword": {},
+
+  "securitySetPasswordHint": "We will send an SMS code to verify your phone before setting a password.",
+  "@securitySetPasswordHint": {},
+
+  "securityCurrentPassword": "Current password",
+  "@securityCurrentPassword": {},
+
+  "securityNewPassword": "New password",
+  "@securityNewPassword": {},
+
+  "securityConfirmPassword": "Confirm password",
+  "@securityConfirmPassword": {},
+
+  "securityPasswordMismatch": "Passwords do not match",
+  "@securityPasswordMismatch": {},
+
+  "securitySavePassword": "Save password",
+  "@securitySavePassword": {},
+
+  "securitySendCode": "Send verification code",
+  "@securitySendCode": {},
+
+  "securityPasswordChanged": "Password updated successfully.",
+  "@securityPasswordChanged": {},
+
+  "securityActiveSessions": "Active sessions",
+  "@securityActiveSessions": {},
+
+  "securityThisDevice": "This device",
+  "@securityThisDevice": {},
+
+  "securityCurrent": "Current",
+  "@securityCurrent": {},
+
+  "securityLogoutDevice": "Log out",
+  "@securityLogoutDevice": {},
+
+  "securityLogoutOthers": "Log out other devices",
+  "@securityLogoutOthers": {},
+
+  "securityOthersLoggedOut": "Other devices were logged out.",
+  "@securityOthersLoggedOut": {},
+
+  "securityNoSessions": "No active sessions found.",
+  "@securityNoSessions": {},
+
+  "securitySessionsLoadFailed": "Could not load sessions.",
+  "@securitySessionsLoadFailed": {},
+
+  "telegramContinue": "Continue with Telegram",
+  "@telegramContinue": {},
+
+  "telegramLink": "Link Telegram",
+  "@telegramLink": {},
+
+  "telegramUnlink": "Unlink Telegram",
+  "@telegramUnlink": {},
+
+  "telegramUnlinked": "Telegram unlinked.",
+  "@telegramUnlinked": {},
+
+  "telegramOpenFailed": "Could not open Telegram login.",
+  "@telegramOpenFailed": {},
+
+  "telegramLinkPhoneTitle": "Confirm your phone",
+  "@telegramLinkPhoneTitle": {},
+
+  "telegramLinkPhoneSubtitle": "Enter your phone number. If it is already registered, we will link Telegram and sign you in. If it is new, we will create your account.",
+  "@telegramLinkPhoneSubtitle": {},
+
+  "telegramCompleteSignIn": "Verify and continue",
+  "@telegramCompleteSignIn": {},
 
   "drawerJoinGame": "Join the game",
   "@drawerJoinGame": {},
@@ -1940,6 +2096,78 @@
   "bigGameWaitingBody": "Waiting for current round to finish.",
   "@bigGameWaitingBody": {},
 
+  "bigGameWaitingBodyWithBlocker": "Waiting for {gameCode} to finish.",
+  "@bigGameWaitingBodyWithBlocker": {
+    "placeholders": {
+      "gameCode": { "type": "String" }
+    }
+  },
+
+  "bigGameStartingSoonBody": "Starting soon…",
+  "@bigGameStartingSoonBody": {},
+
+  "bigGameCartelaCarried": "Carried from previous round",
+  "@bigGameCartelaCarried": {},
+
+  "bigGameRoundOf": "Round {current} of {total}",
+  "@bigGameRoundOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "bigGameThisRoundPrize": "This Round Prize",
+  "@bigGameThisRoundPrize": {},
+
+  "bigGameTotalPrize": "Total Prize",
+  "@bigGameTotalPrize": {},
+
+  "bigGameRoundPrize": "Round {round} Prize",
+  "@bigGameRoundPrize": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+
+  "bigGameShowDetails": "Details",
+  "@bigGameShowDetails": {},
+
+  "bigGameHideDetails": "Hide",
+  "@bigGameHideDetails": {},
+
+  "bigGameBetweenRoundsTitle": "Between rounds",
+  "@bigGameBetweenRoundsTitle": {},
+
+  "bigGameNextRoundStartsIn": "Next round starts in:",
+  "@bigGameNextRoundStartsIn": {},
+
+  "walletBigTicketsLabel": "Big Tickets",
+  "@walletBigTicketsLabel": {},
+
+  "walletBigTicketsForEvent": "Big Tickets · {eventName}",
+  "@walletBigTicketsForEvent": {
+    "placeholders": {
+      "eventName": { "type": "String" }
+    }
+  },
+
+  "registrationUseBigTicket": "Use Big Ticket",
+  "@registrationUseBigTicket": {},
+
+  "registrationPayEtb": "Pay ETB",
+  "@registrationPayEtb": {},
+
+  "registrationBigTicketBalance": "Big Tickets: {count}",
+  "@registrationBigTicketBalance": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "registrationUsesBigTicket": "Uses 1 Big Ticket",
+  "@registrationUsesBigTicket": {},
+
   "gameCategoryNormal": "Normal Game",
   "@gameCategoryNormal": {},
 
@@ -2127,11 +2355,53 @@
   "announcementBigGameWaiting": "Big Game ready — waiting for current round",
   "@announcementBigGameWaiting": {},
 
+  "announcementBigGameStartingSoon": "Big Game ready — starting soon",
+  "@announcementBigGameStartingSoon": {},
+
   "announcementBigGameLive": "Big Game is live now",
   "@announcementBigGameLive": {},
 
   "bigGameLivePrompt": "Big Game is in progress — Go to Big Game",
   "@bigGameLivePrompt": {},
+
+  "bigGameHeldPrompt": "Big Game is ready — waiting for current round — Go to Big Game",
+  "@bigGameHeldPrompt": {},
+
+  "bigGameRegistrationOpenPrompt": "Big Game Round {round} registration is open — Go to Big Game",
+  "@bigGameRegistrationOpenPrompt": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+
+  "bigGameMissedRoundRegistrationTitle": "Register for Round {round}",
+  "@bigGameMissedRoundRegistrationTitle": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+
+  "bigGameMissedRoundHelper": "You missed Round {missedRound}. Register for Round {nextRound} with money or a Big Ticket.",
+  "@bigGameMissedRoundHelper": {
+    "placeholders": {
+      "missedRound": { "type": "int" },
+      "nextRound": { "type": "int" }
+    }
+  },
+
+  "bigGameMissedPreviousRoundLabel": "Missed Round {round}",
+  "@bigGameMissedPreviousRoundLabel": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+
+  "bigGameMissedNextRoundLabel": "Round {round} registration",
+  "@bigGameMissedNextRoundLabel": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
 
   "bigGameGoAction": "Go to Big Game",
   "@bigGameGoAction": {},
@@ -2168,6 +2438,21 @@
 
   "adminMessagesForcedHint": "The app will reopen when the admin removes this notice.",
   "@adminMessagesForcedHint": {},
+
+  "accountBannedTitle": "Account banned",
+  "@accountBannedTitle": {
+    "description": "Title on the forced overlay when an admin bans the player"
+  },
+
+  "accountBannedPleaseContact": "Please contact us for help.",
+  "@accountBannedPleaseContact": {
+    "description": "Prompt under the ban reason directing the player to support"
+  },
+
+  "accountBannedAcknowledge": "Acknowledge",
+  "@accountBannedAcknowledge": {
+    "description": "Button that dismisses the ban overlay after the player has read it"
+  },
 
   "close": "Close",
   "@close": {},

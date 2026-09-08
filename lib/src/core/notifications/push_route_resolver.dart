@@ -24,6 +24,7 @@ String resolvePushRoute(AppPushMessage message) {
     case notificationCategoryBigGameRegistrationOpen:
     case notificationCategoryBigGameTomorrow:
     case notificationCategoryBigGameToday:
+    case notificationCategoryBigGameTicketGranted:
       return '/games/big-game';
     case notificationCategoryRegistrationOpen:
       return '/games';
@@ -37,7 +38,8 @@ String resolvePushRoute(AppPushMessage message) {
       }
       return '/games';
     case notificationCategoryDepositApproved:
-      return '/wallet/deposits';
+    case notificationCategoryDepositRejected:
+      return '/wallet/deposit';
     case notificationCategoryWithdrawalApproved:
     case notificationCategoryWithdrawalCompleted:
     case notificationCategoryWithdrawalRejected:

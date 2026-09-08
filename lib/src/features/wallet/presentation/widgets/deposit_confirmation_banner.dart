@@ -3,16 +3,19 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../models/deposit_confirmation_state.dart';
+import 'wallet_review_status_icon.dart';
 
 class DepositConfirmationBanner extends StatefulWidget {
   const DepositConfirmationBanner({
     required this.state,
     required this.onDismiss,
+    this.onRetry,
     super.key,
   });
 
   final DepositConfirmationState state;
   final VoidCallback onDismiss;
+  final VoidCallback? onRetry;
 
   @override
   State<DepositConfirmationBanner> createState() =>
@@ -59,6 +62,11 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final showDetails =
+        widget.state.kind == DepositConfirmationKind.approved ||
+        widget.state.kind == DepositConfirmationKind.pending ||
+        widget.state.kind == DepositConfirmationKind.underReview ||
+        widget.state.kind == DepositConfirmationKind.rejected;
 
     return FadeTransition(
       opacity: _fade,
@@ -92,10 +100,27 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                             ),
                           ),
                           if (widget.state.kind ==
+                              DepositConfirmationKind.approved) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.depositSuccessApproved,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
+                          if (widget.state.kind ==
                               DepositConfirmationKind.pending) ...[
                             const SizedBox(height: 8),
                             Text(
                               l10n.depositPendingMessage,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
+                          if (widget.state.kind ==
+                              DepositConfirmationKind.underReview) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.state.message ??
+                                  l10n.depositUnderReviewMessage,
                               style: theme.textTheme.bodyMedium,
                             ),
                           ],
@@ -108,7 +133,9 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              l10n.depositTryAgain,
+                              widget.state.canRetry
+                                  ? l10n.depositRejectedCanRetry
+                                  : l10n.depositAlreadyCreditedHint,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -125,7 +152,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                         ],
                       ),
                     ),
-                    if (widget.state.kind != DepositConfirmationKind.verifying)
+                    if (widget.state.kind == DepositConfirmationKind.approved ||
+                        widget.state.kind == DepositConfirmationKind.rejected)
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         onPressed: widget.onDismiss,
@@ -133,8 +161,7 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                       ),
                   ],
                 ),
-                if (widget.state.kind == DepositConfirmationKind.approved ||
-                    widget.state.kind == DepositConfirmationKind.pending) ...[
+                if (showDetails) ...[
                   const SizedBox(height: 16),
                   _DetailRow(
                     label: l10n.depositSelectProvider,
@@ -144,13 +171,23 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                   _DetailRow(
                     label: l10n.depositAmount,
                     value: widget.state.amount != null
-                        ? '${formatMoney(widget.state.amount!)} ETB'
+                        ? formatMoney(widget.state.amount!)
                         : '',
                   ),
                   const SizedBox(height: 8),
                   _DetailRow(
                     label: l10n.depositReceiptCode,
                     value: widget.state.transactionRef ?? '',
+                  ),
+                ],
+                if (widget.state.kind == DepositConfirmationKind.rejected &&
+                    widget.state.canRetry &&
+                    widget.onRetry != null) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: widget.onRetry,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(l10n.depositFixAndResubmit),
                   ),
                 ],
               ],
@@ -166,6 +203,7 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
       DepositConfirmationKind.verifying => l10n.depositVerifying,
       DepositConfirmationKind.approved => l10n.depositApprovedTitle,
       DepositConfirmationKind.pending => l10n.depositPendingTitle,
+      DepositConfirmationKind.underReview => l10n.depositUnderReviewTitle,
       DepositConfirmationKind.rejected => l10n.depositRejectedTitle,
     };
   }
@@ -176,7 +214,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
         AppBranding.casinoPurple.withValues(alpha: 0.18),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.14),
-      DepositConfirmationKind.pending =>
+      DepositConfirmationKind.pending ||
+      DepositConfirmationKind.underReview =>
         theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.9),
       DepositConfirmationKind.rejected =>
         theme.colorScheme.error.withValues(alpha: 0.12),
@@ -189,7 +228,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
         AppBranding.casinoPurple.withValues(alpha: 0.35),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.45),
-      DepositConfirmationKind.pending =>
+      DepositConfirmationKind.pending ||
+      DepositConfirmationKind.underReview =>
         theme.colorScheme.outline.withValues(alpha: 0.35),
       DepositConfirmationKind.rejected =>
         theme.colorScheme.error.withValues(alpha: 0.35),
@@ -204,42 +244,15 @@ class _StatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (kind == DepositConfirmationKind.verifying) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: CircularProgressIndicator(
-          strokeWidth: 3,
-          color: AppBranding.goldAccent,
-        ),
-      );
-    }
-
-    final isApproved = kind == DepositConfirmationKind.approved;
-    final isPending = kind == DepositConfirmationKind.pending;
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isApproved
-            ? AppBranding.feltGreen
-            : isPending
-            ? AppBranding.goldAccent
-            : theme.colorScheme.error,
-      ),
-      child: Icon(
-        isApproved
-            ? Icons.check_rounded
-            : isPending
-            ? Icons.schedule_rounded
-            : Icons.close_rounded,
-        color: Colors.white,
-        size: 28,
-      ),
-    );
+    final status = switch (kind) {
+      DepositConfirmationKind.verifying ||
+      DepositConfirmationKind.pending ||
+      DepositConfirmationKind.underReview =>
+        WalletReviewVisualStatus.loading,
+      DepositConfirmationKind.approved => WalletReviewVisualStatus.approved,
+      DepositConfirmationKind.rejected => WalletReviewVisualStatus.rejected,
+    };
+    return WalletReviewStatusIcon(status: status);
   }
 }
 
