@@ -1581,6 +1581,14 @@ class AppLocalizationsOm extends AppLocalizations {
       'Kaartelaalee sarara, tarree fi digonaal guutuu baay\'ee qaban olitti dhufu. Mallattoo kee fi tarkaanfii tokko-hafuu fayyadama.';
 
   @override
+  String get drawerSortCartelasByRemains =>
+      'Kaartelaalee hafuu isaaniitiin tarreessi';
+
+  @override
+  String get drawerSortCartelasByRemainsSubtitle =>
+      'Kaartelaaleen seera ammaa irratti injifannoo dhiyeenyaan qaban olitti dhufu. 1–4 filadhu; kan caalaa hafan hin ol\'aanan.';
+
+  @override
   String get soundSettingsDeviceOnly =>
       'Qindaa\'inoonni kun meeshaa kana irratti qofa kuufamu.';
 
@@ -2035,6 +2043,12 @@ class AppLocalizationsOm extends AppLocalizations {
   String get postGameSummaryNextGame => 'Itti fufi';
 
   @override
+  String get postGameSummaryDone => 'Xumurame';
+
+  @override
+  String get postGameSummaryNoNextGame => 'Amma taphni itti aanu hin jiru';
+
+  @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';
 
   @override
@@ -2248,6 +2262,80 @@ class AppLocalizationsOm extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
+  String get gameCategoryChainGame => 'Tapha Sanqaa';
+
+  @override
+  String chainRoundOfTotal(int current, int total) {
+    return 'Raawundii $current keessaa $total';
+  }
+
+  @override
+  String get chainRoundThisRoundPrize => 'Raawundii kana';
+
+  @override
+  String get chainRoundTotalPrize => 'Badhaasa waliigalaa';
+
+  @override
+  String chainRoundBreakTitle(int round) {
+    return 'Raawundii $round xumurameera';
+  }
+
+  @override
+  String chainRoundBreakSubtitle(int round, int seconds) {
+    return 'Mallattoon kee ni hafaa. Raawundii $round sekondii $seconds keessatti jalqaba.';
+  }
+
+  @override
+  String chainRoundNextPattern(String pattern) {
+    return 'Seera itti aanu: $pattern';
+  }
+
+  @override
+  String get chainRoundWinnersTitle => 'Mo\'attoota raawundii';
+
+  @override
+  String chainRoundWinnerChip(int round, int cartela) {
+    return 'R$round · #$cartela';
+  }
+
+  @override
+  String get chainRoundsTitle => 'Raawundiiwwan sanqaa';
+
+  @override
+  String chainRoundsSubtitle(int total) {
+    return 'Tapha tokko, raawundii $total. Kubbaan fi mallattoon ni hafaa — kan jijjiiramu seeraa fi badhaasa qofa.';
+  }
+
+  @override
+  String get chainRoundStatusWon => 'Mo\'ateera';
+
+  @override
+  String get chainRoundStatusForfeited => 'Hin taphatamne';
+
+  @override
+  String get chainRoundStatusCurrent => 'Amma taphamaa jira';
+
+  @override
+  String get chainRoundStatusUpcoming => 'Itti aanu';
+
+  @override
+  String chainRoundNewPatternTitle(int round) {
+    return 'Seera raawundii $round';
+  }
+
+  @override
+  String chainRoundNewPatternBody(String pattern) {
+    return 'Kubbaa walfakkaataa, galma haaraa. Mallattoo kee qabadhuutii $pattern barbaadi.';
+  }
+
+  @override
+  String get chainRoundsForfeitedNotice =>
+      'Mo\'ataan hin jiru — raawundiiwwan hafan hin taphatamne.';
+
+  @override
+  String get chainRoundViewAll => 'Raawundiiwwan hunda ilaali';
+
+  @override
   String get gameBonusFreeEntry => 'Galtee bilisaa';
 
   @override
@@ -2292,6 +2380,24 @@ class AppLocalizationsOm extends AppLocalizations {
   @override
   String registrationBigGotdCanSelectMore(int max) {
     return 'Big GOTD irratti hanga kaartelaa $max dabalataa filachuu dandeessa.';
+  }
+
+  @override
+  String get registrationChainLimitReached =>
+      'Tapha Sanqaa kana irratti daangaa kaartelaa ga\'atteetta.';
+
+  @override
+  String get registrationChainAllCartelasUsed =>
+      'Tapha Sanqaa kana irratti kaartelawwan hunda fayyadamteetta.';
+
+  @override
+  String registrationChainCanRegisterMore(int max) {
+    return 'Tapha Sanqaa kana irratti hanga kaartelaa $max dabalataa galmeessuu dandeessa.';
+  }
+
+  @override
+  String registrationChainCanSelectMore(int max) {
+    return 'Tapha Sanqaa kana irratti hanga kaartelaa $max dabalataa filachuu dandeessa.';
   }
 
   @override
@@ -2437,16 +2543,21 @@ class AppLocalizationsOm extends AppLocalizations {
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
-  String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+  String get bigGameLivePrompt =>
+      'Remaining games are here. Big Game is in progress';
 
   @override
   String get bigGameHeldPrompt =>
-      'Big Game is ready — waiting for current round — Go to Big Game';
+      'Remaining games are here. Big Game is ready — waiting for current round';
 
   @override
   String bigGameRegistrationOpenPrompt(int round) {
-    return 'Big Game Round $round registration is open — Go to Big Game';
+    return 'Remaining games are here. Big Game Round $round registration is open';
   }
+
+  @override
+  String get bigGameBetweenRoundsPrompt =>
+      'Remaining games are here. Big Game is between rounds';
 
   @override
   String bigGameMissedRoundRegistrationTitle(int round) {

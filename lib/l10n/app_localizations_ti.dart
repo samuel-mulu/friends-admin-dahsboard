@@ -1530,6 +1530,13 @@ class AppLocalizationsTi extends AppLocalizations {
       'ዝያዳ ዝተማልኡ መስመራት፣ ዓምድታትን ዲያጎናላትን ዘለዎም ካርቴላታት ናብ ላዕሊ ይወጹ። ምልክታትካን ሓደ-ቐረባ ዕቤትካን ይጥቀም።';
 
   @override
+  String get drawerSortCartelasByRemains => 'ካርቴላታት ብዝተረፈ ሰርዕ';
+
+  @override
+  String get drawerSortCartelasByRemainsSubtitle =>
+      'ንንጡፍ ሕጊ ቀረባ ዝኾኑ ካርቴላታት ብቑጽሪ ዝተረፈ ናብ ላዕሊ ይወጹ። 1–4 ምረጽ፤ ካብኡ ንላዕሊ ዝተረፈ ኣይደረድሩን።';
+
+  @override
   String get soundSettingsDeviceOnly => 'እዞም ቅንብራት ኣብዚ መሳርሒ ጥራይ ይቕመጡ።';
 
   @override
@@ -1972,6 +1979,12 @@ class AppLocalizationsTi extends AppLocalizations {
   String get postGameSummaryNextGame => 'ቀጽል';
 
   @override
+  String get postGameSummaryDone => 'ተወዲኡ';
+
+  @override
+  String get postGameSummaryNoNextGame => 'ሕጂ ዝቕጽል ጸወታ የለን';
+
+  @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';
 
   @override
@@ -2179,6 +2192,79 @@ class AppLocalizationsTi extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
+  String get gameCategoryChainGame => 'ሰንሰለት ጸወታ';
+
+  @override
+  String chainRoundOfTotal(int current, int total) {
+    return 'ዙር $current ካብ $total';
+  }
+
+  @override
+  String get chainRoundThisRoundPrize => 'ናይዚ ዙር';
+
+  @override
+  String get chainRoundTotalPrize => 'ጠቅላላ ሽልማት';
+
+  @override
+  String chainRoundBreakTitle(int round) {
+    return 'ዙር $round ተዛዚሙ';
+  }
+
+  @override
+  String chainRoundBreakSubtitle(int round, int seconds) {
+    return 'ምልክታትካ ይተርፉ። ዙር $round ኣብ $seconds ሰ ይጅምር።';
+  }
+
+  @override
+  String chainRoundNextPattern(String pattern) {
+    return 'ዝቕጽል ሕግ፦ $pattern';
+  }
+
+  @override
+  String get chainRoundWinnersTitle => 'ኣሸነፍቲ ዙር';
+
+  @override
+  String chainRoundWinnerChip(int round, int cartela) {
+    return 'ዙር $round · #$cartela';
+  }
+
+  @override
+  String get chainRoundsTitle => 'ዙራት ሰንሰለት';
+
+  @override
+  String chainRoundsSubtitle(int total) {
+    return 'ሓደ ጸወታ፣ $total ዙራት። ኩዕሶታትን ምልክታትን ይተርፉ — ዝቅየር ሕግን ሽልማትን ጥራይ እዩ።';
+  }
+
+  @override
+  String get chainRoundStatusWon => 'ተዓዊቱ';
+
+  @override
+  String get chainRoundStatusForfeited => 'ኣይተጻወተን';
+
+  @override
+  String get chainRoundStatusCurrent => 'ሕጂ ይጻወት';
+
+  @override
+  String get chainRoundStatusUpcoming => 'ዝቕጽል';
+
+  @override
+  String chainRoundNewPatternTitle(int round) {
+    return 'ሕግ ዙር $round';
+  }
+
+  @override
+  String chainRoundNewPatternBody(String pattern) {
+    return 'ተመሳሳሊ ኩዕሶታት፣ ሓድሽ ዕላማ። ምልክታትካ ሓዝካ $pattern ድለ።';
+  }
+
+  @override
+  String get chainRoundsForfeitedNotice => 'ተዓዋቲ የለን — ዝተረፉ ዙራት ኣይተጻወቱን።';
+
+  @override
+  String get chainRoundViewAll => 'ኩሉ ዙራት ርአ';
+
+  @override
   String get gameBonusFreeEntry => 'ነጻ መእተዊ';
 
   @override
@@ -2223,6 +2309,24 @@ class AppLocalizationsTi extends AppLocalizations {
   @override
   String registrationBigGotdCanSelectMore(int max) {
     return 'ን Big GOTD ክሳዕ $max ተወሳኺ ካርቴላ ክትመርጽ ትኽእል ኢኻ።';
+  }
+
+  @override
+  String get registrationChainLimitReached =>
+      'ንዚ ሰንሰለት ጸወታ ናይ ካርቴላ ገደብ በጺሕካ ኣለኻ።';
+
+  @override
+  String get registrationChainAllCartelasUsed =>
+      'ንዚ ሰንሰለት ጸወታ ኩሎም ካርቴላታት ተጠቂምካ ኣለኻ።';
+
+  @override
+  String registrationChainCanRegisterMore(int max) {
+    return 'ንዚ ሰንሰለት ጸወታ ክሳዕ $max ተወሳኺ ካርቴላ ክትምዝገብ ትኽእል ኢኻ።';
+  }
+
+  @override
+  String registrationChainCanSelectMore(int max) {
+    return 'ንዚ ሰንሰለት ጸወታ ክሳዕ $max ተወሳኺ ካርቴላ ክትመርጽ ትኽእል ኢኻ።';
   }
 
   @override
@@ -2368,16 +2472,21 @@ class AppLocalizationsTi extends AppLocalizations {
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
-  String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+  String get bigGameLivePrompt =>
+      'Remaining games are here. Big Game is in progress';
 
   @override
   String get bigGameHeldPrompt =>
-      'Big Game is ready — waiting for current round — Go to Big Game';
+      'Remaining games are here. Big Game is ready — waiting for current round';
 
   @override
   String bigGameRegistrationOpenPrompt(int round) {
-    return 'Big Game Round $round registration is open — Go to Big Game';
+    return 'Remaining games are here. Big Game Round $round registration is open';
   }
+
+  @override
+  String get bigGameBetweenRoundsPrompt =>
+      'Remaining games are here. Big Game is between rounds';
 
   @override
   String bigGameMissedRoundRegistrationTitle(int round) {

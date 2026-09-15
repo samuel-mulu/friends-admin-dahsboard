@@ -14,6 +14,8 @@ class AppPreferencesStorage {
   static const _localeKey = 'app_locale';
   static const _cartelaMarkColorKey = 'cartela_mark_color';
   static const _cartelaSortModeKey = 'cartela_sort_mode';
+  static const _cartelaSortMaxRemainsKey = 'cartela_sort_max_remains';
+  static const defaultCartelaSortMaxRemains = 4;
   static const _profileAvatarPrefix = 'profile_avatar_';
   static const _dismissedGameAnnouncementsKey = 'dismissed_game_announcements';
   static const _cbeWithdrawAccountPrefix = 'cbe_withdraw_account_';
@@ -89,6 +91,21 @@ class AppPreferencesStorage {
 
   Future<void> writeCartelaSortMode(CartelaSortMode mode) {
     return _prefs.setString(_cartelaSortModeKey, mode.storageKey);
+  }
+
+  int readCartelaSortMaxRemains() {
+    final raw = _prefs.getInt(_cartelaSortMaxRemainsKey);
+    if (raw == null) {
+      return defaultCartelaSortMaxRemains;
+    }
+    return raw.clamp(1, 4);
+  }
+
+  Future<void> writeCartelaSortMaxRemains(int maxRemains) {
+    return _prefs.setInt(
+      _cartelaSortMaxRemainsKey,
+      maxRemains.clamp(1, 4),
+    );
   }
 
   String? readProfileAvatarId(String userId) {

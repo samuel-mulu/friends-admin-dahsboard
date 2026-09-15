@@ -26,6 +26,8 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.on('game:winner_window_joined', _onWinnerWindowEvent);
     _socketService.on('game:finished', _onGameFinished);
     _socketService.on('game:cancelled', _onGameCancelled);
+    _socketService.on('chain:round_finished', _onChainRoundEvent);
+    _socketService.on('chain:round_started', _onChainRoundEvent);
     _socketService.on('session:prize_updated', _onSessionPrizeUpdated);
     _socketService.on('session:cartelas_updated', _onSessionCartelasUpdated);
     _socketService.on('my_cartela:registered', _onMyCartelaRegistered);
@@ -54,6 +56,8 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.off('game:winner_window_joined', _onWinnerWindowEvent);
     _socketService.off('game:finished', _onGameFinished);
     _socketService.off('game:cancelled', _onGameCancelled);
+    _socketService.off('chain:round_finished', _onChainRoundEvent);
+    _socketService.off('chain:round_started', _onChainRoundEvent);
     _socketService.off('session:prize_updated', _onSessionPrizeUpdated);
     _socketService.off('session:cartelas_updated', _onSessionCartelasUpdated);
     _socketService.off('my_cartela:registered', _onMyCartelaRegistered);

@@ -1566,7 +1566,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerSortCartelasByLinesSubtitle =>
-      'Cartelas with more completed rows, columns, and diagonals rise to the top. Uses your marks, including one-away progress.';
+      'Cartelas with more fully completed rows, columns, and diagonals rise to the top (1 line, then 2, then 3…). Partial marks do not affect order.';
+
+  @override
+  String get drawerSortCartelasByRemains => 'Sort cartelas by remains';
+
+  @override
+  String get drawerSortCartelasByRemainsSubtitle =>
+      'Closest-to-win cartelas rise to the top by how many cells remain for the active rule. Choose 1–4; cards with more remains stay unpromoted.';
 
   @override
   String get soundSettingsDeviceOnly =>
@@ -2018,6 +2025,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postGameSummaryNextGame => 'Continue';
 
   @override
+  String get postGameSummaryDone => 'Done';
+
+  @override
+  String get postGameSummaryNoNextGame => 'No next game right now';
+
+  @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';
 
   @override
@@ -2228,6 +2241,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
+  String get gameCategoryChainGame => 'Chain Game';
+
+  @override
+  String chainRoundOfTotal(int current, int total) {
+    return 'Round $current of $total';
+  }
+
+  @override
+  String get chainRoundThisRoundPrize => 'This round';
+
+  @override
+  String get chainRoundTotalPrize => 'Total pool';
+
+  @override
+  String chainRoundBreakTitle(int round) {
+    return 'Round $round complete';
+  }
+
+  @override
+  String chainRoundBreakSubtitle(int round, int seconds) {
+    return 'Your marks stay. Round $round starts in ${seconds}s.';
+  }
+
+  @override
+  String chainRoundNextPattern(String pattern) {
+    return 'Next pattern: $pattern';
+  }
+
+  @override
+  String get chainRoundWinnersTitle => 'Round winners';
+
+  @override
+  String chainRoundWinnerChip(int round, int cartela) {
+    return 'R$round · #$cartela';
+  }
+
+  @override
+  String get chainRoundsTitle => 'Chain rounds';
+
+  @override
+  String chainRoundsSubtitle(int total) {
+    return 'One draw, $total rounds. Balls and marks carry over — only the pattern and prize change.';
+  }
+
+  @override
+  String get chainRoundStatusWon => 'Won';
+
+  @override
+  String get chainRoundStatusForfeited => 'Not played';
+
+  @override
+  String get chainRoundStatusCurrent => 'Playing now';
+
+  @override
+  String get chainRoundStatusUpcoming => 'Upcoming';
+
+  @override
+  String chainRoundNewPatternTitle(int round) {
+    return 'Round $round pattern';
+  }
+
+  @override
+  String chainRoundNewPatternBody(String pattern) {
+    return 'Same balls, new target. Keep your marks and look for $pattern.';
+  }
+
+  @override
+  String get chainRoundsForfeitedNotice =>
+      'No winner — the remaining rounds were not played.';
+
+  @override
+  String get chainRoundViewAll => 'View all rounds';
+
+  @override
   String get gameBonusFreeEntry => 'Free entry';
 
   @override
@@ -2272,6 +2359,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String registrationBigGotdCanSelectMore(int max) {
     return 'You can still select up to $max more cartelas for Big GOTD.';
+  }
+
+  @override
+  String get registrationChainLimitReached =>
+      'You have reached the cartela limit for this Chain Game.';
+
+  @override
+  String get registrationChainAllCartelasUsed =>
+      'You have already used all cartelas for this Chain Game.';
+
+  @override
+  String registrationChainCanRegisterMore(int max) {
+    return 'You can still register up to $max more cartelas for this Chain Game.';
+  }
+
+  @override
+  String registrationChainCanSelectMore(int max) {
+    return 'You can still select up to $max more cartelas for this Chain Game.';
   }
 
   @override
@@ -2417,16 +2522,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
-  String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+  String get bigGameLivePrompt =>
+      'Remaining games are here. Big Game is in progress';
 
   @override
   String get bigGameHeldPrompt =>
-      'Big Game is ready — waiting for current round — Go to Big Game';
+      'Remaining games are here. Big Game is ready — waiting for current round';
 
   @override
   String bigGameRegistrationOpenPrompt(int round) {
-    return 'Big Game Round $round registration is open — Go to Big Game';
+    return 'Remaining games are here. Big Game Round $round registration is open';
   }
+
+  @override
+  String get bigGameBetweenRoundsPrompt =>
+      'Remaining games are here. Big Game is between rounds';
 
   @override
   String bigGameMissedRoundRegistrationTitle(int round) {

@@ -92,6 +92,7 @@ class _CartelaRegistrationPanel extends ConsumerStatefulWidget {
     this.category = GameCategory.normal,
     this.fixedPrizeAmount,
     this.maxCartelasPerPlayer,
+    this.roundPrizes,
     required this.registeredCartelas,
     required this.cartelaHoldSeconds,
     required this.bulkSelectionSeconds,
@@ -112,6 +113,7 @@ class _CartelaRegistrationPanel extends ConsumerStatefulWidget {
   final GameCategory category;
   final String? fixedPrizeAmount;
   final int? maxCartelasPerPlayer;
+  final List<String>? roundPrizes;
   final List<GameCartelaModel> registeredCartelas;
   final int cartelaHoldSeconds;
   final int bulkSelectionSeconds;
@@ -173,6 +175,9 @@ class _CartelaRegistrationPanelState
     if (_isBigGotd) {
       return RegistrationLimitKind.bigGotd;
     }
+    if (_isChainGame) {
+      return RegistrationLimitKind.chainGame;
+    }
     return RegistrationLimitKind.normal;
   }
 
@@ -217,11 +222,18 @@ class _CartelaRegistrationPanelState
             : 'You can still register up to $maxAffordable more free cartela${maxAffordable == 1 ? '' : 's'} for this bonus game.',
       RegistrationLimitKind.bigGotd =>
         maxAffordable == null || maxAffordable < 1
-            ? (_isBigGotdCartelaLimitReached() &&
-                    !_isBigGotdBalanceLimited(_walletBalanceValue())
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
                 ? l10n.registrationBigGotdLimitReached
                 : l10n.registrationInsufficientBalance)
             : l10n.registrationBigGotdCanRegisterMore(maxAffordable),
+      RegistrationLimitKind.chainGame =>
+        maxAffordable == null || maxAffordable < 1
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationChainLimitReached
+                : l10n.registrationInsufficientBalance)
+            : l10n.registrationChainCanRegisterMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
             ? l10n.registrationInsufficientBalanceRegister
@@ -241,11 +253,18 @@ class _CartelaRegistrationPanelState
             : 'You can still register up to $maxAffordable more free cartela${maxAffordable == 1 ? '' : 's'} for this bonus game.',
       RegistrationLimitKind.bigGotd =>
         maxAffordable == null || maxAffordable < 1
-            ? (_isBigGotdCartelaLimitReached() &&
-                    !_isBigGotdBalanceLimited(_walletBalanceValue())
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
                 ? l10n.registrationBigGotdAllCartelasUsed
                 : l10n.registrationInsufficientBalanceSelect)
             : l10n.registrationBigGotdCanSelectMore(maxAffordable),
+      RegistrationLimitKind.chainGame =>
+        maxAffordable == null || maxAffordable < 1
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationChainAllCartelasUsed
+                : l10n.registrationInsufficientBalanceSelect)
+            : l10n.registrationChainCanSelectMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
             ? l10n.registrationInsufficientBalanceSelect
@@ -265,6 +284,8 @@ class _CartelaRegistrationPanelState
       widget.category.canUseBonusCartelaBalance;
 
   bool get _isBigGame => widget.category == GameCategory.bigGame;
+
+  bool get _isChainGame => widget.category == GameCategory.chainGame;
 
   int get _bonusCartelaLimit => widget.maxCartelasPerPlayer ?? 5;
 
@@ -556,14 +577,15 @@ class _CartelaRegistrationPanelState
   }
 
   int? _cartelaLimitRemaining() {
-    if (_isBigGame) {
+    if (_isChainGame) {
       final max = widget.maxCartelasPerPlayer;
       if (max == null) {
         return null;
       }
-      final remaining =
-          max - _currentMineCount(_currentRegistrationSummary());
-      return remaining < 0 ? 0 : remaining;
+      return remainingCartelaLimit(
+        maxPerPlayer: max,
+        alreadyRegistered: _currentMineCount(_currentRegistrationSummary()),
+      );
     }
     if (!_isBonusLike) {
       return null;
@@ -588,16 +610,16 @@ class _CartelaRegistrationPanelState
     return _usableBonusCartelaBalance + moneyAffordable;
   }
 
-  bool _isBigGotdCartelaLimitReached() {
-    if (!_isBigGotd) {
+  bool _isCartelaCountLimitReached() {
+    if (!_isBigGotd && !_isChainGame) {
       return false;
     }
     final limit = _cartelaLimitRemaining();
     return limit != null && limit < 1;
   }
 
-  bool _isBigGotdBalanceLimited(String? walletBalance) {
-    if (!_isBigGotd) {
+  bool _isWalletBalanceLimited(String? walletBalance) {
+    if (!_isBigGotd && !_isChainGame) {
       return false;
     }
     final money = _moneyAffordableSelections(walletBalance);
@@ -619,28 +641,16 @@ class _CartelaRegistrationPanelState
       return _cartelaLimitRemaining();
     }
     if (_isBigGotd) {
-      final limit = _cartelaLimitRemaining();
-      final money = _moneyAffordableSelections(walletBalance);
-      if (limit == null) {
-        return money;
-      }
-      if (money == null) {
-        return limit;
-      }
-      return money < limit ? money : limit;
+      return minCartelaSelectionCap(
+        _cartelaLimitRemaining(),
+        _moneyAffordableSelections(walletBalance),
+      );
     }
-    if (_isBigGame) {
-      final limit = _cartelaLimitRemaining();
+    if (_isBigGame || _isChainGame) {
       final byPayment = _usingBigGameTicket
           ? _bigGameTicketBalance
           : _moneyAffordableSelections(walletBalance);
-      if (limit == null) {
-        return byPayment;
-      }
-      if (byPayment == null) {
-        return limit;
-      }
-      return byPayment < limit ? byPayment : limit;
+      return minCartelaSelectionCap(_cartelaLimitRemaining(), byPayment);
     }
     return _moneyAffordableSelections(walletBalance);
   }
@@ -801,7 +811,10 @@ class _CartelaRegistrationPanelState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Select up to $maxAffordable cartela${maxAffordable == 1 ? '' : 's'} with your current balance',
+            _insufficientBalanceSelectionMessage(
+              maxAffordable,
+              _registrationLimitKind,
+            ),
           ),
         ),
       );
@@ -838,6 +851,7 @@ class _CartelaRegistrationPanelState
           isBonus: _isBonus,
           isBigGotd: _isBigGotd,
           isBigGame: _isBigGame,
+          isChainGame: widget.category == GameCategory.chainGame,
           fixedPrizeAmount: widget.fixedPrizeAmount,
           maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
           bonusCartelaBalance: _usableBonusCartelaBalance,
@@ -1260,6 +1274,35 @@ class _CartelaRegistrationPanelState
     unawaited(ref.read(cartelaCatalogProvider.notifier).reshuffle());
   }
 
+  void _openChainRoundsFromRegistration() {
+    final prizes = widget.roundPrizes;
+    if (prizes == null || prizes.isEmpty || !mounted) {
+      return;
+    }
+    unawaited(
+      showChainGameRoundsDialog(
+        context: context,
+        plan: ChainRoundPlan(
+          sessionId: widget.sessionId ?? '',
+          roundCount: prizes.length,
+          currentRound: 1,
+          totalPrizeAmount: widget.fixedPrizeAmount ?? widget.prizePerCartela,
+          currentRoundPrizeAmount: prizes.first,
+          rounds: [
+            for (var i = 0; i < prizes.length; i++)
+              ChainRoundPlanEntry(
+                roundIndex: i + 1,
+                prizeAmount: prizes[i],
+                state: i == 0
+                    ? ChainRoundState.current
+                    : ChainRoundState.upcoming,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(cartelaCatalogProvider, (previous, next) {
@@ -1281,8 +1324,8 @@ class _CartelaRegistrationPanelState
     final snapshotSessionId = _effectiveSessionId;
     final registeredNumbers = _toolbarRegisteredNumbers(snapshotSessionId);
     final maxAffordable = _maxAffordableSelections(wallet?.balance);
-    final remainingBonusCartelas = _isBonusLike
-        ? _bonusRemainingSelections()
+    final remainingBonusCartelas = _isBonusLike || _isChainGame || _isBigGame
+        ? _cartelaLimitRemaining()
         : null;
     if (snapshotSessionId != null) {
       ref.listen(registrationStateProvider(snapshotSessionId), (
@@ -1321,6 +1364,7 @@ class _CartelaRegistrationPanelState
           entryFee: widget.entryFee,
           fixedPrizeAmount: widget.fixedPrizeAmount,
           maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
+          roundPrizes: widget.roundPrizes,
           selectedCount: _session.selectionCount,
           remainingBalance: _selectedRemainingBalance(wallet?.balance),
           onSelectModeChanged: _setSelectModeEnabled,
@@ -1328,6 +1372,10 @@ class _CartelaRegistrationPanelState
           searchController: _searchController,
           onReshuffle: _requestShuffleReshuffle,
           onRegisteredNumberTap: _handleRegisteredNumberTap,
+          onViewChainRounds: _isChainGame &&
+                  (widget.roundPrizes ?? const []).isNotEmpty
+              ? _openChainRoundsFromRegistration
+              : null,
         ),
         if (_session.registeringCartelaIds.isNotEmpty) ...[
           VGap.sm,
@@ -1605,6 +1653,7 @@ class _RegistrationToolbar extends StatelessWidget {
     required this.entryFee,
     required this.fixedPrizeAmount,
     required this.maxCartelasPerPlayer,
+    this.roundPrizes,
     required this.selectedCount,
     this.remainingBalance,
     required this.onSelectModeChanged,
@@ -1612,6 +1661,7 @@ class _RegistrationToolbar extends StatelessWidget {
     required this.searchController,
     required this.onReshuffle,
     required this.onRegisteredNumberTap,
+    this.onViewChainRounds,
   });
 
   final List<int> registeredNumbers;
@@ -1628,6 +1678,7 @@ class _RegistrationToolbar extends StatelessWidget {
   final String entryFee;
   final String? fixedPrizeAmount;
   final int? maxCartelasPerPlayer;
+  final List<String>? roundPrizes;
   final int selectedCount;
   final String? remainingBalance;
   final ValueChanged<bool> onSelectModeChanged;
@@ -1635,6 +1686,7 @@ class _RegistrationToolbar extends StatelessWidget {
   final TextEditingController searchController;
   final VoidCallback onReshuffle;
   final ValueChanged<int> onRegisteredNumberTap;
+  final VoidCallback? onViewChainRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -1646,6 +1698,7 @@ class _RegistrationToolbar extends StatelessWidget {
     final hasFreeEntry = category.hasFreeEntry;
     final canUseBonusCartelaBalance = category.canUseBonusCartelaBalance;
     final isBigGame = category == GameCategory.bigGame;
+    final isChainGame = category == GameCategory.chainGame;
     final canUseSelectMode =
         maxAffordableSelections == null || maxAffordableSelections! >= 1;
     final displayBalance = selectModeEnabled && remainingBalance != null
@@ -1673,6 +1726,18 @@ class _RegistrationToolbar extends StatelessWidget {
       GameCategory.bigGotd,
       isDark: isDark,
     );
+    final chainAccent = GameCategoryTheme.accentColor(
+      GameCategory.chainGame,
+      isDark: isDark,
+    );
+    final chainSurface = GameCategoryTheme.surfaceColor(
+      GameCategory.chainGame,
+      isDark: isDark,
+    );
+    final chainBorder = GameCategoryTheme.borderColor(
+      GameCategory.chainGame,
+      isDark: isDark,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1682,11 +1747,15 @@ class _RegistrationToolbar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isBigGame
             ? bigGameSurface
+            : isChainGame
+            ? chainSurface
             : AppBranding.statPillBackground(context),
         borderRadius: BorderRadius.circular(AppSpacing.xl),
         border: Border.all(
           color: isBigGame
               ? bigGameBorder
+              : isChainGame
+              ? chainBorder
               : theme.brightness == Brightness.dark
               ? theme.colorScheme.outlineVariant
               : AppBranding.panelBorder(context),
@@ -1807,13 +1876,6 @@ class _RegistrationToolbar extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                if (maxCartelasPerPlayer != null)
-                  Text(
-                    l10n.gameBonusMaxCartelas(bonusLimit),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
               ],
             ),
             if (!isGuest &&
@@ -1853,6 +1915,77 @@ class _RegistrationToolbar extends StatelessWidget {
                 ),
               ),
             ],
+            VGap.sm,
+          ],
+          if (isChainGame) ...[
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                GameCategoryBadge(
+                  category: GameCategory.chainGame,
+                  compact: true,
+                ),
+                Text(
+                  '${l10n.bigGameEntryFee}: ${formatMoney(entryFee)}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: chainAccent,
+                  ),
+                ),
+                if (roundPrizes != null && roundPrizes!.length > 1)
+                  ...[
+                    for (var i = 0; i < roundPrizes!.length; i++)
+                      Text(
+                        '${l10n.bigGameRoundPrize(i + 1)}: ${formatMoney(roundPrizes![i])}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    if (fixedPrizeAmount != null)
+                      Text(
+                        '${l10n.chainRoundTotalPrize}: ${formatMoney(fixedPrizeAmount!)}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ]
+                else if (fixedPrizeAmount != null)
+                  Text(
+                    l10n.gameBonusFixedPrize(formatMoney(fixedPrizeAmount!)),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                if (maxCartelasPerPlayer != null)
+                  Text(
+                    l10n.gameBonusMaxCartelas(bonusLimit),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                if (remainingBonusCartelas != null)
+                  Text(
+                    '$remainingBonusCartelas${l10n.registrationLeft}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                if (onViewChainRounds != null)
+                  GestureDetector(
+                    onTap: onViewChainRounds,
+                    child: Text(
+                      l10n.chainRoundViewAll,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: chainAccent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             VGap.sm,
           ],
           Row(

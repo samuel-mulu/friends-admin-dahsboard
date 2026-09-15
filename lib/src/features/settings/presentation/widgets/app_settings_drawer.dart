@@ -25,7 +25,6 @@ import '../../../games/domain/big_game_phase.dart';
 import '../../../games/presentation/providers/current_big_game_provider.dart';
 import '../../../games/presentation/utils/big_game_countdown.dart';
 import '../../../games/presentation/providers/cartela_sort_mode_provider.dart';
-import '../../../games/presentation/utils/cartela_marked_pattern_evaluator.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
 import 'terms_conditions_dialog.dart';
@@ -228,7 +227,12 @@ class AppSettingsDrawer extends ConsumerWidget {
                         horizontal: AppSpacing.md,
                         vertical: AppSpacing.xs,
                       ),
-                      child: const _CartelaLinesSortCard(),
+                      child: const Column(
+                        children: [
+                          _CartelaLinesSortCard(),
+                          _CartelaRemainsSortCard(),
+                        ],
+                      ),
                     ),
                   ),
                   VGap.md,
@@ -906,7 +910,11 @@ class _DrawerBigGameStatus extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bigGameAsync = ref.watch(currentBigGameProvider);
+    final walletAsync = ref.watch(myWalletProvider);
     final clock = ref.watch(serverClockProvider);
+    final ticketBalance =
+        walletAsync.asData?.value.bigGameTicketBalance ?? 0;
+    final ticketGameName = walletAsync.asData?.value.bigGameName?.trim();
 
     return bigGameAsync.when(
       loading: () => const Padding(
@@ -915,7 +923,7 @@ class _DrawerBigGameStatus extends ConsumerWidget {
       ),
       error: (_, _) => const SizedBox.shrink(),
       data: (game) {
-        if (game == null) {
+        if (game == null && ticketBalance <= 0) {
           return Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
@@ -928,8 +936,10 @@ class _DrawerBigGameStatus extends ConsumerWidget {
         }
 
         final now = clock.isSynced ? clock.nowLocal() : DateTime.now();
-        final phase = resolveBigGamePhase(game, now: now);
-        final prize = game.fixedPrizeAmount ?? game.prizeAmount;
+        final phase = game == null
+            ? null
+            : resolveBigGamePhase(game, now: now);
+        final prize = game?.fixedPrizeAmount ?? game?.prizeAmount;
 
         final statusLabel = switch (phase) {
           BigGamePhase.beforeRegistrationOpens => l10n.bigGameScheduledTitle,
@@ -937,13 +947,14 @@ class _DrawerBigGameStatus extends ConsumerWidget {
           BigGamePhase.waitingToPlay => l10n.bigGameReadyTitle,
           BigGamePhase.live => l10n.announcementBigGameLive,
           BigGamePhase.betweenRounds => l10n.bigGameBetweenRoundsTitle,
+          null => l10n.drawerBigGame,
           _ => l10n.drawerBigGame,
         };
 
         final countdownTarget = switch (phase) {
-          BigGamePhase.beforeRegistrationOpens => game.registrationOpensAt,
-          BigGamePhase.registrationOpen => game.scheduledStartAt,
-          BigGamePhase.betweenRounds => game.nextRoundStartsAt,
+          BigGamePhase.beforeRegistrationOpens => game?.registrationOpensAt,
+          BigGamePhase.registrationOpen => game?.scheduledStartAt,
+          BigGamePhase.betweenRounds => game?.nextRoundStartsAt,
           _ => null,
         };
         final countdownLabel = switch (phase) {
@@ -972,26 +983,61 @@ class _DrawerBigGameStatus extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  statusLabel,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppBranding.goldDark,
+                if (ticketBalance > 0) ...[
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.confirmation_number_outlined,
+                        size: 18,
+                        color: AppBranding.goldDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ticketGameName != null && ticketGameName.isNotEmpty
+                              ? l10n.walletBigTicketsForEvent(ticketGameName)
+                              : l10n.walletBigTicketsLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppBranding.goldDark,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$ticketBalance',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: AppBranding.goldDark,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.announcementBigGamePrize(formatMoney(prize)),
-                  style: theme.textTheme.bodySmall,
-                ),
-                if (countdown != null && countdownLabel != null) ...[
-                  const SizedBox(height: 6),
+                  if (game != null) const SizedBox(height: 10),
+                ],
+                if (game != null) ...[
                   Text(
-                    '$countdownLabel $countdown',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    statusLabel,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppBranding.goldDark,
                     ),
                   ),
+                  if (prize != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.announcementBigGamePrize(formatMoney(prize)),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  if (countdown != null && countdownLabel != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '$countdownLabel $countdown',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -1305,11 +1351,91 @@ class _CartelaLinesSortCard extends ConsumerWidget {
       value: sortEnabled,
       onChanged: (value) {
         unawaited(
-          ref.read(cartelaSortModeProvider.notifier).setSortMode(
-                value ? CartelaSortMode.lines : CartelaSortMode.manual,
-              ),
+          ref
+              .read(cartelaSortModeProvider.notifier)
+              .setLinesSortEnabled(value),
         );
       },
+    );
+  }
+}
+
+class _CartelaRemainsSortCard extends ConsumerWidget {
+  const _CartelaRemainsSortCard();
+
+  static const _remainsChoices = [1, 2, 3, 4];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final sortMode = ref.watch(cartelaSortModeProvider);
+    final sortEnabled = sortMode.sortsByRemains;
+    final maxRemains = ref.watch(cartelaSortMaxRemainsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(
+            Icons.filter_list_rounded,
+            color: sortEnabled
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+          title: Text(
+            l10n.drawerSortCartelasByRemains,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          subtitle: Text(
+            l10n.drawerSortCartelasByRemainsSubtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          value: sortEnabled,
+          onChanged: (value) {
+            unawaited(
+              ref
+                  .read(cartelaSortModeProvider.notifier)
+                  .setRemainsSortEnabled(value),
+            );
+          },
+        ),
+        if (sortEnabled) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 40, bottom: AppSpacing.sm),
+            child: SegmentedButton<int>(
+              segments: [
+                for (final choice in _remainsChoices)
+                  ButtonSegment<int>(
+                    value: choice,
+                    label: Text('$choice'),
+                  ),
+              ],
+              selected: {maxRemains},
+              onSelectionChanged: (selected) {
+                if (selected.isEmpty) {
+                  return;
+                }
+                unawaited(
+                  ref
+                      .read(cartelaSortMaxRemainsProvider.notifier)
+                      .setMaxRemains(selected.first),
+                );
+              },
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

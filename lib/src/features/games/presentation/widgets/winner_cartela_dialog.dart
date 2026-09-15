@@ -10,9 +10,15 @@ import '../utils/cartela_board_layout.dart';
 import 'winning_pattern_cartela_grid.dart';
 import 'winner_cartela_number_strip.dart';
 
+/// [pauseEndsAt] turns the close button into a Chain Game inter-round countdown
+/// ring: the player sees how long the winner reveal lasts and the dialog closes
+/// itself when the draw resumes. Null for every other flow.
 Future<void> showWinnerCartelaDialog({
   required BuildContext context,
   required List<SessionWinnerResultModel> results,
+  DateTime? pauseEndsAt,
+  int? roundIndex,
+  int? roundCount,
 }) {
   if (results.isEmpty) {
     return Future<void>.value();
@@ -22,15 +28,28 @@ Future<void> showWinnerCartelaDialog({
     context: context,
     barrierDismissible: true,
     builder: (dialogContext) {
-      return _WinnerCartelaDialog(results: results);
+      return _WinnerCartelaDialog(
+        results: results,
+        pauseEndsAt: pauseEndsAt,
+        roundIndex: roundIndex,
+        roundCount: roundCount,
+      );
     },
   );
 }
 
 class _WinnerCartelaDialog extends StatefulWidget {
-  const _WinnerCartelaDialog({required this.results});
+  const _WinnerCartelaDialog({
+    required this.results,
+    this.pauseEndsAt,
+    this.roundIndex,
+    this.roundCount,
+  });
 
   final List<SessionWinnerResultModel> results;
+  final DateTime? pauseEndsAt;
+  final int? roundIndex;
+  final int? roundCount;
 
   @override
   State<_WinnerCartelaDialog> createState() => _WinnerCartelaDialogState();
@@ -39,15 +58,113 @@ class _WinnerCartelaDialog extends StatefulWidget {
 class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
   late final PageController _pageController = PageController();
   int _pageIndex = 0;
+  Timer? _pauseTicker;
+  Duration _pauseRemaining = Duration.zero;
+  Duration _pauseTotal = Duration.zero;
 
   List<int> get _winnerNumbers => widget.results
       .map((result) => result.cartelaNumber)
       .toList(growable: false);
 
   @override
+  void initState() {
+    super.initState();
+    _startPauseCountdown();
+  }
+
+  void _startPauseCountdown() {
+    final endsAt = widget.pauseEndsAt;
+    if (endsAt == null) {
+      return;
+    }
+
+    final remaining = endsAt.difference(DateTime.now());
+    if (remaining <= Duration.zero) {
+      return;
+    }
+
+    _pauseTotal = remaining;
+    _pauseRemaining = remaining;
+    _pauseTicker = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (!mounted) {
+        return;
+      }
+      final left = endsAt.difference(DateTime.now());
+      if (left <= Duration.zero) {
+        _pauseTicker?.cancel();
+        // The draw has resumed — get out of the player's way.
+        Navigator.of(context).maybePop();
+        return;
+      }
+      setState(() => _pauseRemaining = left);
+    });
+  }
+
+  @override
   void dispose() {
+    _pauseTicker?.cancel();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Widget _buildCloseControl(ThemeData theme) {
+    final closeButton = IconButton(
+      tooltip: MaterialLocalizations.of(context).closeButtonLabel,
+      onPressed: () => Navigator.of(context).pop(),
+      icon: const Icon(Icons.close_rounded),
+    );
+
+    if (_pauseTotal <= Duration.zero) {
+      return closeButton;
+    }
+
+    final progress =
+        (_pauseRemaining.inMilliseconds / _pauseTotal.inMilliseconds)
+            .clamp(0.0, 1.0);
+    final secondsLeft = (_pauseRemaining.inMilliseconds / 1000).ceil();
+
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 42,
+            height: 42,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: progress, end: progress),
+              duration: const Duration(milliseconds: 200),
+              builder: (context, value, _) {
+                return CircularProgressIndicator(
+                  value: value,
+                  strokeWidth: 3,
+                  color: AppBranding.gold,
+                  backgroundColor: theme.colorScheme.outlineVariant,
+                );
+              },
+            ),
+          ),
+          InkResponse(
+            onTap: () => Navigator.of(context).pop(),
+            radius: 22,
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: Center(
+                child: Text(
+                  '$secondsLeft',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppBranding.gold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _goToPage(int index) {
@@ -102,18 +219,32 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      l10n.winningCartelasTitle,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.winningCartelasTitle,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (widget.roundIndex != null &&
+                            widget.roundCount != null)
+                          Text(
+                            l10n.chainRoundOfTotal(
+                              widget.roundIndex!,
+                              widget.roundCount!,
+                            ),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(context).closeButtonLabel,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
+                  _buildCloseControl(theme),
                 ],
               ),
               Text(

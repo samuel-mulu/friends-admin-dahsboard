@@ -424,6 +424,8 @@ class _CartelaRegistrationSheetState
 
   bool get _isBigGame => widget.category == GameCategory.bigGame;
 
+  bool get _isChainGame => widget.category == GameCategory.chainGame;
+
   bool get _hasEnoughBalance {
     if (_hasFreeEntry) {
       return true;
@@ -676,6 +678,9 @@ class _CartelaRegistrationSheetState
                       ? 'You can register up to ${widget.maxCartelasPerPlayer ?? 5} free cartelas for this bonus game.'
                       : (error.message == 'BIG_GOTD_CARTELA_LIMIT_REACHED')
                       ? 'You can register up to ${widget.maxCartelasPerPlayer ?? 5} cartelas for Big GOTD.'
+                      : (error.message == 'CHAIN_GAME_CARTELA_LIMIT_REACHED' ||
+                            error.code == 'CHAIN_GAME_CARTELA_LIMIT_REACHED')
+                      ? 'You can register up to ${widget.maxCartelasPerPlayer ?? 5} cartelas for this Chain Game.'
                       : error.displayMessage)
                 : 'Could not register this cartela.',
           ),
@@ -848,7 +853,9 @@ class _CartelaRegistrationSheetState
                                       : _isBigGotd
                                       ? l10n.gameCategoryNormal
                                       : _isBigGame
-                                      ? 'Big Game'
+                                      ? l10n.gameCategoryBigGame
+                                      : _isChainGame
+                                      ? l10n.gameCategoryChainGame
                                       : 'Preview',
                                   style: theme.textTheme.labelLarge?.copyWith(
                                     color: Colors.white.withValues(alpha: 0.85),
@@ -865,11 +872,15 @@ class _CartelaRegistrationSheetState
                                     ),
                                   ),
                                 ],
-                                if ((_isBonusLike || _isBigGame) &&
+                                if ((_isBonusLike ||
+                                        _isBigGame ||
+                                        _isChainGame) &&
                                     widget.fixedPrizeAmount != null) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Fixed prize: ${formatMoney(widget.fixedPrizeAmount!)}',
+                                    l10n.gameBonusFixedPrize(
+                                      formatMoney(widget.fixedPrizeAmount!),
+                                    ),
                                     style: theme.textTheme.labelSmall?.copyWith(
                                       color: AppBranding.goldAccent,
                                       fontWeight: FontWeight.w800,
@@ -1014,7 +1025,9 @@ class _CartelaRegistrationSheetState
                                   if (_isBonusLike) ...[
                                     if (widget.fixedPrizeAmount != null)
                                       Text(
-                                        'Fixed prize: ${formatMoney(widget.fixedPrizeAmount!)}',
+                                        l10n.gameBonusFixedPrize(
+                                      formatMoney(widget.fixedPrizeAmount!),
+                                    ),
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
                                               color: theme
@@ -1034,7 +1047,7 @@ class _CartelaRegistrationSheetState
                                           ),
                                     ),
                                   ],
-                                  if (_isBigGame &&
+                                  if (_isChainGame &&
                                       widget.maxCartelasPerPlayer != null)
                                     Text(
                                       'Max ${widget.maxCartelasPerPlayer} cartelas',

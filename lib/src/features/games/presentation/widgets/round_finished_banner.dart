@@ -2,8 +2,93 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
+import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
+import '../../domain/game_category_theme.dart';
 import 'winner_cartela_number_strip.dart';
+
+/// Per-round outcome list shown once a Chain Game reaches its final summary.
+/// Forfeited rounds are struck through so a short chain reads as "ended early"
+/// instead of silently dropping rounds.
+class _ChainRoundsRecap extends StatelessWidget {
+  const _ChainRoundsRecap({required this.rounds, required this.roundCount});
+
+  final List<ChainRoundResultSummary> rounds;
+  final int roundCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final accent = GameCategoryTheme.accentColor(
+      GameCategory.chainGame,
+      isDark: theme.brightness == Brightness.dark,
+    );
+    final anyForfeited = rounds.any((round) => round.isForfeited);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final round in rounds)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                Text(
+                  l10n.chainRoundOfTotal(round.roundIndex, roundCount),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    round.isForfeited
+                        ? l10n.chainRoundStatusForfeited
+                        : round.winners
+                              .map((winner) => '#${winner.cartelaNumber}')
+                              .join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: round.isForfeited
+                          ? theme.colorScheme.onSurfaceVariant
+                          : AppBranding.gold,
+                      fontWeight: FontWeight.w700,
+                      decoration: round.isForfeited
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  round.prizeAmount,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                    decoration: round.isForfeited
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (anyForfeited) ...[
+          const SizedBox(height: 2),
+          Text(
+            l10n.chainRoundsForfeitedNotice,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 Color _bannerGoldAccent(BuildContext context) {
   return Theme.of(context).brightness == Brightness.dark
@@ -186,6 +271,11 @@ class RoundFinishedBanner extends StatelessWidget {
     required this.secondsRemaining,
     this.isNoWinner = false,
     this.isAdvancing = false,
+    this.hasNextGame = true,
+    this.chainRoundResults = const [],
+    this.chainRoundCount,
+    this.isInterRoundPause = false,
+    this.interRoundTitle,
     this.onNext,
     this.onOpenWinners,
     super.key,
@@ -198,6 +288,19 @@ class RoundFinishedBanner extends StatelessWidget {
   final int secondsRemaining;
   final bool isNoWinner;
   final bool isAdvancing;
+
+  /// When false, Continue dismisses to empty Live instead of opening next.
+  final bool hasNextGame;
+
+  /// CHAIN_GAME: every round decided in this session. Empty for other games, so
+  /// the recap below simply does not render for them.
+  final List<ChainRoundResultSummary> chainRoundResults;
+  final int? chainRoundCount;
+
+  /// Non-final Chain Game pause. Hides the all-rounds recap and uses
+  /// [interRoundTitle] so the last-round 60s summary stays unchanged.
+  final bool isInterRoundPause;
+  final String? interRoundTitle;
   final VoidCallback? onNext;
   final VoidCallback? onOpenWinners;
 
@@ -220,7 +323,7 @@ class RoundFinishedBanner extends StatelessWidget {
           '+${winnerCartelaNumbers.length - 1}';
     }
 
-    return l10n.gameResultsLoading;
+    return isLoading ? l10n.gameResultsLoading : '';
   }
 
   void _openWinnerDialog(BuildContext context) {
@@ -231,6 +334,7 @@ class RoundFinishedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final winnerLabel = _winnerLabel(l10n);
     final countdownColor = _bannerCountdownColor(context);
     final trophyColor = _bannerTrophyColor(context);
     final canOpenDialog =
@@ -267,6 +371,10 @@ class RoundFinishedBanner extends StatelessWidget {
                     Text(
                       isNoWinner
                           ? l10n.sessionResultsNoWinners
+                          : isInterRoundPause &&
+                                interRoundTitle != null &&
+                                interRoundTitle!.trim().isNotEmpty
+                          ? interRoundTitle!
                           : l10n.gameFinished,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -287,7 +395,9 @@ class RoundFinishedBanner extends StatelessWidget {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ]                     else if (isLoading && results.isEmpty)
+                    ] else if (isLoading &&
+                        results.isEmpty &&
+                        winnerCartelaNumbers.isEmpty)
                       Row(
                         children: [
                           SizedBox(
@@ -310,12 +420,13 @@ class RoundFinishedBanner extends StatelessWidget {
                         ],
                       )
                     else if (!isAdvancing) ...[
-                      Text(
-                        _winnerLabel(l10n),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      if (winnerLabel.isNotEmpty)
+                        Text(
+                          winnerLabel,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
                       if (results.length > 1) ...[
                         const SizedBox(height: 8),
                         IgnorePointer(
@@ -328,7 +439,27 @@ class RoundFinishedBanner extends StatelessWidget {
                             compact: true,
                           ),
                         ),
+                      ] else if (results.isEmpty &&
+                          winnerCartelaNumbers.length > 1) ...[
+                        const SizedBox(height: 8),
+                        IgnorePointer(
+                          child: WinnerCartelaNumberStrip(
+                            numbers: winnerCartelaNumbers,
+                            selectedIndex: 0,
+                            onSelected: (_) {},
+                            compact: true,
+                          ),
+                        ),
                       ],
+                    ],
+                    if (!isInterRoundPause &&
+                        chainRoundResults.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _ChainRoundsRecap(
+                        rounds: chainRoundResults,
+                        roundCount:
+                            chainRoundCount ?? chainRoundResults.length,
+                      ),
                     ],
                     const SizedBox(height: 6),
                     if (isAdvancing)
@@ -345,7 +476,9 @@ class RoundFinishedBanner extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              l10n.postGameSummaryOpeningNextRound,
+                              hasNextGame
+                                  ? l10n.postGameSummaryOpeningNextRound
+                                  : l10n.postGameSummaryNoNextGame,
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: countdownColor,
                                 fontWeight: FontWeight.w800,
@@ -356,7 +489,9 @@ class RoundFinishedBanner extends StatelessWidget {
                       )
                     else
                       Text(
-                        l10n.postGameSummaryNextRoundIn(secondsRemaining),
+                        hasNextGame
+                            ? l10n.postGameSummaryNextRoundIn(secondsRemaining)
+                            : l10n.postGameSummaryNoNextGame,
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: countdownColor,
                           fontWeight: FontWeight.w800,
@@ -393,7 +528,9 @@ class RoundFinishedBanner extends StatelessWidget {
                   if (onNext != null) ...[
                     if (canOpenDialog) const SizedBox(height: 8),
                     _SubtlePulseContinueButton(
-                      label: l10n.postGameSummaryNextGame,
+                      label: hasNextGame
+                          ? l10n.postGameSummaryNextGame
+                          : l10n.postGameSummaryDone,
                       onPressed: onNext,
                       isAdvancing: isAdvancing,
                     ),

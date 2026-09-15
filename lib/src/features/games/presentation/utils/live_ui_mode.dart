@@ -1,5 +1,6 @@
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
+import 'live_game_finish_transition.dart';
 import 'live_presentation_phase.dart';
 import 'live_primary_game_selection.dart';
 import 'live_ready_atomic_visibility.dart';
@@ -41,6 +42,10 @@ enum LiveUiCountdownKind {
   registration,
   nextBall,
   winnerWindow,
+
+  /// CHAIN_GAME: counting down to the next round inside the same draw.
+  interRoundPause,
+
   postGameReview,
 }
 
@@ -81,6 +86,7 @@ class ResolveLiveUiModeInput {
     this.awaitingLiveRoom = false,
     this.hasError = false,
     this.winnerWindowExpired = false,
+    this.excludeBigGame = false,
   });
 
   final GameOperationsCurrentResponse? operations;
@@ -101,6 +107,9 @@ class ResolveLiveUiModeInput {
   final bool awaitingLiveRoom;
   final bool hasError;
   final bool winnerWindowExpired;
+
+  /// Non-embedded Live (`/games`) never plays Big Game as primary.
+  final bool excludeBigGame;
 }
 
 class LiveUiModeState {
@@ -172,7 +181,9 @@ class LiveUiModeResolver {
     }
 
     final pinned = input.pinnedPrimaryGame;
-    if (pinned != null && holds.postGameSummaryReviewActive) {
+    if (pinned != null &&
+        !(input.excludeBigGame && pinned.isBigGame) &&
+        holds.postGameSummaryReviewActive) {
       return _buildForPinnedTerminal(
         input: input,
         game: pinned,
@@ -180,7 +191,9 @@ class LiveUiModeResolver {
       );
     }
 
-    if (pinned != null && holds.pinTerminalSession) {
+    if (pinned != null &&
+        !(input.excludeBigGame && pinned.isBigGame) &&
+        holds.pinTerminalSession) {
       if (pinned.status == GameStatus.winnerWindow) {
         return _buildForPinnedWinnerWindow(
           input: input,
@@ -205,6 +218,7 @@ class LiveUiModeResolver {
       ownsLiveCartelas: ownsLiveCartelas,
       lock: null,
       now: input.now,
+      excludeBigGame: input.excludeBigGame,
     );
 
     if (primaryFromOps == null) {
@@ -248,6 +262,9 @@ class LiveUiModeResolver {
   static GameModel? _stickyOwnedLiveGame(ResolveLiveUiModeInput input) {
     final game = input.ownedLiveGameFallback;
     if (game == null || !keepsOwnedLiveGamePrimary(game.status)) {
+      return null;
+    }
+    if (input.excludeBigGame && game.isBigGame) {
       return null;
     }
 
@@ -370,6 +387,7 @@ class LiveUiModeResolver {
         ownsLiveCartelas: ownsLiveCartelas,
         lock: null,
         now: input.now,
+        excludeBigGame: input.excludeBigGame,
       );
       if (primary != null) {
         return _buildForPrimaryGame(
@@ -438,6 +456,7 @@ class LiveUiModeResolver {
             ownsLiveCartelas: ownsLiveCartelas,
             lock: lock,
             now: input.now,
+            excludeBigGame: input.excludeBigGame,
           ) ??
             snapshot;
 
@@ -663,6 +682,7 @@ class LiveUiModeResolver {
       presentationPhase: presentationPhase,
       ownsLiveCartelas: ownsLiveCartelas,
       hasPrimarySessionCartelas: input.hasPrimarySessionCartelas,
+      operations: operations,
     );
 
     final secondaryRegistration =
@@ -772,6 +792,7 @@ class LiveUiModeResolver {
     required LivePresentationPhase presentationPhase,
     required bool ownsLiveCartelas,
     required bool hasPrimarySessionCartelas,
+    required GameOperationsCurrentResponse operations,
   }) {
     return switch (primary.status) {
       GameStatus.ready =>
@@ -787,7 +808,11 @@ class LiveUiModeResolver {
       GameStatus.finished => LiveUiMode.reviewFinished,
       GameStatus.noWinner => LiveUiMode.reviewNoWinner,
       GameStatus.cancelled =>
-        primary.cancelledReason == 'no_players'
+        primary.cancelledReason == 'no_players' &&
+                hasPlayableAdvanceTarget(
+                  operations: operations,
+                  terminalGame: primary,
+                )
             ? LiveUiMode.handoffOpeningNext
             : LiveUiMode.cancelled,
       _ => LiveUiMode.empty,
@@ -1028,6 +1053,10 @@ class LiveUiModeResolver {
   ) {
     if (holds.postGameSummaryReviewActive) {
       return LiveUiCountdownKind.postGameReview;
+    }
+    // The draw is held between Chain Game rounds, so there is no next ball.
+    if (presentationPhase.isChainRoundPause) {
+      return LiveUiCountdownKind.interRoundPause;
     }
     return switch (mode) {
       LiveUiMode.registrationCountdown when presentationPhase ==

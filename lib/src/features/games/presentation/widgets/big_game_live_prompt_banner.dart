@@ -11,7 +11,7 @@ import '../providers/current_big_game_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../utils/big_game_navigation.dart';
 
-/// Persistent strip on the normal games tab when Big Game is live or held.
+/// Persistent strip on the normal games tab when Big Game is actionable.
 class BigGameLivePromptBanner extends ConsumerWidget {
   const BigGameLivePromptBanner({
     required this.currentGame,
@@ -33,15 +33,15 @@ class BigGameLivePromptBanner extends ConsumerWidget {
     final bigGame = ref.watch(currentBigGameProvider).value;
     final clock = ref.watch(serverClockProvider);
     final now = clock.isSynced ? clock.nowLocal() : DateTime.now();
+    final phase =
+        bigGame == null ? null : resolveBigGamePhase(bigGame, now: now);
 
     final shouldShow = elsewhere != null ||
         bigGame?.heldWaitingForLiveSlot == true ||
-        (bigGame != null &&
-            resolveBigGamePhase(bigGame, now: now) == BigGamePhase.live) ||
-        (bigGame != null &&
-            resolveBigGamePhase(bigGame, now: now) ==
-                BigGamePhase.registrationOpen &&
-            bigGame.displayRoundIndex > 1);
+        phase == BigGamePhase.live ||
+        phase == BigGamePhase.registrationOpen ||
+        phase == BigGamePhase.betweenRounds ||
+        phase == BigGamePhase.waitingToPlay;
 
     if (!shouldShow) {
       return const SizedBox.shrink();
@@ -53,17 +53,14 @@ class BigGameLivePromptBanner extends ConsumerWidget {
       GameCategory.bigGame,
       isDark: isDark,
     );
-    final phase =
-        bigGame == null ? null : resolveBigGamePhase(bigGame, now: now);
     final isHeld = elsewhere?.phase == 'held' ||
-        bigGame?.heldWaitingForLiveSlot == true;
+        bigGame?.heldWaitingForLiveSlot == true ||
+        phase == BigGamePhase.waitingToPlay;
     final nextWhileLive = bigGame?.nextRoundRegistration;
     final nextRegistrationOpenWhileLive = phase == BigGamePhase.live &&
         nextWhileLive != null &&
         nextWhileLive.canRegister;
-    final isRegistrationOpen =
-        (phase == BigGamePhase.registrationOpen &&
-            (bigGame?.displayRoundIndex ?? 1) > 1) ||
+    final isRegistrationOpen = phase == BigGamePhase.registrationOpen ||
         nextRegistrationOpenWhileLive;
     final registrationRound = nextRegistrationOpenWhileLive
         ? nextWhileLive.displayRoundIndex
@@ -72,7 +69,9 @@ class BigGameLivePromptBanner extends ConsumerWidget {
         ? l10n.bigGameHeldPrompt
         : isRegistrationOpen
             ? l10n.bigGameRegistrationOpenPrompt(registrationRound)
-            : l10n.bigGameLivePrompt;
+            : phase == BigGamePhase.betweenRounds
+                ? l10n.bigGameBetweenRoundsPrompt
+                : l10n.bigGameLivePrompt;
 
     return Material(
       color: GameCategoryTheme.surfaceColor(

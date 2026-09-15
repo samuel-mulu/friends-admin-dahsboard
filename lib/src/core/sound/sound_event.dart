@@ -4,4 +4,5 @@ enum SoundEvent {
   gameStart,
   winnerWindow,
   validBingo,
+  roundTransition,
 }

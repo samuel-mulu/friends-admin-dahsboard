@@ -14,6 +14,11 @@ enum LivePresentationPhase {
   liveWaitingFirstBall,
   liveCalling,
   winnerWindow,
+
+  /// CHAIN_GAME only: the round is decided and the draw is held for the winner
+  /// reveal. The session is still PLAYING — balls, marks, and cartelas stay put.
+  interRoundPause,
+
   checking,
   review,
   cancelled,
@@ -44,8 +49,19 @@ extension LivePresentationPhaseX on LivePresentationPhase {
       this == LivePresentationPhase.liveWaitingFirstBall ||
       this == LivePresentationPhase.liveCalling ||
       this == LivePresentationPhase.winnerWindow ||
+      this == LivePresentationPhase.interRoundPause ||
       this == LivePresentationPhase.checking ||
       isTerminalLayout;
+
+  /// The draw is running or held mid-draw. Chain Game's inter-round pause is a
+  /// live phase, not a terminal one: nothing is cleared and play resumes.
+  bool get isLiveDrawLayout =>
+      this == LivePresentationPhase.liveWaitingFirstBall ||
+      this == LivePresentationPhase.liveCalling ||
+      this == LivePresentationPhase.winnerWindow ||
+      this == LivePresentationPhase.interRoundPause;
+
+  bool get isChainRoundPause => this == LivePresentationPhase.interRoundPause;
 }
 
 bool registrationCountdownIsReopened({
@@ -265,6 +281,20 @@ bool canShowPostGameSummary({
   return status == GameStatus.finished || status == GameStatus.noWinner;
 }
 
+/// Chain-only 20s round-break summary. Separate from [canShowPostGameSummary]
+/// so this overlay cannot advance the queue or start auto-call.
+bool canShowChainInterRoundSummary({
+  required GameModel? game,
+  required bool summaryActive,
+  required bool summaryDismissed,
+  DateTime? now,
+}) {
+  if (!summaryActive || summaryDismissed) {
+    return false;
+  }
+  return isChainRoundPauseActive(game, now: now);
+}
+
 /// Seconds left until registration closes from a backend [scheduledStartAt].
 int registrationCountdownSecondsRemaining({
   required DateTime? scheduledStartAt,
@@ -298,6 +328,37 @@ bool shouldPreloadWinnerResultsDuringWindow(
 
 bool canClaimDuringWinnerWindow(DateTime? windowEndsAt, {DateTime? now}) {
   return winnerWindowSecondsLeft(windowEndsAt, now: now) > 0;
+}
+
+/// True while a Chain Game is holding the draw on a finished round's winner
+/// reveal. Only CHAIN_GAME ever carries `roundPausedUntil`, so this is inert
+/// for every other category.
+bool isChainRoundPauseActive(GameModel? game, {DateTime? now}) {
+  if (game == null || !game.isChainGame) {
+    return false;
+  }
+  final pausedUntil = game.roundPausedUntil;
+  if (pausedUntil == null) {
+    return false;
+  }
+  return (now ?? DateTime.now()).isBefore(pausedUntil);
+}
+
+/// Seconds left on the inter-round pause, for the countdown ring and banner.
+int chainRoundPauseSecondsLeft(GameModel? game, {DateTime? now}) {
+  if (game == null || !game.isChainGame) {
+    return 0;
+  }
+  return secondsUntilCeil(game.roundPausedUntil, now: now);
+}
+
+/// During the inter-round pause the session has already advanced `roundIndex`
+/// onto the next round. The round whose winners are on screen is one behind.
+int chainRevealedRoundIndex(GameModel game, {DateTime? now}) {
+  if (isChainRoundPauseActive(game, now: now) && game.displayRoundIndex > 1) {
+    return game.displayRoundIndex - 1;
+  }
+  return game.displayRoundIndex;
 }
 
 class LivePresentationPhaseResolver {
@@ -408,6 +469,10 @@ class LivePresentationPhaseResolver {
     // Canonical refetch may already know the session is live while local
     // called-number state is still catching up.
     if (game.status == GameStatus.playing) {
+      // Chain Game holds the draw between rounds without leaving PLAYING.
+      if (isChainRoundPauseActive(game, now: now)) {
+        return LivePresentationPhase.interRoundPause;
+      }
       return calledNumbers.isEmpty && game.calledNumbersCount == 0
           ? LivePresentationPhase.liveWaitingFirstBall
           : LivePresentationPhase.liveCalling;

@@ -1,6 +1,12 @@
 part of 'live_game_screen.dart';
 
 mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
+  // Chain Game inter-round state. All null/inert for the other four categories.
+  Timer? _chainPauseTicker;
+  ChainRoundPlan? _chainRoundPlan;
+  String? _chainRoundPlanKey;
+  bool _chainRoundPlanInFlight = false;
+
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
   LiveRealtimeController get _realtime => controllers.realtime;
@@ -167,12 +173,153 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operations.nextUpcomingGameFor(current: current) == null;
   }
 
+  GameModel? _coerceReleasedTerminalToIdle({
+    required GameModel? game,
+    required GameOperationsCurrentResponse? operations,
+    bool allowTerminalTransition = false,
+  }) {
+    if (game == null || widget.embedded) {
+      return game;
+    }
+
+    final postGameSummaryActive = _review.postGameSummaryReviewActive ||
+        _review.postGameSummaryAdvancing;
+    if (postGameSummaryActive) {
+      return game;
+    }
+
+    final releasedSessionId = _releasedIdleTerminalSessionId;
+    final sameReleasedSession = releasedSessionId != null &&
+        (game.sessionId == releasedSessionId ||
+            (game.sessionId == null && _game?.sessionId == releasedSessionId));
+
+    if (!isTerminalGameStatus(game.status)) {
+      if (game.sessionId != null &&
+          releasedSessionId != null &&
+          game.sessionId != releasedSessionId) {
+        _releasedIdleTerminalSessionId = null;
+      }
+      return game;
+    }
+
+    if (hasPlayableAdvanceTarget(
+      operations: operations,
+      terminalGame: game,
+    )) {
+      _releasedIdleTerminalSessionId = null;
+      return game;
+    }
+
+    // Finished/noWinner stay visible until summary advance (or explicit release).
+    if ((game.status == GameStatus.finished ||
+            game.status == GameStatus.noWinner) &&
+        !allowTerminalTransition &&
+        !sameReleasedSession) {
+      return game;
+    }
+
+    // Cancelled with no next, or finished after advance/release → true empty.
+    _releasedIdleTerminalSessionId = game.sessionId ?? releasedSessionId;
+    return null;
+  }
+
+  void _applyIdleEmptyAfterTerminal({required String? finishedSessionId}) {
+    _releasedIdleTerminalSessionId = finishedSessionId;
+    _dismissWinnerCartelaDialogIfOpen();
+    _review.clearPostGameSummaryHold(
+      resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,
+      patternClearReason: WinnerPatternClearReason.sessionChanged,
+      clearWinnerPatterns: false,
+    );
+    _expireReadyTransitionLockIfNeeded();
+    _applySocketSessionMembership(null);
+    _registration.resetCurrentCartelaSession(null);
+    _registration.resetNextRegistrationCartelaSession(null);
+    if (!mounted) {
+      _game = null;
+      _lastOperations = null;
+      _nextUpcomingGame = null;
+      _nextRegistrationCartelas = const [];
+      _cn.calledNumbers = const [];
+      _myCartelas = const [];
+      _clearMyCartelaDisplayOrder();
+      _emptyMessage =
+          'No game is open right now. Pull down to refresh when the next round starts.';
+      return;
+    }
+    setState(() {
+      _clearReadyTransitionLock();
+      _game = null;
+      _lastOperations = null;
+      _nextUpcomingGame = null;
+      _nextRegistrationCartelas = const [];
+      _cn.calledNumbers = const [];
+      _myCartelas = const [];
+      _clearMyCartelaDisplayOrder();
+      _cn.claimingCartelaIds.clear();
+      _cn.processedClaimedIds.clear();
+      _cn.processedResolvedClaimIds.clear();
+      _cn.processedCalledNumberIds.clear();
+      _cn.processedCalledNumberOrders.clear();
+      _cn.pendingClaimCartelaIds.clear();
+      _cn.manualMarkedNumbers.clear();
+      _cn.lastManualMarkedKey = null;
+      _cn.bufferedCalledNumbers = const [];
+      _cn.deferredCalledNumbers = const [];
+      _cn.marksSessionId = null;
+      _cn.marksOwnerUserId = null;
+      _cn.restoredMarksSessionId = null;
+      _emptyMessage =
+          'No game is open right now. Pull down to refresh when the next round starts.';
+      _isLoading = false;
+      _errorMessage = null;
+    });
+    _syncActiveCartelasToProvider();
+    _evaluateLiveRoomSplash();
+  }
+
   void _enterFinishedReviewFromExpiredWindow() {
     final game = _game;
     if (game == null ||
         game.status != GameStatus.winnerWindow ||
         !_winnerWindowExpired ||
         _review.postGameSummaryReviewActive) {
+      return;
+    }
+
+    if (shouldSkipLocalChainWinnerWindowFinish(game)) {
+      ChainGameDebug.log(
+        'ww_expired skip_local_finish session=${game.sessionId} '
+        'round=${game.displayRoundIndex}/${game.displayRoundCount} '
+        'status=${game.status.name}',
+      );
+      if (_review.winnerWindowClosing) {
+        return;
+      }
+      _review.winnerWindowClosing = true;
+      void requestChainClosingRefetch() {
+        _realtime.requestTerminalCanonicalRefetch(
+          reason: 'chain_winner_window_expired',
+          wallet: !isGuest,
+          registrationSessionId: game.sessionId,
+          includeCalledNumbers: true,
+          includeMyCartelas: !isGuest,
+        );
+      }
+
+      requestChainClosingRefetch();
+      _review.startWinnerWindowClosingPoll(
+        onPoll: requestChainClosingRefetch,
+        shouldContinue: () =>
+            mounted &&
+            _review.winnerWindowClosing &&
+            _game?.status == GameStatus.winnerWindow &&
+            shouldSkipLocalChainWinnerWindowFinish(_game),
+        onTimedOut: requestChainClosingRefetch,
+      );
+      if (mounted) {
+        setState(() {});
+      }
       return;
     }
 
@@ -250,6 +397,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _finishWinnerWindowClosingLocally(GameModel game) {
+    if (shouldSkipLocalChainWinnerWindowFinish(game)) {
+      ChainGameDebug.log(
+        'local_finish blocked chain session=${game.sessionId} '
+        'round=${game.displayRoundIndex}/${game.displayRoundCount}',
+      );
+      return;
+    }
+
     if (game.status != GameStatus.winnerWindow ||
         !_winnerWindowExpired ||
         _isAnyClaimChecking ||
@@ -316,13 +471,23 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       wallet: !isGuest,
       registrationSessionId: game.sessionId,
       includeCalledNumbers: true,
-      includeMyCartelas: false,
+      includeMyCartelas: !isGuest && game.isChainGame,
     );
+    if (shouldSkipLocalChainWinnerWindowFinish(game)) {
+      return;
+    }
     // Do not wait on another poll cycle — claims are done, leave Finalizing.
     _finishWinnerWindowClosingLocally(game);
   }
 
-  bool get _showsPostGameSummary => _review.showsPostGameSummary;
+  bool get _showsPostGameSummary {
+    if (_isChainRoundPaused || _review.showsChainInterRoundSummary) {
+      return false;
+    }
+    return _review.showsPostGameSummary;
+  }
+
+  bool get _showsChainInterRoundSummary => _review.showsChainInterRoundSummary;
 
   static final RegExp _sessionIdPattern = RegExp(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
@@ -483,6 +648,20 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _applySessionOutcomeFromGame(GameModel? game) {
     final summary = game?.sessionOutcomeSummary;
     if (summary == null) {
+      return;
+    }
+
+    // PLAYING snapshots during a Chain pause omit WW winners. Keep the chips
+    // the 20s banner already has from roundResults / round_finished.
+    if (game != null &&
+        game.isChainGame &&
+        isChainRoundPauseActive(game, now: _countdownNow()) &&
+        summary.winnerCartelaNumbers.isEmpty &&
+        _review.sessionWinnerCartelaNumbers.isNotEmpty) {
+      _review.sessionBlockedCartelaNumbers = mergeSortedCartelaNumbers([
+        ..._review.sessionBlockedCartelaNumbers,
+        ...summary.blockedCartelaNumbers,
+      ]);
       return;
     }
 
@@ -717,9 +896,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     return null;
   }
 
-  Future<void> _fetchSessionWinnerResultsIfNeeded({bool force = false}) {
+  Future<void> _fetchSessionWinnerResultsIfNeeded({
+    bool force = false,
+    bool showLoading = true,
+  }) {
     return _review.fetchSessionWinnerResultsIfNeeded(
       force: force,
+      showLoading: showLoading,
       onResultsUpdated: () {
         _syncSessionWinnerResultsPolling();
         _maybeAutoShowWinnerCartelaDialog();
@@ -929,6 +1112,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       phase.name,
       detail: detail,
     );
+    if (_game?.isChainGame == true) {
+      ChainGameDebug.log(
+        'phase ${_lastDebugPhase?.name ?? 'none'} -> ${phase.name} '
+        '${detail ?? ''} round=${_game?.displayRoundIndex}/'
+        '${_game?.displayRoundCount} pausedUntil=${_game?.roundPausedUntil} '
+        'banner=${_showsChainInterRoundSummary ? 'roundBreak' : _showsPostGameSummary ? 'gameFinished' : 'none'}',
+      );
+    }
     _lastDebugPhase = phase;
   }
 
@@ -1191,7 +1382,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             resumeSync || includeMyCartelas || showLoading || _game == null,
         operationsSyncReason: operationsSyncReason,
       );
-      final game = loadSelection.game;
+      var game = advanceTarget != null
+          ? loadSelection.game
+          : _coerceReleasedTerminalToIdle(
+              game: loadSelection.game,
+              operations: operations,
+              allowTerminalTransition:
+                  resumeSync || allowTerminalTransition,
+            );
       final preloadedPrimaryCartelas = loadSelection.preloadedPrimaryCartelas;
       final preloadedPrimaryCartelasToken =
           loadSelection.preloadedPrimaryCartelasToken;
@@ -1202,9 +1400,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final priorGame = _game;
       final effectiveAllowTerminalTransition =
           resumeSync || allowTerminalTransition;
+      final releasedIdle = _releasedIdleTerminalSessionId != null &&
+          priorGame?.sessionId == _releasedIdleTerminalSessionId;
       final holdingTerminalSummary =
           !effectiveAllowTerminalTransition &&
           priorGame != null &&
+          !releasedIdle &&
           _shouldPinTerminalSession(priorGame);
       if (holdingTerminalSummary &&
           (game == null || game.sessionId != priorGame.sessionId)) {
@@ -1286,12 +1487,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         // Terminal transition hold (CANCELLED / FINISHED / NO_WINNER -> READY):
         // the backend can briefly report no current/queued game between emitting
         // the terminal event and opening the next READY registration. Do NOT
-        // tear down the UI on that transient gap.
+        // tear down the UI on that transient gap — but never pin forever after
+        // summary dismiss when there is no next playable game.
+        final postGameSummaryActive = _review.postGameSummaryReviewActive ||
+            _review.postGameSummaryAdvancing;
+        final releaseTerminalHold = _releasedIdleTerminalSessionId != null &&
+            priorGame?.sessionId == _releasedIdleTerminalSessionId;
         if (priorGame != null &&
             (isTerminalTransitionActive ||
                 shouldHoldTerminalPaint(
                   priorGame: priorGame,
                   operations: operations,
+                  postGameSummaryActive: postGameSummaryActive,
+                  releaseTerminalHold: releaseTerminalHold,
                 ))) {
           _safeSetState(generation, () {
             _isLoading = false;
@@ -2197,10 +2405,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _registration.tryApplyMyCartelasRemoteSnapshot(
           token: myCartelasSnapshotToken,
           responseSessionId: game.sessionId!,
-          cartelas: myCartelas,
+          cartelas: normalizeChainPlayableCartelas(
+            game: mergedGame,
+            cartelas: myCartelas,
+          ),
         );
       }
       _sortMyCartelas();
+      _syncChainPlayableCartelas();
       _isLoading = false;
       // Canonical truth is now on screen; feed the reconnect throttle so a
       // socket `connect` right after this apply does not refetch redundantly.
@@ -2982,6 +3194,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             );
           })
           .toList(growable: false);
+      _syncChainPlayableCartelas();
     });
     _markCalledNumbersPanelDirty();
 
@@ -3253,6 +3466,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _syncWinnerWindowTicker() {
+    // Chain Game round boundaries never reach a terminal status, so they piggy-back
+    // on the same sync points instead of the post-game machinery.
+    _syncChainRoundPauseTicker();
+    _syncChainRoundPlan();
+
     // WW must not preload/apply winner-results UI.
     // Finished owns the API fetch via _startPostGameSummary / terminal apply.
     _countdown.syncWinnerWindowTicker(
@@ -3304,7 +3522,198 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
+  /// Chain round boundaries stay PLAYING, so they must not go through the
+  /// finished-game path. Refetch canonical state and winner cartelas instead.
+  void _onChainRoundEvent(dynamic payload) {
+    if (!isLiveHostActive) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'chain:round_event',
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    final sessionId =
+        normalizedPayload['sessionId'] as String? ??
+        normalizedPayload['id'] as String?;
+    final slotId =
+        normalizedPayload['slotId'] as String? ??
+        normalizedPayload['gameSlotId'] as String?;
+    if (!_eventAffectsCurrentGame(sessionId: sessionId, slotId: slotId)) {
+      return;
+    }
+
+    _chainRoundPlanKey = null;
+    final isRoundFinished = normalizedPayload['finishedRoundIndex'] != null;
+    ChainGameDebug.log(
+      '${isRoundFinished ? 'chain:round_finished' : 'chain:round_started'} '
+      'session=$sessionId finishedRound=${normalizedPayload['finishedRoundIndex']} '
+      'nextRound=${normalizedPayload['nextRoundIndex'] ?? normalizedPayload['roundIndex']} '
+      'pausedUntil=${normalizedPayload['pausedUntil']}',
+    );
+    if (isRoundFinished) {
+      _applyChainRoundFinishedFromSocket(normalizedPayload);
+    } else {
+      _applyChainRoundStartedFromSocket(normalizedPayload);
+    }
+    _scheduleCanonicalRefetch(
+      reason: isRoundFinished ? 'chain_round_finished' : 'chain_round_started',
+      includeCalledNumbers: true,
+      includeMyCartelas: !isGuest,
+    );
+    if (isRoundFinished) {
+      unawaited(
+        _fetchSessionWinnerResultsIfNeeded(
+          force: _review.sessionWinnerResults.isEmpty,
+          showLoading: false,
+        ),
+      );
+    }
+    _syncChainPlayableCartelas();
+    _syncChainRoundPlan();
+    _syncChainRoundPauseTicker();
+  }
+
+  /// Paint round-1 winners on the 20s banner from the socket, before the
+  /// winner-results fetch (cartelas are already REGISTERED again).
+  void _applyChainRoundFinishedFromSocket(Map<String, dynamic> payload) {
+    final finishedRound = (payload['finishedRoundIndex'] as num?)?.toInt();
+    if (finishedRound == null) {
+      return;
+    }
+
+    final winnerNumbers =
+        winnerCartelaNumbersFromChainRoundFinishedPayload(payload);
+    if (winnerNumbers.isNotEmpty) {
+      _review.sessionWinnerCartelaNumbers = mergeSortedCartelaNumbers([
+        ..._review.sessionWinnerCartelaNumbers,
+        ...winnerNumbers,
+      ]);
+      _review.sessionWinnerResultsLoading = false;
+    }
+
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      if (winnerNumbers.isNotEmpty && mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    final winners = chainRoundWinnersFromFinishedPayload(payload);
+    final nextResult = ChainRoundResultSummary(
+      roundIndex: finishedRound,
+      prizeAmount:
+          payload['roundPrizeAmount']?.toString() ??
+          game.roundPrizeAmount ??
+          game.prizeAmount,
+      outcome: ChainRoundOutcome.won,
+      winners: winners,
+    );
+
+    final existing = [...game.roundResults];
+    final index = existing.indexWhere(
+      (round) => round.roundIndex == finishedRound,
+    );
+    if (index >= 0) {
+      if (existing[index].winners.isEmpty && winners.isNotEmpty) {
+        existing[index] = nextResult;
+      }
+    } else {
+      existing.add(nextResult);
+    }
+
+    if (!mounted) {
+      _game = applyChainRoundFinishedToGame(
+        game: game.copyWith(roundResults: existing),
+        payload: payload,
+      );
+      _review.resetWinnerWindowClosingState();
+      if (_review.postGameSummaryReviewActive) {
+        _review.clearPostGameSummaryHold(
+          resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,
+          patternClearReason: WinnerPatternClearReason.sessionChanged,
+          clearWinnerPatterns: false,
+        );
+      }
+      return;
+    }
+    setState(() {
+      _game = applyChainRoundFinishedToGame(
+        game: game.copyWith(roundResults: existing),
+        payload: payload,
+      );
+      _countdown.winnerWindowEndsAt = null;
+      _cn.socketAutoCallEnabled = false;
+    });
+    _review.resetWinnerWindowClosingState();
+    if (_review.postGameSummaryReviewActive) {
+      _clearPostGameSummaryHold(
+        patternClearReason: WinnerPatternClearReason.sessionChanged,
+        clearWinnerPatterns: false,
+      );
+    }
+    _maybeStartChainInterRoundSummary();
+    _syncWinnerWindowTicker();
+    _syncNextBallCountdownTicker();
+    _logPresentationPhaseIfChanged(
+      detail: 'chain_round_finished round=$finishedRound',
+    );
+  }
+
+  void _applyChainRoundStartedFromSocket(Map<String, dynamic> payload) {
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      return;
+    }
+
+    final roundIndex = (payload['roundIndex'] as num?)?.toInt();
+    final roundPrize = payload['roundPrizeAmount']?.toString();
+    final next = game.copyWith(
+      status: GameStatus.playing,
+      roundPausedUntil: null,
+      roundIndex: roundIndex ?? game.roundIndex,
+      currentRound: roundIndex ?? game.currentRound,
+      roundPrizeAmount: (roundPrize != null && roundPrize.isNotEmpty)
+          ? roundPrize
+          : game.roundPrizeAmount,
+    );
+    if (!mounted) {
+      _game = next;
+      _review.resetChainInterRoundSummary();
+      return;
+    }
+    setState(() {
+      _game = next;
+    });
+    _review.resetChainInterRoundSummary();
+    _stopChainRoundPauseTicker();
+    _logPresentationPhaseIfChanged(
+      detail: 'chain_round_started round=${roundIndex ?? game.displayRoundIndex}',
+    );
+  }
+
   void _startPostGameSummary({required bool scheduleAdvance}) {
+    final status = _game?.status;
+    if (status != GameStatus.finished && status != GameStatus.noWinner) {
+      ChainGameDebug.log(
+        'skip postGameSummary status=${status?.name} '
+        'paused=${_isChainRoundPaused}',
+      );
+      return;
+    }
+    if (_isChainRoundPaused) {
+      ChainGameDebug.log('skip postGameSummary chainPauseActive');
+      return;
+    }
+    ChainGameDebug.log(
+      'banner=gameFinished status=${status?.name} '
+      'round=${_game?.displayRoundIndex}/${_game?.displayRoundCount}',
+    );
     _review.startPostGameSummary(
       scheduleAdvance: scheduleAdvance,
       onStarted: () {
@@ -3345,6 +3754,321 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _review.syncPostGameSummaryCountdownTicker();
   }
 
+  // ---------------------------------------------------------------------------
+  // Chain Game inter-round pause
+  //
+  // The session stays PLAYING across the whole chain, so none of the terminal
+  // machinery above runs between rounds. All this does is drive a countdown and
+  // surface the round that just finished.
+  // ---------------------------------------------------------------------------
+
+  bool get _isChainRoundPaused => isChainRoundPauseActive(
+    _game,
+    now: _countdownNow(),
+  );
+
+  int get _chainRoundPauseSecondsLeft =>
+      chainRoundPauseSecondsLeft(_game, now: _countdownNow());
+
+  /// Identifies one pause window so the 20s summary starts once per round.
+  String? get _chainRoundPauseKey {
+    final game = _game;
+    final pausedUntil = game?.roundPausedUntil;
+    if (game == null || pausedUntil == null) {
+      return null;
+    }
+    return '${game.sessionId ?? game.id}:${game.displayRoundIndex}';
+  }
+
+  void _syncChainRoundPauseTicker() {
+    if (!_isChainRoundPaused) {
+      _stopChainRoundPauseTicker();
+      if (_review.chainInterRoundSummaryKey != null) {
+        _review.resetChainInterRoundSummary();
+      }
+      return;
+    }
+
+    if (_review.winnerWindowClosing) {
+      _review.resetWinnerWindowClosingState();
+    }
+    _maybeStartChainInterRoundSummary();
+    _syncChainPlayableCartelas();
+
+    if (_chainPauseTicker?.isActive == true) {
+      return;
+    }
+
+    _chainPauseTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!isLiveHostActive) {
+        return;
+      }
+      if (!_isChainRoundPaused) {
+        _onChainRoundResumed();
+        return;
+      }
+      setState(() {});
+    });
+  }
+
+  void _stopChainRoundPauseTicker() {
+    _chainPauseTicker?.cancel();
+    _chainPauseTicker = null;
+  }
+
+  void _onChainRoundResumed() {
+    final startingRoundIndex = _game?.displayRoundIndex;
+    ChainGameDebug.log(
+      'pause elapsed resume round=$startingRoundIndex '
+      'session=${_game?.sessionId}',
+    );
+    _stopChainRoundPauseTicker();
+    _dismissWinnerCartelaDialogIfOpen();
+    _review.resetChainInterRoundSummary();
+    if (!isLiveHostActive) {
+      return;
+    }
+    setState(() {});
+    _playGameSound(SoundEvent.roundTransition);
+    // Canonical state carries the new round's rule and prize.
+    _scheduleCanonicalRefetch(
+      reason: 'chain_round_resumed',
+      includeCalledNumbers: true,
+      includeMyCartelas: !isGuest,
+    );
+    _syncChainPlayableCartelas();
+    _announceChainNewPattern(startingRoundIndex);
+  }
+
+  /// Marks and balls carry over, so the only thing that actually changed is the
+  /// target — call that out once, briefly, as the draw restarts.
+  void _announceChainNewPattern(int? startingRoundIndex) {
+    final game = _game;
+    final plan = _chainRoundPlan;
+    if (game == null || plan == null || startingRoundIndex == null) {
+      return;
+    }
+
+    if (startingRoundIndex > game.displayRoundCount) {
+      return;
+    }
+
+    final entry = plan.roundAt(startingRoundIndex);
+    final patternName = entry?.gameRuleName ?? entry?.gameRuleKey;
+    if (patternName == null || !mounted) {
+      return;
+    }
+
+    unawaited(
+      showChainRoundNewPatternSheet(
+        context: context,
+        roundIndex: startingRoundIndex,
+        patternName: patternName,
+      ),
+    );
+  }
+
+  /// One 20s finished summary per non-final round. No winner dialog, no
+  /// Continue — play resumes when [roundPausedUntil] elapses.
+  void _maybeStartChainInterRoundSummary() {
+    final pauseKey = _chainRoundPauseKey;
+    if (pauseKey == null) {
+      return;
+    }
+    final wasShowing = _review.showsChainInterRoundSummary;
+    _seedChainRoundWinnersFromGame();
+    _review.startChainInterRoundSummary(pauseKey);
+    if (mounted &&
+        _review.showsChainInterRoundSummary &&
+        !wasShowing) {
+      ChainGameDebug.log(
+        'banner=roundBreak pauseKey=$pauseKey '
+        'seconds=${_chainRoundPauseSecondsLeft} '
+        'round=${_game?.displayRoundIndex}/${_game?.displayRoundCount}',
+      );
+      setState(() {});
+      unawaited(
+        _fetchSessionWinnerResultsIfNeeded(
+          force: _review.sessionWinnerResults.isEmpty,
+          showLoading: false,
+        ),
+      );
+    }
+  }
+
+  /// Round-1 cartelas are REGISTERED again during the pause, so the 20s
+  /// banner reads winners from roundResults / WW chips immediately.
+  void _seedChainRoundWinnersFromGame() {
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      return;
+    }
+
+    final fromRound = winnerCartelaNumbersFromChainRoundResults(
+      roundResults: game.roundResults,
+      roundIndex: chainRevealedRoundIndex(game, now: _countdownNow()),
+    );
+    if (fromRound.isEmpty) {
+      return;
+    }
+
+    _review.sessionWinnerCartelaNumbers = mergeSortedCartelaNumbers([
+      ..._review.sessionWinnerCartelaNumbers,
+      ...fromRound,
+    ]);
+    _review.sessionWinnerResultsLoading = false;
+  }
+
+  /// Fetches the fixed round ladder once per chain session, and again whenever a
+  /// round is decided so the tile states stay honest.
+  void _syncChainRoundPlan() {
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      if (_chainRoundPlan != null) {
+        setState(() {
+          _chainRoundPlan = null;
+          _chainRoundPlanKey = null;
+        });
+      }
+      return;
+    }
+
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return;
+    }
+
+    final key = '$sessionId:${game.roundResults.length}:'
+        '${game.displayRoundIndex}';
+    if (_chainRoundPlanKey == key || _chainRoundPlanInFlight) {
+      return;
+    }
+
+    _chainRoundPlanKey = key;
+    _chainRoundPlanInFlight = true;
+    unawaited(
+      ref
+          .read(gamesRepositoryProvider)
+          .getChainRoundPlan(sessionId)
+          .then((plan) {
+            if (!isLiveHostActive) {
+              return;
+            }
+            setState(() => _chainRoundPlan = plan);
+          })
+          .catchError((Object _) {
+            // Non-fatal: the strip and dialog degrade to session-level data.
+            _chainRoundPlanKey = null;
+          })
+          .whenComplete(() => _chainRoundPlanInFlight = false),
+    );
+  }
+
+  String? _chainCurrentRuleName() {
+    final game = _game;
+    if (game == null) {
+      return null;
+    }
+    final fromPlan = _chainRoundPlan
+        ?.roundAt(game.displayRoundIndex)
+        ?.gameRuleName;
+    return fromPlan ?? game.gameRule?.name;
+  }
+
+  Widget? _buildChainGameInfoStrip() {
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      return null;
+    }
+
+    return ChainGameInfoStrip(
+      roundIndex: game.displayRoundIndex,
+      roundCount: game.displayRoundCount,
+      thisRoundPrize: game.roundPrizeAmount ?? game.prizeAmount,
+      totalPrize: game.prizeAmount,
+      roundPrizes: game.roundPrizes,
+      showAllRoundPrizes: game.isRegistrationOpen,
+      patternName: _chainCurrentRuleName(),
+      onTap: _openChainRoundsDialog,
+    );
+  }
+
+  void _openChainRoundsDialog() {
+    final game = _game;
+    if (game == null || !game.isChainGame || !mounted) {
+      return;
+    }
+    final plan = _chainRoundPlan ?? ChainRoundPlan.fromGame(game);
+    if (plan.rounds.isEmpty) {
+      return;
+    }
+    unawaited(showChainGameRoundsDialog(context: context, plan: plan));
+  }
+
+  Widget? _buildChainRoundWinnersBar() {
+    final game = _game;
+    if (game == null || !game.isChainGame || game.roundResults.isEmpty) {
+      return null;
+    }
+
+    return ChainRoundWinnersBar(
+      roundResults: game.roundResults,
+      myCartelaNumbers: _myCartelas
+          .map((cartela) => cartela.cartela.number)
+          .toSet(),
+      onTap: _chainRoundPlan == null ? null : _openChainRoundsDialog,
+    );
+  }
+
+  Widget? _buildChainInterRoundSummaryBanner() {
+    if (!_showsChainInterRoundSummary) {
+      return null;
+    }
+
+    final game = _game;
+    final finishedRound = game == null
+        ? 1
+        : chainRevealedRoundIndex(game, now: _countdownNow());
+    final roundWinnerNumbers = game == null
+        ? const <int>[]
+        : winnerCartelaNumbersFromChainRoundResults(
+            roundResults: game.roundResults,
+            roundIndex: finishedRound,
+          );
+    final winnerNumbers = winnerCartelaNumbersForStrip(
+      useSessionWideOutcomeChips: true,
+      sessionWinnerCartelaNumbers: [
+        ..._review.sessionWinnerCartelaNumbers,
+        ...roundWinnerNumbers,
+      ],
+      myCartelas: _myCartelas,
+    );
+    final results = _sessionWinnerResultsForDisplay;
+    final waitingOnWinners =
+        results.isEmpty && winnerNumbers.isEmpty;
+
+    return RoundFinishedBanner(
+      isLoading: _review.sessionWinnerResultsLoading && waitingOnWinners,
+      isLoaded: _review.sessionWinnerResultsLoaded || !waitingOnWinners,
+      results: results,
+      winnerCartelaNumbers: winnerNumbers,
+      isInterRoundPause: true,
+      interRoundTitle: context.l10n.chainRoundBreakTitle(finishedRound),
+      secondsRemaining: _chainRoundPauseSecondsLeft,
+    );
+  }
+
+  void _syncChainPlayableCartelas() {
+    final next = normalizeChainPlayableCartelas(
+      game: _game,
+      cartelas: _myCartelas,
+    );
+    if (identical(next, _myCartelas)) {
+      return;
+    }
+    _myCartelas = next;
+  }
+
   Widget? _buildPostGameSummaryBanner() {
     if (!_showsPostGameSummary) {
       return null;
@@ -3362,12 +4086,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       results: _sessionWinnerResultsForDisplay,
       winnerCartelaNumbers: winnerNumbers,
       isNoWinner: _game?.status == GameStatus.noWinner,
+      chainRoundResults: _game?.roundResults ?? const [],
+      chainRoundCount: _game?.isChainGame == true
+          ? _game?.displayRoundCount
+          : null,
       secondsRemaining: postGameSummarySecondsRemaining(
         shownAt: _review.postGameSummaryShownAt,
         now: _countdownNow(),
         minimumHold: _postGameSummaryHold,
       ),
       isAdvancing: _review.postGameSummaryAdvancing,
+      hasNextGame: _game != null &&
+          hasPlayableAdvanceTarget(
+            operations: _lastOperations,
+            terminalGame: _game!,
+          ),
       onNext: _onPostGameSummaryNextTapped,
       onOpenWinners:
           !_winnerReviewEligibleViewer || _winnerReviewDialogResults.isEmpty
@@ -3546,20 +4279,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (nextGame == null ||
           (onlyIfRegistrationAvailable &&
               (nextGame.status != GameStatus.ready || !nextGame.canRegister))) {
-        _clearPostGameSummaryHold(
-          patternClearReason: WinnerPatternClearReason.sessionChanged,
-          clearWinnerPatterns: false,
+        _applyIdleEmptyAfterTerminal(
+          finishedSessionId: currentGame.sessionId,
         );
-        await _loadInitialState(
-          showLoading: false,
-          allowTerminalTransition: true,
-          operationsSyncReason: OperationsSyncReason.inconsistencyRecovery,
-        );
-        return _game == null ||
-            (_game?.status == GameStatus.ready &&
-                (_game?.canRegister ?? false));
+        return _game == null;
       }
 
+      _releasedIdleTerminalSessionId = null;
       await _loadInitialState(
         showLoading: false,
         allowTerminalTransition: true,

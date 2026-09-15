@@ -5,7 +5,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import 'game_category_badge.dart';
 
-/// Shared big-game metadata strip (entry fee, round/fixed prize, max cartelas).
+/// Shared big-game metadata strip (entry fee, round/fixed prize).
 class BigGameInfoStrip extends StatelessWidget {
   const BigGameInfoStrip({
     required this.game,
@@ -18,7 +18,6 @@ class BigGameInfoStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final limit = game.maxCartelasPerPlayer;
     final roundPrize = game.effectiveRoundPrizeAmount;
     final prizeText = roundPrize != null
         ? (game.hasMultipleRounds
@@ -43,13 +42,6 @@ class BigGameInfoStrip extends StatelessWidget {
         if (prizeText != null)
           Text(
             prizeText,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        if (limit != null)
-          Text(
-            l10n.gameBonusMaxCartelas(limit),
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

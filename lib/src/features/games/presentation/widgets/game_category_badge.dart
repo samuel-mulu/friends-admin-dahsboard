@@ -34,6 +34,7 @@ class GameCategoryBadge extends StatelessWidget {
       GameCategory.bonus => l10n.gameCategoryBonus,
       GameCategory.bigGotd => l10n.gameCategoryNormal,
       GameCategory.bigGame => l10n.gameCategoryBigGame,
+      GameCategory.chainGame => l10n.gameCategoryChainGame,
     };
 
     return Semantics(

@@ -36,6 +36,20 @@ bool isTerminalGameStatus(GameStatus status) {
       status == GameStatus.cancelled;
 }
 
+/// True when ops exposes a different READY session the player can register for.
+bool hasPlayableAdvanceTarget({
+  required GameOperationsCurrentResponse? operations,
+  required GameModel terminalGame,
+}) {
+  if (operations == null) {
+    return false;
+  }
+  final next = operations.resolveAdvanceTargetFor(terminalGame: terminalGame);
+  return next != null &&
+      next.status == GameStatus.ready &&
+      next.canRegister;
+}
+
 /// Keeps the current session on screen during finished review instead of
 /// swapping to the next registration session from a canonical refetch.
 bool shouldPinTerminalSession({
@@ -49,7 +63,9 @@ bool shouldPinTerminalSession({
   return switch (status) {
     GameStatus.finished => true,
     GameStatus.noWinner => true,
-    GameStatus.cancelled => true,
+    // Cancelled has no post-game summary; pinning forever blocks empty Live.
+    // Ready-transition lock covers brief no_players → next READY handoff.
+    GameStatus.cancelled => false,
     GameStatus.winnerWindow => true,
     _ => false,
   };
@@ -57,11 +73,17 @@ bool shouldPinTerminalSession({
 
 /// Hold terminal/review paint until the backend opens the next READY registration
 /// or a new live session appears in operations.
+///
+/// After post-game summary is dismissed with no next game, [releaseTerminalHold]
+/// must be true so Live can show the real empty state instead of pinning forever.
+/// While summary/advance is active, a brief ops null gap still holds paint.
 bool shouldHoldTerminalPaint({
   required GameModel? priorGame,
   required GameOperationsCurrentResponse? operations,
+  bool postGameSummaryActive = false,
+  bool releaseTerminalHold = false,
 }) {
-  if (priorGame == null) {
+  if (priorGame == null || releaseTerminalHold) {
     return false;
   }
 
@@ -71,6 +93,11 @@ bool shouldHoldTerminalPaint({
       if (live.status == GameStatus.winnerWindow ||
           live.status == GameStatus.finished ||
           live.status == GameStatus.noWinner) {
+        return false;
+      }
+      // Chain Game: the same session goes PLAYING between rounds. Holding
+      // winner-window paint here would keep the Game Finished card up.
+      if (priorGame.isChainGame && live.status == GameStatus.playing) {
         return false;
       }
       return true;
@@ -103,5 +130,7 @@ bool shouldHoldTerminalPaint({
     return false;
   }
 
-  return true;
+  // Bridge only the transient ops gap while summary/advance is still active.
+  // Idle after dismiss (no next READY) must fall through to empty Live.
+  return postGameSummaryActive;
 }

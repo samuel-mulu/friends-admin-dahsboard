@@ -11,6 +11,7 @@ abstract final class GameCategoryTheme {
       GameCategory.bonus => Icons.redeem_rounded,
       GameCategory.bigGotd => Icons.star_rounded,
       GameCategory.bigGame => Icons.emoji_events_rounded,
+      GameCategory.chainGame => Icons.link_rounded,
     };
   }
 
@@ -23,6 +24,9 @@ abstract final class GameCategoryTheme {
       // Lavender surface: purple label in light mode (gold washes out).
       GameCategory.bigGame =>
         isDark ? AppBranding.gold : AppBranding.brandPurple,
+      // Teal reads as "chain" without colliding with Big Game purple or gold.
+      GameCategory.chainGame =>
+        isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E),
     };
   }
 
@@ -36,6 +40,8 @@ abstract final class GameCategoryTheme {
         isDark ? const Color(0xFF2B2111) : const Color(0xFFFFF6DB),
       GameCategory.bigGame =>
         isDark ? AppBranding.casinoPurpleDeep : const Color(0xFFF3E8FF),
+      GameCategory.chainGame =>
+        isDark ? const Color(0xFF0C2C2A) : const Color(0xFFE6FBF7),
     };
   }
 
@@ -47,6 +53,9 @@ abstract final class GameCategoryTheme {
   static GameCategory categoryFor(GameModel game) {
     if (game.isBigGame) {
       return GameCategory.bigGame;
+    }
+    if (game.isChainGame) {
+      return GameCategory.chainGame;
     }
     if (game.isBigGotd) {
       return GameCategory.bigGotd;

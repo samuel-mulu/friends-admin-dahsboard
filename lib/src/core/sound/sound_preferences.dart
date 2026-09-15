@@ -49,6 +49,7 @@ class SoundPreferencesState {
       case SoundEvent.calledNumber:
         return calledNumberEnabled;
       case SoundEvent.gameStart:
+      case SoundEvent.roundTransition:
         return gameStartEnabled;
       case SoundEvent.winnerWindow:
         return winnerWindowEnabled;

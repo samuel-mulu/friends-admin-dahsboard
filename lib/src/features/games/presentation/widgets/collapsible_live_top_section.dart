@@ -5,10 +5,13 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
+import '../../data/models/chain_round_plan_model.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_rule_localized_name.dart';
 import 'bonus_game_info_strip.dart';
 import 'big_game_info_strip.dart';
+import 'chain_game_info_strip.dart';
+import 'chain_game_rounds_dialog.dart';
 import 'game_compact_info_bar.dart';
 import 'live_status_chip.dart';
 
@@ -489,6 +492,25 @@ class _NextGameDetailPanel extends ConsumerWidget {
           VGap.xs,
         ] else if (game.isBigGame) ...[
           BigGameInfoStrip(game: game),
+          VGap.xs,
+        ] else if (game.isChainGame) ...[
+          ChainGameInfoStrip(
+            roundIndex: game.displayRoundIndex,
+            roundCount: game.displayRoundCount,
+            thisRoundPrize: game.roundPrizeAmount ?? game.prizeAmount,
+            totalPrize: game.prizeAmount,
+            roundPrizes: game.roundPrizes,
+            showAllRoundPrizes: true,
+            patternName: game.gameRule?.name,
+            onTap: (game.roundPrizes ?? const []).isEmpty
+                ? null
+                : () {
+                    showChainGameRoundsDialog(
+                      context: context,
+                      plan: ChainRoundPlan.fromGame(game),
+                    );
+                  },
+          ),
           VGap.xs,
         ],
         Text(

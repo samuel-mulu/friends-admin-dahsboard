@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../data/models/chain_round_plan_model.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_rule_localized_name.dart';
 import 'bonus_game_info_strip.dart';
 import 'big_game_info_strip.dart';
+import 'chain_game_info_strip.dart';
+import 'chain_game_rounds_dialog.dart';
 import 'game_rule_detail_dialog.dart';
 
 enum GameCompactInfoBarLayout { live, registrationOpen }
@@ -29,7 +32,7 @@ class GameCompactInfoBar extends ConsumerWidget {
   final int? myRegisteredCartelasCount;
 
   String _displayPrizeAmount(GameModel game) {
-    if (game.isBigGame) {
+    if (game.isBigGame || game.isChainGame) {
       return game.effectiveRoundPrizeAmount ??
           game.prizeAmount;
     }
@@ -106,6 +109,9 @@ class GameCompactInfoBar extends ConsumerWidget {
         ] else if (game.isBigGame) ...[
           const SizedBox(height: 8),
           BigGameInfoStrip(game: game),
+        ] else if (game.isChainGame) ...[
+          const SizedBox(height: 8),
+          _ChainGameRegistrationRounds(game: game),
         ],
       ],
     );
@@ -206,6 +212,9 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
         ] else if (game.isBigGame) ...[
           const SizedBox(height: 8),
           BigGameInfoStrip(game: game),
+        ] else if (game.isChainGame) ...[
+          const SizedBox(height: 8),
+          _ChainGameRegistrationRounds(game: game),
         ],
       ],
     );
@@ -422,6 +431,66 @@ class _CompactDivider extends StatelessWidget {
       height: 36,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       color: AppBranding.panelBorder(context).withValues(alpha: 0.65),
+    );
+  }
+}
+
+class _ChainGameRegistrationRounds extends StatelessWidget {
+  const _ChainGameRegistrationRounds({required this.game});
+
+  final GameModel game;
+
+  @override
+  Widget build(BuildContext context) {
+    final prizes = game.roundPrizes ?? const <String>[];
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: prizes.isEmpty
+          ? null
+          : () {
+              showChainGameRoundsDialog(
+                context: context,
+                plan: ChainRoundPlan.fromGame(game),
+              );
+            },
+      borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (prizes.length > 1)
+            ChainRoundPrizeChips(roundPrizes: prizes)
+          else if (game.fixedPrizeAmount != null)
+            Text(
+              l10n.gameBonusFixedPrize(formatMoney(game.fixedPrizeAmount!)),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          if (game.maxCartelasPerPlayer != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              l10n.gameBonusMaxCartelas(game.maxCartelasPerPlayer!),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (prizes.length > 1) ...[
+            const SizedBox(height: 2),
+            Text(
+              l10n.chainRoundViewAll,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

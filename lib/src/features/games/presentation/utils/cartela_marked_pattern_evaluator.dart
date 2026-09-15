@@ -7,7 +7,7 @@ import 'cartela_mark_helpers.dart';
 import 'cartela_pattern_progress_overlay.dart';
 
 enum CartelaSortMode {
-  /// Classic bingo lines (rows + columns + diagonals), then one-away proximity.
+  /// Fully completed classic bingo lines only (rows + columns + diagonals).
   lines,
   smart,
   markedCells,
@@ -28,6 +28,9 @@ enum CartelaSortMode {
 
   /// Sidebar on/off: lines sort enabled.
   bool get sortsByLines => this == CartelaSortMode.lines;
+
+  /// Sidebar on/off: remains (smart) sort enabled.
+  bool get sortsByRemains => this == CartelaSortMode.smart;
 
   bool get allowsManualReorder => this == CartelaSortMode.manual;
 
@@ -171,14 +174,20 @@ class CartelaMarkedPatternEvaluator {
     };
   }
 
+  static const defaultMaxRemainsToSort = 4;
+  static const _unpromotedRemainsRank = 999;
+
   static List<GameCartelaModel> sortCartelas({
     required List<GameCartelaModel> cartelas,
     required Map<String, CartelaPatternUiResult> resultsByCartelaId,
     required CartelaSortMode sortMode,
+    int maxRemainsToSort = defaultMaxRemainsToSort,
   }) {
     if (sortMode == CartelaSortMode.manual || cartelas.length <= 1) {
       return List<GameCartelaModel>.from(cartelas);
     }
+
+    final cappedMaxRemains = maxRemainsToSort.clamp(1, 4);
 
     final sorted = List<GameCartelaModel>.from(cartelas)
       ..sort((left, right) {
@@ -200,12 +209,14 @@ class CartelaMarkedPatternEvaluator {
             right: right,
             leftResult: leftResult,
             rightResult: rightResult,
+            maxRemainsToSort: cappedMaxRemains,
           ),
           CartelaSortMode.reviewSmart => _compareReviewSmart(
             left: left,
             right: right,
             leftResult: leftResult,
             rightResult: rightResult,
+            maxRemainsToSort: cappedMaxRemains,
           ),
           CartelaSortMode.markedCells => _compareMarkedCells(
             left: left,
@@ -218,6 +229,16 @@ class CartelaMarkedPatternEvaluator {
       });
 
     return sorted;
+  }
+
+  static int remainsSortRank(int missingCellCount, int maxRemainsToSort) {
+    if (missingCellCount < 0) {
+      return _unpromotedRemainsRank;
+    }
+    if (missingCellCount <= maxRemainsToSort) {
+      return missingCellCount;
+    }
+    return _unpromotedRemainsRank;
   }
 
   /// Count fully marked classic bingo lines (5 rows + 5 columns + 2 diagonals).
@@ -254,6 +275,8 @@ class CartelaMarkedPatternEvaluator {
     required CartelaPatternUiResult leftResult,
     required CartelaPatternUiResult rightResult,
   }) {
+    // Only count fully completed rows/columns/diagonals (1 line, 2 lines, …).
+    // Do not break ties by marked/clicked cell count.
     if (leftResult.completedClassicLineCount !=
         rightResult.completedClassicLineCount) {
       return rightResult.completedClassicLineCount.compareTo(
@@ -261,12 +284,7 @@ class CartelaMarkedPatternEvaluator {
       );
     }
 
-    return _compareSmart(
-      left: left,
-      right: right,
-      leftResult: leftResult,
-      rightResult: rightResult,
-    );
+    return left.cartela.number.compareTo(right.cartela.number);
   }
 
   static int _compareSmart({
@@ -274,6 +292,7 @@ class CartelaMarkedPatternEvaluator {
     required GameCartelaModel right,
     required CartelaPatternUiResult leftResult,
     required CartelaPatternUiResult rightResult,
+    int maxRemainsToSort = defaultMaxRemainsToSort,
   }) {
     if (leftResult.hasLocalPatternComplete !=
         rightResult.hasLocalPatternComplete) {
@@ -284,10 +303,16 @@ class CartelaMarkedPatternEvaluator {
       return rightResult.isOneAway ? 1 : -1;
     }
 
-    if (leftResult.missingCellCount != rightResult.missingCellCount) {
-      return leftResult.missingCellCount.compareTo(
-        rightResult.missingCellCount,
-      );
+    final leftRank = remainsSortRank(
+      leftResult.missingCellCount,
+      maxRemainsToSort,
+    );
+    final rightRank = remainsSortRank(
+      rightResult.missingCellCount,
+      maxRemainsToSort,
+    );
+    if (leftRank != rightRank) {
+      return leftRank.compareTo(rightRank);
     }
 
     if (leftResult.markedCellCount != rightResult.markedCellCount) {
@@ -302,6 +327,7 @@ class CartelaMarkedPatternEvaluator {
     required GameCartelaModel right,
     required CartelaPatternUiResult leftResult,
     required CartelaPatternUiResult rightResult,
+    int maxRemainsToSort = defaultMaxRemainsToSort,
   }) {
     final leftWon = left.isWinner || leftResult.hasLocalPatternComplete;
     final rightWon = right.isWinner || rightResult.hasLocalPatternComplete;
@@ -314,6 +340,7 @@ class CartelaMarkedPatternEvaluator {
       right: right,
       leftResult: leftResult,
       rightResult: rightResult,
+      maxRemainsToSort: maxRemainsToSort,
     );
   }
 

@@ -16,8 +16,16 @@ bool isCartelaEligibleForBingoClaim({
   }
 
   if (gameCartela.status == GameCartelaStatus.blocked ||
-      gameCartela.status == GameCartelaStatus.cancelled ||
-      gameCartela.isWinner) {
+      gameCartela.status == GameCartelaStatus.cancelled) {
+    return false;
+  }
+
+  // Chain Game winners are reset to REGISTERED between rounds. A stale local
+  // isWinner flag from the previous round must not keep Bingo locked.
+  final staleChainWinner = game.isChainGame &&
+      game.status == GameStatus.playing &&
+      gameCartela.status == GameCartelaStatus.registered;
+  if (gameCartela.isWinner && !staleChainWinner) {
     return false;
   }
 

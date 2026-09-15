@@ -383,21 +383,32 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
 
       if (resolvedCartela.isWinner ||
           resolvedCartela.status == GameCartelaStatus.winner) {
+        final chainPlaying =
+            _game?.isChainGame == true && _game?.status == GameStatus.playing;
         setState(() {
-          _game = _game?.copyWith(status: GameStatus.winnerWindow);
-          _myCartelas = _myCartelas
-              .map((cartela) {
-                if (cartela.id != gameCartela.id) {
-                  return cartela;
-                }
+          if (!chainPlaying) {
+            _game = _game?.copyWith(status: GameStatus.winnerWindow);
+          }
+          _myCartelas = normalizeChainPlayableCartelas(
+            game: _game,
+            cartelas: _myCartelas
+                .map((cartela) {
+                  if (cartela.id != gameCartela.id) {
+                    return cartela;
+                  }
 
-                return resolvedCartela.copyWith(
-                  status: GameCartelaStatus.winner,
-                  isWinner: true,
-                  blockedAt: null,
-                );
-              })
-              .toList(growable: false);
+                  if (chainPlaying) {
+                    return resolvedCartela;
+                  }
+
+                  return resolvedCartela.copyWith(
+                    status: GameCartelaStatus.winner,
+                    isWinner: true,
+                    blockedAt: null,
+                  );
+                })
+                .toList(growable: false),
+          );
         });
 
         _syncWinnerWindowTicker();

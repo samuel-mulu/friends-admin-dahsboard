@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -9,6 +10,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../data/models/game_model.dart';
+import '../../domain/game_rule_localized_name.dart';
 import '../utils/big_game_countdown.dart';
 
 /// Non-live Big Game phase chrome (schedule / waiting / empty / shared cards).
@@ -637,7 +639,7 @@ class _BigGameCountdownRow extends StatelessWidget {
   }
 }
 
-class BigGameMetadataSection extends StatelessWidget {
+class BigGameMetadataSection extends ConsumerWidget {
   const BigGameMetadataSection({
     required this.game,
     this.compact = false,
@@ -669,12 +671,13 @@ class BigGameMetadataSection extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final roundPrize = game.effectiveRoundPrizeAmount;
     final prizes = game.roundPrizes;
     final activeRound = game.displayRoundIndex;
     final finishedByRound = _finishedByRound;
+    final thisRoundRule = game.localizedRuleName(ref);
     final rows = <Widget>[
       if (game.hasMultipleRounds)
         _MetadataRow(
@@ -684,6 +687,12 @@ class BigGameMetadataSection extends StatelessWidget {
           ),
           value: '',
           labelOnly: true,
+        ),
+      if (thisRoundRule.trim().isNotEmpty)
+        _MetadataRow(
+          label: l10n.gameRuleDetailTitle,
+          value: thisRoundRule,
+          emphasize: true,
         ),
       if (game.fixedPrizeAmount != null)
         _MetadataRow(
@@ -722,11 +731,6 @@ class BigGameMetadataSection extends StatelessWidget {
         _MetadataRow(
           label: l10n.bigGamePlayStartTime,
           value: _formatLocalDateTime(game.scheduledStartAt!),
-        ),
-      if (!compact && game.maxCartelasPerPlayer != null)
-        _MetadataRow(
-          label: l10n.bigGameMaxCartelas,
-          value: game.maxCartelasPerPlayer.toString(),
         ),
     ];
 

@@ -14,6 +14,9 @@ import 'sound_preferences.dart';
 /// One-shot events (game start, winner window) are deduped per session, and
 /// every play accepts an optional [dedupeKey] (e.g. called-number id or
 /// claimId) so duplicate socket payloads or canonical refetches never replay.
+///
+/// A Chain Game plays several rounds inside one session, so callers there pass
+/// a `roundKey` to widen the once-per-session scope to once-per-round.
 class GameSoundService {
   GameSoundService(this._ref);
 
@@ -22,19 +25,21 @@ class GameSoundService {
     SoundEvent.gameStart: 'sounds/game_start.wav',
     SoundEvent.winnerWindow: 'sounds/winner_window.wav',
     SoundEvent.validBingo: 'sounds/bingo_valid.wav',
+    SoundEvent.roundTransition: 'sounds/game_start.wav',
   };
 
   final Ref _ref;
   final AudioPlayer _player = AudioPlayer(playerId: 'game_sounds');
 
   String? _sessionId;
-  final Set<SoundEvent> _playedOncePerSession = <SoundEvent>{};
+  final Set<String> _playedOncePerSession = <String>{};
   final Set<String> _playedDedupeKeys = <String>{};
 
   Future<void> play(
     SoundEvent event, {
     String? sessionId,
     String? dedupeKey,
+    Object? roundKey,
   }) async {
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
@@ -51,12 +56,17 @@ class GameSoundService {
     _syncSession(sessionId);
 
     final oncePerSession =
-        event == SoundEvent.gameStart || event == SoundEvent.winnerWindow;
+        event == SoundEvent.gameStart ||
+        event == SoundEvent.winnerWindow ||
+        event == SoundEvent.roundTransition;
     if (oncePerSession) {
-      if (_playedOncePerSession.contains(event)) {
+      final onceKey = roundKey == null
+          ? event.name
+          : '${event.name}@$roundKey';
+      if (_playedOncePerSession.contains(onceKey)) {
         return;
       }
-      _playedOncePerSession.add(event);
+      _playedOncePerSession.add(onceKey);
     }
 
     if (dedupeKey != null) {

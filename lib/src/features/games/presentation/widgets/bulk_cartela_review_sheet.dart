@@ -25,6 +25,7 @@ class BulkCartelaReviewSheet extends StatefulWidget {
     this.isBonus = false,
     this.isBigGotd = false,
     this.isBigGame = false,
+    this.isChainGame = false,
     this.fixedPrizeAmount,
     this.maxCartelasPerPlayer,
     this.bonusCartelaBalance = 0,
@@ -40,6 +41,7 @@ class BulkCartelaReviewSheet extends StatefulWidget {
   final bool isBonus;
   final bool isBigGotd;
   final bool isBigGame;
+  final bool isChainGame;
   final String? fixedPrizeAmount;
   final int? maxCartelasPerPlayer;
   final int bonusCartelaBalance;
@@ -72,9 +74,13 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
     return (entryFee * walletCartelas).toStringAsFixed(2);
   }
 
-  /// Welcome bonus credits apply only to normal games (not BONUS / Big GOTD / Big Game).
+  /// Welcome bonus credits apply only to normal games
+  /// (not BONUS / Big GOTD / Big Game / Chain Game).
   bool get _canUseBonusCartelaBalance =>
-      !widget.isBonus && !widget.isBigGotd && !widget.isBigGame;
+      !widget.isBonus &&
+      !widget.isBigGotd &&
+      !widget.isBigGame &&
+      !widget.isChainGame;
 
   int _bonusCartelasUsed(int count) {
     if (!_canUseBonusCartelaBalance || count <= 0) {
@@ -300,6 +306,15 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
                       : widget.isBigGame
                       ? [
                           l10n.gameCategoryBigGame,
+                          if (widget.fixedPrizeAmount != null)
+                            l10n.gameBonusFixedPrize(
+                              formatMoney(widget.fixedPrizeAmount!),
+                            ),
+                        ].join(' • ')
+                      : widget.isChainGame
+                      ? [
+                          l10n.gameCategoryChainGame,
+                          '${context.l10n.bigGameEntryFee}: ${formatMoney(widget.entryFee)}',
                           if (widget.fixedPrizeAmount != null)
                             l10n.gameBonusFixedPrize(
                               formatMoney(widget.fixedPrizeAmount!),

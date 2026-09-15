@@ -237,6 +237,7 @@ class LiveTransitionController {
       ownsLiveCartelas: ownsLiveCartelas,
       lock: readyTransitionLockActive ? readyTransitionLock : null,
       now: host.countdownNow(),
+      excludeBigGame: !host.embedded,
     );
   }
 

@@ -34,7 +34,8 @@ enum GameCategory {
   normal,
   bonus,
   bigGotd,
-  bigGame;
+  bigGame,
+  chainGame;
 
   factory GameCategory.fromApi(String? value) {
     switch (value?.trim().toUpperCase()) {
@@ -44,6 +45,8 @@ enum GameCategory {
         return GameCategory.bigGotd;
       case 'BIG_GAME':
         return GameCategory.bigGame;
+      case 'CHAIN_GAME':
+        return GameCategory.chainGame;
       case 'NORMAL':
       default:
         return GameCategory.normal;
@@ -57,6 +60,97 @@ enum GameCategory {
 
   /// Welcome bonus cartela credits apply only to normal games.
   bool get canUseBonusCartelaBalance => this == GameCategory.normal;
+
+  /// Plays numbered rounds. Big Game runs a session per round; Chain Game runs
+  /// every round inside one session. Only use this for round labelling.
+  bool get isMultiRound =>
+      this == GameCategory.bigGame || this == GameCategory.chainGame;
+}
+
+enum ChainRoundOutcome {
+  won,
+  forfeited;
+
+  factory ChainRoundOutcome.fromApi(String? value) {
+    return value?.trim().toUpperCase() == 'FORFEITED'
+        ? ChainRoundOutcome.forfeited
+        : ChainRoundOutcome.won;
+  }
+}
+
+/// One winning cartela of a finished Chain Game round.
+class ChainRoundWinnerSummary {
+  const ChainRoundWinnerSummary({
+    required this.gameCartelaId,
+    required this.cartelaNumber,
+    required this.amount,
+  });
+
+  final String gameCartelaId;
+  final int cartelaNumber;
+  final String amount;
+
+  factory ChainRoundWinnerSummary.fromJson(Map<String, dynamic> json) {
+    return ChainRoundWinnerSummary(
+      gameCartelaId: json['gameCartelaId'] as String? ?? '',
+      cartelaNumber: (json['cartelaNumber'] as num?)?.toInt() ?? 0,
+      amount: json['amount']?.toString() ?? '0',
+    );
+  }
+}
+
+/// A Chain Game round that has already been decided inside the live session.
+/// `forfeited` rounds were configured but never played because an earlier round
+/// exhausted the balls without a valid claim.
+class ChainRoundResultSummary {
+  const ChainRoundResultSummary({
+    required this.roundIndex,
+    required this.prizeAmount,
+    required this.outcome,
+    this.gameRuleKey,
+    this.gameRuleName,
+    this.paidAmount,
+    this.winningBallLetter,
+    this.winningBallNumber,
+    this.finalizedAt,
+    this.winners = const [],
+  });
+
+  final int roundIndex;
+  final String prizeAmount;
+  final ChainRoundOutcome outcome;
+  final String? gameRuleKey;
+  final String? gameRuleName;
+  final String? paidAmount;
+  final String? winningBallLetter;
+  final int? winningBallNumber;
+  final DateTime? finalizedAt;
+  final List<ChainRoundWinnerSummary> winners;
+
+  bool get isForfeited => outcome == ChainRoundOutcome.forfeited;
+
+  factory ChainRoundResultSummary.fromJson(Map<String, dynamic> json) {
+    final winnersRaw = json['winners'];
+    return ChainRoundResultSummary(
+      roundIndex: (json['roundIndex'] as num?)?.toInt() ?? 1,
+      prizeAmount: json['prizeAmount']?.toString() ?? '0',
+      outcome: ChainRoundOutcome.fromApi(json['outcome'] as String?),
+      gameRuleKey: json['gameRuleKey'] as String?,
+      gameRuleName: json['gameRuleName'] as String?,
+      paidAmount: json['paidAmount']?.toString(),
+      winningBallLetter: json['winningBallLetter'] as String?,
+      winningBallNumber: (json['winningBallNumber'] as num?)?.toInt(),
+      finalizedAt: json['finalizedAt'] is String
+          ? DateTime.tryParse(json['finalizedAt'] as String)
+          : null,
+      winners: winnersRaw is List
+          ? winnersRaw
+                .whereType<Map<String, dynamic>>()
+                .map(ChainRoundWinnerSummary.fromJson)
+                .toList(growable: false)
+          : const [],
+    );
+  }
 }
 
 enum GameStatus {
@@ -504,8 +598,11 @@ class GameModel {
     this.currentRound,
     this.roundIndex,
     this.roundPrizes,
+    this.roundGameRuleIds,
     this.roundPrizeAmount,
     this.nextRoundStartsAt,
+    this.roundPausedUntil,
+    this.roundResults = const [],
     this.bigGameTicketBalance,
     this.previousRound,
     this.finishedRounds,
@@ -559,8 +656,14 @@ class GameModel {
   final int? currentRound;
   final int? roundIndex;
   final List<String>? roundPrizes;
+  final List<String>? roundGameRuleIds;
   final String? roundPrizeAmount;
   final DateTime? nextRoundStartsAt;
+  /// CHAIN_GAME: set while the draw is paused on the winner reveal between
+  /// rounds. Null for every other category and while a round is being played.
+  final DateTime? roundPausedUntil;
+  /// CHAIN_GAME: rounds decided so far in this session, in round order.
+  final List<ChainRoundResultSummary> roundResults;
   final int? bigGameTicketBalance;
   final BigGamePreviousRoundSummary? previousRound;
   /// Finished prior rounds with winners (Round 1…N-1 while on Round N).
@@ -576,6 +679,18 @@ class GameModel {
   bool get isBigGotd => category == GameCategory.bigGotd;
 
   bool get isBigGame => category == GameCategory.bigGame;
+
+  bool get isChainGame => category == GameCategory.chainGame;
+
+  /// True only while a Chain Game is holding the winner reveal between rounds.
+  bool get isChainRoundPaused =>
+      isChainGame &&
+      roundPausedUntil != null &&
+      roundPausedUntil!.isAfter(DateTime.now());
+
+  /// Rounds still to play after the current one, for the "round X of Y" strip.
+  bool get hasRemainingChainRounds =>
+      isChainGame && displayRoundIndex < displayRoundCount;
 
   bool get isBonusLike => category.isBonusLike;
 
@@ -787,8 +902,13 @@ class GameModel {
       roundPrizes: _parseRoundPrizes(
         json['roundPrizes'] ?? gameSlot?['roundPrizes'],
       ),
+      roundGameRuleIds: _parseRoundPrizes(
+        json['roundGameRuleIds'] ?? gameSlot?['roundGameRuleIds'],
+      ),
       roundPrizeAmount: _parseOptionalMoney(json['roundPrizeAmount']),
       nextRoundStartsAt: _parseDate(json['nextRoundStartsAt']),
+      roundPausedUntil: _parseDate(json['roundPausedUntil']),
+      roundResults: _parseChainRoundResults(json['roundResults']),
       bigGameTicketBalance: _parseInt(json['bigGameTicketBalance']),
       previousRound: json['previousRound'] is Map<String, dynamic>
           ? BigGamePreviousRoundSummary.fromJson(
@@ -900,9 +1020,25 @@ class GameModel {
       currentRound: _parseInt(json['currentRound']),
       roundIndex: _parseInt(json['roundIndex']),
       roundPrizes: _parseRoundPrizes(json['roundPrizes']),
+      roundGameRuleIds: _parseRoundPrizes(json['roundGameRuleIds']),
       roundPrizeAmount: _parseOptionalMoney(json['roundPrizeAmount']),
       nextRoundStartsAt: _parseDate(json['nextRoundStartsAt']),
+      roundPausedUntil: _parseDate(json['roundPausedUntil']),
+      roundResults: _parseChainRoundResults(json['roundResults']),
       bigGameTicketBalance: _parseInt(json['bigGameTicketBalance']),
+    );
+  }
+
+  static List<ChainRoundResultSummary> _parseChainRoundResults(Object? raw) {
+    if (raw is! List || raw.isEmpty) {
+      return const [];
+    }
+    final parsed = raw
+        .whereType<Map<String, dynamic>>()
+        .map(ChainRoundResultSummary.fromJson)
+        .toList(growable: false);
+    return List<ChainRoundResultSummary>.unmodifiable(
+      parsed..sort((a, b) => a.roundIndex.compareTo(b.roundIndex)),
     );
   }
 
@@ -1122,8 +1258,11 @@ class GameModel {
     Object? currentRound = _copyWithKeep,
     Object? roundIndex = _copyWithKeep,
     Object? roundPrizes = _copyWithKeep,
+    Object? roundGameRuleIds = _copyWithKeep,
     Object? roundPrizeAmount = _copyWithKeep,
     Object? nextRoundStartsAt = _copyWithKeep,
+    Object? roundPausedUntil = _copyWithKeep,
+    Object? roundResults = _copyWithKeep,
     Object? bigGameTicketBalance = _copyWithKeep,
     Object? previousRound = _copyWithKeep,
     Object? finishedRounds = _copyWithKeep,
@@ -1196,12 +1335,21 @@ class GameModel {
       roundPrizes: identical(roundPrizes, _copyWithKeep)
           ? this.roundPrizes
           : roundPrizes as List<String>?,
+      roundGameRuleIds: identical(roundGameRuleIds, _copyWithKeep)
+          ? this.roundGameRuleIds
+          : roundGameRuleIds as List<String>?,
       roundPrizeAmount: identical(roundPrizeAmount, _copyWithKeep)
           ? this.roundPrizeAmount
           : roundPrizeAmount as String?,
       nextRoundStartsAt: identical(nextRoundStartsAt, _copyWithKeep)
           ? this.nextRoundStartsAt
           : nextRoundStartsAt as DateTime?,
+      roundPausedUntil: identical(roundPausedUntil, _copyWithKeep)
+          ? this.roundPausedUntil
+          : roundPausedUntil as DateTime?,
+      roundResults: identical(roundResults, _copyWithKeep)
+          ? this.roundResults
+          : (roundResults as List<ChainRoundResultSummary>? ?? const []),
       bigGameTicketBalance: identical(bigGameTicketBalance, _copyWithKeep)
           ? this.bigGameTicketBalance
           : bigGameTicketBalance as int?,

@@ -1,6 +1,6 @@
 import '../../domain/cartela_availability.dart';
 
-enum RegistrationLimitKind { bonus, bigGotd, normal }
+enum RegistrationLimitKind { bonus, bigGotd, chainGame, normal }
 
 /// Non-UI outcome from registration controller actions.
 sealed class RegistrationActionResult {

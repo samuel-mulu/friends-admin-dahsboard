@@ -139,7 +139,9 @@ class _GameHeaderMetadata extends StatelessWidget {
             ? l10n.gameBonusFreeEntry
             : '${formatMoney(game.entryFee)} ETB',
       ),
-      if (!compact && game.maxCartelasPerPlayer != null)
+      if (!compact &&
+          !game.isBigGame &&
+          game.maxCartelasPerPlayer != null)
         _MetaRow(
           label: l10n.bigGameMaxCartelas,
           value: game.maxCartelasPerPlayer.toString(),

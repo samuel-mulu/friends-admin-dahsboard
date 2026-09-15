@@ -2733,8 +2733,20 @@ abstract class AppLocalizations {
   /// No description provided for @drawerSortCartelasByLinesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Cartelas with more completed rows, columns, and diagonals rise to the top. Uses your marks, including one-away progress.'**
+  /// **'Cartelas with more fully completed rows, columns, and diagonals rise to the top (1 line, then 2, then 3…). Partial marks do not affect order.'**
   String get drawerSortCartelasByLinesSubtitle;
+
+  /// No description provided for @drawerSortCartelasByRemains.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort cartelas by remains'**
+  String get drawerSortCartelasByRemains;
+
+  /// No description provided for @drawerSortCartelasByRemainsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Closest-to-win cartelas rise to the top by how many cells remain for the active rule. Choose 1–4; cards with more remains stay unpromoted.'**
+  String get drawerSortCartelasByRemainsSubtitle;
 
   /// No description provided for @soundSettingsDeviceOnly.
   ///
@@ -3550,6 +3562,18 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get postGameSummaryNextGame;
 
+  /// No description provided for @postGameSummaryDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get postGameSummaryDone;
+
+  /// No description provided for @postGameSummaryNoNextGame.
+  ///
+  /// In en, this message translates to:
+  /// **'No next game right now'**
+  String get postGameSummaryNoNextGame;
+
   /// No description provided for @postGameSummaryOpeningNextRound.
   ///
   /// In en, this message translates to:
@@ -3898,6 +3922,120 @@ abstract class AppLocalizations {
   /// **'Big Game'**
   String get gameCategoryBigGame;
 
+  /// No description provided for @gameCategoryChainGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain Game'**
+  String get gameCategoryChainGame;
+
+  /// No description provided for @chainRoundOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {current} of {total}'**
+  String chainRoundOfTotal(int current, int total);
+
+  /// No description provided for @chainRoundThisRoundPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'This round'**
+  String get chainRoundThisRoundPrize;
+
+  /// No description provided for @chainRoundTotalPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'Total pool'**
+  String get chainRoundTotalPrize;
+
+  /// No description provided for @chainRoundBreakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round} complete'**
+  String chainRoundBreakTitle(int round);
+
+  /// No description provided for @chainRoundBreakSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your marks stay. Round {round} starts in {seconds}s.'**
+  String chainRoundBreakSubtitle(int round, int seconds);
+
+  /// No description provided for @chainRoundNextPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Next pattern: {pattern}'**
+  String chainRoundNextPattern(String pattern);
+
+  /// No description provided for @chainRoundWinnersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Round winners'**
+  String get chainRoundWinnersTitle;
+
+  /// No description provided for @chainRoundWinnerChip.
+  ///
+  /// In en, this message translates to:
+  /// **'R{round} · #{cartela}'**
+  String chainRoundWinnerChip(int round, int cartela);
+
+  /// No description provided for @chainRoundsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain rounds'**
+  String get chainRoundsTitle;
+
+  /// No description provided for @chainRoundsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One draw, {total} rounds. Balls and marks carry over — only the pattern and prize change.'**
+  String chainRoundsSubtitle(int total);
+
+  /// No description provided for @chainRoundStatusWon.
+  ///
+  /// In en, this message translates to:
+  /// **'Won'**
+  String get chainRoundStatusWon;
+
+  /// No description provided for @chainRoundStatusForfeited.
+  ///
+  /// In en, this message translates to:
+  /// **'Not played'**
+  String get chainRoundStatusForfeited;
+
+  /// No description provided for @chainRoundStatusCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing now'**
+  String get chainRoundStatusCurrent;
+
+  /// No description provided for @chainRoundStatusUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get chainRoundStatusUpcoming;
+
+  /// No description provided for @chainRoundNewPatternTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round} pattern'**
+  String chainRoundNewPatternTitle(int round);
+
+  /// No description provided for @chainRoundNewPatternBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Same balls, new target. Keep your marks and look for {pattern}.'**
+  String chainRoundNewPatternBody(String pattern);
+
+  /// No description provided for @chainRoundsForfeitedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'No winner — the remaining rounds were not played.'**
+  String get chainRoundsForfeitedNotice;
+
+  /// No description provided for @chainRoundViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all rounds'**
+  String get chainRoundViewAll;
+
   /// No description provided for @gameBonusFreeEntry.
   ///
   /// In en, this message translates to:
@@ -3963,6 +4101,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can still select up to {max} more cartelas for Big GOTD.'**
   String registrationBigGotdCanSelectMore(int max);
+
+  /// No description provided for @registrationChainLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the cartela limit for this Chain Game.'**
+  String get registrationChainLimitReached;
+
+  /// No description provided for @registrationChainAllCartelasUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already used all cartelas for this Chain Game.'**
+  String get registrationChainAllCartelasUsed;
+
+  /// No description provided for @registrationChainCanRegisterMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still register up to {max} more cartelas for this Chain Game.'**
+  String registrationChainCanRegisterMore(int max);
+
+  /// No description provided for @registrationChainCanSelectMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still select up to {max} more cartelas for this Chain Game.'**
+  String registrationChainCanSelectMore(int max);
 
   /// No description provided for @gameStatusRegistrationOpen.
   ///
@@ -4231,20 +4393,26 @@ abstract class AppLocalizations {
   /// No description provided for @bigGameLivePrompt.
   ///
   /// In en, this message translates to:
-  /// **'Big Game is in progress — Go to Big Game'**
+  /// **'Remaining games are here. Big Game is in progress'**
   String get bigGameLivePrompt;
 
   /// No description provided for @bigGameHeldPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Big Game is ready — waiting for current round — Go to Big Game'**
+  /// **'Remaining games are here. Big Game is ready — waiting for current round'**
   String get bigGameHeldPrompt;
 
   /// No description provided for @bigGameRegistrationOpenPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Big Game Round {round} registration is open — Go to Big Game'**
+  /// **'Remaining games are here. Big Game Round {round} registration is open'**
   String bigGameRegistrationOpenPrompt(int round);
+
+  /// No description provided for @bigGameBetweenRoundsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining games are here. Big Game is between rounds'**
+  String get bigGameBetweenRoundsPrompt;
 
   /// No description provided for @bigGameMissedRoundRegistrationTitle.
   ///

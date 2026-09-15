@@ -29,6 +29,7 @@ import '../../domain/big_game_phase.dart';
 import '../widgets/game_category_badge.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/cartela_mark_helpers.dart';
+import '../utils/cartela_selection_cap.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
 import '../widgets/called_numbers_strip.dart';
@@ -38,6 +39,9 @@ import '../widgets/cartela_registration_sheet.dart';
 import '../widgets/collapsible_live_top_section.dart';
 import '../widgets/live_next_round_registration_section.dart';
 import '../widgets/live_cartela_card.dart';
+import '../widgets/chain_game_info_strip.dart';
+import '../widgets/chain_game_rounds_dialog.dart';
+import '../widgets/chain_round_winners_bar.dart';
 import '../widgets/round_finished_banner.dart';
 import '../widgets/winner_cartela_dialog.dart';
 import '../widgets/registration_action_dock.dart';
@@ -60,6 +64,7 @@ import '../controllers/live_transition_controller.dart';
 import '../utils/cartela_outcome_public_visibility.dart';
 import '../utils/live_ready_transition_lock.dart';
 import '../utils/live_presentation_phase.dart';
+import '../utils/chain_round_cartela_state.dart';
 import '../utils/live_primary_game_selection.dart';
 import '../utils/live_ui_mode.dart';
 import '../utils/live_registration_target.dart';
@@ -90,6 +95,7 @@ import '../../../../core/sync/resume_sync_guard.dart';
 import '../utils/live_resume_sync.dart';
 import '../utils/live_resume_terminal_gate.dart';
 import '../debug/live_realtime_debug.dart';
+import '../debug/chain_game_debug.dart';
 import '../widgets/registration_open_pulse.dart';
 import '../widgets/winner_window_countdown.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
@@ -101,6 +107,7 @@ import '../../data/games_repository.dart';
 import '../../data/models/bingo_claim_result.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/cartela_model.dart';
+import '../../data/models/chain_round_plan_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/completed_pattern_model.dart';
@@ -245,11 +252,16 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     if (!isLiveHostActive) {
       return;
     }
+    final game = _game;
     unawaited(
       ref.read(gameSoundServiceProvider).play(
         event,
-        sessionId: sessionId ?? _game?.sessionId,
+        sessionId: sessionId ?? game?.sessionId,
         dedupeKey: dedupeKey,
+        // A Chain Game replays the one-shot cues every round inside one session.
+        roundKey: game != null && game.isChainGame
+            ? game.displayRoundIndex
+            : null,
       ),
     );
   }
@@ -314,6 +326,9 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _timingConfigLoaded = false;
   GameModel? _nextUpcomingGame;
   GameOperationsCurrentResponse? _lastOperations;
+  /// After finish/cancel with no next READY, ignore ops terminal fallback for
+  /// this session until a real next game appears.
+  String? _releasedIdleTerminalSessionId;
   bool _hasBlockingLiveGame = false;
   List<int>? _pendingAutoOpenCartelaNumbers;
   Timer? _myCartelasRefreshDebounceTimer;
@@ -531,6 +546,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         awaitingLiveRoom: _awaitingLiveRoom,
         hasError: _errorMessage != null,
         winnerWindowExpired: _resolverWinnerWindowExpired,
+        excludeBigGame: !widget.embedded,
       ),
     );
   }
@@ -853,6 +869,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       case LivePresentationPhase.liveWaitingFirstBall:
       case LivePresentationPhase.liveCalling:
       case LivePresentationPhase.winnerWindow:
+      case LivePresentationPhase.interRoundPause:
       case LivePresentationPhase.checking:
       case LivePresentationPhase.review:
         return true;
@@ -886,7 +903,11 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   LivePresentationPhase get _livePresentationPhase =>
       _liveUiMode.presentationPhase;
 
-  List<GameCartelaModel> _orderedMyCartelas([CartelaSortMode? sortMode]) {
+  List<GameCartelaModel> _orderedMyCartelas([
+    CartelaSortMode? sortMode,
+    int maxRemainsToSort =
+        CartelaMarkedPatternEvaluator.defaultMaxRemainsToSort,
+  ]) {
     final mode = sortMode ?? CartelaSortMode.manual;
     final baseOrder = applyCartelaDisplayOrder(
       cartelas: _myCartelas,
@@ -900,6 +921,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       cartelas: baseOrder,
       resultsByCartelaId: _cn.cartelaSortResults,
       sortMode: mode,
+      maxRemainsToSort: maxRemainsToSort,
     );
   }
 
@@ -1006,6 +1028,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       });
     }
     WidgetsBinding.instance.removeObserver(this);
+    _stopChainRoundPauseTicker();
     _liveRoomSplashTicker?.cancel();
     _liveCartelaScrollIdle.dispose();
     _review.stopSessionWinnerResultsPolling();
@@ -1652,7 +1675,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
 
     final cartelaSortMode = ref.watch(cartelaSortModeProvider);
-    final orderedCartelas = _orderedMyCartelas(cartelaSortMode);
+    final cartelaSortMaxRemains = ref.watch(cartelaSortMaxRemainsProvider);
+    final orderedCartelas = _orderedMyCartelas(
+      cartelaSortMode,
+      cartelaSortMaxRemains,
+    );
     final cartelaList = _InlineRegisteredCartelaList(
       cartelas: orderedCartelas,
       sortResultsByCartelaId: _cn.cartelaSortResults,
@@ -1873,9 +1900,21 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               : _queueUpcomingGameForDisplay,
         ),
         if (_buildLiveStatusBanner() case final banner?) ...[VGap.sm, banner],
+        if (_buildChainGameInfoStrip() case final chainStrip?) ...[
+          VGap.sm,
+          chainStrip,
+        ],
+        if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
+          VGap.sm,
+          chainSummary,
+        ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
           VGap.sm,
           summaryBanner,
+        ],
+        if (_buildChainRoundWinnersBar() case final chainWinners?) ...[
+          VGap.sm,
+          chainWinners,
         ],
         VGap.sm,
         _buildCalledNumbersPanel(),
@@ -1888,6 +1927,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_buildLiveStatusBanner() case final banner?) ...[banner, VGap.sm],
+        if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
+          chainSummary,
+          VGap.sm,
+        ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
           summaryBanner,
           VGap.sm,
@@ -1912,9 +1955,21 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           showRule: !game.isRegistrationOpen,
         ),
         if (_buildLiveStatusBanner() case final banner?) ...[VGap.sm, banner],
+        if (_buildChainGameInfoStrip() case final chainStrip?) ...[
+          VGap.sm,
+          chainStrip,
+        ],
+        if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
+          VGap.sm,
+          chainSummary,
+        ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
           VGap.sm,
           summaryBanner,
+        ],
+        if (_buildChainRoundWinnersBar() case final chainWinners?) ...[
+          VGap.sm,
+          chainWinners,
         ],
         if (!game.isRegistrationOpen &&
             !_showsInlinePlayCartelas &&
@@ -1984,8 +2039,13 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           Builder(
             builder: (context) {
               final cartelaSortMode = ref.watch(cartelaSortModeProvider);
+              final cartelaSortMaxRemains =
+                  ref.watch(cartelaSortMaxRemainsProvider);
               return _InlineRegisteredCartelaList(
-                cartelas: _orderedMyCartelas(cartelaSortMode),
+                cartelas: _orderedMyCartelas(
+                  cartelaSortMode,
+                  cartelaSortMaxRemains,
+                ),
                 sortResultsByCartelaId: _cn.cartelaSortResults,
                 canClaimBingoFor: _canClaimBingoForCartela,
                 claimingCartelaIds: _cn.claimingCartelaIds,
@@ -2112,6 +2172,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ? (target.effectiveRoundPrizeAmount ?? target.fixedPrizeAmount)
           : target.fixedPrizeAmount,
       maxCartelasPerPlayer: target.maxCartelasPerPlayer,
+      roundPrizes: target.isChainGame ? target.roundPrizes : null,
       registeredCartelas: registeredCartelas,
       cartelaHoldSeconds: _cartelaHoldSeconds,
       bulkSelectionSeconds: _effectiveBulkSelectionSeconds,

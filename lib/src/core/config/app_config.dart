@@ -25,6 +25,7 @@ class AppConfig {
     required this.apiBaseUrl,
     required this.socketBaseUrl,
     this.realtimeDebug = false,
+    this.chainDebug = false,
     this.debug = false,
     this.telebirrDepositDebug = false,
   });
@@ -34,6 +35,9 @@ class AppConfig {
 
   /// Verbose live-game / auto-call socket tracing (debug builds only).
   final bool realtimeDebug;
+
+  /// Chain Game round-boundary tracing (debug builds only).
+  final bool chainDebug;
 
   /// General debug tracing (debug builds only).
   final bool debug;
@@ -65,6 +69,9 @@ class AppConfig {
     final realtimeDebug =
         const bool.fromEnvironment('REALTIME_DEBUG') ||
         _envBool('REALTIME_DEBUG');
+    final chainDebug =
+        const bool.fromEnvironment('CHAIN_DEBUG') ||
+        _envBool('CHAIN_DEBUG');
     final debug =
         const bool.fromEnvironment('DEBUG') || _envBool('DEBUG');
     final telebirrDepositDebug =
@@ -93,6 +100,7 @@ class AppConfig {
       apiBaseUrl: apiBaseUrl,
       socketBaseUrl: socketBaseUrl,
       realtimeDebug: realtimeDebug,
+      chainDebug: chainDebug,
       debug: debug,
       telebirrDepositDebug: telebirrDepositDebug,
     );

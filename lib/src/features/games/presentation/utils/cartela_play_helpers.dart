@@ -22,6 +22,8 @@ List<GameCartelaModel> sortCartelasForPlay({
   required Set<String> manualMarkedNumbers,
   required String ruleKey,
   CartelaSortMode sortMode = CartelaSortMode.manual,
+  int maxRemainsToSort =
+      CartelaMarkedPatternEvaluator.defaultMaxRemainsToSort,
 }) {
   final results = CartelaMarkedPatternEvaluator.evaluateAll(
     cartelas: cartelas,
@@ -32,6 +34,7 @@ List<GameCartelaModel> sortCartelasForPlay({
     cartelas: cartelas,
     resultsByCartelaId: results,
     sortMode: sortMode,
+    maxRemainsToSort: maxRemainsToSort,
   );
 }
 

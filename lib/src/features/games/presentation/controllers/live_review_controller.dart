@@ -24,6 +24,9 @@ class LiveReviewController {
   bool postGameSummaryReviewActive = false;
   bool postGameSummaryHoldBypassed = false;
   bool postGameSummaryAdvancing = false;
+  bool chainInterRoundSummaryActive = false;
+  bool chainInterRoundSummaryDismissed = false;
+  String? chainInterRoundSummaryKey;
   Timer? finishTransitionTimer;
   List<SessionWinnerResultModel> sessionWinnerResults = const [];
   bool sessionWinnerResultsLoading = false;
@@ -65,6 +68,15 @@ class LiveReviewController {
       status: host.game?.status,
       windowEndsAt: host.controllers.countdown.effectiveWinnerWindowEndsAt(),
       postGameSummaryReviewActive: postGameSummaryReviewActive,
+      now: host.countdownNow(),
+    );
+  }
+
+  bool get showsChainInterRoundSummary {
+    return presentation_phase.canShowChainInterRoundSummary(
+      game: host.game,
+      summaryActive: chainInterRoundSummaryActive,
+      summaryDismissed: chainInterRoundSummaryDismissed,
       now: host.countdownNow(),
     );
   }
@@ -176,6 +188,7 @@ class LiveReviewController {
     );
     winnerCartelaDialogAutoShownForSessionId = null;
     resetWinnerWindowClosingState();
+    resetChainInterRoundSummary();
   }
 
   void clearPostGameSummaryHold({
@@ -207,6 +220,7 @@ class LiveReviewController {
 
   Future<void> fetchSessionWinnerResultsIfNeeded({
     bool force = false,
+    bool showLoading = true,
     void Function()? onResultsUpdated,
   }) async {
     if (host.game?.status == GameStatus.noWinner) {
@@ -233,8 +247,10 @@ class LiveReviewController {
       return;
     }
 
-    sessionWinnerResultsLoading = true;
-    host.markNeedsBuild();
+    if (showLoading) {
+      sessionWinnerResultsLoading = true;
+      host.markNeedsBuild();
+    }
 
     try {
       final response = await host.gamesRepository.getSessionWinnerResults(
@@ -366,6 +382,20 @@ class LiveReviewController {
 
       onPoll();
     });
+  }
+
+  void resetChainInterRoundSummary() {
+    chainInterRoundSummaryActive = false;
+    chainInterRoundSummaryDismissed = false;
+    chainInterRoundSummaryKey = null;
+  }
+
+  /// Starts the Chain Game 20s finished-summary overlay for one pause window.
+  /// The overlay stays until the pause elapses; it does not start auto-call.
+  void startChainInterRoundSummary(String pauseKey) {
+    chainInterRoundSummaryKey = pauseKey;
+    chainInterRoundSummaryDismissed = false;
+    chainInterRoundSummaryActive = true;
   }
 
   void startPostGameSummary({

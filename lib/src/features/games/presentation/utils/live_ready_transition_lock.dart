@@ -243,11 +243,13 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
   required bool ownsLiveCartelas,
   required ReadyTransitionLock? lock,
   required DateTime now,
+  bool excludeBigGame = false,
 }) {
   if (lock == null || !lock.isActiveAt(now)) {
     return resolvePrimaryGameForOperations(
       operations: operations,
       ownsLiveCartelas: ownsLiveCartelas,
+      excludeBigGame: excludeBigGame,
     );
   }
 
@@ -258,16 +260,21 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
     return resolvePrimaryGameForOperations(
       operations: operations,
       ownsLiveCartelas: ownsLiveCartelas,
+      excludeBigGame: excludeBigGame,
     );
   }
 
   final liveGame = operations.liveGame;
-  if (liveGame != null && liveGame.sessionId == lockSessionId) {
+  if (liveGame != null &&
+      liveGame.sessionId == lockSessionId &&
+      !(excludeBigGame && liveGame.isBigGame)) {
     return liveGame;
   }
 
   final checkingGame = operations.checkingGame;
-  if (checkingGame != null && checkingGame.sessionId == lockSessionId) {
+  if (checkingGame != null &&
+      checkingGame.sessionId == lockSessionId &&
+      !(excludeBigGame && checkingGame.isBigGame)) {
     return checkingGame;
   }
 
@@ -278,6 +285,7 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
     return resolvePrimaryGameForOperations(
       operations: operations,
       ownsLiveCartelas: ownsLiveCartelas,
+      excludeBigGame: excludeBigGame,
     );
   }
 
@@ -291,6 +299,7 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
     return resolvePrimaryGameForOperations(
       operations: operations,
       ownsLiveCartelas: ownsLiveCartelas,
+      excludeBigGame: excludeBigGame,
     );
   }
 
@@ -299,17 +308,28 @@ GameModel? resolvePrimaryGameForOperationsWithTransitionLock({
       registration.sessionId != lockSessionId &&
       liveGame == null &&
       checkingGame == null) {
+    if (excludeBigGame && snapshot.isBigGame) {
+      return resolvePrimaryGameForOperations(
+        operations: operations,
+        ownsLiveCartelas: ownsLiveCartelas,
+        excludeBigGame: excludeBigGame,
+      );
+    }
     return snapshot;
   }
 
   final normal = resolvePrimaryGameForOperations(
     operations: operations,
     ownsLiveCartelas: ownsLiveCartelas,
+    excludeBigGame: excludeBigGame,
   );
   if (normal != null &&
       normal.sessionId != lockSessionId &&
       normal.status == GameStatus.ready &&
       snapshot.status == GameStatus.ready) {
+    if (excludeBigGame && snapshot.isBigGame) {
+      return normal;
+    }
     return snapshot;
   }
 

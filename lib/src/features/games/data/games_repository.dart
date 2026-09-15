@@ -8,6 +8,7 @@ import '../domain/bulk_register_result.dart';
 import 'models/bingo_claim_result.dart';
 import 'models/bulk_reserve_cartelas_result.dart';
 import 'models/cartela_catalog_page.dart';
+import 'models/chain_round_plan_model.dart';
 import 'models/cartela_model.dart';
 import 'models/cartela_reservation_model.dart';
 import 'models/called_numbers_snapshot.dart';
@@ -105,6 +106,19 @@ class GamesRepository {
           throw StateError('Invalid session detail response.');
         }
         return GameModel.fromSessionJson(rawData);
+      },
+    );
+  }
+
+  /// CHAIN_GAME only — the fixed pattern/prize ladder for a chain session.
+  Future<ChainRoundPlan> getChainRoundPlan(String sessionId) {
+    return _apiClient.get<ChainRoundPlan>(
+      '/games/sessions/$sessionId/chain-rounds',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid chain round plan response.');
+        }
+        return ChainRoundPlan.fromJson(rawData);
       },
     );
   }

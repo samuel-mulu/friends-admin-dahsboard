@@ -1525,6 +1525,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'የተሟሉ ረድፎች፣ አምዶች እና ዲያጎናሎች ያሏቸው ካርቴላዎች ወደ ላይ ይወጣሉ። የምልክትዎን እና አንድ-አቅራቢያ እድገትን ይጠቀማል።';
 
   @override
+  String get drawerSortCartelasByRemains => 'ካርቴላዎችን በቀሪ ደርድር';
+
+  @override
+  String get drawerSortCartelasByRemainsSubtitle =>
+      'ለንቁ ህግ ቅርብ የሆኑ ካርቴላዎች በቀሪ ሴሎች ብዛት ወደ ላይ ይወጣሉ። 1–4 ይምረጡ፤ ከዚያ በላይ የቀሩ አይደረደሩም።';
+
+  @override
   String get soundSettingsDeviceOnly => 'እነዚህ ቅንብሮች በዚህ መሳሪያ ላይ ብቻ ይቀመጣሉ።';
 
   @override
@@ -1967,6 +1974,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get postGameSummaryNextGame => 'ቀጥል';
 
   @override
+  String get postGameSummaryDone => 'ተጠናቋል';
+
+  @override
+  String get postGameSummaryNoNextGame => 'አሁን ቀጣይ ጨዋታ የለም';
+
+  @override
   String get postGameSummaryOpeningNextRound => 'Opening next round…';
 
   @override
@@ -2175,6 +2188,79 @@ class AppLocalizationsAm extends AppLocalizations {
   String get gameCategoryBigGame => 'Big Game';
 
   @override
+  String get gameCategoryChainGame => 'ሰንሰለት ጨዋታ';
+
+  @override
+  String chainRoundOfTotal(int current, int total) {
+    return 'ዙር $current ከ $total';
+  }
+
+  @override
+  String get chainRoundThisRoundPrize => 'የዚህ ዙር';
+
+  @override
+  String get chainRoundTotalPrize => 'ጠቅላላ ሽልማት';
+
+  @override
+  String chainRoundBreakTitle(int round) {
+    return 'ዙር $round ተጠናቋል';
+  }
+
+  @override
+  String chainRoundBreakSubtitle(int round, int seconds) {
+    return 'ምልክቶችዎ ይቀራሉ። ዙር $round በ $seconds ሰ ይጀምራል።';
+  }
+
+  @override
+  String chainRoundNextPattern(String pattern) {
+    return 'ቀጣይ ህግ፦ $pattern';
+  }
+
+  @override
+  String get chainRoundWinnersTitle => 'የዙር አሸናፊዎች';
+
+  @override
+  String chainRoundWinnerChip(int round, int cartela) {
+    return 'ዙር $round · #$cartela';
+  }
+
+  @override
+  String get chainRoundsTitle => 'የሰንሰለት ዙሮች';
+
+  @override
+  String chainRoundsSubtitle(int total) {
+    return 'አንድ ጨዋታ፣ $total ዙሮች። ኳሶችና ምልክቶች ይቀራሉ — የሚቀየረው ህግና ሽልማት ብቻ ነው።';
+  }
+
+  @override
+  String get chainRoundStatusWon => 'አሸንፏል';
+
+  @override
+  String get chainRoundStatusForfeited => 'አልተጫወተም';
+
+  @override
+  String get chainRoundStatusCurrent => 'አሁን እየተጫወተ';
+
+  @override
+  String get chainRoundStatusUpcoming => 'ቀጣይ';
+
+  @override
+  String chainRoundNewPatternTitle(int round) {
+    return 'የዙር $round ህግ';
+  }
+
+  @override
+  String chainRoundNewPatternBody(String pattern) {
+    return 'ተመሳሳይ ኳሶች፣ አዲስ ግብ። ምልክቶችዎን ያቆዩና $pattern ይፈልጉ።';
+  }
+
+  @override
+  String get chainRoundsForfeitedNotice => 'አሸናፊ የለም — የቀሩት ዙሮች አልተጫወቱም።';
+
+  @override
+  String get chainRoundViewAll => 'ሁሉንም ዙሮች ይመልከቱ';
+
+  @override
   String get gameBonusFreeEntry => 'ነጻ መግቢያ';
 
   @override
@@ -2217,6 +2303,23 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String registrationBigGotdCanSelectMore(int max) {
     return 'ለ Big GOTD እስከ $max ተጨማሪ ካርቴላ ሊመረጡ ይችላሉ።';
+  }
+
+  @override
+  String get registrationChainLimitReached => 'ለዚህ የሰንሰለት ጨዋታ የካርቴላ ገደብ ደርሰዋል።';
+
+  @override
+  String get registrationChainAllCartelasUsed =>
+      'ለዚህ የሰንሰለት ጨዋታ ሁሉንም ካርቴሎች ተጠቅመዋል።';
+
+  @override
+  String registrationChainCanRegisterMore(int max) {
+    return 'ለዚህ የሰንሰለት ጨዋታ እስከ $max ተጨማሪ ካርቴሎች መመዝገብ ይችላሉ።';
+  }
+
+  @override
+  String registrationChainCanSelectMore(int max) {
+    return 'ለዚህ የሰንሰለት ጨዋታ እስከ $max ተጨማሪ ካርቴሎች መምረጥ ይችላሉ።';
   }
 
   @override
@@ -2362,16 +2465,20 @@ class AppLocalizationsAm extends AppLocalizations {
   String get announcementBigGameLive => 'Big Game is live now';
 
   @override
-  String get bigGameLivePrompt => 'Big Game is in progress — Go to Big Game';
+  String get bigGameLivePrompt => 'ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ በሂደት ላይ ነው';
 
   @override
   String get bigGameHeldPrompt =>
-      'Big Game is ready — waiting for current round — Go to Big Game';
+      'ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ ዝግጁ ነው — አሁኑን ዙር ይጠብቃል';
 
   @override
   String bigGameRegistrationOpenPrompt(int round) {
-    return 'Big Game Round $round registration is open — Go to Big Game';
+    return 'ቀሪ ጨዋታዎች እዚህ ናቸው። የትልቁ ጨዋታ ዙር $round ምዝገባ ክፍት ነው';
   }
+
+  @override
+  String get bigGameBetweenRoundsPrompt =>
+      'ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ በዙሮች መካከል ነው';
 
   @override
   String bigGameMissedRoundRegistrationTitle(int round) {
@@ -2394,7 +2501,7 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get bigGameGoAction => 'Go to Big Game';
+  String get bigGameGoAction => 'ወደ ትልቁ ጨዋታ ሂድ';
 
   @override
   String get announcementDismiss => 'Dismiss announcement';

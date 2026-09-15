@@ -10,8 +10,10 @@ import '../../data/games_repository.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/called_numbers_snapshot.dart';
 import '../../data/models/game_cartela_model.dart';
+import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../../domain/attended_game_history_entry.dart';
+import '../../domain/game_category_theme.dart';
 import '../../domain/game_rule_localized_name.dart';
 import 'called_numbers_strip.dart';
 import 'history_cartela_detail_dialog.dart';
@@ -189,6 +191,14 @@ class _GameHistoryDetailDialogState
                           );
                         },
                       ),
+                      if (game.isChainGame &&
+                          game.roundResults.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _ChainRoundsHistorySection(
+                          rounds: game.roundResults,
+                          roundCount: game.displayRoundCount,
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       Text(
                         l10n.liveCalledNumbersLabel,
@@ -395,6 +405,118 @@ class _HistoryCalledNumbersError extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Per-round breakdown for a finished Chain Game. Forfeited rounds are kept in
+/// the list so the history explains why a 4-round chain paid only two prizes.
+class _ChainRoundsHistorySection extends StatelessWidget {
+  const _ChainRoundsHistorySection({
+    required this.rounds,
+    required this.roundCount,
+  });
+
+  final List<ChainRoundResultSummary> rounds;
+  final int roundCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final accent = GameCategoryTheme.accentColor(
+      GameCategory.chainGame,
+      isDark: theme.brightness == Brightness.dark,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.link_rounded, size: 16, color: accent),
+            const SizedBox(width: 6),
+            Text(
+              l10n.chainRoundsTitle,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final round in rounds)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.chainRoundOfTotal(round.roundIndex, roundCount),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: accent,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          round.gameRuleName ?? round.gameRuleKey ?? '—',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (round.winners.isNotEmpty)
+                          Text(
+                            round.winners
+                                .map((winner) => '#${winner.cartelaNumber}')
+                                .join(' · '),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppBranding.gold,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatMoney(round.prizeAmount),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: AppBranding.balanceAccent(context),
+                          decoration: round.isForfeited
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      if (round.isForfeited)
+                        Text(
+                          l10n.chainRoundStatusForfeited,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
