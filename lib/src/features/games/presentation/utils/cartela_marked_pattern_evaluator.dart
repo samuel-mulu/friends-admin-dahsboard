@@ -189,46 +189,58 @@ class CartelaMarkedPatternEvaluator {
 
     final cappedMaxRemains = maxRemainsToSort.clamp(1, 4);
 
-    final sorted = List<GameCartelaModel>.from(cartelas)
-      ..sort((left, right) {
-        final leftResult = resultsByCartelaId[left.id];
-        final rightResult = resultsByCartelaId[right.id];
+    // Decorate with original index so ties (especially unpromoted remains)
+    // keep the caller's display order. Dart's List.sort is not stable.
+    final indexed = [
+      for (var i = 0; i < cartelas.length; i++) (index: i, cartela: cartelas[i]),
+    ]..sort((left, right) {
+        final leftCartela = left.cartela;
+        final rightCartela = right.cartela;
+        final leftResult = resultsByCartelaId[leftCartela.id];
+        final rightResult = resultsByCartelaId[rightCartela.id];
         if (leftResult == null || rightResult == null) {
-          return left.cartela.number.compareTo(right.cartela.number);
+          final byNumber = leftCartela.cartela.number.compareTo(
+            rightCartela.cartela.number,
+          );
+          return byNumber != 0 ? byNumber : left.index.compareTo(right.index);
         }
 
-        return switch (sortMode) {
+        final byMode = switch (sortMode) {
           CartelaSortMode.lines => _compareLines(
-            left: left,
-            right: right,
+            left: leftCartela,
+            right: rightCartela,
             leftResult: leftResult,
             rightResult: rightResult,
           ),
           CartelaSortMode.smart => _compareSmart(
-            left: left,
-            right: right,
+            left: leftCartela,
+            right: rightCartela,
             leftResult: leftResult,
             rightResult: rightResult,
             maxRemainsToSort: cappedMaxRemains,
           ),
           CartelaSortMode.reviewSmart => _compareReviewSmart(
-            left: left,
-            right: right,
+            left: leftCartela,
+            right: rightCartela,
             leftResult: leftResult,
             rightResult: rightResult,
             maxRemainsToSort: cappedMaxRemains,
           ),
           CartelaSortMode.markedCells => _compareMarkedCells(
-            left: left,
-            right: right,
+            left: leftCartela,
+            right: rightCartela,
             leftResult: leftResult,
             rightResult: rightResult,
           ),
           CartelaSortMode.manual => 0,
         };
+        if (byMode != 0) {
+          return byMode;
+        }
+        return left.index.compareTo(right.index);
       });
 
-    return sorted;
+    return [for (final entry in indexed) entry.cartela];
   }
 
   static int remainsSortRank(int missingCellCount, int maxRemainsToSort) {
@@ -315,6 +327,13 @@ class CartelaMarkedPatternEvaluator {
       return leftRank.compareTo(rightRank);
     }
 
+    // Both still above the remains threshold — do not reorder by marks.
+    // Caller preserves original index when this returns 0.
+    if (leftRank == _unpromotedRemainsRank) {
+      return 0;
+    }
+
+    // Same promoted remains count — prefer more marked cells, then cartela #.
     if (leftResult.markedCellCount != rightResult.markedCellCount) {
       return rightResult.markedCellCount.compareTo(leftResult.markedCellCount);
     }

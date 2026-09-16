@@ -10,8 +10,6 @@ import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/telegram_phone_link_screen.dart';
-import '../../features/auth/presentation/screens/unlock_screen.dart';
-import '../../features/auth/security/app_lock_controller.dart';
 import '../../features/games/presentation/screens/big_game_screen.dart';
 import '../../features/games/presentation/screens/game_history_screen.dart';
 import '../../features/games/presentation/screens/live_game_screen.dart';
@@ -55,27 +53,16 @@ bool _shouldHoldOnLoadingForVersionCheck(Ref ref) {
 
 String? _authRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authControllerProvider);
-  final lockState = ref.read(appLockControllerProvider);
   final isInitializing = authState.isInitializing;
-  final isLockInitializing = lockState.isInitializing;
   final isAuthenticated = authState.session != null;
-  final isLocked = lockState.isLocked && lockState.hasPin;
   final location = state.matchedLocation;
 
   if (_shouldHoldOnLoadingForVersionCheck(ref)) {
     return location == '/loading' ? null : '/loading';
   }
 
-  if (isInitializing || isLockInitializing) {
+  if (isInitializing) {
     return location == '/loading' ? null : '/loading';
-  }
-
-  if (isAuthenticated && isLocked) {
-    if (location == '/unlock') {
-      return null;
-    }
-
-    return '/unlock?redirect=${Uri.encodeComponent(location)}';
   }
 
   if (!isAuthenticated) {
@@ -88,10 +75,6 @@ String? _authRedirect(Ref ref, GoRouterState state) {
       return null;
     }
 
-    if (location == '/unlock') {
-      return '/games';
-    }
-
     if (isProtectedLocation(location)) {
       return loginPathWithRedirect(location);
     }
@@ -100,10 +83,6 @@ String? _authRedirect(Ref ref, GoRouterState state) {
   }
 
   if (location == '/loading') {
-    return redirectAfterAuth(state);
-  }
-
-  if (location == '/unlock') {
     return redirectAfterAuth(state);
   }
 
@@ -168,11 +147,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             TelegramPhoneLinkScreen(ticket: ticket),
           );
         },
-      ),
-      GoRoute(
-        path: '/unlock',
-        builder: (context, state) =>
-            appRouteWithBackConfirm(const UnlockScreen()),
       ),
       GoRoute(
         path: '/support/contact',

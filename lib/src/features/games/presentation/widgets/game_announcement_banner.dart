@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,15 +10,43 @@ import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
+import '../../domain/game_category_theme.dart';
 import '../providers/current_big_game_provider.dart';
 import '../providers/game_announcement_dismiss_provider.dart';
 import '../utils/big_game_navigation.dart';
 import '../widgets/game_countdown.dart';
 
-/// Global dismissible announcement for scheduled, waiting, and live Big Game events.
-class GameAnnouncementBanner extends ConsumerWidget {
+/// Centered helper card for Big Game on other shell routes (e.g. `/games`).
+///
+/// Hidden on `/games/big-game`. Auto-dismisses after 30s (or via close).
+class GameAnnouncementBanner extends ConsumerStatefulWidget {
   const GameAnnouncementBanner({super.key});
+
+  static const autoDismissAfter = Duration(seconds: 30);
+
+  @override
+  ConsumerState<GameAnnouncementBanner> createState() =>
+      _GameAnnouncementBannerState();
+}
+
+class _GameAnnouncementBannerState
+    extends ConsumerState<GameAnnouncementBanner>
+    with SingleTickerProviderStateMixin {
+  Timer? _autoDismissTimer;
+  String? _armedAnnouncementId;
+  GoRouter? _router;
+  late final AnimationController _appear;
+
+  @override
+  void initState() {
+    super.initState();
+    _appear = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+  }
 
   bool _isVisiblePhase(BigGamePhase phase) {
     return switch (phase) {
@@ -28,15 +58,103 @@ class GameAnnouncementBanner extends ConsumerWidget {
     };
   }
 
+  bool _isOnBigGameRoute(BuildContext context) {
+    final location = GoRouter.of(context).state.matchedLocation;
+    return location == '/games/big-game' ||
+        location.endsWith('/games/big-game');
+  }
+
+  void _onRouteChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (!identical(_router, router)) {
+      _router?.routerDelegate.removeListener(_onRouteChanged);
+      _router = router;
+      _router!.routerDelegate.addListener(_onRouteChanged);
+    }
+  }
+
+  void _cancelAutoDismiss() {
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
+    _armedAnnouncementId = null;
+  }
+
+  void _scheduleAutoDismiss(String? announcementId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (announcementId == null) {
+        _cancelAutoDismiss();
+        if (_appear.value > 0) {
+          _appear.value = 0;
+        }
+        return;
+      }
+      if (_armedAnnouncementId == announcementId &&
+          _autoDismissTimer?.isActive == true) {
+        return;
+      }
+      _autoDismissTimer?.cancel();
+      _armedAnnouncementId = announcementId;
+      _appear.forward(from: 0);
+      _autoDismissTimer = Timer(GameAnnouncementBanner.autoDismissAfter, () {
+        if (!mounted || _armedAnnouncementId != announcementId) {
+          return;
+        }
+        unawaited(_dismiss(announcementId));
+      });
+    });
+  }
+
+  Future<void> _dismiss(String id) async {
+    _cancelAutoDismiss();
+    if (_appear.value > 0) {
+      await _appear.reverse();
+    }
+    if (!mounted) {
+      return;
+    }
+    await ref.read(gameAnnouncementDismissProvider.notifier).dismiss(id);
+  }
+
+  @override
+  void dispose() {
+    _router?.routerDelegate.removeListener(_onRouteChanged);
+    _cancelAutoDismiss();
+    _appear.dispose();
+    super.dispose();
+  }
+
+  String? _phaseChip(BigGamePhase phase, AppLocalizations l10n) {
+    return switch (phase) {
+      BigGamePhase.live => l10n.announcementBigGameLive,
+      BigGamePhase.waitingToPlay => l10n.announcementBigGameStartingSoon,
+      BigGamePhase.registrationOpen => null,
+      BigGamePhase.beforeRegistrationOpens => null,
+      _ => null,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isGuest = ref.watch(authControllerProvider).session == null;
-    if (isGuest) {
+    if (isGuest || _isOnBigGameRoute(context)) {
+      _scheduleAutoDismiss(null);
       return const SizedBox.shrink();
     }
 
     final bigGame = ref.watch(currentBigGameProvider).value;
     if (bigGame == null) {
+      _scheduleAutoDismiss(null);
       return const SizedBox.shrink();
     }
 
@@ -44,6 +162,7 @@ class GameAnnouncementBanner extends ConsumerWidget {
     final now = clock.isSynced ? clock.nowLocal() : DateTime.now();
     final phase = resolveBigGamePhase(bigGame, now: now);
     if (!_isVisiblePhase(phase)) {
+      _scheduleAutoDismiss(null);
       return const SizedBox.shrink();
     }
 
@@ -51,15 +170,30 @@ class GameAnnouncementBanner extends ConsumerWidget {
     final id = 'big-$sessionKey-${phase.name}';
     final dismissed = ref.watch(gameAnnouncementDismissProvider);
     if (dismissed.contains(id)) {
+      _scheduleAutoDismiss(null);
       return const SizedBox.shrink();
     }
 
-    final dismiss = ref.watch(gameAnnouncementDismissProvider.notifier);
-    final l10n = context.l10n;
-    final prize = bigGame.fixedPrizeAmount ?? bigGame.prizeAmount;
-    const accent = Color(0xFFF5C542);
+    _scheduleAutoDismiss(id);
 
-    final subtitle = switch (phase) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = GameCategoryTheme.accentColor(
+      GameCategory.bigGame,
+      isDark: isDark,
+    );
+    final surface = GameCategoryTheme.surfaceColor(
+      GameCategory.bigGame,
+      isDark: isDark,
+    );
+    final border = GameCategoryTheme.borderColor(
+      GameCategory.bigGame,
+      isDark: isDark,
+    );
+    final prize = bigGame.fixedPrizeAmount ?? bigGame.prizeAmount;
+
+    final helperText = switch (phase) {
       BigGamePhase.waitingToPlay => bigGame.heldWaitingForLiveSlot
           ? l10n.announcementBigGameWaiting
           : l10n.announcementBigGameStartingSoon,
@@ -83,65 +217,223 @@ class GameAnnouncementBanner extends ConsumerWidget {
         target != null &&
         phase != BigGamePhase.live &&
         phase != BigGamePhase.waitingToPlay;
+    // Avoid repeating the same line as both chip and helper body.
+    final chipLabel = _phaseChip(phase, l10n);
+    final showChip =
+        chipLabel != null && chipLabel.trim() != helperText.trim();
 
-    return Material(
-      color: accent.withValues(alpha: 0.12),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.sm,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.emoji_events_rounded, color: accent),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.announcementBigGameTitle,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+    return Positioned.fill(
+      // Pass taps through empty space; only the card receives input.
+      child: IgnorePointer(
+        child: Center(
+          child: IgnorePointer(
+            ignoring: false,
+            child: FadeTransition(
+              opacity: _appear,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.94, end: 1).animate(
+                  CurvedAnimation(
+                    parent: _appear,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: border.withValues(
+                                alpha: isDark ? 0.5 : 0.35,
+                              ),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                surface,
+                                accent.withValues(
+                                  alpha: isDark ? 0.18 : 0.10,
+                                ),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.45 : 0.18,
+                                ),
+                                blurRadius: 24,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: accent.withValues(
+                                        alpha: isDark ? 0.22 : 0.16,
+                                      ),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Icon(
+                                      Icons.emoji_events_rounded,
+                                      color: accent,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.announcementBigGameTitle,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.6,
+                                            color: accent,
+                                          ),
+                                        ),
+                                        if (showChip) ...[
+                                          const SizedBox(height: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: accent.withValues(
+                                                alpha: isDark ? 0.24 : 0.14,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: Text(
+                                              chipLabel,
+                                              style: theme
+                                                  .textTheme.labelSmall
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: accent,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: l10n.announcementDismiss,
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () => unawaited(_dismiss(id)),
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      size: 22,
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  helperText,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                              if (showCountdown) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surface
+                                        .withValues(
+                                      alpha: isDark ? 0.35 : 0.72,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: accent.withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: GameCountdownRow(
+                                    label: l10n.announcementBigGameStartsIn,
+                                    target: target,
+                                    serverClock: clock,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () => requireAuthNavigate(
+                                    ref,
+                                    GoRouter.of(context),
+                                    redirectPath: '/games/big-game',
+                                    onAuthenticated: () =>
+                                        BigGameNavigation.goToBigGame(
+                                          context,
+                                          ref,
+                                        ),
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: accent,
+                                    foregroundColor:
+                                        isDark ? Colors.black : Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    l10n.announcementBigGameAction,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (showCountdown) ...[
-                      const SizedBox(height: 4),
-                      GameCountdownRow(
-                        label: l10n.announcementBigGameStartsIn,
-                        target: target,
-                        serverClock: clock,
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    TextButton(
-                      onPressed: () => requireAuthNavigate(
-                        ref,
-                        GoRouter.of(context),
-                        redirectPath: '/games/big-game',
-                        onAuthenticated: () =>
-                            BigGameNavigation.goToBigGame(context, ref),
-                      ),
-                      child: Text(l10n.announcementBigGameAction),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              IconButton(
-                tooltip: l10n.announcementDismiss,
-                onPressed: () => dismiss.dismiss(id),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
+            ),
           ),
         ),
       ),

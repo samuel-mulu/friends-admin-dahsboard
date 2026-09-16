@@ -103,6 +103,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       winnerWindowExpired: _winnerWindowExpired,
       // Lock is applied on the BINGO button via bingoClaimLocked listenable.
       isCountdownLocked: false,
+      chainBingoArmedAfterCalledCount: _chainBingoArmedAfterCalledCount,
     );
   }
 

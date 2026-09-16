@@ -204,6 +204,10 @@ class _ChainRoundTile extends StatelessWidget {
     final l10n = context.l10n;
     final isCurrent = round.state == ChainRoundState.current;
     final isForfeited = round.state == ChainRoundState.forfeited;
+    // Light cream panels wash out bright gold — use goldDark for readable text.
+    final wonGold = theme.brightness == Brightness.dark
+        ? AppBranding.gold
+        : AppBranding.goldDark;
 
     final statusLabel = switch (round.state) {
       ChainRoundState.won => l10n.chainRoundStatusWon,
@@ -212,7 +216,7 @@ class _ChainRoundTile extends StatelessWidget {
       ChainRoundState.upcoming => l10n.chainRoundStatusUpcoming,
     };
     final statusColor = switch (round.state) {
-      ChainRoundState.won => AppBranding.gold,
+      ChainRoundState.won => wonGold,
       ChainRoundState.forfeited => theme.colorScheme.error,
       ChainRoundState.current => accent,
       ChainRoundState.upcoming => theme.colorScheme.onSurfaceVariant,
@@ -262,7 +266,7 @@ class _ChainRoundTile extends StatelessWidget {
                           .map((number) => '#$number')
                           .join(' · '),
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppBranding.gold,
+                        color: wonGold,
                         fontWeight: FontWeight.w800,
                       ),
                     ),

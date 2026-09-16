@@ -487,16 +487,27 @@ void main() {
       );
     });
 
-    test('skips local FINISHED for every Chain winner window', () {
+    test('skips local FINISHED only while later chain rounds remain', () {
       expect(
         shouldSkipLocalChainWinnerWindowFinish(
           _chainGame(status: GameStatus.winnerWindow, roundIndex: 1),
         ),
         isTrue,
       );
+      // Last round WW: same local FINISHED → 60s Continue path as Normal.
       expect(
         shouldSkipLocalChainWinnerWindowFinish(
           _chainGame(status: GameStatus.winnerWindow, roundIndex: 2),
+        ),
+        isFalse,
+      );
+      expect(
+        shouldSkipLocalChainWinnerWindowFinish(
+          _chainGame(
+            status: GameStatus.winnerWindow,
+            roundIndex: 2,
+            roundPausedUntil: now.add(const Duration(seconds: 5)),
+          ),
         ),
         isTrue,
       );
@@ -505,6 +516,111 @@ void main() {
           _normalGame(status: GameStatus.winnerWindow),
         ),
         isFalse,
+      );
+    });
+
+    test(
+      'merge keeps Chain PLAYING+pause over stale winnerWindow snapshot',
+      () {
+        final pausedUntil = DateTime.now().add(const Duration(seconds: 18));
+        final current = _chainGame(
+          status: GameStatus.playing,
+          roundIndex: 2,
+          roundPausedUntil: pausedUntil,
+        );
+        final incoming = _chainGame(
+          status: GameStatus.winnerWindow,
+          roundIndex: 1,
+        );
+
+        final merged = GameModel.mergeCanonicalSessionState(
+          current: current,
+          incoming: incoming,
+        );
+
+        expect(merged.status, GameStatus.playing);
+        expect(merged.roundPausedUntil, pausedUntil);
+        expect(merged.roundIndex, 2);
+        expect(merged.winnerWindowEndsAt, isNull);
+      },
+    );
+
+    test(
+      'merge keeps Chain FINISHED over stale winnerWindow snapshot',
+      () {
+        final finished = _chainGame(
+          status: GameStatus.finished,
+          roundIndex: 2,
+        ).copyWith(finishedAt: now);
+        final incoming = _chainGame(
+          status: GameStatus.winnerWindow,
+          roundIndex: 2,
+        );
+
+        final merged = GameModel.mergeCanonicalSessionState(
+          current: finished,
+          incoming: incoming,
+        );
+
+        expect(merged.status, GameStatus.finished);
+      },
+    );
+
+    test('Bingo stays disarmed until a new ball after chain round resume', () {
+      final game = _chainGame(status: GameStatus.playing, roundIndex: 2);
+      final cartela = _cartela(
+        id: 'w1',
+        status: GameCartelaStatus.registered,
+        isWinner: false,
+      );
+
+      expect(
+        isChainBingoArmedAfterNewBall(
+          game: game,
+          calledNumbersCount: 18,
+          armedAfterCalledCount: 18,
+        ),
+        isFalse,
+      );
+      expect(
+        isChainBingoArmedAfterNewBall(
+          game: game,
+          calledNumbersCount: 19,
+          armedAfterCalledCount: 18,
+        ),
+        isTrue,
+      );
+      expect(
+        isCartelaEligibleForBingoClaim(
+          game: game,
+          gameCartela: cartela,
+          winnerWindowExpired: false,
+          hasPendingClaim: false,
+          isCountdownLocked: false,
+          calledNumbersCount: 18,
+          chainBingoArmedAfterCalledCount: 18,
+        ),
+        isFalse,
+      );
+      expect(
+        isCartelaEligibleForBingoClaim(
+          game: game,
+          gameCartela: cartela,
+          winnerWindowExpired: false,
+          hasPendingClaim: false,
+          isCountdownLocked: false,
+          calledNumbersCount: 19,
+          chainBingoArmedAfterCalledCount: 18,
+        ),
+        isTrue,
+      );
+      expect(
+        isChainBingoArmedAfterNewBall(
+          game: _normalGame(status: GameStatus.playing),
+          calledNumbersCount: 18,
+          armedAfterCalledCount: 18,
+        ),
+        isTrue,
       );
     });
 

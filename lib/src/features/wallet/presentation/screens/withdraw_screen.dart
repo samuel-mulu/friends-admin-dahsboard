@@ -9,7 +9,6 @@ import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../auth/presentation/widgets/local_reauth_dialog.dart';
 import '../../../settings/presentation/providers/theme_mode_provider.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/withdrawal_model.dart';
@@ -609,8 +608,26 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       return;
     }
 
-    final confirmed = await showLocalReauthDialog(context);
-    if (!confirmed || !mounted) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm withdrawal'),
+        content: const Text(
+          'Submit this withdrawal request? This cannot be undone from the app.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
       return;
     }
 

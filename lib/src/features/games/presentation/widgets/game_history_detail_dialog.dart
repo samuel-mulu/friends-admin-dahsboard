@@ -424,10 +424,12 @@ class _ChainRoundsHistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final isDark = theme.brightness == Brightness.dark;
     final accent = GameCategoryTheme.accentColor(
       GameCategory.chainGame,
-      isDark: theme.brightness == Brightness.dark,
+      isDark: isDark,
     );
+    final wonGold = isDark ? AppBranding.gold : AppBranding.goldDark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -482,7 +484,7 @@ class _ChainRoundsHistorySection extends StatelessWidget {
                                 .map((winner) => '#${winner.cartelaNumber}')
                                 .join(' · '),
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppBranding.gold,
+                              color: wonGold,
                               fontWeight: FontWeight.w800,
                             ),
                           ),

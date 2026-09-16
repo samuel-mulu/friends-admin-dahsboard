@@ -1,5 +1,6 @@
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
+import 'chain_round_cartela_state.dart';
 
 /// Pure eligibility check shared by live-game claim UI.
 bool isCartelaEligibleForBingoClaim({
@@ -8,6 +9,8 @@ bool isCartelaEligibleForBingoClaim({
   required bool winnerWindowExpired,
   required bool hasPendingClaim,
   required bool isCountdownLocked,
+  int calledNumbersCount = 0,
+  int? chainBingoArmedAfterCalledCount,
 }) {
   if (game == null ||
       (game.status != GameStatus.playing &&
@@ -30,6 +33,14 @@ bool isCartelaEligibleForBingoClaim({
   }
 
   if (winnerWindowExpired || hasPendingClaim || isCountdownLocked) {
+    return false;
+  }
+
+  if (!isChainBingoArmedAfterNewBall(
+    game: game,
+    calledNumbersCount: calledNumbersCount,
+    armedAfterCalledCount: chainBingoArmedAfterCalledCount,
+  )) {
     return false;
   }
 

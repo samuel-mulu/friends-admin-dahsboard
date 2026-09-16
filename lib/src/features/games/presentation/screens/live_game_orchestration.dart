@@ -6,6 +6,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   ChainRoundPlan? _chainRoundPlan;
   String? _chainRoundPlanKey;
   bool _chainRoundPlanInFlight = false;
+  /// After round 2+ resumes, Bingo stays off until called count exceeds this.
+  int? _chainBingoArmedAfterCalledCount;
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
@@ -287,6 +289,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    // Chain inter-round already owns the UI — never reopen WW closing / local finish.
+    if (_isChainRoundPaused || _review.showsChainInterRoundSummary) {
+      ChainGameDebug.log(
+        'ww_expired ignored inter_round_active session=${game.sessionId} '
+        'round=${game.displayRoundIndex}/${game.displayRoundCount}',
+      );
+      if (_review.winnerWindowClosing) {
+        _review.resetWinnerWindowClosingState();
+      }
+      return;
+    }
+
     if (shouldSkipLocalChainWinnerWindowFinish(game)) {
       ChainGameDebug.log(
         'ww_expired skip_local_finish session=${game.sessionId} '
@@ -298,6 +312,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
       _review.winnerWindowClosing = true;
       void requestChainClosingRefetch() {
+        // Pause/summary may arm while a poll tick is already scheduled.
+        if (_isChainRoundPaused || _review.showsChainInterRoundSummary) {
+          _review.resetWinnerWindowClosingState();
+          return;
+        }
         _realtime.requestTerminalCanonicalRefetch(
           reason: 'chain_winner_window_expired',
           wallet: !isGuest,
@@ -313,6 +332,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         shouldContinue: () =>
             mounted &&
             _review.winnerWindowClosing &&
+            !_isChainRoundPaused &&
+            !_review.showsChainInterRoundSummary &&
             _game?.status == GameStatus.winnerWindow &&
             shouldSkipLocalChainWinnerWindowFinish(_game),
         onTimedOut: requestChainClosingRefetch,
@@ -397,10 +418,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _finishWinnerWindowClosingLocally(GameModel game) {
-    if (shouldSkipLocalChainWinnerWindowFinish(game)) {
+    if (shouldSkipLocalChainWinnerWindowFinish(game) ||
+        _isChainRoundPaused ||
+        _review.showsChainInterRoundSummary) {
       ChainGameDebug.log(
         'local_finish blocked chain session=${game.sessionId} '
-        'round=${game.displayRoundIndex}/${game.displayRoundCount}',
+        'round=${game.displayRoundIndex}/${game.displayRoundCount} '
+        'pause=${_isChainRoundPaused} interRound=${_review.showsChainInterRoundSummary}',
       );
       return;
     }
@@ -473,7 +497,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       includeCalledNumbers: true,
       includeMyCartelas: !isGuest && game.isChainGame,
     );
-    if (shouldSkipLocalChainWinnerWindowFinish(game)) {
+    if (shouldSkipLocalChainWinnerWindowFinish(game) ||
+        _isChainRoundPaused ||
+        _review.showsChainInterRoundSummary) {
       return;
     }
     // Do not wait on another poll cycle — claims are done, leave Finalizing.
@@ -533,6 +559,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _cn.blockedCartelaServerReasonById.clear();
       _cn.cartelaSortSignature = null;
     }
+    _chainBingoArmedAfterCalledCount = null;
     _pendingWinnerWindowPayload = null;
     _pendingBingoInvalidPayload = null;
     _cn.clearSessionScopedState(
@@ -589,10 +616,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _cn.sessionLastCalledNumberFromStrip();
 
   List<SessionWinnerResultModel> get _sessionWinnerResultsForDisplay {
+    // Chain finished summary: keep each winner's API active/winning ball so the
+    // green line helper matches other games. Do not overwrite with strip last ball.
+    final useStripLastBall =
+        _showsPostGameSummary && _game?.isChainGame != true;
     return _review.sessionWinnerResultsForDisplay(
-      sessionLastCalledNumber: _showsPostGameSummary
-          ? _sessionLastCalledNumberFromStrip()
-          : null,
+      sessionLastCalledNumber:
+          useStripLastBall ? _sessionLastCalledNumberFromStrip() : null,
     );
   }
 
@@ -604,10 +634,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _refreshWinnerDisplayFromSessionStrip() {
+    final useStripLastBall =
+        _showsPostGameSummary && _game?.isChainGame != true;
     _review.refreshWinnerDisplayFromSessionStrip(
-      sessionLastCalledNumber: _showsPostGameSummary
-          ? _sessionLastCalledNumberFromStrip()
-          : null,
+      sessionLastCalledNumber:
+          useStripLastBall ? _sessionLastCalledNumberFromStrip() : null,
     );
   }
 
@@ -2309,11 +2340,36 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
       final previousNextAutoCallAt = _game?.nextAutoCallAt;
       final previousStatus = _game?.status;
+      final previousGame = _game;
+      // Stale winner-window enrich after Chain FINISHED must not reopen WW UI.
+      final ignoreStaleChainWw = !resumeSync &&
+          previousGame != null &&
+          previousGame.isChainGame &&
+          previousGame.sessionId != null &&
+          previousGame.sessionId == game.sessionId &&
+          (previousGame.status == GameStatus.finished ||
+              previousGame.status == GameStatus.noWinner) &&
+          (game.status == GameStatus.winnerWindow ||
+              game.status == GameStatus.checking);
+      if (ignoreStaleChainWw) {
+        ChainGameDebug.log(
+          'ops_apply ignore_stale_ww local=${previousGame.status.name} '
+          'incoming=${game.status.name} session=${previousGame.sessionId}',
+        );
+      }
       final mergedGame = resumeSync
           ? game
           : GameModel.mergeCanonicalSessionState(
-              current: _game,
-              incoming: game,
+              current: previousGame,
+              incoming: ignoreStaleChainWw
+                  ? game.copyWith(
+                      status: previousGame.status,
+                      finishedAt:
+                          previousGame.finishedAt ?? game.finishedAt,
+                      winnerWindowEndsAt: null,
+                      roundPausedUntil: null,
+                    )
+                  : game,
             );
 
       _game = mergedGame;
@@ -3513,6 +3569,41 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _applyTerminalWinnerResultsFromSocket(normalizedPayload);
 
+    final game = _game;
+    if (game != null &&
+        game.isChainGame &&
+        game.status != GameStatus.finished &&
+        game.status != GameStatus.noWinner) {
+      ChainGameDebug.log(
+        'game:finished optimistic FINISHED session=${game.sessionId} '
+        'round=${game.displayRoundIndex}/${game.displayRoundCount}',
+      );
+      _review.resetWinnerWindowClosingState();
+      _review.resetChainInterRoundSummary();
+      _stopChainRoundPauseTicker();
+      if (mounted) {
+        setState(() {
+          _game = game.copyWith(
+            status: GameStatus.finished,
+            roundPausedUntil: null,
+            winnerWindowEndsAt: null,
+            finishedAt: game.finishedAt ?? DateTime.now(),
+          );
+          _countdown.winnerWindowEndsAt = null;
+        });
+      } else {
+        _game = game.copyWith(
+          status: GameStatus.finished,
+          roundPausedUntil: null,
+          winnerWindowEndsAt: null,
+          finishedAt: game.finishedAt ?? DateTime.now(),
+        );
+        _countdown.winnerWindowEndsAt = null;
+      }
+      _startPostGameSummary(scheduleAdvance: true);
+      unawaited(_fetchSessionWinnerResultsIfNeeded(force: true));
+    }
+
     _realtime.requestTerminalCanonicalRefetch(
       reason: 'game_finished',
       wallet: !isGuest,
@@ -3633,6 +3724,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         payload: payload,
       );
       _review.resetWinnerWindowClosingState();
+      _countdown.winnerWindowEndsAt = null;
       if (_review.postGameSummaryReviewActive) {
         _review.clearPostGameSummaryHold(
           resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,
@@ -3640,6 +3732,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           clearWinnerPatterns: false,
         );
       }
+      _maybeStartChainInterRoundSummary();
       return;
     }
     setState(() {
@@ -3650,6 +3743,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _countdown.winnerWindowEndsAt = null;
       _cn.socketAutoCallEnabled = false;
     });
+    // Mid-round owns the UI now — kill any WW-expiry closing poll/refetch loop.
     _review.resetWinnerWindowClosingState();
     if (_review.postGameSummaryReviewActive) {
       _clearPostGameSummaryHold(
@@ -3685,6 +3779,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!mounted) {
       _game = next;
       _review.resetChainInterRoundSummary();
+      _armChainBingoAfterCurrentBalls();
       return;
     }
     setState(() {
@@ -3692,6 +3787,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     });
     _review.resetChainInterRoundSummary();
     _stopChainRoundPauseTicker();
+    _armChainBingoAfterCurrentBalls();
     _logPresentationPhaseIfChanged(
       detail: 'chain_round_started round=${roundIndex ?? game.displayRoundIndex}',
     );
@@ -3706,8 +3802,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       return;
     }
-    if (_isChainRoundPaused) {
-      ChainGameDebug.log('skip postGameSummary chainPauseActive');
+    if (_isChainRoundPaused || _review.showsChainInterRoundSummary) {
+      ChainGameDebug.log(
+        'skip postGameSummary chainInterRound '
+        'pause=${_isChainRoundPaused} '
+        'summary=${_review.showsChainInterRoundSummary}',
+      );
       return;
     }
     ChainGameDebug.log(
@@ -3825,6 +3925,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _stopChainRoundPauseTicker();
     _dismissWinnerCartelaDialogIfOpen();
     _review.resetChainInterRoundSummary();
+    _armChainBingoAfterCurrentBalls();
     if (!isLiveHostActive) {
       return;
     }
@@ -3838,6 +3939,24 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
     _syncChainPlayableCartelas();
     _announceChainNewPattern(startingRoundIndex);
+  }
+
+  /// Carried balls must not arm Bingo for the new round pattern until the
+  /// next auto-call. Round 1 leaves [_chainBingoArmedAfterCalledCount] null.
+  void _armChainBingoAfterCurrentBalls() {
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      _chainBingoArmedAfterCalledCount = null;
+      return;
+    }
+    final count = _cn.calledNumbers.isNotEmpty
+        ? _cn.calledNumbers.length
+        : game.calledNumbersCount;
+    _chainBingoArmedAfterCalledCount = count;
+    ChainGameDebug.log(
+      'bingo armed after calledCount>$count '
+      'round=${game.displayRoundIndex}',
+    );
   }
 
   /// Marks and balls carry over, so the only thing that actually changed is the

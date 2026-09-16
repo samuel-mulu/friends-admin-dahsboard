@@ -42,12 +42,36 @@ List<GameCartelaModel> normalizeChainPlayableCartelas({
   return changed ? List<GameCartelaModel>.unmodifiable(next) : cartelas;
 }
 
-/// Local winner-window expiry must not invent FINISHED for a Chain Game.
-/// Mid-chain the session stays PLAYING; the last round waits for canonical
-/// FINISHED from `game:finished`. [hasRemainingChainRounds] is unsafe here
-/// because finalize already advances `roundIndex` onto the next round.
+/// Local winner-window expiry must not invent FINISHED mid-chain.
+///
+/// Non-final rounds stay PLAYING with a pause — skip local finish and wait for
+/// that path. The last round (`roundIndex == roundCount`, no pause) uses the
+/// same local FINISHED → 60s Continue summary as Normal.
 bool shouldSkipLocalChainWinnerWindowFinish(GameModel? game) {
-  return game != null && game.isChainGame;
+  if (game == null || !game.isChainGame) {
+    return false;
+  }
+  // Pause already armed (or still showing) means a non-final round closed.
+  if (game.roundPausedUntil != null) {
+    return true;
+  }
+  return game.hasRemainingChainRounds;
+}
+
+/// After a new Chain round becomes playable, Bingo stays off until at least
+/// one new auto-call ball arrives. Carried marks + old balls must not arm it.
+bool isChainBingoArmedAfterNewBall({
+  required GameModel? game,
+  required int calledNumbersCount,
+  required int? armedAfterCalledCount,
+}) {
+  if (game == null || !game.isChainGame) {
+    return true;
+  }
+  if (armedAfterCalledCount == null) {
+    return true;
+  }
+  return calledNumbersCount > armedAfterCalledCount;
 }
 
 /// Winners of a decided Chain round, from session `roundResults`.

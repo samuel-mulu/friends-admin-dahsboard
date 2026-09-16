@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../auth/security/app_lock_controller.dart';
 import '../../../profile/presentation/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
@@ -15,7 +14,6 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
-    final lockState = ref.watch(appLockControllerProvider);
     final user = authState.session?.user;
     final theme = Theme.of(context);
 
@@ -222,72 +220,6 @@ class ProfileScreen extends ConsumerWidget {
                     'You stay signed in on this device unless you log out.',
                     style: theme.textTheme.bodyMedium,
                   ),
-                  VGap.xl,
-                  _SecurityStatusRow(
-                    title: 'PIN',
-                    value: lockState.hasPin ? 'Set' : 'Not set',
-                    icon: Icons.pin_outlined,
-                  ),
-                  VGap.sm,
-                  _SecurityStatusRow(
-                    title: 'Biometric unlock',
-                    value: lockState.isBiometricAvailable
-                        ? (lockState.isBiometricEnabled
-                              ? 'Enabled'
-                              : 'Available')
-                        : 'Not available',
-                    icon: Icons.fingerprint,
-                  ),
-                  VGap.sm,
-                  _SecurityStatusRow(
-                    title: 'Auto-lock',
-                    value: lockState.hasPin
-                        ? 'After 60 minutes away'
-                        : 'Disabled until a PIN is set',
-                    icon: Icons.timer_outlined,
-                  ),
-                  if (lockState.isBiometricAvailable) ...[
-                    VGap.xl,
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: lockState.isBiometricEnabled,
-                      onChanged: lockState.hasPin
-                          ? (enabled) => ref
-                                .read(appLockControllerProvider.notifier)
-                                .setBiometricEnabled(enabled)
-                          : null,
-                      title: const Text('Use biometric unlock'),
-                      subtitle: Text(
-                        lockState.hasPin
-                            ? 'Use fingerprint or device biometric unlock when reopening after inactivity.'
-                            : 'Set a 4-digit PIN first to enable biometric unlock.',
-                      ),
-                    ),
-                  ],
-                  VGap.xl,
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      FilledButton(
-                        onPressed: () => _showPinDialog(
-                          context,
-                          ref,
-                          hasExistingPin: lockState.hasPin,
-                          biometricAvailable: lockState.isBiometricAvailable,
-                          biometricEnabled: lockState.isBiometricEnabled,
-                        ),
-                        child: Text(
-                          lockState.hasPin ? 'Change PIN' : 'Set 4-digit PIN',
-                        ),
-                      ),
-                      if (lockState.hasPin)
-                        OutlinedButton(
-                          onPressed: () => _confirmRemovePin(context, ref),
-                          child: const Text('Remove PIN'),
-                        ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -331,51 +263,6 @@ class ProfileScreen extends ConsumerWidget {
     await ref
         .read(profileAvatarControllerProvider(userId))
         .setAvatar(result == kClearAvatarSelection ? null : result);
-  }
-
-  Future<void> _showPinDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    required bool hasExistingPin,
-    required bool biometricAvailable,
-    required bool biometricEnabled,
-  }) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => _PinManagementDialog(
-        hasExistingPin: hasExistingPin,
-        biometricAvailable: biometricAvailable,
-        biometricEnabled: biometricEnabled,
-      ),
-    );
-  }
-
-  Future<void> _confirmRemovePin(BuildContext context, WidgetRef ref) async {
-    final shouldRemove = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Remove PIN?'),
-        content: const Text(
-          'This device will stop asking for a local unlock after inactivity until you set a new PIN.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldRemove != true) {
-      return;
-    }
-
-    await ref.read(appLockControllerProvider.notifier).clearPin();
   }
 }
 
@@ -508,197 +395,5 @@ class _InfoChip extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _SecurityStatusRow extends StatelessWidget {
-  const _SecurityStatusRow({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  final String title;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: theme.colorScheme.secondaryContainer,
-          child: Icon(icon, color: theme.colorScheme.onSecondaryContainer),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(value, style: theme.textTheme.bodyMedium),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PinManagementDialog extends ConsumerStatefulWidget {
-  const _PinManagementDialog({
-    required this.hasExistingPin,
-    required this.biometricAvailable,
-    required this.biometricEnabled,
-  });
-
-  final bool hasExistingPin;
-  final bool biometricAvailable;
-  final bool biometricEnabled;
-
-  @override
-  ConsumerState<_PinManagementDialog> createState() =>
-      _PinManagementDialogState();
-}
-
-class _PinManagementDialogState extends ConsumerState<_PinManagementDialog> {
-  final _pinController = TextEditingController();
-  final _confirmPinController = TextEditingController();
-  late bool _enableBiometric;
-  bool _isSaving = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _enableBiometric = widget.biometricEnabled;
-  }
-
-  @override
-  void dispose() {
-    _pinController.dispose();
-    _confirmPinController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.hasExistingPin ? 'Change PIN' : 'Set 4-digit PIN'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.hasExistingPin
-                  ? 'Update your local unlock PIN for this device.'
-                  : 'Create a 4-digit PIN for local unlock after inactivity.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _pinController,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              decoration: const InputDecoration(
-                labelText: 'PIN',
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirmPinController,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              decoration: const InputDecoration(
-                labelText: 'Confirm PIN',
-                counterText: '',
-              ),
-            ),
-            if (widget.biometricAvailable) ...[
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _enableBiometric,
-                onChanged: (value) {
-                  setState(() {
-                    _enableBiometric = value ?? false;
-                  });
-                },
-                title: const Text('Enable biometric unlock'),
-              ),
-            ],
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _isSaving ? null : _save,
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _save() async {
-    final pin = _pinController.text.trim();
-    final confirmPin = _confirmPinController.text.trim();
-
-    if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
-      setState(() {
-        _errorMessage = 'PIN must be exactly 4 digits.';
-      });
-      return;
-    }
-
-    if (pin != confirmPin) {
-      setState(() {
-        _errorMessage = 'PIN entries did not match.';
-      });
-      return;
-    }
-
-    setState(() {
-      _errorMessage = null;
-      _isSaving = true;
-    });
-
-    final controller = ref.read(appLockControllerProvider.notifier);
-    await controller.setPin(pin);
-    await controller.setBiometricEnabled(_enableBiometric);
-
-    if (!mounted) {
-      return;
-    }
-
-    Navigator.of(context).pop();
   }
 }

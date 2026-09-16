@@ -26,11 +26,17 @@ class HomeShellScreen extends ConsumerWidget {
             child: Scaffold(
               appBar: AppShellAppBar(navigationShell: navigationShell),
               drawer: AppSettingsDrawer(navigationShell: navigationShell),
-              body: Column(
+              body: Stack(
                 children: [
-                  const BroadcastTopBanner(),
+                  Column(
+                    children: [
+                      const BroadcastTopBanner(),
+                      Expanded(
+                        child: WalletRealtimeSync(child: navigationShell),
+                      ),
+                    ],
+                  ),
                   const GameAnnouncementBanner(),
-                  Expanded(child: WalletRealtimeSync(child: navigationShell)),
                 ],
               ),
             ),

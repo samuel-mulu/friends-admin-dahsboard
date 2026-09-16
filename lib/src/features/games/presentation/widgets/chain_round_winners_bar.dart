@@ -70,12 +70,15 @@ class ChainRoundWinnersBar extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final chip = chips[index];
                       final isMine = myCartelaNumbers.contains(chip.cartela);
+                      final mineGold = theme.brightness == Brightness.dark
+                          ? AppBranding.gold
+                          : AppBranding.goldDark;
                       return _WinnerChip(
                         label: l10n.chainRoundWinnerChip(
                           chip.round,
                           chip.cartela,
                         ),
-                        accent: isMine ? AppBranding.gold : accent,
+                        accent: isMine ? mineGold : accent,
                         emphasized: isMine,
                       );
                     },

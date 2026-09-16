@@ -1180,6 +1180,8 @@ class GameModel {
   /// The only fields preserved from current are:
   /// - status (if more advanced)
   /// - winnerWindowEndsAt (if incoming is null but current has it)
+  /// - Chain inter-round `roundPausedUntil` when a stale WW/PLAYING snapshot
+  ///   would otherwise wipe the pause armed by `chain:round_finished`
   ///
   /// All other fields (including metrics) come from incoming.
   static GameModel mergeCanonicalSessionState({
@@ -1195,6 +1197,29 @@ class GameModel {
     if (!sameSession) {
       // Phase B2: Different session → use incoming entirely (all metrics replaced).
       return incoming;
+    }
+
+    // Chain mid-round: socket already armed PLAYING + pause. A lagging
+    // winnerWindow/checking/playing ops snapshot must not clear that pause
+    // (rank would prefer WW over PLAYING and drop roundPausedUntil).
+    if (current.isChainRoundPaused) {
+      final incomingPaused =
+          incoming.roundPausedUntil != null &&
+          incoming.roundPausedUntil!.isAfter(DateTime.now());
+      final incomingWouldWipePause =
+          !incomingPaused &&
+          (incoming.status == GameStatus.winnerWindow ||
+              incoming.status == GameStatus.checking ||
+              incoming.status == GameStatus.playing);
+      if (incomingWouldWipePause) {
+        return incoming.copyWith(
+          status: GameStatus.playing,
+          roundPausedUntil: current.roundPausedUntil,
+          roundIndex: current.roundIndex ?? incoming.roundIndex,
+          currentRound: current.currentRound ?? incoming.currentRound,
+          winnerWindowEndsAt: null,
+        );
+      }
     }
 
     final mergedStatus = _preferMoreLiveStatus(current.status, incoming.status);

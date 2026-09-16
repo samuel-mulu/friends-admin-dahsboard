@@ -159,13 +159,19 @@ class LiveCalledNumbersController {
     required GameCartelaModel gameCartela,
     required bool winnerWindowExpired,
     required bool isCountdownLocked,
+    int? chainBingoArmedAfterCalledCount,
   }) {
+    final effectiveCalledCount = calledNumbers.isNotEmpty
+        ? calledNumbers.length
+        : (game?.calledNumbersCount ?? 0);
     if (!isCartelaEligibleForBingoClaim(
       game: game,
       gameCartela: gameCartela,
       winnerWindowExpired: winnerWindowExpired,
       hasPendingClaim: pendingClaimCartelaIds.contains(gameCartela.id),
       isCountdownLocked: isCountdownLocked,
+      calledNumbersCount: effectiveCalledCount,
+      chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
     )) {
       return false;
     }

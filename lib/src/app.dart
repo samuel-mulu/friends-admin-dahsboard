@@ -22,8 +22,6 @@ import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'features/auth/presentation/providers/telegram_deep_link_provider.dart';
 import 'features/auth/presentation/widgets/account_ban_overlay.dart';
 import 'features/auth/presentation/widgets/account_ban_realtime_sync.dart';
-import 'features/auth/presentation/widgets/pin_setup_dialog.dart';
-import 'features/auth/security/app_lock_controller.dart';
 import 'features/settings/presentation/providers/locale_provider.dart';
 import 'features/settings/presentation/providers/theme_mode_provider.dart';
 import 'features/settings/presentation/widgets/first_launch_preferences_gate.dart';
@@ -38,7 +36,6 @@ class FriendsBingoApp extends ConsumerStatefulWidget {
 
 class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
     with WidgetsBindingObserver {
-  bool _isShowingPinSetup = false;
   StreamSubscription<dynamic>? _notificationTapSubscription;
 
   @override
@@ -97,16 +94,13 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
       ref.read(screenAwakeControllerProvider.notifier).syncLifecycle(state),
     );
 
-    final controller = ref.read(appLockControllerProvider.notifier);
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.inactive:
         AppBackgroundResumeGate.onAppBackgrounded();
-        controller.onAppPaused();
         break;
       case AppLifecycleState.resumed:
-        controller.onAppResumed();
         unawaited(syncAppAfterResume(ref));
         if (!kIsWeb &&
             defaultTargetPlatform == TargetPlatform.android &&
@@ -153,33 +147,6 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
           ref.read(authNotificationSyncProvider).syncAuthenticatedSession(),
         );
         navigateAfterAuthentication(router);
-      });
-    });
-
-    ref.listen<AppLockState>(appLockControllerProvider, (previous, next) {
-      if (!next.shouldPromptForPinSetup || _isShowingPinSetup) {
-        return;
-      }
-
-      _isShowingPinSetup = true;
-      Future.microtask(() async {
-        if (!mounted) {
-          _isShowingPinSetup = false;
-          return;
-        }
-        final dialogContext = router.routerDelegate.navigatorKey.currentContext;
-        if (dialogContext == null || !dialogContext.mounted) {
-          _isShowingPinSetup = false;
-          return;
-        }
-
-        await showDialog<void>(
-          context: dialogContext,
-          barrierDismissible: false,
-          builder: (_) => const PinSetupDialog(),
-        );
-
-        _isShowingPinSetup = false;
       });
     });
 
