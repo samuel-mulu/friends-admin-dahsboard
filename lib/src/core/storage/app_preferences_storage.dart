@@ -85,8 +85,14 @@ class AppPreferencesStorage {
   }
 
   CartelaSortMode readCartelaSortMode() {
-    return CartelaSortMode.tryParse(_prefs.getString(_cartelaSortModeKey)) ??
+    final mode =
+        CartelaSortMode.tryParse(_prefs.getString(_cartelaSortModeKey)) ??
         CartelaSortMode.manual;
+    // Lines sort was removed from settings; fall back to manual order.
+    if (mode == CartelaSortMode.lines) {
+      return CartelaSortMode.manual;
+    }
+    return mode;
   }
 
   Future<void> writeCartelaSortMode(CartelaSortMode mode) {

@@ -14,13 +14,16 @@ import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';
 import '../providers/current_big_game_provider.dart';
+import '../providers/current_game_operations_provider.dart';
 import '../providers/game_announcement_dismiss_provider.dart';
 import '../utils/big_game_navigation.dart';
 import '../widgets/game_countdown.dart';
 
-/// Centered helper card for Big Game on other shell routes (e.g. `/games`).
+/// Centered helper card for Big Game on other shell routes.
 ///
-/// Hidden on `/games/big-game`. Auto-dismisses after 30s (or via close).
+/// Hidden on `/games/big-game`. On `/games` during an active standard live
+/// round, hidden too — [BigGameLivePromptBanner] already covers that case
+/// without blocking cartelas. Auto-dismisses after 30s (or via close).
 class GameAnnouncementBanner extends ConsumerStatefulWidget {
   const GameAnnouncementBanner({super.key});
 
@@ -62,6 +65,25 @@ class _GameAnnouncementBannerState
     final location = GoRouter.of(context).state.matchedLocation;
     return location == '/games/big-game' ||
         location.endsWith('/games/big-game');
+  }
+
+  bool _isOnGamesRoute(BuildContext context) {
+    final location = GoRouter.of(context).state.matchedLocation;
+    return location == '/games' || location.endsWith('/games');
+  }
+
+  /// Standard live round on `/games` already has [BigGameLivePromptBanner].
+  bool _hasBlockingStandardLiveGame(GameOperationsCurrentResponse? operations) {
+    final live = operations?.liveGame ?? operations?.checkingGame;
+    if (live == null || live.isBigGame) {
+      return false;
+    }
+    return switch (live.status) {
+      GameStatus.playing ||
+      GameStatus.checking ||
+      GameStatus.winnerWindow => true,
+      _ => false,
+    };
   }
 
   void _onRouteChanged() {
@@ -152,6 +174,14 @@ class _GameAnnouncementBannerState
       return const SizedBox.shrink();
     }
 
+    // Playing a normal round on /games: keep only the top strip prompt so the
+    // centered card does not cover cartelas (see screenshot bleed-through).
+    final operations = ref.watch(currentGameOperationsProvider).value;
+    if (_isOnGamesRoute(context) && _hasBlockingStandardLiveGame(operations)) {
+      _scheduleAutoDismiss(null);
+      return const SizedBox.shrink();
+    }
+
     final bigGame = ref.watch(currentBigGameProvider).value;
     if (bigGame == null) {
       _scheduleAutoDismiss(null);
@@ -180,10 +210,6 @@ class _GameAnnouncementBannerState
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = GameCategoryTheme.accentColor(
-      GameCategory.bigGame,
-      isDark: isDark,
-    );
-    final surface = GameCategoryTheme.surfaceColor(
       GameCategory.bigGame,
       isDark: isDark,
     );
@@ -246,28 +272,26 @@ class _GameAnnouncementBannerState
                       constraints: const BoxConstraints(maxWidth: 360),
                       child: Material(
                         color: Colors.transparent,
+                        elevation: 0,
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: border.withValues(
-                                alpha: isDark ? 0.5 : 0.35,
+                                alpha: isDark ? 0.55 : 0.4,
                               ),
                             ),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                surface,
-                                accent.withValues(
-                                  alpha: isDark ? 0.18 : 0.10,
-                                ),
-                              ],
+                            // Solid enough that live cartelas do not show through.
+                            color: Color.alphaBlend(
+                              accent.withValues(alpha: isDark ? 0.22 : 0.12),
+                              isDark
+                                  ? const Color(0xF01A1228)
+                                  : const Color(0xF8FFFFFF),
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(
-                                  alpha: isDark ? 0.45 : 0.18,
+                                  alpha: isDark ? 0.5 : 0.22,
                                 ),
                                 blurRadius: 24,
                                 offset: const Offset(0, 10),

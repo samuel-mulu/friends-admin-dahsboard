@@ -50,6 +50,58 @@ enum UserStatus {
   }
 }
 
+/// Server-synced preference for game push targeting.
+enum GamePushMode {
+  always,
+  registeredOnly,
+  off;
+
+  factory GamePushMode.fromApi(String? value) {
+    switch ((value ?? 'ALWAYS').toUpperCase()) {
+      case 'REGISTERED_ONLY':
+        return GamePushMode.registeredOnly;
+      case 'OFF':
+        return GamePushMode.off;
+      case 'ALWAYS':
+      default:
+        return GamePushMode.always;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case GamePushMode.always:
+        return 'ALWAYS';
+      case GamePushMode.registeredOnly:
+        return 'REGISTERED_ONLY';
+      case GamePushMode.off:
+        return 'OFF';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case GamePushMode.always:
+        return 'All game alerts';
+      case GamePushMode.registeredOnly:
+        return "Only when I'm playing";
+      case GamePushMode.off:
+        return 'Off';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case GamePushMode.always:
+        return 'Include registration open and big-game reminders.';
+      case GamePushMode.registeredOnly:
+        return 'Only alerts for games where you have a cartela.';
+      case GamePushMode.off:
+        return 'No game push notifications.';
+    }
+  }
+}
+
 class UserProfile {
   UserProfile({
     required this.id,
@@ -63,6 +115,7 @@ class UserProfile {
     this.hasPassword = true,
     this.telegramLinked = false,
     this.telegramUsername,
+    this.gamePushMode = GamePushMode.always,
   });
 
   final String id;
@@ -76,6 +129,7 @@ class UserProfile {
   final bool hasPassword;
   final bool telegramLinked;
   final String? telegramUsername;
+  final GamePushMode gamePushMode;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -96,6 +150,7 @@ class UserProfile {
           ? json['telegramLinked'] as bool
           : json['telegramId'] != null,
       telegramUsername: json['telegramUsername'] as String?,
+      gamePushMode: GamePushMode.fromApi(json['gamePushMode'] as String?),
     );
   }
 
@@ -110,6 +165,7 @@ class UserProfile {
       'updatedAt': updatedAt.toIso8601String(),
       'hasPassword': hasPassword,
       'telegramLinked': telegramLinked,
+      'gamePushMode': gamePushMode.apiValue,
       if (telegramUsername != null) 'telegramUsername': telegramUsername,
       if (wallet != null) 'wallet': wallet!.toJson(),
     };
@@ -121,6 +177,7 @@ class UserProfile {
     bool? telegramLinked,
     String? telegramUsername,
     WalletModel? wallet,
+    GamePushMode? gamePushMode,
   }) {
     return UserProfile(
       id: id,
@@ -134,6 +191,7 @@ class UserProfile {
       hasPassword: hasPassword ?? this.hasPassword,
       telegramLinked: telegramLinked ?? this.telegramLinked,
       telegramUsername: telegramUsername ?? this.telegramUsername,
+      gamePushMode: gamePushMode ?? this.gamePushMode,
     );
   }
 }

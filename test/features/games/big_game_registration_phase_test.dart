@@ -90,7 +90,7 @@ void main() {
       expect(phase, LivePresentationPhase.registrationOpen);
     });
 
-    test('open-ended next-round window (null scheduledStartAt) stays open', () {
+    test('stranded READY (null scheduledStartAt) stays open for recovery', () {
       final game = _bigGame(
         status: GameStatus.ready,
         canRegister: true,
@@ -101,6 +101,45 @@ void main() {
 
       expect(isBigGameRegistrationWindowOpen(game, now: now), isTrue);
       expect(resolveBigGamePhase(game, now: now), BigGamePhase.registrationOpen);
+    });
+
+    test('inter-round READY with armed play start is registrationOpen', () {
+      final game = _bigGame(
+        status: GameStatus.ready,
+        canRegister: true,
+        registrationOpensAt: now.subtract(const Duration(seconds: 5)),
+        scheduledStartAt: now.add(const Duration(seconds: 60)),
+        roundIndex: 2,
+      );
+
+      expect(isBigGameRegistrationWindowOpen(game, now: now), isTrue);
+      expect(resolveBigGamePhase(game, now: now), BigGamePhase.registrationOpen);
+    });
+
+    test('FINISHED with future nextRoundStartsAt is betweenRounds', () {
+      final game = _bigGame(
+        status: GameStatus.finished,
+        canRegister: false,
+        roundIndex: 1,
+      ).copyWith(
+        nextRoundStartsAt: now.add(const Duration(minutes: 2)),
+        currentRound: 1,
+      );
+
+      expect(resolveBigGamePhase(game, now: now), BigGamePhase.betweenRounds);
+    });
+
+    test('FINISHED does not stay betweenRounds after nextRoundStartsAt passes', () {
+      final game = _bigGame(
+        status: GameStatus.finished,
+        canRegister: false,
+        roundIndex: 1,
+      ).copyWith(
+        nextRoundStartsAt: now.subtract(const Duration(seconds: 1)),
+        currentRound: 1,
+      );
+
+      expect(resolveBigGamePhase(game, now: now), BigGamePhase.finishedReview);
     });
   });
 }

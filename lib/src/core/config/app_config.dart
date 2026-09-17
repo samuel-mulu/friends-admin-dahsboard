@@ -26,6 +26,7 @@ class AppConfig {
     required this.socketBaseUrl,
     this.realtimeDebug = false,
     this.chainDebug = false,
+    this.bigGameDebug = false,
     this.debug = false,
     this.telebirrDepositDebug = false,
   });
@@ -38,6 +39,9 @@ class AppConfig {
 
   /// Chain Game round-boundary tracing (debug builds only).
   final bool chainDebug;
+
+  /// Big Game round / registration-window tracing (debug builds only).
+  final bool bigGameDebug;
 
   /// General debug tracing (debug builds only).
   final bool debug;
@@ -72,6 +76,9 @@ class AppConfig {
     final chainDebug =
         const bool.fromEnvironment('CHAIN_DEBUG') ||
         _envBool('CHAIN_DEBUG');
+    final bigGameDebug =
+        const bool.fromEnvironment('BIG_GAME_DEBUG') ||
+        _envBool('BIG_GAME_DEBUG');
     final debug =
         const bool.fromEnvironment('DEBUG') || _envBool('DEBUG');
     final telebirrDepositDebug =
@@ -101,6 +108,7 @@ class AppConfig {
       socketBaseUrl: socketBaseUrl,
       realtimeDebug: realtimeDebug,
       chainDebug: chainDebug,
+      bigGameDebug: bigGameDebug,
       debug: debug,
       telebirrDepositDebug: telebirrDepositDebug,
     );

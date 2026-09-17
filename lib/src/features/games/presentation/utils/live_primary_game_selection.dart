@@ -12,7 +12,7 @@ bool keepsTerminalLiveGamePrimary(GameStatus status) {
   return status == GameStatus.finished || status == GameStatus.noWinner;
 }
 
-GameModel? _nonBigGame(GameModel? game, {required bool excludeBigGame}) {
+GameModel? nonBigGame(GameModel? game, {required bool excludeBigGame}) {
   if (game == null) {
     return null;
   }
@@ -22,16 +22,61 @@ GameModel? _nonBigGame(GameModel? game, {required bool excludeBigGame}) {
   return game;
 }
 
+/// Player-facing current game, optionally stripping Big Game for `/games`.
+GameModel? currentGameForPlayer({
+  required GameOperationsCurrentResponse operations,
+  bool excludeBigGame = false,
+}) {
+  return nonBigGame(
+    operations.currentGameForPlayer,
+    excludeBigGame: excludeBigGame,
+  );
+}
+
+/// True when operations still has a non–Big Game live/checking/registration
+/// surface or a non–Big Game upcoming queue item.
+///
+/// Used by `/games` idle clear: Big Game alone must not block emptying the
+/// standard live screen (banner-only on `/games`).
+bool operationsHasStandardGameSurface(
+  GameOperationsCurrentResponse? operations, {
+  GameModel? current,
+}) {
+  if (operations == null) {
+    return false;
+  }
+
+  if (nonBigGame(operations.liveGame, excludeBigGame: true) != null ||
+      nonBigGame(operations.checkingGame, excludeBigGame: true) != null ||
+      nonBigGame(operations.registrationOpenGame, excludeBigGame: true) !=
+          null) {
+    return true;
+  }
+
+  final upcoming = operations.nextUpcomingGameFor(current: current);
+  if (upcoming != null && !upcoming.isBigGame) {
+    return true;
+  }
+
+  for (final item in operations.queue) {
+    if (!item.isBigGame) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 GameModel? resolvePrimaryGameForOperations({
   required GameOperationsCurrentResponse operations,
   required bool ownsLiveCartelas,
   bool excludeBigGame = false,
 }) {
-  final liveCandidate = _nonBigGame(
+  final liveCandidate = nonBigGame(
     operations.liveGame ?? operations.checkingGame,
     excludeBigGame: excludeBigGame,
   );
-  final registrationGame = _nonBigGame(
+  final registrationGame = nonBigGame(
     operations.registrationOpenGame,
     excludeBigGame: excludeBigGame,
   );

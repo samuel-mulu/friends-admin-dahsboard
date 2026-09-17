@@ -1,6 +1,7 @@
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import 'chain_round_cartela_state.dart';
+import 'live_presentation_phase.dart';
 
 /// Pure eligibility check shared by live-game claim UI.
 bool isCartelaEligibleForBingoClaim({
@@ -11,6 +12,7 @@ bool isCartelaEligibleForBingoClaim({
   required bool isCountdownLocked,
   int calledNumbersCount = 0,
   int? chainBingoArmedAfterCalledCount,
+  DateTime? now,
 }) {
   if (game == null ||
       (game.status != GameStatus.playing &&
@@ -33,6 +35,12 @@ bool isCartelaEligibleForBingoClaim({
   }
 
   if (winnerWindowExpired || hasPendingClaim || isCountdownLocked) {
+    return false;
+  }
+
+  // Chain inter-round 20s reveal: session stays PLAYING but Bingo must stay off
+  // until the pause ends and a new ball arms the next round.
+  if (isChainRoundPauseActive(game, now: now)) {
     return false;
   }
 

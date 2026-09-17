@@ -443,11 +443,35 @@ void main() {
       expect(next.single.isWinner, isTrue);
     });
 
-    test('Bingo is ready for a stale chain winner that is REGISTERED', () {
+    test('Bingo stays off during the chain inter-round pause', () {
       final game = _chainGame(
         status: GameStatus.playing,
         roundIndex: 2,
         roundPausedUntil: now.add(const Duration(seconds: 8)),
+      );
+      final cartela = _cartela(
+        id: 'w1',
+        status: GameCartelaStatus.registered,
+        isWinner: true,
+      );
+
+      expect(
+        isCartelaEligibleForBingoClaim(
+          game: game,
+          gameCartela: cartela,
+          winnerWindowExpired: false,
+          hasPendingClaim: false,
+          isCountdownLocked: false,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('Bingo is ready for a stale chain winner after the pause ends', () {
+      final game = _chainGame(
+        status: GameStatus.playing,
+        roundIndex: 2,
       );
       final cartela = _cartela(
         id: 'w1',

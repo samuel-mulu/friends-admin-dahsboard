@@ -20,16 +20,6 @@ class CartelaSortModeController extends Notifier<CartelaSortMode> {
     await storage.writeCartelaSortMode(mode);
   }
 
-  Future<void> setLinesSortEnabled(bool enabled) async {
-    if (enabled) {
-      await setSortMode(CartelaSortMode.lines);
-      return;
-    }
-    if (state == CartelaSortMode.lines) {
-      await setSortMode(CartelaSortMode.manual);
-    }
-  }
-
   Future<void> setRemainsSortEnabled(bool enabled) async {
     if (enabled) {
       await setSortMode(CartelaSortMode.smart);

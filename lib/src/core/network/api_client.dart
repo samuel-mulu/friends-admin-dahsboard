@@ -70,6 +70,25 @@ class ApiClient {
     }
   }
 
+  Future<ApiEnvelope<T>> patchEnvelope<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    required T Function(Object? rawData) decoder,
+  }) async {
+    try {
+      final response = await _dio.patch<Object?>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+      );
+
+      return _decodeEnvelope(response.data, decoder);
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(ApiException.fromCaughtError(error), stackTrace);
+    }
+  }
+
   Future<T> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -96,6 +115,22 @@ class ApiClient {
       data: data,
       queryParameters: queryParameters,
       receiveTimeout: receiveTimeout,
+      decoder: decoder,
+    );
+
+    return envelope.data;
+  }
+
+  Future<T> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    required T Function(Object? rawData) decoder,
+  }) async {
+    final envelope = await patchEnvelope<T>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
       decoder: decoder,
     );
 

@@ -9,6 +9,7 @@ import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/games_repository.dart';
 import '../../domain/big_game_phase.dart';
+import '../debug/big_game_debug.dart';
 import '../providers/current_big_game_provider.dart';
 import 'big_game_live_host.dart';
 import 'big_game_phase_views.dart';
@@ -24,6 +25,9 @@ class BigGameScreen extends ConsumerStatefulWidget {
 
 class _BigGameScreenState extends ConsumerState<BigGameScreen>
     with WidgetsBindingObserver {
+  BigGamePhase? _lastLoggedPhase;
+  String? _lastLoggedSessionKey;
+
   @override
   void initState() {
     super.initState();
@@ -98,7 +102,19 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             return BigGameEmptyView(onRefresh: _handleRefresh);
           }
 
-          final phase = resolveBigGamePhase(game, now: _now(clock));
+          final now = _now(clock);
+          final phase = resolveBigGamePhase(game, now: now);
+          final sessionKey = '${game.sessionId ?? game.id}:${game.status.name}';
+          if (_lastLoggedPhase != phase || _lastLoggedSessionKey != sessionKey) {
+            BigGameDebug.phase(
+              from: _lastLoggedPhase,
+              to: phase,
+              game: game,
+              now: now,
+            );
+            _lastLoggedPhase = phase;
+            _lastLoggedSessionKey = sessionKey;
+          }
           if (phase == BigGamePhase.finishedReview ||
               phase == BigGamePhase.cancelled) {
             WidgetsBinding.instance.addPostFrameCallback((_) {

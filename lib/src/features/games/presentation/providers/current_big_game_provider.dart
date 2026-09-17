@@ -7,6 +7,7 @@ import '../../../../core/realtime/socket_service.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
+import '../debug/big_game_debug.dart';
 import 'realtime_connection_provider.dart';
 
 final currentBigGameProvider =
@@ -140,6 +141,18 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
       final next = await _loadBigGame();
       if (!ref.mounted) {
         return;
+      }
+      final previous = state.value;
+      final roundChanged =
+          previous?.sessionId != next?.sessionId ||
+          previous?.status != next?.status ||
+          previous?.roundIndex != next?.roundIndex ||
+          previous?.nextRoundRegistration?.sessionId !=
+              next?.nextRoundRegistration?.sessionId ||
+          previous?.scheduledStartAt != next?.scheduledStartAt ||
+          previous?.canRegister != next?.canRegister;
+      if (roundChanged) {
+        BigGameDebug.snapshot(next, reason: 'refresh_round_change');
       }
       state = AsyncData(next);
     } catch (error, stackTrace) {

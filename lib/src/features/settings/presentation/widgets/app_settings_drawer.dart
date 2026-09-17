@@ -229,7 +229,6 @@ class AppSettingsDrawer extends ConsumerWidget {
                       ),
                       child: const Column(
                         children: [
-                          _CartelaLinesSortCard(),
                           _CartelaRemainsSortCard(),
                         ],
                       ),
@@ -1213,7 +1212,7 @@ class _NotificationSettingsSheet extends ConsumerWidget {
                   ],
                 ),
                 Text(
-                  'These settings are saved on this device only for now.',
+                  'Game alerts sync to your account. Wallet and system toggles stay on this device.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -1227,38 +1226,55 @@ class _NotificationSettingsSheet extends ConsumerWidget {
                     unawaited(notifier.setPushEnabled(value));
                   },
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('GAME_STARTED'),
-                  value: preferences.gameStartedEnabled,
-                  onChanged: preferences.pushEnabled
-                      ? (value) {
-                          unawaited(notifier.setGameStartedEnabled(value));
-                        }
-                      : null,
+                VGap.md,
+                Text(
+                  'Game alerts',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('GAME_FINISHED'),
-                  value: preferences.gameFinishedEnabled,
+                VGap.sm,
+                RadioGroup<GamePushMode>(
+                  groupValue: preferences.gamePushMode,
                   onChanged: preferences.pushEnabled
                       ? (value) {
-                          unawaited(notifier.setGameFinishedEnabled(value));
-                        }
-                      : null,
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('WINNER_ANNOUNCEMENT'),
-                  value: preferences.winnerAnnouncementsEnabled,
-                  onChanged: preferences.pushEnabled
-                      ? (value) {
+                          if (value == null) {
+                            return;
+                          }
                           unawaited(
-                            notifier.setWinnerAnnouncementsEnabled(value),
+                            notifier.setGamePushMode(value).catchError((
+                              Object _,
+                            ) {
+                              if (!context.mounted) {
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Could not save game alert preference.',
+                                  ),
+                                ),
+                              );
+                            }),
                           );
                         }
-                      : null,
+                      : (_) {},
+                  child: Column(
+                    children: [
+                      for (final mode in GamePushMode.values)
+                        RadioListTile<GamePushMode>(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          title: Text(mode.label),
+                          subtitle: Text(mode.description),
+                          value: mode,
+                          enabled: preferences.pushEnabled,
+                          selected: preferences.gamePushMode == mode,
+                        ),
+                    ],
+                  ),
                 ),
+                VGap.md,
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('DEPOSIT_APPROVED'),
@@ -1324,42 +1340,6 @@ class _NotificationSettingsSheet extends ConsumerWidget {
   }
 }
 
-class _CartelaLinesSortCard extends ConsumerWidget {
-  const _CartelaLinesSortCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final l10n = context.l10n;
-    final sortMode = ref.watch(cartelaSortModeProvider);
-    final sortEnabled = sortMode.sortsByLines;
-
-    return SwitchListTile.adaptive(
-      contentPadding: EdgeInsets.zero,
-      secondary: Icon(
-        Icons.view_agenda_outlined,
-        color: sortEnabled
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant,
-      ),
-      title: Text(
-        l10n.drawerSortCartelasByLines,
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      value: sortEnabled,
-      onChanged: (value) {
-        unawaited(
-          ref
-              .read(cartelaSortModeProvider.notifier)
-              .setLinesSortEnabled(value),
-        );
-      },
-    );
-  }
-}
-
 class _CartelaRemainsSortCard extends ConsumerWidget {
   const _CartelaRemainsSortCard();
 
@@ -1388,12 +1368,6 @@ class _CartelaRemainsSortCard extends ConsumerWidget {
             l10n.drawerSortCartelasByRemains,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(
-            l10n.drawerSortCartelasByRemainsSubtitle,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           value: sortEnabled,

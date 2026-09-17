@@ -232,5 +232,78 @@ void main() {
       );
       expect(primary, isNull);
     });
+
+    test('currentGameForPlayer strips Big Game when excludeBigGame', () {
+      final big = _game(
+        sessionId: 'bg',
+        status: GameStatus.playing,
+        category: GameCategory.bigGame,
+      );
+      expect(
+        currentGameForPlayer(
+          operations: _ops(live: big),
+          excludeBigGame: true,
+        ),
+        isNull,
+      );
+      expect(
+        currentGameForPlayer(
+          operations: _ops(live: big),
+          excludeBigGame: false,
+        )?.sessionId,
+        'bg',
+      );
+    });
+
+    test('operationsHasStandardGameSurface is false for Big Game only', () {
+      final big = _game(
+        sessionId: 'bg',
+        status: GameStatus.playing,
+        category: GameCategory.bigGame,
+      );
+      expect(
+        operationsHasStandardGameSurface(_ops(live: big)),
+        isFalse,
+      );
+    });
+
+    test('operationsHasStandardGameSurface is true with standard registration',
+        () {
+      final big = _game(
+        sessionId: 'bg',
+        status: GameStatus.playing,
+        category: GameCategory.bigGame,
+      );
+      final normal = _game(
+        sessionId: 'n1',
+        status: GameStatus.ready,
+        canRegister: true,
+      );
+      expect(
+        operationsHasStandardGameSurface(
+          _ops(live: big, registration: normal),
+        ),
+        isTrue,
+      );
+    });
+
+    test('LiveUiMode is empty when only Big Game with excludeBigGame', () {
+      final big = _game(
+        sessionId: 'bg',
+        status: GameStatus.playing,
+        category: GameCategory.bigGame,
+      );
+      final state = resolveLiveUiMode(
+        ResolveLiveUiModeInput(
+          operations: _ops(live: big),
+          ownsLiveSessionCartelas: true,
+          hasPrimarySessionCartelas: true,
+          now: DateTime.utc(2026, 9, 15),
+          excludeBigGame: true,
+        ),
+      );
+      expect(state.mode, LiveUiMode.empty);
+      expect(state.primaryGame, isNull);
+    });
   });
 }

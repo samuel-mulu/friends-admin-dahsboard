@@ -12,7 +12,8 @@ enum BigGamePhase {
 }
 
 /// Mirrors backend [canRegisterForBigGameWindow]: open when registration has
-/// started and play start is still in the future (or open-ended / null start).
+/// started and play start is still in the future (or open-ended / null start
+/// for stranded recovery). Option A opens Round N+1 only after Round N finishes.
 bool isBigGameRegistrationWindowOpen(
   GameModel game, {
   required DateTime now,
@@ -31,7 +32,7 @@ bool isBigGameRegistrationWindowOpen(
 
   final scheduledStartAt = game.scheduledStartAt;
   if (scheduledStartAt == null) {
-    // Open-ended next-round registration while a prior round is still live.
+    // Stranded READY recovery (play start not armed yet).
     return registrationOpensAt != null || game.canRegister;
   }
 
@@ -87,11 +88,14 @@ BigGamePhase resolveBigGamePhase(
 
 bool _isBetweenRounds(GameModel game, {required DateTime now}) {
   final nextRoundStartsAt = game.nextRoundStartsAt;
-  if (nextRoundStartsAt != null && now.isBefore(nextRoundStartsAt)) {
-    return true;
+  if (nextRoundStartsAt != null) {
+    // Armed play-start / registration-close deadline from interRoundDelaySeconds.
+    // Once it passes, do not stay stuck in betweenRounds forever.
+    return now.isBefore(nextRoundStartsAt);
   }
 
   final roundCount = game.roundCount ?? 1;
   final currentRound = game.currentRound ?? game.roundIndex ?? 1;
+  // Recovery only: finished earlier round and next READY not armed on payload yet.
   return currentRound < roundCount;
 }

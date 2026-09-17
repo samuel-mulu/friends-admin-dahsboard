@@ -171,6 +171,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return false;
     }
 
+    // `/games` ignores Big Game for idle clear (banner-only). Embedded Big Game
+    // host keeps the full operations surface.
+    if (!widget.embedded) {
+      return !operationsHasStandardGameSurface(
+        operations,
+        current: current,
+      );
+    }
+
     return !operations.hasActiveGame &&
         operations.nextUpcomingGameFor(current: current) == null;
   }
@@ -643,8 +652,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _showWinnerCartelaDialogForReview(
-    List<SessionWinnerResultModel> results,
-  ) {
+    List<SessionWinnerResultModel> results, {
+    DateTime? pauseEndsAt,
+    int? roundIndex,
+    int? roundCount,
+  }) {
     if (!mounted || results.isEmpty) {
       return;
     }
@@ -652,7 +664,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _review.winnerCartelaDialogVisible = true;
     setState(() {});
     unawaited(
-      showWinnerCartelaDialog(context: context, results: results).whenComplete(
+      showWinnerCartelaDialog(
+        context: context,
+        results: results,
+        pauseEndsAt: pauseEndsAt,
+        roundIndex: roundIndex,
+        roundCount: roundCount,
+      ).whenComplete(
         () {
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
@@ -1496,7 +1514,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           return;
         }
 
-        if (!confirmedEmpty && priorGame != null) {
+        final mayRetainPriorOnEmptyResolve =
+            !confirmedEmpty &&
+            priorGame != null &&
+            (widget.embedded || !priorGame.isBigGame);
+        if (mayRetainPriorOnEmptyResolve) {
           _safeSetState(generation, () {
             _errorMessage = null;
             _emptyMessage = null;
@@ -2691,8 +2713,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operationsSyncSnapshot,
         context: 'load_game_fallback',
       )) {
+        final retained = !widget.embedded && _game?.isBigGame == true
+            ? null
+            : _game;
         return (
-          game: _game,
+          game: retained,
           preloadedPrimaryCartelas: null,
           preloadedPrimaryCartelasToken: null,
         );
@@ -2708,9 +2733,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     final ops = resolvedOperations;
+    final excludeBigGame = !widget.embedded;
 
     final liveCandidate = ops.liveGame ?? ops.checkingGame;
     final registrationGame = ops.registrationOpenGame;
+    // On `/games`, never use Big Game live ownership to decide primary — that
+    // belongs on `/games/big-game`. Fetching those cartelas also leaked the
+    // Registered list under the banner.
+    final ownershipLiveCandidate = nonBigGame(
+      liveCandidate,
+      excludeBigGame: excludeBigGame,
+    );
     List<GameCartelaModel>? preloadedPrimaryCartelas;
     CurrentCartelaSnapshotToken? preloadedPrimaryCartelasToken;
 
@@ -2719,12 +2752,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final game =
         !isGuest &&
             allowOwnershipLookup &&
-            liveCandidate != null &&
+            ownershipLiveCandidate != null &&
             registrationGame != null &&
-            liveCandidate.sessionId != null &&
-            liveCandidate.sessionId!.isNotEmpty
+            ownershipLiveCandidate.sessionId != null &&
+            ownershipLiveCandidate.sessionId!.isNotEmpty
         ? () {
-            final liveSessionId = liveCandidate.sessionId!;
+            final liveSessionId = ownershipLiveCandidate.sessionId!;
             final snapshotToken = _registration
                 .captureCurrentSessionFetchToken(liveSessionId);
             return _gamesRepository
@@ -2775,9 +2808,25 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                   ops,
                   ownsLiveCartelas: _ownsLiveCartelasForOperations(ops),
                 ) ??
-                ops.currentGameForPlayer,
+                currentGameForPlayer(
+                  operations: ops,
+                  excludeBigGame: excludeBigGame,
+                ),
           );
-    final resolvedGame = await game;
+    var resolvedGame = await game;
+    // Hard stop: never paint Big Game as the `/games` primary.
+    if (excludeBigGame && resolvedGame?.isBigGame == true) {
+      resolvedGame = null;
+      preloadedPrimaryCartelas = null;
+      preloadedPrimaryCartelasToken = null;
+    } else if (preloadedPrimaryCartelas != null &&
+        resolvedGame?.sessionId != null &&
+        preloadedPrimaryCartelas!.isNotEmpty &&
+        preloadedPrimaryCartelas!.first.gameId != resolvedGame!.sessionId) {
+      // Ownership fetch was for a different session than the resolved primary.
+      preloadedPrimaryCartelas = null;
+      preloadedPrimaryCartelasToken = null;
+    }
     _joinSessionRoomEarly(resolvedGame?.sessionId);
     return (
       game: resolvedGame,
@@ -3987,8 +4036,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  /// One 20s finished summary per non-final round. No winner dialog, no
-  /// Continue — play resumes when [roundPausedUntil] elapses.
+  /// One 20s finished summary per non-final round. No Continue — play resumes
+  /// when [roundPausedUntil] elapses. Banner tap opens the winner cartela modal.
   void _maybeStartChainInterRoundSummary() {
     final pauseKey = _chainRoundPauseKey;
     if (pauseKey == null) {
@@ -4165,6 +4214,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final results = _sessionWinnerResultsForDisplay;
     final waitingOnWinners =
         results.isEmpty && winnerNumbers.isEmpty;
+    final dialogResults = _winnerReviewDialogResults;
+    final pauseEndsAt = game?.roundPausedUntil;
 
     return RoundFinishedBanner(
       isLoading: _review.sessionWinnerResultsLoading && waitingOnWinners,
@@ -4174,6 +4225,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       isInterRoundPause: true,
       interRoundTitle: context.l10n.chainRoundBreakTitle(finishedRound),
       secondsRemaining: _chainRoundPauseSecondsLeft,
+      onOpenWinners:
+          !_winnerReviewEligibleViewer || dialogResults.isEmpty
+          ? null
+          : () => _showWinnerCartelaDialogForReview(
+                dialogResults,
+                pauseEndsAt: pauseEndsAt,
+                roundIndex: finishedRound,
+                roundCount: game?.displayRoundCount,
+              ),
     );
   }
 
