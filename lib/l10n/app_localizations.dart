@@ -1884,6 +1884,24 @@ abstract class AppLocalizations {
   /// **'None yet — pick numbers below.'**
   String get liveRegisteredCartelasEmpty;
 
+  /// No description provided for @registeredCartelasOverflowCount.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String registeredCartelasOverflowCount(int count);
+
+  /// No description provided for @registeredCartelasShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all registered cartelas'**
+  String get registeredCartelasShowMore;
+
+  /// No description provided for @registeredCartelasShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get registeredCartelasShowLess;
+
   /// No description provided for @liveMissedRoundHelper.
   ///
   /// In en, this message translates to:

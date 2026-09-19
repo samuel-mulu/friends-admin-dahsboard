@@ -13,6 +13,7 @@ import 'big_game_info_strip.dart';
 import 'chain_game_info_strip.dart';
 import 'chain_game_rounds_dialog.dart';
 import 'game_compact_info_bar.dart';
+import 'collapsible_registered_cartela_chips.dart';
 import 'live_status_chip.dart';
 
 enum LiveTopSectionVariant { livePlay, registration }
@@ -538,30 +539,11 @@ class _NextGameDetailPanel extends ConsumerWidget {
             ),
           ),
           VGap.xs,
-          Wrap(
+          CollapsibleRegisteredCartelaChips(
+            numbers: registeredCartelaNumbers,
+            style: CollapsibleRegisteredCartelaChipStyle.pill,
             spacing: 6,
             runSpacing: 6,
-            children: registeredCartelaNumbers
-                .map(
-                  (number) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$number',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(growable: false),
           ),
         ],
       ],

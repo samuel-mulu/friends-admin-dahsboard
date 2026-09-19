@@ -326,6 +326,10 @@
   "liveNextQueuedPlayLabel": "ቀጣይ ተራ ጨዋታ",
   "liveRegisteredCartelasLabel": "የተመዘገቡ ካርቴላዎች",
   "liveRegisteredCartelasEmpty": "እስካሁን የለም — ከታች ቁጥሮችን ምረጥ።",
+
+  "registeredCartelasOverflowCount": "+{count}",
+  "registeredCartelasShowMore": "ሁሉንም ካርቴላዎች አሳይ",
+  "registeredCartelasShowLess": "ያነሱ አሳይ",
   "liveMissedRoundHelper": "ይህን ዙር አምልጦሃል። ለቀጣዩ ተራ ጨዋታ አሁን ተመዝገብ።",
   "liveMissedRoundYouMissedGame": "ይህን ዙር አምልጠሃል።",
   "liveMissedNoNextTitle": "ይህን ዙር አምልጠሃል",

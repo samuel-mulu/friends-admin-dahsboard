@@ -1028,6 +1028,17 @@ class AppLocalizationsTi extends AppLocalizations {
   String get liveRegisteredCartelasEmpty => 'ገና የለን — ኣብ ታሕቲ ቁጽሪታት ምረጽ።';
 
   @override
+  String registeredCartelasOverflowCount(int count) {
+    return '+$count';
+  }
+
+  @override
+  String get registeredCartelasShowMore => 'ኩሎም ካርቴላታት ኣርኢ';
+
+  @override
+  String get registeredCartelasShowLess => 'ኣጉድስ';
+
+  @override
   String get liveMissedRoundHelper => 'ነዚ ዙር ሓሊፍካዮ። ንዝቕጽል ተራ ጸወታ ሕጂ ተመዝገብ።';
 
   @override

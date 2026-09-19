@@ -7,6 +7,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_rule_localized_name.dart';
 import 'collapsible_live_top_section.dart';
+import 'collapsible_registered_cartela_chips.dart';
 
 enum LiveNextRoundSectionVariant {
   nextQueued,
@@ -123,17 +124,11 @@ class LiveNextRoundRegistrationSection extends ConsumerWidget {
               ),
             )
           else
-            Wrap(
+            CollapsibleRegisteredCartelaChips(
+              numbers: registeredCartelaNumbers,
+              style: CollapsibleRegisteredCartelaChipStyle.materialChip,
               spacing: 6,
               runSpacing: 6,
-              children: [
-                for (final number in registeredCartelaNumbers)
-                  Chip(
-                    label: Text('#$number'),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-              ],
             ),
         ],
         const SizedBox(height: AppSpacing.md),

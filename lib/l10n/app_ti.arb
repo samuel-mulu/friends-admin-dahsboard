@@ -326,6 +326,10 @@
   "liveNextQueuedPlayLabel": "ዝቕጽል ተራ ጸወታ",
   "liveRegisteredCartelasLabel": "ዝተመዝገቡ ካርቴላታት",
   "liveRegisteredCartelasEmpty": "ገና የለን — ኣብ ታሕቲ ቁጽሪታት ምረጽ።",
+
+  "registeredCartelasOverflowCount": "+{count}",
+  "registeredCartelasShowMore": "ኩሎም ካርቴላታት ኣርኢ",
+  "registeredCartelasShowLess": "ኣጉድስ",
   "liveMissedRoundHelper": "ነዚ ዙር ሓሊፍካዮ። ንዝቕጽል ተራ ጸወታ ሕጂ ተመዝገብ።",
   "liveMissedRoundYouMissedGame": "ነዚ ዙር ሓሊፍካዮ።",
   "liveMissedNoNextTitle": "ነዚ ዙር ሓሊፍካዮ",

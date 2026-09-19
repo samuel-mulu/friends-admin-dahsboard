@@ -1060,6 +1060,17 @@ class AppLocalizationsOm extends AppLocalizations {
       'Amma hin jiru — armaan gadii lakkoofsa filadhu.';
 
   @override
+  String registeredCartelasOverflowCount(int count) {
+    return '+$count';
+  }
+
+  @override
+  String get registeredCartelasShowMore => 'Kaartelaa hunda agarsiisi';
+
+  @override
+  String get registeredCartelasShowLess => 'Xiqqeessi';
+
+  @override
   String get liveMissedRoundHelper =>
       'Raawundii kana irra darbite. Tapha itti aanuuf amma galmeessi.';
 

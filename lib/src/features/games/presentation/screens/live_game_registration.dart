@@ -2061,36 +2061,9 @@ class _RegistrationToolbar extends StatelessWidget {
           ],
           if (registeredNumbers.isNotEmpty) ...[
             VGap.md,
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: registeredNumbers
-                  .map(
-                    (number) => Material(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(AppSpacing.sm),
-                      child: InkWell(
-                        onTap: selectModeEnabled
-                            ? null
-                            : () => onRegisteredNumberTap(number),
-                        borderRadius: BorderRadius.circular(AppSpacing.sm),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xxs,
-                          ),
-                          child: Text(
-                            '$number',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
+            CollapsibleRegisteredCartelaChips(
+              numbers: registeredNumbers,
+              onNumberTap: selectModeEnabled ? null : onRegisteredNumberTap,
             ),
           ],
           if (!isGuest &&

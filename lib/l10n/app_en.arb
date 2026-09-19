@@ -1016,6 +1016,17 @@
   "liveRegisteredCartelasEmpty": "None yet — pick numbers below.",
   "@liveRegisteredCartelasEmpty": {},
 
+  "registeredCartelasOverflowCount": "+{count}",
+  "@registeredCartelasOverflowCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "registeredCartelasShowMore": "Show all registered cartelas",
+  "@registeredCartelasShowMore": {},
+
+  "registeredCartelasShowLess": "Show less",
+  "@registeredCartelasShowLess": {},
+
   "liveMissedRoundHelper": "You missed the current game. Register for the next round.",
   "@liveMissedRoundHelper": {},
 

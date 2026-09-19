@@ -244,6 +244,10 @@
   "liveNextQueuedPlayLabel": "Tapha itti aanu",
   "liveRegisteredCartelasLabel": "Kaartelaa galmaa'an",
   "liveRegisteredCartelasEmpty": "Amma hin jiru — armaan gadii lakkoofsa filadhu.",
+
+  "registeredCartelasOverflowCount": "+{count}",
+  "registeredCartelasShowMore": "Kaartelaa hunda agarsiisi",
+  "registeredCartelasShowLess": "Xiqqeessi",
   "liveMissedRoundHelper": "Raawundii kana irra darbite. Tapha itti aanuuf amma galmeessi.",
   "liveMissedRoundYouMissedGame": "Raawundii kana irra darbite.",
   "liveMissedNoNextTitle": "Raawundii kana irra darbite",

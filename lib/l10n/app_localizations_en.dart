@@ -1054,6 +1054,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get liveRegisteredCartelasEmpty => 'None yet — pick numbers below.';
 
   @override
+  String registeredCartelasOverflowCount(int count) {
+    return '+$count';
+  }
+
+  @override
+  String get registeredCartelasShowMore => 'Show all registered cartelas';
+
+  @override
+  String get registeredCartelasShowLess => 'Show less';
+
+  @override
   String get liveMissedRoundHelper =>
       'You missed the current game. Register for the next round.';
 

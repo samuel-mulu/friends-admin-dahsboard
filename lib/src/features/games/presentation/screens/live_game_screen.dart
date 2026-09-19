@@ -37,6 +37,7 @@ import '../../domain/cartela_board_preview_cache.dart';
 import '../widgets/bulk_cartela_review_sheet.dart';
 import '../widgets/cartela_registration_sheet.dart';
 import '../widgets/collapsible_live_top_section.dart';
+import '../widgets/collapsible_registered_cartela_chips.dart';
 import '../widgets/live_next_round_registration_section.dart';
 import '../widgets/live_cartela_card.dart';
 import '../widgets/chain_game_info_strip.dart';

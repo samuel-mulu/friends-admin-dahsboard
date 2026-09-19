@@ -1025,6 +1025,17 @@ class AppLocalizationsAm extends AppLocalizations {
   String get liveRegisteredCartelasEmpty => 'እስካሁን የለም — ከታች ቁጥሮችን ምረጥ።';
 
   @override
+  String registeredCartelasOverflowCount(int count) {
+    return '+$count';
+  }
+
+  @override
+  String get registeredCartelasShowMore => 'ሁሉንም ካርቴላዎች አሳይ';
+
+  @override
+  String get registeredCartelasShowLess => 'ያነሱ አሳይ';
+
+  @override
   String get liveMissedRoundHelper => 'ይህን ዙር አምልጦሃል። ለቀጣዩ ተራ ጨዋታ አሁን ተመዝገብ።';
 
   @override
