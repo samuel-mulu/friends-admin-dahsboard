@@ -371,5 +371,71 @@
     "am": "3 ስኴር + 2 ማዕዘን የማይገናኙ",
     "ti": "3 ስኴር + 2 ኩርናዕ ዘይራከቡ",
     "om": "3 squares + 2 angles all separate"
+  },
+  "ONE_DIAGONAL": {
+    "en": "1 diagonal",
+    "am": "1 ዲያጎናል",
+    "ti": "1 ዲያጎናል",
+    "om": "1 diagonal"
+  },
+  "ONE_SQUARE": {
+    "en": "1 square",
+    "am": "1 ስኴር",
+    "ti": "1 ስኴር",
+    "om": "1 square"
+  },
+  "TWO_SQUARES": {
+    "en": "2 squares all separate",
+    "am": "2 ስኴር የማይገናኙ",
+    "ti": "2 ስኴር ዘይራከቡ",
+    "om": "2 squares all separate"
+  },
+  "ONE_ROW_ONE_COLUMN": {
+    "en": "1 row + 1 column",
+    "am": "1 ረድፍ + 1 አምድ",
+    "ti": "1 መስመር + 1 ዓምዲ",
+    "om": "1 row + 1 column"
+  },
+  "ONE_RECTANGLE": {
+    "en": "1 rectangle",
+    "am": "1 አራት ማዕዘን",
+    "ti": "1 ሬክታንግል",
+    "om": "1 rectangle"
+  },
+  "ONE_LINE_TOUCH_FREE": {
+    "en": "1 line touching free",
+    "am": "1 በፍሪ መስመር",
+    "ti": "1 ፍሪ ዝነክእ መስመር",
+    "om": "1 line touching free"
+  },
+  "ONE_LINE_WITHOUT_FREE": {
+    "en": "1 line without free",
+    "am": "1 ያለ ፍሪ መስመር",
+    "ti": "1 ፍሪ ዘይነክእ መስመር",
+    "om": "1 line without free"
+  },
+  "ONE_COLUMN": {
+    "en": "1 column",
+    "am": "1 አምድ",
+    "ti": "1 ዓምዲ",
+    "om": "1 column"
+  },
+  "TWO_COLUMNS": {
+    "en": "2 columns",
+    "am": "2 አምድ",
+    "ti": "2 ዓምዲ",
+    "om": "2 columns"
+  },
+  "ONE_ROW": {
+    "en": "1 row",
+    "am": "1 ረድፍ",
+    "ti": "1 መስመር",
+    "om": "1 row"
+  },
+  "TWO_ROWS": {
+    "en": "2 rows",
+    "am": "2 ረድፍ",
+    "ti": "2 መስመር",
+    "om": "2 rows"
   }
 }

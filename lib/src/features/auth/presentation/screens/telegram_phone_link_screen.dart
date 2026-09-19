@@ -121,11 +121,18 @@ Future<void> launchTelegramLogin(BuildContext context, WidgetRef ref) async {
         : '$baseUrl/auth/telegram/widget',
   );
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched && context.mounted) {
+  if (!context.mounted) {
+    return;
+  }
+  if (!launched) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.telegramOpenFailed)),
     );
+    return;
   }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(context.l10n.telegramBrowserHandoff)),
+  );
 }
 
 Map<String, dynamic>? parseTelegramAuthUri(Uri uri) {

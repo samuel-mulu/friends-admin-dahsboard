@@ -1014,6 +1014,66 @@ class GameRulePatternPreview {
         {24},
       ],
     ),
+    'ONE_DIAGONAL': _sample(
+      markedCells: _diagMain(),
+      linePatterns: [_diagMain()],
+    ),
+    'ONE_SQUARE': _sample(
+      markedCells: _square2x2(0, 0),
+      squarePatterns: [_square2x2(0, 0)],
+    ),
+    'TWO_SQUARES': _sample(
+      markedCells: _union([_square2x2(0, 0), _square2x2(3, 3)]),
+      squarePatterns: [_square2x2(0, 0), _square2x2(3, 3)],
+    ),
+    'ONE_ROW_ONE_COLUMN': _sample(
+      markedCells: _union([_row(0), _col(0)]),
+      linePatterns: [_row(0), _col(0)],
+    ),
+    'ONE_RECTANGLE': _sample(
+      markedCells: _coords([
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [1, 1],
+        [1, 2],
+      ]),
+      shapePieces: [
+        _coords([
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 0],
+          [1, 1],
+          [1, 2],
+        ]),
+      ],
+    ),
+    'ONE_LINE_TOUCH_FREE': _sample(
+      markedCells: _row(2),
+      linePatterns: [_row(2)],
+    ),
+    'ONE_LINE_WITHOUT_FREE': _sample(
+      markedCells: _row(0),
+      linePatterns: [_row(0)],
+    ),
+    'ONE_COLUMN': _sample(
+      markedCells: _col(0),
+      linePatterns: [_col(0)],
+    ),
+    'TWO_COLUMNS': _sample(
+      markedCells: _union([_col(0), _col(4)]),
+      linePatterns: [_col(0), _col(4)],
+    ),
+    'ONE_ROW': _sample(
+      markedCells: _row(0),
+      linePatterns: [_row(0)],
+    ),
+    'TWO_ROWS': _sample(
+      markedCells: _union([_row(0), _row(4)]),
+      linePatterns: [_row(0), _row(4)],
+    ),
   };
 
   static final List<GameRulePatternSample> _bigNOrZSamples =
@@ -1162,5 +1222,20 @@ class GameRulePatternPreview {
         'Complete 4 lines that do not pass through FREE. Overlap allowed.',
     'THREE_SQUARES_TWO_ANGLES':
         'Complete 3 squares and 2 of the 4 corner angles. Overlap not allowed.',
+    'ONE_DIAGONAL': 'Complete 1 diagonal.',
+    'ONE_SQUARE': 'Complete 1 2x2 square.',
+    'TWO_SQUARES':
+        'Complete 2 separate 2x2 squares. Overlap not allowed.',
+    'ONE_ROW_ONE_COLUMN':
+        'Complete 1 row and 1 column. Overlap allowed.',
+    'ONE_RECTANGLE': 'Complete 1 rectangle (2x3 or 3x2).',
+    'ONE_LINE_TOUCH_FREE':
+        'Complete 1 line that passes through FREE.',
+    'ONE_LINE_WITHOUT_FREE':
+        'Complete 1 line that does not pass through FREE.',
+    'ONE_COLUMN': 'Complete any 1 full column.',
+    'TWO_COLUMNS': 'Complete any 2 full columns. Overlap allowed.',
+    'ONE_ROW': 'Complete any 1 full row.',
+    'TWO_ROWS': 'Complete any 2 full rows. Overlap allowed.',
   };
 }

@@ -543,6 +543,7 @@
   "telegramUnlink": "Unlink Telegram",
   "telegramUnlinked": "Telegram unlinked.",
   "telegramOpenFailed": "Could not open Telegram login.",
+  "telegramBrowserHandoff": "In the browser, sign in with Telegram, then tap Open Friends Bingo to return here.",
   "telegramLinkPhoneTitle": "Confirm your phone",
   "telegramLinkPhoneSubtitle": "Enter your phone number. If it is already registered, we will link Telegram and sign you in. If it is new, we will create your account.",
   "telegramCompleteSignIn": "Verify and continue",

@@ -1866,6 +1866,10 @@ class AppLocalizationsOm extends AppLocalizations {
   String get telegramOpenFailed => 'Could not open Telegram login.';
 
   @override
+  String get telegramBrowserHandoff =>
+      'In the browser, sign in with Telegram, then tap Open Friends Bingo to return here.';
+
+  @override
   String get telegramLinkPhoneTitle => 'Confirm your phone';
 
   @override

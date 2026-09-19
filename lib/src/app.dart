@@ -129,7 +129,6 @@ class _FriendsBingoAppState extends ConsumerState<FriendsBingoApp>
     final locale = ref.watch(localeProvider);
     ref.watch(gameRuleNamesRepositoryProvider);
     ref.watch(telegramDeepLinkListenerProvider);
-    ref.watch(telegramDeepLinkListenerProvider);
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (next.isInitializing) {

@@ -3256,6 +3256,12 @@ abstract class AppLocalizations {
   /// **'Could not open Telegram login.'**
   String get telegramOpenFailed;
 
+  /// No description provided for @telegramBrowserHandoff.
+  ///
+  /// In en, this message translates to:
+  /// **'In the browser, sign in with Telegram, then tap Open Friends Bingo to return here.'**
+  String get telegramBrowserHandoff;
+
   /// No description provided for @telegramLinkPhoneTitle.
   ///
   /// In en, this message translates to:

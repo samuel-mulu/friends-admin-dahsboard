@@ -547,8 +547,6 @@ class CartelaMarkedPatternEvaluator {
 
     return {
       'FULL_HOUSE': _singlePatternRule('full_house', _allCellsPattern()),
-      'ONE_ROW': _countedRule('rows', allRows, 1),
-      'ONE_DIAGONAL': _countedRule('diagonals', allDiagonals, 1),
       'MIX_01': _comboRule([
         _RequiredGroup(
           key: 'columns',
@@ -1034,6 +1032,51 @@ class CartelaMarkedPatternEvaluator {
           disallowOverlapWithGroups: const {'squares'},
         ),
       ]),
+      'ONE_DIAGONAL': _countedRule('diagonals', allDiagonals, 1),
+      'ONE_SQUARE': _comboRule([
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 1,
+        ),
+      ]),
+      'TWO_SQUARES': _comboRule([
+        _RequiredGroup(
+          key: 'squares',
+          candidates: allSquares,
+          requiredCount: 2,
+          disallowOverlapWithinGroup: true,
+        ),
+      ]),
+      'ONE_ROW_ONE_COLUMN': _comboRule([
+        _RequiredGroup(key: 'rows', candidates: allRows, requiredCount: 1),
+        _RequiredGroup(
+          key: 'columns',
+          candidates: allColumns,
+          requiredCount: 1,
+        ),
+      ]),
+      'ONE_RECTANGLE': _comboRule([
+        _RequiredGroup(
+          key: 'rectangles',
+          candidates: allRectangles,
+          requiredCount: 1,
+        ),
+      ]),
+      'ONE_LINE_TOUCH_FREE': _countedRule(
+        'lines_touching_free',
+        touchingFreeLines,
+        1,
+      ),
+      'ONE_LINE_WITHOUT_FREE': _countedRule(
+        'lines_without_free',
+        withoutFreeLines,
+        1,
+      ),
+      'ONE_COLUMN': _countedRule('columns', allColumns, 1),
+      'TWO_COLUMNS': _countedRule('columns', allColumns, 2),
+      'ONE_ROW': _countedRule('rows', allRows, 1),
+      'TWO_ROWS': _countedRule('rows', allRows, 2),
     };
   }
 

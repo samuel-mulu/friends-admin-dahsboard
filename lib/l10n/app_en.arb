@@ -1809,6 +1809,8 @@
 
   "telegramOpenFailed": "Could not open Telegram login.",
   "@telegramOpenFailed": {},
+  "telegramBrowserHandoff": "In the browser, sign in with Telegram, then tap Open Friends Bingo to return here.",
+  "@telegramBrowserHandoff": {},
 
   "telegramLinkPhoneTitle": "Confirm your phone",
   "@telegramLinkPhoneTitle": {},
