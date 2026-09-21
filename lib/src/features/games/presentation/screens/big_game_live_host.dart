@@ -30,6 +30,7 @@ class BigGameLiveHost extends ConsumerStatefulWidget {
     /// (sticky live scroller owns scroll). Registration embeds may allow PTR
     /// from the parent shell.
     this.isLivePlaying = false,
+    this.preserveLiveInstanceOnTerminalTransition = false,
     super.key,
   });
 
@@ -43,6 +44,10 @@ class BigGameLiveHost extends ConsumerStatefulWidget {
   final Future<void> Function()? onCountdownExpired;
   final bool isLivePlaying;
 
+  /// PLAYING → FINISHED on the same session: keep nested [LiveGameScreen] so
+  /// the 60s post-game summary is not torn down by bootstrap remount.
+  final bool preserveLiveInstanceOnTerminalTransition;
+
   @override
   ConsumerState<BigGameLiveHost> createState() => _BigGameLiveHostState();
 }
@@ -51,6 +56,18 @@ class _BigGameLiveHostState extends ConsumerState<BigGameLiveHost> {
   GameModel? _bootstrapped;
   bool _bootstrapping = true;
   Object? _bootstrapError;
+
+  bool _isTerminalTransition({
+    required GameStatus from,
+    required GameStatus to,
+  }) {
+    final wasLive = from == GameStatus.playing ||
+        from == GameStatus.checking ||
+        from == GameStatus.winnerWindow;
+    final isTerminal =
+        to == GameStatus.finished || to == GameStatus.noWinner;
+    return wasLive && isTerminal;
+  }
 
   @override
   void initState() {
@@ -67,7 +84,18 @@ class _BigGameLiveHostState extends ConsumerState<BigGameLiveHost> {
     final nextRegChanged =
         oldWidget.game.nextRoundRegistration?.sessionId !=
         widget.game.nextRoundRegistration?.sessionId;
-    if (oldId != nextId || (statusChanged && widget.isLivePlaying)) {
+    final terminalOnSameSession = oldId != null &&
+        oldId == nextId &&
+        widget.preserveLiveInstanceOnTerminalTransition &&
+        statusChanged &&
+        _isTerminalTransition(
+          from: oldWidget.game.status,
+          to: widget.game.status,
+        );
+    if (oldId != nextId ||
+        (statusChanged &&
+            widget.isLivePlaying &&
+            !terminalOnSameSession)) {
       unawaited(_runBootstrap(widget.game));
       return;
     }

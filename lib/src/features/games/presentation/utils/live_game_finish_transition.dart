@@ -1,4 +1,5 @@
 import '../../data/models/game_model.dart';
+import 'big_game_live_presentation.dart' as big_game_advance;
 
 /// Whether a FINISHED or NO_WINNER transition should run terminal side effects.
 bool shouldRunFinishTransition({
@@ -36,18 +37,49 @@ bool isTerminalGameStatus(GameStatus status) {
       status == GameStatus.cancelled;
 }
 
+bool isAdvanceRegistrationEligible({
+  required GameModel next,
+  required bool embeddedBigGame,
+  required DateTime now,
+}) {
+  if (next.status != GameStatus.ready) {
+    return false;
+  }
+  if (embeddedBigGame && next.isBigGame) {
+    return big_game_advance.liveRegistrationEligible(
+      game: next,
+      now: now,
+      embeddedBigGame: true,
+    );
+  }
+  return next.canRegister;
+}
+
 /// True when ops exposes a different READY session the player can register for.
 bool hasPlayableAdvanceTarget({
   required GameOperationsCurrentResponse? operations,
   required GameModel terminalGame,
+  bool embeddedBigGame = false,
+  DateTime? now,
 }) {
   if (operations == null) {
     return false;
   }
+  if (embeddedBigGame && terminalGame.isBigGame) {
+    final resolved = big_game_advance.resolveEmbeddedBigGameAdvanceTarget(
+      terminalGame: terminalGame,
+      operations: operations,
+      now: now ?? DateTime.now(),
+    );
+    return resolved != null;
+  }
   final next = operations.resolveAdvanceTargetFor(terminalGame: terminalGame);
   return next != null &&
-      next.status == GameStatus.ready &&
-      next.canRegister;
+      isAdvanceRegistrationEligible(
+        next: next,
+        embeddedBigGame: embeddedBigGame,
+        now: now ?? DateTime.now(),
+      );
 }
 
 /// Keeps the current session on screen during finished review instead of

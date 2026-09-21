@@ -35,6 +35,7 @@ class LiveReviewController {
   Timer? winnerWindowPreloadPollTimer;
   bool winnerCartelaDialogVisible = false;
   String? winnerCartelaDialogAutoShownForSessionId;
+  String? winnerCartelaDialogAutoShownForPauseKey;
   bool winnerWindowClosing = false;
   bool winnerWindowClosingTimedOut = false;
   int winnerWindowClosingPollAttempts = 0;
@@ -388,6 +389,7 @@ class LiveReviewController {
     chainInterRoundSummaryActive = false;
     chainInterRoundSummaryDismissed = false;
     chainInterRoundSummaryKey = null;
+    winnerCartelaDialogAutoShownForPauseKey = null;
   }
 
   /// Starts the Chain Game 20s finished-summary overlay for one pause window.

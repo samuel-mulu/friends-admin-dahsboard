@@ -1,6 +1,7 @@
 import '../../../../core/utils/api_date_time.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
+import '../../data/models/session_winner_result_model.dart';
 
 /// After a non-final Chain Game round, winners are REGISTERED again on the
 /// server so they can Bingo later. Local `isWinner` patches from round 1 must
@@ -93,6 +94,77 @@ List<int> winnerCartelaNumbersFromChainRoundResults({
     ];
   }
   return const [];
+}
+
+/// Pinned winners bar: show every round when there are few; otherwise round 1,
+/// the most recently decided round, and the final round when it has a winner.
+List<ChainRoundResultSummary> condensedChainRoundResultsForBar({
+  required List<ChainRoundResultSummary> roundResults,
+  required int roundCount,
+}) {
+  final decided = roundResults
+      .where((round) => !round.isForfeited && round.winners.isNotEmpty)
+      .toList()
+    ..sort((a, b) => a.roundIndex.compareTo(b.roundIndex));
+
+  if (decided.length <= 3) {
+    return List<ChainRoundResultSummary>.unmodifiable(decided);
+  }
+
+  final picked = <int, ChainRoundResultSummary>{};
+  void add(ChainRoundResultSummary round) => picked[round.roundIndex] = round;
+
+  add(decided.first);
+  add(decided.last);
+  for (final round in decided) {
+    if (round.roundIndex == roundCount) {
+      add(round);
+      break;
+    }
+  }
+
+  final condensed = picked.values.toList()
+    ..sort((a, b) => a.roundIndex.compareTo(b.roundIndex));
+  return List<ChainRoundResultSummary>.unmodifiable(condensed);
+}
+
+/// API modal rows for one finished chain round (not the whole session).
+List<SessionWinnerResultModel> chainInterRoundDialogResults({
+  required List<SessionWinnerResultModel> modalResults,
+  required List<ChainRoundResultSummary> roundResults,
+  required int finishedRoundIndex,
+}) {
+  if (modalResults.isEmpty) {
+    return const [];
+  }
+
+  ChainRoundResultSummary? finishedRound;
+  for (final round in roundResults) {
+    if (round.roundIndex == finishedRoundIndex) {
+      finishedRound = round;
+      break;
+    }
+  }
+  if (finishedRound == null || finishedRound.winners.isEmpty) {
+    return const [];
+  }
+
+  final cartelaNumbers = {
+    for (final winner in finishedRound.winners)
+      if (winner.cartelaNumber > 0) winner.cartelaNumber,
+  };
+  final gameCartelaIds = {
+    for (final winner in finishedRound.winners)
+      if (winner.gameCartelaId.isNotEmpty) winner.gameCartelaId,
+  };
+
+  return modalResults
+      .where(
+        (result) =>
+            gameCartelaIds.contains(result.gameCartelaId) ||
+            cartelaNumbers.contains(result.cartelaNumber),
+      )
+      .toList(growable: false);
 }
 
 int? _positiveInt(Object? raw) {

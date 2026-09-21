@@ -1222,6 +1222,18 @@ class GameModel {
       }
     }
 
+    if ((current.status == GameStatus.finished ||
+            current.status == GameStatus.noWinner) &&
+        (incoming.status == GameStatus.winnerWindow ||
+            incoming.status == GameStatus.checking)) {
+      return incoming.copyWith(
+        status: current.status,
+        finishedAt: current.finishedAt ?? incoming.finishedAt,
+        winnerWindowEndsAt: null,
+        roundPausedUntil: null,
+      );
+    }
+
     final mergedStatus = _preferMoreLiveStatus(current.status, incoming.status);
     if (mergedStatus == incoming.status &&
         mergedStatus == current.status &&

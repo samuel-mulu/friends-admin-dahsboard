@@ -5,6 +5,7 @@ import 'live_presentation_phase.dart';
 import 'live_primary_game_selection.dart';
 import 'live_ready_atomic_visibility.dart';
 import 'live_ready_transition_lock.dart';
+import 'big_game_live_presentation.dart';
 import 'live_embedded_operations_snapshot.dart';
 
 /// Flutter-only presentation modes. These are not backend statuses.
@@ -87,6 +88,7 @@ class ResolveLiveUiModeInput {
     this.hasError = false,
     this.winnerWindowExpired = false,
     this.excludeBigGame = false,
+    this.embeddedBigGame = false,
   });
 
   final GameOperationsCurrentResponse? operations;
@@ -110,6 +112,9 @@ class ResolveLiveUiModeInput {
 
   /// Non-embedded Live (`/games`) never plays Big Game as primary.
   final bool excludeBigGame;
+
+  /// Embedded Big Game host only — never set on standard `/games` live.
+  final bool embeddedBigGame;
 }
 
 class LiveUiModeState {
@@ -531,6 +536,8 @@ class LiveUiModeResolver {
             calledNumbers: input.calledNumbers,
             staleAfter: input.preparingStaleAfter,
             blockingLiveGameExists: hasBlockingLiveGame,
+            postGameSummaryReviewActive:
+                input.holds.postGameSummaryReviewActive,
           );
 
     return LiveUiModeState(
@@ -598,6 +605,7 @@ class LiveUiModeResolver {
       calledNumbers: input.calledNumbers,
       staleAfter: input.preparingStaleAfter,
       blockingLiveGameExists: hasBlockingLiveGame,
+      postGameSummaryReviewActive: input.holds.postGameSummaryReviewActive,
     );
     final blocksPromotion = _blocksRegistrationPromotion(
       input: input,
@@ -675,6 +683,7 @@ class LiveUiModeResolver {
       calledNumbers: input.calledNumbers,
       staleAfter: input.preparingStaleAfter,
       blockingLiveGameExists: hasBlockingLiveGame,
+      postGameSummaryReviewActive: input.holds.postGameSummaryReviewActive,
     );
 
     final mode = _modeForPrimary(
@@ -683,6 +692,7 @@ class LiveUiModeResolver {
       ownsLiveCartelas: ownsLiveCartelas,
       hasPrimarySessionCartelas: input.hasPrimarySessionCartelas,
       operations: operations,
+      postGameSummaryReviewActive: input.holds.postGameSummaryReviewActive,
     );
 
     final secondaryRegistration =
@@ -693,6 +703,7 @@ class LiveUiModeResolver {
         );
 
     final registrationTarget = _registrationTarget(
+      input: input,
       primary: primary,
       nextUpcoming: nextUpcoming,
       hasPrimarySessionCartelas: input.hasPrimarySessionCartelas,
@@ -712,6 +723,7 @@ class LiveUiModeResolver {
     );
 
     final hideRegistrationCountdown = _hideRegistrationCountdown(
+      input: input,
       mode: mode,
       hasBlockingLiveGame: hasBlockingLiveGame,
       primary: primary,
@@ -724,7 +736,7 @@ class LiveUiModeResolver {
       registrationTargetIsCurrent: registrationTargetIsCurrent,
     );
 
-    final useRegistrationOpenLayout = _useRegistrationOpenLayout(
+    var useRegistrationOpenLayout = _useRegistrationOpenLayout(
       input: input,
       mode: mode,
       primary: primary,
@@ -733,6 +745,14 @@ class LiveUiModeResolver {
       registrationTargetIsCurrent: registrationTargetIsCurrent,
       presentationPhase: presentationPhase,
     );
+    if (input.embeddedBigGame &&
+        primary.isBigGame &&
+        primary.status == GameStatus.ready &&
+        bigGameRegistrationEligible(primary, input.now) &&
+        (mode == LiveUiMode.registrationCountdown ||
+            mode == LiveUiMode.registrationWaitingForCurrentGame)) {
+      useRegistrationOpenLayout = true;
+    }
 
     final showsInlinePlay = _showsInlinePlayCartelas(mode, presentationPhase);
     final registrationOpenBodyTarget = useRegistrationOpenLayout
@@ -793,7 +813,15 @@ class LiveUiModeResolver {
     required bool ownsLiveCartelas,
     required bool hasPrimarySessionCartelas,
     required GameOperationsCurrentResponse operations,
+    bool postGameSummaryReviewActive = false,
   }) {
+    if (postGameSummaryReviewActive &&
+        presentationPhase == LivePresentationPhase.review) {
+      return primary.status == GameStatus.noWinner
+          ? LiveUiMode.reviewNoWinner
+          : LiveUiMode.reviewFinished;
+    }
+
     return switch (primary.status) {
       GameStatus.ready =>
         presentationPhase == LivePresentationPhase.preparingGame
@@ -842,30 +870,37 @@ class LiveUiModeResolver {
   }
 
   static GameModel? _registrationTarget({
+    required ResolveLiveUiModeInput input,
     required GameModel primary,
     required GameModel? nextUpcoming,
     required bool hasPrimarySessionCartelas,
     required LiveUiMode mode,
     required GameModel? secondaryRegistration,
   }) {
+    bool eligible(GameModel game) => liveRegistrationEligible(
+          game: game,
+          now: input.now,
+          embeddedBigGame: input.embeddedBigGame,
+        );
+
     if (mode == LiveUiMode.missedRoundRegistration) {
       return primary;
     }
     if (primary.status == GameStatus.playing && hasPrimarySessionCartelas) {
       return primary;
     }
-    if (primary.status == GameStatus.ready && primary.canRegister) {
+    if (primary.status == GameStatus.ready && eligible(primary)) {
       return primary;
     }
     if (!hasPrimarySessionCartelas &&
         secondaryRegistration != null &&
-        secondaryRegistration.canRegister) {
+        eligible(secondaryRegistration)) {
       return secondaryRegistration;
     }
     if (!hasPrimarySessionCartelas &&
         nextUpcoming != null &&
         nextUpcoming.status == GameStatus.ready &&
-        nextUpcoming.canRegister) {
+        eligible(nextUpcoming)) {
       return nextUpcoming;
     }
     return null;
@@ -896,6 +931,7 @@ class LiveUiModeResolver {
   }
 
   static bool _hideRegistrationCountdown({
+    required ResolveLiveUiModeInput input,
     required LiveUiMode mode,
     required bool hasBlockingLiveGame,
     required GameModel primary,
@@ -910,7 +946,11 @@ class LiveUiModeResolver {
     }
     if (hasBlockingLiveGame &&
         primary.status == GameStatus.ready &&
-        primary.canRegister) {
+        liveRegistrationEligible(
+          game: primary,
+          now: input.now,
+          embeddedBigGame: input.embeddedBigGame,
+        )) {
       return true;
     }
     if (!registrationTargetIsCurrent &&
@@ -972,7 +1012,11 @@ class LiveUiModeResolver {
         !registrationTargetIsCurrent &&
         registrationTarget != null &&
         registrationTarget.status == GameStatus.ready &&
-        registrationTarget.canRegister) {
+        liveRegistrationEligible(
+          game: registrationTarget,
+          now: input.now,
+          embeddedBigGame: input.embeddedBigGame,
+        )) {
       return true;
     }
 

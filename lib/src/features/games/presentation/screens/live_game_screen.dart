@@ -26,6 +26,7 @@ import '../../domain/cartela_payment_source.dart';
 import '../../domain/game_rule_localized_name.dart';
 import '../../domain/game_category_theme.dart';
 import '../../domain/big_game_phase.dart';
+import '../utils/big_game_live_presentation.dart';
 import '../widgets/game_category_badge.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/cartela_mark_helpers.dart';
@@ -66,6 +67,8 @@ import '../utils/cartela_outcome_public_visibility.dart';
 import '../utils/live_ready_transition_lock.dart';
 import '../utils/live_presentation_phase.dart';
 import '../utils/chain_round_cartela_state.dart';
+import '../utils/live_round_break.dart';
+import '../utils/live_terminal_apply.dart';
 import '../utils/live_primary_game_selection.dart';
 import '../utils/live_ui_mode.dart';
 import '../utils/live_registration_target.dart';
@@ -75,6 +78,7 @@ import '../utils/live_session_ownership.dart';
 import '../utils/missed_live_preview_numbers.dart';
 import '../utils/missed_preview_foreign_session_sync.dart';
 import '../debug/missed_preview_debug.dart';
+import '../debug/big_game_debug.dart';
 import '../utils/registration_reg_display_count.dart';
 import '../widgets/missed_live_game_preview.dart';
 import '../utils/cartela_display_order.dart';
@@ -355,6 +359,22 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   bool get _hasVisibleCurrentSessionCartelas => _myCartelas.isNotEmpty;
 
+  bool get _embeddedBigGame =>
+      widget.embedded &&
+      (_game?.isBigGame ?? widget.initialGame?.isBigGame ?? false);
+
+  bool get _suppressEmbeddedBigGameEmptyCartelaState =>
+      shouldSuppressEmbeddedBigGameEmptyCartelaState(
+        embeddedBigGame: _embeddedBigGame,
+        isGuest: isGuest,
+        hasPrimarySessionCartelas: _hasVisibleCurrentSessionCartelas,
+        initialLoadComplete: _initialLoadComplete,
+        isLoading: _isLoading,
+        resumeSyncInFlight: controllers.realtime.resumeSyncInFlight,
+        canonicalRefetchInFlight:
+            controllers.realtime.canonicalRefetchInFlight,
+      );
+
   DateTime? get _resolverWinnerWindowEndsAt {
     if (_game?.status != GameStatus.winnerWindow) {
       return null;
@@ -548,6 +568,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         hasError: _errorMessage != null,
         winnerWindowExpired: _resolverWinnerWindowExpired,
         excludeBigGame: !widget.embedded,
+        embeddedBigGame: _embeddedBigGame,
       ),
     );
   }
@@ -987,10 +1008,18 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     if (widget.initialGame != null) {
       _game = widget.initialGame;
       _nextUpcomingGame = widget.initialGame!.nextRoundRegistration;
-      _isLoading = false;
       _awaitingLiveRoom = false;
       _hasCompletedInitialPaint = true;
-      _initialLoadComplete = true;
+      final embeddedBigGameSeed =
+          widget.embedded && widget.initialGame!.isBigGame;
+      if (embeddedBigGameSeed) {
+        // Public card is seeded; wait for canonical + my-cartelas before empty UX.
+        _isLoading = false;
+        _initialLoadComplete = false;
+      } else {
+        _isLoading = false;
+        _initialLoadComplete = true;
+      }
     }
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
@@ -1030,6 +1059,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
     WidgetsBinding.instance.removeObserver(this);
     _stopChainRoundPauseTicker();
+    _disposeChainPauseEndsAtListenable();
     _liveRoomSplashTicker?.cancel();
     _liveCartelaScrollIdle.dispose();
     _review.stopSessionWinnerResultsPolling();
@@ -1995,7 +2025,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ),
         ] else if (!_hasVisibleCurrentSessionCartelas &&
             !_review.postGameSummaryReviewActive)
-          isGuest
+          _suppressEmbeddedBigGameEmptyCartelaState
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: const Center(
+                    child: FriendsBingoLoader.inline(compact: true),
+                  ),
+                )
+              : isGuest
               ? _GuestSpectatorHint(
                   onSignUp: () => context.go('/register'),
                   onSignIn: () => context.go(loginPathWithRedirect('/games')),

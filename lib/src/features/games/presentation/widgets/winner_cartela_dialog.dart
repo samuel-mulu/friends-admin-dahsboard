@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/l10n.dart';
@@ -17,6 +18,7 @@ Future<void> showWinnerCartelaDialog({
   required BuildContext context,
   required List<SessionWinnerResultModel> results,
   DateTime? pauseEndsAt,
+  ValueListenable<DateTime?>? pauseEndsAtListenable,
   int? roundIndex,
   int? roundCount,
 }) {
@@ -31,6 +33,7 @@ Future<void> showWinnerCartelaDialog({
       return _WinnerCartelaDialog(
         results: results,
         pauseEndsAt: pauseEndsAt,
+        pauseEndsAtListenable: pauseEndsAtListenable,
         roundIndex: roundIndex,
         roundCount: roundCount,
       );
@@ -42,12 +45,14 @@ class _WinnerCartelaDialog extends StatefulWidget {
   const _WinnerCartelaDialog({
     required this.results,
     this.pauseEndsAt,
+    this.pauseEndsAtListenable,
     this.roundIndex,
     this.roundCount,
   });
 
   final List<SessionWinnerResultModel> results;
   final DateTime? pauseEndsAt;
+  final ValueListenable<DateTime?>? pauseEndsAtListenable;
   final int? roundIndex;
   final int? roundCount;
 
@@ -61,40 +66,77 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
   Timer? _pauseTicker;
   Duration _pauseRemaining = Duration.zero;
   Duration _pauseTotal = Duration.zero;
+  DateTime? _activePauseEndsAt;
 
   List<int> get _winnerNumbers => widget.results
       .map((result) => result.cartelaNumber)
       .toList(growable: false);
 
+  DateTime? get _effectivePauseEndsAt =>
+      widget.pauseEndsAtListenable?.value ?? widget.pauseEndsAt;
+
   @override
   void initState() {
     super.initState();
+    widget.pauseEndsAtListenable?.addListener(_onPauseEndsAtChanged);
+    _startPauseCountdown();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WinnerCartelaDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pauseEndsAtListenable != widget.pauseEndsAtListenable) {
+      oldWidget.pauseEndsAtListenable?.removeListener(_onPauseEndsAtChanged);
+      widget.pauseEndsAtListenable?.addListener(_onPauseEndsAtChanged);
+      _onPauseEndsAtChanged();
+    }
+  }
+
+  void _onPauseEndsAtChanged() {
     _startPauseCountdown();
   }
 
   void _startPauseCountdown() {
-    final endsAt = widget.pauseEndsAt;
+    final endsAt = _effectivePauseEndsAt;
+    _pauseTicker?.cancel();
+    _activePauseEndsAt = endsAt;
     if (endsAt == null) {
+      _pauseTotal = Duration.zero;
+      _pauseRemaining = Duration.zero;
       return;
     }
 
     final remaining = endsAt.difference(DateTime.now());
     if (remaining <= Duration.zero) {
+      _pauseTotal = Duration.zero;
+      _pauseRemaining = Duration.zero;
+      if (mounted) {
+        Navigator.of(context).maybePop();
+      }
       return;
     }
 
-    _pauseTotal = remaining;
+    if (_pauseTotal <= Duration.zero || remaining > _pauseTotal) {
+      _pauseTotal = remaining;
+    }
     _pauseRemaining = remaining;
     _pauseTicker = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (!mounted) {
         return;
       }
-      final left = endsAt.difference(DateTime.now());
+      final activeEndsAt = _activePauseEndsAt;
+      if (activeEndsAt == null) {
+        return;
+      }
+      final left = activeEndsAt.difference(DateTime.now());
       if (left <= Duration.zero) {
         _pauseTicker?.cancel();
         // The draw has resumed — get out of the player's way.
         Navigator.of(context).maybePop();
         return;
+      }
+      if (left > _pauseTotal) {
+        _pauseTotal = left;
       }
       setState(() => _pauseRemaining = left);
     });
@@ -102,6 +144,7 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
 
   @override
   void dispose() {
+    widget.pauseEndsAtListenable?.removeListener(_onPauseEndsAtChanged);
     _pauseTicker?.cancel();
     _pageController.dispose();
     super.dispose();

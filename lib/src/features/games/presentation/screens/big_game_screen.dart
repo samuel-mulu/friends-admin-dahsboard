@@ -9,6 +9,7 @@ import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/games_repository.dart';
 import '../../domain/big_game_phase.dart';
+import '../utils/big_game_live_presentation.dart';
 import '../debug/big_game_debug.dart';
 import '../providers/current_big_game_provider.dart';
 import 'big_game_live_host.dart';
@@ -115,8 +116,7 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             _lastLoggedPhase = phase;
             _lastLoggedSessionKey = sessionKey;
           }
-          if (phase == BigGamePhase.finishedReview ||
-              phase == BigGamePhase.cancelled) {
+          if (phase == BigGamePhase.cancelled) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) {
                 return;
@@ -126,14 +126,32 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             return BigGameEmptyView(onRefresh: _handleRefresh);
           }
 
-          // PLAYING: sticky LiveGameScreen owns scroll — no outer PTR.
-          if (phase == BigGamePhase.live) {
+          final embedTerminalReview = shouldEmbedBigGameTerminalReviewHost(
+            game: game,
+            phase: phase,
+          );
+
+          // PLAYING + FINISHED review: one host so 60s summary is not unmounted.
+          if (phase == BigGamePhase.live || embedTerminalReview) {
+            if (embedTerminalReview) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) {
+                  return;
+                }
+                unawaited(ref.read(currentBigGameProvider.notifier).refresh());
+              });
+            }
             return BigGameLiveHost(
+              key: ValueKey('big-game-live-${game.sessionId ?? game.id}'),
               game: game,
               clock: clock,
-              headerTitle: context.l10n.drawerBigGame,
+              headerTitle: embedTerminalReview
+                  ? context.l10n.gameFinished
+                  : context.l10n.drawerBigGame,
               showCountdown: false,
+              showBanner: true,
               isLivePlaying: true,
+              preserveLiveInstanceOnTerminalTransition: true,
             );
           }
 

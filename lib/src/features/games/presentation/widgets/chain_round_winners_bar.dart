@@ -4,26 +4,30 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_category_theme.dart';
+import '../utils/chain_round_cartela_state.dart';
 
 /// Past Chain Game round winners, pinned under the board for the whole session.
 /// Stays visible while later rounds play so players can see who already won.
 class ChainRoundWinnersBar extends StatelessWidget {
   const ChainRoundWinnersBar({
     required this.roundResults,
+    required this.roundCount,
     this.myCartelaNumbers = const {},
     this.onTap,
     super.key,
   });
 
   final List<ChainRoundResultSummary> roundResults;
+  final int roundCount;
   final Set<int> myCartelaNumbers;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final decided = roundResults
-        .where((round) => !round.isForfeited && round.winners.isNotEmpty)
-        .toList(growable: false);
+    final decided = condensedChainRoundResultsForBar(
+      roundResults: roundResults,
+      roundCount: roundCount,
+    );
     if (decided.isEmpty) {
       return const SizedBox.shrink();
     }

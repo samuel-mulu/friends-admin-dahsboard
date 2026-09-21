@@ -281,7 +281,8 @@ bool canShowPostGameSummary({
   return status == GameStatus.finished || status == GameStatus.noWinner;
 }
 
-/// Chain-only 20s round-break summary. Separate from [canShowPostGameSummary]
+/// Chain-only inter-round pause summary (length from admin `interRoundDelaySeconds`
+/// on [GameModel.roundPausedUntil]). Separate from [canShowPostGameSummary]
 /// so this overlay cannot advance the queue or start auto-call.
 bool canShowChainInterRoundSummary({
   required GameModel? game,
@@ -434,10 +435,17 @@ class LivePresentationPhaseResolver {
     required List<CalledNumberModel> calledNumbers,
     required Duration staleAfter,
     bool blockingLiveGameExists = false,
+    bool postGameSummaryReviewActive = false,
     DateTime? now,
   }) {
     if (game == null) {
       return LivePresentationPhase.noActiveGame;
+    }
+
+    if (postGameSummaryReviewActive &&
+        (game.status == GameStatus.winnerWindow ||
+            game.status == GameStatus.checking)) {
+      return LivePresentationPhase.review;
     }
 
     if (game.status == GameStatus.winnerWindow) {

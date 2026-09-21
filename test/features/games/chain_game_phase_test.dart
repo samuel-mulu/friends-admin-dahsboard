@@ -4,6 +4,8 @@ import 'package:friends_bingo_app/src/features/games/data/models/called_number_m
 import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/bingo_claim_eligibility.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/chain_round_cartela_state.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_game_finish_transition.dart';
@@ -750,6 +752,140 @@ void main() {
         ),
         isEmpty,
       );
+    });
+
+    test('inter-round dialog rows filter to the finished round only', () {
+      const pattern = CompletedPatternModel(
+        type: 'ONE_LINE',
+        numbers: [1, 2, 3, 4, 5],
+        highlightCellIndexes: {0, 1, 2, 3, 4},
+      );
+      const roundOneApi = SessionWinnerResultModel(
+        gameCartelaId: 'gc-1',
+        cartelaId: 'c-1',
+        cartelaNumber: 12,
+        amount: '3000',
+        columns: <List<String>>[],
+        completedPatterns: [pattern],
+      );
+      const roundTwoApi = SessionWinnerResultModel(
+        gameCartelaId: 'gc-2',
+        cartelaId: 'c-2',
+        cartelaNumber: 24,
+        amount: '2000',
+        columns: <List<String>>[],
+        completedPatterns: [pattern],
+      );
+      const roundResults = [
+        ChainRoundResultSummary(
+          roundIndex: 1,
+          prizeAmount: '3000',
+          outcome: ChainRoundOutcome.won,
+          winners: const [
+            ChainRoundWinnerSummary(
+              gameCartelaId: 'gc-1',
+              cartelaNumber: 12,
+              amount: '3000',
+            ),
+          ],
+        ),
+        ChainRoundResultSummary(
+          roundIndex: 2,
+          prizeAmount: '2000',
+          outcome: ChainRoundOutcome.won,
+          winners: const [
+            ChainRoundWinnerSummary(
+              gameCartelaId: 'gc-2',
+              cartelaNumber: 24,
+              amount: '2000',
+            ),
+          ],
+        ),
+      ];
+
+      expect(
+        chainInterRoundDialogResults(
+          modalResults: [roundOneApi, roundTwoApi],
+          roundResults: roundResults,
+          finishedRoundIndex: 1,
+        ),
+        [roundOneApi],
+      );
+      expect(
+        chainInterRoundDialogResults(
+          modalResults: [roundOneApi, roundTwoApi],
+          roundResults: roundResults,
+          finishedRoundIndex: 2,
+        ),
+        [roundTwoApi],
+      );
+    });
+
+    test('condensed winners bar keeps round 1 and latest when many rounds', () {
+      final roundResults = [
+        for (var i = 1; i <= 5; i++)
+          ChainRoundResultSummary(
+            roundIndex: i,
+            prizeAmount: '1000',
+            outcome: ChainRoundOutcome.won,
+            winners: [
+              ChainRoundWinnerSummary(
+                gameCartelaId: 'gc-$i',
+                cartelaNumber: i * 10,
+                amount: '1000',
+              ),
+            ],
+          ),
+      ];
+
+      final condensed = condensedChainRoundResultsForBar(
+        roundResults: roundResults,
+        roundCount: 5,
+      );
+
+      expect(condensed.map((round) => round.roundIndex), [1, 5]);
+      expect(
+        condensed
+            .expand((round) => round.winners)
+            .map((winner) => winner.cartelaNumber),
+        [10, 50],
+      );
+    });
+
+    test('condensed winners bar shows every round when there are at most three', () {
+      final roundResults = [
+        ChainRoundResultSummary(
+          roundIndex: 1,
+          prizeAmount: '1000',
+          outcome: ChainRoundOutcome.won,
+          winners: const [
+            ChainRoundWinnerSummary(
+              gameCartelaId: 'gc-1',
+              cartelaNumber: 12,
+              amount: '1000',
+            ),
+          ],
+        ),
+        ChainRoundResultSummary(
+          roundIndex: 2,
+          prizeAmount: '1000',
+          outcome: ChainRoundOutcome.won,
+          winners: const [
+            ChainRoundWinnerSummary(
+              gameCartelaId: 'gc-2',
+              cartelaNumber: 24,
+              amount: '1000',
+            ),
+          ],
+        ),
+      ];
+
+      final condensed = condensedChainRoundResultsForBar(
+        roundResults: roundResults,
+        roundCount: 5,
+      );
+
+      expect(condensed.map((round) => round.roundIndex), [1, 2]);
     });
 
     test('round_finished socket payload supplies winner numbers immediately', () {

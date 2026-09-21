@@ -15,6 +15,7 @@ import '../utils/live_resume_provider_policy.dart';
 import '../utils/live_resume_terminal_gate.dart';
 import '../utils/live_sync_trigger_action.dart';
 import '../utils/live_socket_session_membership.dart';
+import '../utils/chain_round_cartela_state.dart';
 import 'live_game_host.dart';
 
 /// Socket membership, canonical refetch scheduling, and event session guards.
@@ -199,6 +200,29 @@ class LiveRealtimeController {
     bool includeMyCartelas = false,
   }) {
     if (!host.isLiveHostActive) {
+      return;
+    }
+
+    final currentGame = host.game;
+    final review = host.controllers.review;
+    final sessionId = currentGame?.sessionId;
+    final sameSession = sessionId != null &&
+        (registrationSessionId == null || registrationSessionId == sessionId);
+
+    if (currentGame?.isChainGame == true &&
+        review.postGameSummaryReviewActive &&
+        sameSession) {
+      LiveRealtimeDebug.refreshCoalesced(reason: 'chain_final_summary_$reason');
+      return;
+    }
+
+    if (currentGame?.isChainGame == true &&
+        shouldSkipLocalChainWinnerWindowFinish(currentGame) &&
+        sameSession &&
+        (reason == 'winner_window_expired' ||
+            reason == 'winner_window_pending_cleared' ||
+            reason == 'chain_winner_window_expired')) {
+      LiveRealtimeDebug.refreshCoalesced(reason: reason);
       return;
     }
 
