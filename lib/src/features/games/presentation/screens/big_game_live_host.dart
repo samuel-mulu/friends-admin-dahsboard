@@ -157,6 +157,9 @@ class _BigGameLiveHostState extends ConsumerState<BigGameLiveHost> {
     }
 
     final game = _bootstrapped ?? seed;
+    final terminalSummaryEmbed = widget.preserveLiveInstanceOnTerminalTransition &&
+        (game.status == GameStatus.finished ||
+            game.status == GameStatus.noWinner);
     final showMissedRegistration = game.showBigGameMissedRoundRegistration;
     final registrationRoundIndex =
         game.nextRoundRegistration?.displayRoundIndex ?? game.displayRoundIndex;
@@ -200,9 +203,11 @@ class _BigGameLiveHostState extends ConsumerState<BigGameLiveHost> {
         Expanded(
           child: LiveGameScreen(
             key: ValueKey(
-              'big-game-live-$sessionId'
-              '-missed-$showMissedRegistration'
-              '-next-${game.nextRoundRegistration?.sessionId ?? 'none'}',
+              terminalSummaryEmbed
+                  ? 'big-game-live-terminal-$sessionId'
+                  : 'big-game-live-$sessionId'
+                      '-missed-$showMissedRegistration'
+                      '-next-${game.nextRoundRegistration?.sessionId ?? 'none'}',
             ),
             gameId: sessionId,
             showAppBar: false,

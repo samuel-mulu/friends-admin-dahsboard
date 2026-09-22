@@ -135,10 +135,50 @@ bool shouldEmbedBigGameTerminalReviewHost({
   required GameModel game,
   required BigGamePhase phase,
 }) {
-  if (phase != BigGamePhase.finishedReview) {
+  if (!game.isBigGame) {
     return false;
   }
-  return game.isBigGame &&
-      (game.status == GameStatus.finished ||
-          game.status == GameStatus.noWinner);
+  if (game.status != GameStatus.finished &&
+      game.status != GameStatus.noWinner) {
+    return false;
+  }
+  // FINISHED + armed nextRoundStartsAt resolves to betweenRounds, not
+  // finishedReview — same terminal summary host either way.
+  return phase == BigGamePhase.finishedReview ||
+      phase == BigGamePhase.betweenRounds;
+}
+
+/// Keeps Round N on screen while Round N+1 is already the API primary.
+GameModel applyBigGameApiToPinnedTerminal({
+  required GameModel pinned,
+  required GameModel? apiPrimary,
+}) {
+  if (apiPrimary == null) {
+    return pinned;
+  }
+  final pinnedId = pinned.sessionId;
+  if (pinnedId == null || pinnedId.isEmpty) {
+    return pinned;
+  }
+
+  if (apiPrimary.sessionId == pinnedId &&
+      (apiPrimary.status == GameStatus.finished ||
+          apiPrimary.status == GameStatus.noWinner)) {
+    return mergeEmbeddedBigGameTerminalHandoff(
+      terminalGame: apiPrimary,
+      queuedUpcoming: apiPrimary.nextRoundRegistration,
+      cardSeed: pinned,
+    );
+  }
+
+  if (apiPrimary.sessionId != pinnedId &&
+      apiPrimary.isBigGame &&
+      apiPrimary.status == GameStatus.ready) {
+    return mergeEmbeddedBigGameTerminalHandoff(
+      terminalGame: pinned,
+      queuedUpcoming: apiPrimary,
+    );
+  }
+
+  return pinned;
 }

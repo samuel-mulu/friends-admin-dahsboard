@@ -4034,6 +4034,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       'banner=gameFinished status=${status?.name} '
       'round=${_game?.displayRoundIndex}/${_game?.displayRoundCount}',
     );
+    _pinEmbeddedBigGameTerminalForSummary();
     _review.startPostGameSummary(
       scheduleAdvance: scheduleAdvance,
       onStarted: () {
@@ -4465,6 +4466,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
+  void _pinEmbeddedBigGameTerminalForSummary() {
+    if (!_embeddedBigGame || _game == null || !_game!.isBigGame) {
+      return;
+    }
+    final status = _game!.status;
+    if (status != GameStatus.finished && status != GameStatus.noWinner) {
+      return;
+    }
+    ref.read(bigGameFinishedSummaryPinProvider.notifier).state =
+        _embeddedBigGameTerminalForPostGameSummary(_game!);
+  }
+
   Widget? _buildPostGameSummaryBanner() {
     if (!_showsPostGameSummary) {
       return null;
@@ -4567,6 +4580,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         WinnerPatternClearReason.clearSessionScopedReview,
     bool clearWinnerPatterns = true,
   }) {
+    if (_embeddedBigGame &&
+        ref.read(bigGameFinishedSummaryPinProvider) != null) {
+      ref.read(bigGameFinishedSummaryPinProvider.notifier).state = null;
+      unawaited(ref.read(currentBigGameProvider.notifier).refresh());
+    }
     _dismissWinnerCartelaDialogIfOpen();
     _review.clearPostGameSummaryHold(
       resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,

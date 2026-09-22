@@ -77,6 +77,47 @@ void main() {
       );
     });
 
+    test('betweenRounds on FINISHED session keeps terminal review host', () {
+      final game = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+        roundCount: 3,
+      );
+      expect(
+        shouldEmbedBigGameTerminalReviewHost(
+          game: game,
+          phase: BigGamePhase.betweenRounds,
+        ),
+        isTrue,
+      );
+    });
+
+    test('pin keeps Round 1 when API primary is Round 2 READY', () {
+      final finished = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+        roundCount: 3,
+      );
+      final roundTwo = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        roundIndex: 2,
+        roundCount: 3,
+        canRegister: true,
+        registrationOpensAt: _now.subtract(const Duration(minutes: 1)),
+        scheduledStartAt: _now.add(const Duration(minutes: 5)),
+      );
+      final pinned = applyBigGameApiToPinnedTerminal(
+        pinned: finished,
+        apiPrimary: roundTwo,
+      );
+      expect(pinned.sessionId, 's1');
+      expect(pinned.status, GameStatus.finished);
+      expect(pinned.nextRoundRegistration?.sessionId, 's2');
+    });
+
     test('slot has more rounds after round 1 finish', () {
       final game = _bigGame(
         status: GameStatus.finished,
