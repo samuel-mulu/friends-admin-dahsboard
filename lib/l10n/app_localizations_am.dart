@@ -2525,6 +2525,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ በዙሮች መካከል ነው';
 
   @override
+  String bigGamePlayingPrompt(int round) {
+    return 'ቀሪ ጨዋታዎች እዚህ ናቸው። የትልቁ ጨዋታ ዙር $round በመጫወት ላይ ነው';
+  }
+
+  @override
+  String get bigGamePromptDismiss => 'የትልቁ ጨዋታ ማስታወሻ ደብቅ';
+
+  @override
   String bigGameMissedRoundRegistrationTitle(int round) {
     return 'Register for Round $round';
   }

@@ -116,7 +116,7 @@ void main() {
       expect(resolveBigGamePhase(game, now: now), BigGamePhase.registrationOpen);
     });
 
-    test('FINISHED with future nextRoundStartsAt is betweenRounds', () {
+    test('FINISHED with future nextRoundStartsAt stays finishedReview', () {
       final game = _bigGame(
         status: GameStatus.finished,
         canRegister: false,
@@ -126,10 +126,10 @@ void main() {
         currentRound: 1,
       );
 
-      expect(resolveBigGamePhase(game, now: now), BigGamePhase.betweenRounds);
+      expect(resolveBigGamePhase(game, now: now), BigGamePhase.finishedReview);
     });
 
-    test('FINISHED does not stay betweenRounds after nextRoundStartsAt passes', () {
+    test('FINISHED stays finishedReview after nextRoundStartsAt passes', () {
       final game = _bigGame(
         status: GameStatus.finished,
         canRegister: false,

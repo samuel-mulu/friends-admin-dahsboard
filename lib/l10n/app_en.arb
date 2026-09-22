@@ -2535,6 +2535,16 @@
   "bigGameBetweenRoundsPrompt": "Remaining games are here. Big Game is between rounds",
   "@bigGameBetweenRoundsPrompt": {},
 
+  "bigGamePlayingPrompt": "Remaining games are here. Big Game Round {round} is playing",
+  "@bigGamePlayingPrompt": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+
+  "bigGamePromptDismiss": "Hide Big Game reminder",
+  "@bigGamePromptDismiss": {},
+
   "bigGameMissedRoundRegistrationTitle": "Register for Round {round}",
   "@bigGameMissedRoundRegistrationTitle": {
     "placeholders": {

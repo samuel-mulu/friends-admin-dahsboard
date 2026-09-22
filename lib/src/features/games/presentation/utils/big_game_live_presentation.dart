@@ -91,45 +91,6 @@ bool bigGameSlotHasMoreRoundsAfterTerminal(GameModel terminalGame) {
   return false;
 }
 
-/// Next READY session for embedded Big Game (ops queue + card handoff).
-GameModel? resolveEmbeddedBigGameAdvanceTarget({
-  required GameModel terminalGame,
-  required GameOperationsCurrentResponse? operations,
-  required DateTime now,
-}) {
-  if (!terminalGame.isBigGame) {
-    return null;
-  }
-
-  final fromOps = operations?.resolveAdvanceTargetFor(
-    terminalGame: terminalGame,
-  );
-  if (fromOps != null &&
-      fromOps.status == GameStatus.ready &&
-      liveRegistrationEligible(
-        game: fromOps,
-        now: now,
-        embeddedBigGame: true,
-      )) {
-    return fromOps;
-  }
-
-  final cardNext = terminalGame.nextRoundRegistration;
-  if (cardNext != null &&
-      cardNext.sessionId != null &&
-      cardNext.sessionId != terminalGame.sessionId &&
-      cardNext.status == GameStatus.ready &&
-      liveRegistrationEligible(
-        game: cardNext,
-        now: now,
-        embeddedBigGame: true,
-      )) {
-    return cardNext;
-  }
-
-  return null;
-}
-
 /// Whether embedded live should stay mounted for the 60s terminal summary.
 bool shouldEmbedBigGameTerminalReviewHost({
   required GameModel game,
@@ -138,47 +99,7 @@ bool shouldEmbedBigGameTerminalReviewHost({
   if (!game.isBigGame) {
     return false;
   }
-  if (game.status != GameStatus.finished &&
-      game.status != GameStatus.noWinner) {
-    return false;
-  }
-  // FINISHED + armed nextRoundStartsAt resolves to betweenRounds, not
-  // finishedReview — same terminal summary host either way.
-  return phase == BigGamePhase.finishedReview ||
-      phase == BigGamePhase.betweenRounds;
-}
-
-/// Keeps Round N on screen while Round N+1 is already the API primary.
-GameModel applyBigGameApiToPinnedTerminal({
-  required GameModel pinned,
-  required GameModel? apiPrimary,
-}) {
-  if (apiPrimary == null) {
-    return pinned;
-  }
-  final pinnedId = pinned.sessionId;
-  if (pinnedId == null || pinnedId.isEmpty) {
-    return pinned;
-  }
-
-  if (apiPrimary.sessionId == pinnedId &&
-      (apiPrimary.status == GameStatus.finished ||
-          apiPrimary.status == GameStatus.noWinner)) {
-    return mergeEmbeddedBigGameTerminalHandoff(
-      terminalGame: apiPrimary,
-      queuedUpcoming: apiPrimary.nextRoundRegistration,
-      cardSeed: pinned,
-    );
-  }
-
-  if (apiPrimary.sessionId != pinnedId &&
-      apiPrimary.isBigGame &&
-      apiPrimary.status == GameStatus.ready) {
-    return mergeEmbeddedBigGameTerminalHandoff(
-      terminalGame: pinned,
-      queuedUpcoming: apiPrimary,
-    );
-  }
-
-  return pinned;
+  return phase == BigGamePhase.finishedReview &&
+      (game.status == GameStatus.finished ||
+          game.status == GameStatus.noWinner);
 }

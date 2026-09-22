@@ -4480,6 +4480,18 @@ abstract class AppLocalizations {
   /// **'Remaining games are here. Big Game is between rounds'**
   String get bigGameBetweenRoundsPrompt;
 
+  /// No description provided for @bigGamePlayingPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining games are here. Big Game Round {round} is playing'**
+  String bigGamePlayingPrompt(int round);
+
+  /// No description provided for @bigGamePromptDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Big Game reminder'**
+  String get bigGamePromptDismiss;
+
   /// No description provided for @bigGameMissedRoundRegistrationTitle.
   ///
   /// In en, this message translates to:

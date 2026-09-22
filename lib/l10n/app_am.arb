@@ -665,6 +665,8 @@
   "bigGameHeldPrompt": "ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ ዝግጁ ነው — አሁኑን ዙር ይጠብቃል",
   "bigGameRegistrationOpenPrompt": "ቀሪ ጨዋታዎች እዚህ ናቸው። የትልቁ ጨዋታ ዙር {round} ምዝገባ ክፍት ነው",
   "bigGameBetweenRoundsPrompt": "ቀሪ ጨዋታዎች እዚህ ናቸው። ትልቁ ጨዋታ በዙሮች መካከል ነው",
+  "bigGamePlayingPrompt": "ቀሪ ጨዋታዎች እዚህ ናቸው። የትልቁ ጨዋታ ዙር {round} በመጫወት ላይ ነው",
+  "bigGamePromptDismiss": "የትልቁ ጨዋታ ማስታወሻ ደብቅ",
   "bigGameGoAction": "ወደ ትልቁ ጨዋታ ሂድ",
   "walletBigTicketsLabel": "Big Tickets",
   "walletBigTicketsForEvent": "Big Tickets · {eventName}",

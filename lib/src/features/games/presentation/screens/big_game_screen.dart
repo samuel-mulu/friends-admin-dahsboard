@@ -11,7 +11,6 @@ import '../../data/games_repository.dart';
 import '../../domain/big_game_phase.dart';
 import '../utils/big_game_live_presentation.dart';
 import '../debug/big_game_debug.dart';
-import '../providers/big_game_finished_summary_pin_provider.dart';
 import '../providers/current_big_game_provider.dart';
 import 'big_game_live_host.dart';
 import 'big_game_phase_views.dart';
@@ -89,7 +88,6 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
   @override
   Widget build(BuildContext context) {
     final bigGameAsync = ref.watch(currentBigGameProvider);
-    final summaryPin = ref.watch(bigGameFinishedSummaryPinProvider);
     final clock = ref.watch(serverClockProvider);
 
     return Theme(
@@ -101,30 +99,18 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
           onRetry: _handleRefresh,
         ),
         data: (game) {
-          if (game == null && summaryPin == null) {
-            return BigGameEmptyView(onRefresh: _handleRefresh);
-          }
-
-          final apiGame = game;
-          final displayGame = summaryPin != null
-              ? applyBigGameApiToPinnedTerminal(
-                  pinned: summaryPin,
-                  apiPrimary: apiGame,
-                )
-              : apiGame;
-          if (displayGame == null) {
+          if (game == null) {
             return BigGameEmptyView(onRefresh: _handleRefresh);
           }
 
           final now = _now(clock);
-          final phase = resolveBigGamePhase(displayGame, now: now);
-          final sessionKey =
-              '${displayGame.sessionId ?? displayGame.id}:${displayGame.status.name}';
+          final phase = resolveBigGamePhase(game, now: now);
+          final sessionKey = '${game.sessionId ?? game.id}:${game.status.name}';
           if (_lastLoggedPhase != phase || _lastLoggedSessionKey != sessionKey) {
             BigGameDebug.phase(
               from: _lastLoggedPhase,
               to: phase,
-              game: displayGame,
+              game: game,
               now: now,
             );
             _lastLoggedPhase = phase;
@@ -140,15 +126,14 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             return BigGameEmptyView(onRefresh: _handleRefresh);
           }
 
-          final embedTerminalReview = summaryPin != null ||
-              shouldEmbedBigGameTerminalReviewHost(
-                game: displayGame,
-                phase: phase,
-              );
+          final embedTerminalReview = shouldEmbedBigGameTerminalReviewHost(
+            game: game,
+            phase: phase,
+          );
 
           // PLAYING + FINISHED review: one host so 60s summary is not unmounted.
           if (phase == BigGamePhase.live || embedTerminalReview) {
-            if (embedTerminalReview && summaryPin == null) {
+            if (embedTerminalReview) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) {
                   return;
@@ -156,15 +141,14 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 unawaited(ref.read(currentBigGameProvider.notifier).refresh());
               });
             }
-            final hostSessionId =
-                displayGame.sessionId ?? displayGame.id;
+            final hostSessionId = game.sessionId ?? game.id;
             return BigGameLiveHost(
               key: ValueKey(
-                summaryPin != null || embedTerminalReview
+                embedTerminalReview
                     ? 'big-game-terminal-review-$hostSessionId'
                     : 'big-game-live-$hostSessionId',
               ),
-              game: displayGame,
+              game: game,
               clock: clock,
               headerTitle: embedTerminalReview
                   ? context.l10n.gameFinished
@@ -180,7 +164,7 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             onRefresh: _handleRefresh,
             child: switch (phase) {
               BigGamePhase.beforeRegistrationOpens => BigGameScheduledView(
-                game: displayGame,
+                game: game,
                 clock: clock,
                 countdownTarget: game.registrationOpensAt,
                 title: context.l10n.bigGameScheduledTitle,
@@ -188,7 +172,7 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 onCountdownExpired: _handleRefresh,
               ),
               BigGamePhase.registrationOpen => BigGameLiveHost(
-                game: displayGame,
+                game: game,
                 clock: clock,
                 headerTitle: context.l10n.bigGameRegistrationOpenTitle,
                 countdownLabel: context.l10n.bigGamePlayStartsIn,
@@ -197,17 +181,16 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 onCountdownExpired: _handleRefresh,
               ),
               BigGamePhase.waitingToPlay => BigGameWaitingView(
-                game: displayGame,
+                game: game,
                 onRefresh: _handleRefresh,
               ),
               BigGamePhase.betweenRounds => BigGameLiveHost(
-                game: displayGame,
+                game: game,
                 clock: clock,
                 headerTitle: context.l10n.bigGameBetweenRoundsTitle,
                 countdownLabel: context.l10n.bigGamePlayStartsIn,
                 countdownTarget:
-                    displayGame.scheduledStartAt ??
-                    displayGame.nextRoundStartsAt,
+                    game.scheduledStartAt ?? game.nextRoundStartsAt,
                 showBanner: true,
                 onCountdownExpired: _handleRefresh,
               ),

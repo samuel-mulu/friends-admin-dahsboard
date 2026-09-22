@@ -2533,6 +2533,14 @@ class AppLocalizationsTi extends AppLocalizations {
       'Remaining games are here. Big Game is between rounds';
 
   @override
+  String bigGamePlayingPrompt(int round) {
+    return 'Remaining games are here. Big Game Round $round is playing';
+  }
+
+  @override
+  String get bigGamePromptDismiss => 'Hide Big Game reminder';
+
+  @override
   String bigGameMissedRoundRegistrationTitle(int round) {
     return 'Register for Round $round';
   }

@@ -67,13 +67,18 @@ bool hasPlayableAdvanceTarget({
 }) {
   final clock = now ?? DateTime.now();
   if (embeddedBigGame && terminalGame.isBigGame) {
-    final resolved = big_game_advance.resolveEmbeddedBigGameAdvanceTarget(
-      terminalGame: terminalGame,
-      operations: operations,
-      now: clock,
-    );
-    if (resolved != null) {
-      return true;
+    if (operations != null) {
+      final resolved = operations.resolveAdvanceTargetFor(
+        terminalGame: terminalGame,
+      );
+      if (resolved != null &&
+          isAdvanceRegistrationEligible(
+            next: resolved,
+            embeddedBigGame: true,
+            now: clock,
+          )) {
+        return true;
+      }
     }
     return big_game_advance.bigGameSlotHasMoreRoundsAfterTerminal(terminalGame);
   }

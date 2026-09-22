@@ -552,6 +552,8 @@
   "bigGameHeldPrompt": "Remaining games are here. Big Game is ready — waiting for current round",
   "bigGameRegistrationOpenPrompt": "Remaining games are here. Big Game Round {round} registration is open",
   "bigGameBetweenRoundsPrompt": "Remaining games are here. Big Game is between rounds",
+  "bigGamePlayingPrompt": "Remaining games are here. Big Game Round {round} is playing",
+  "bigGamePromptDismiss": "Hide Big Game reminder",
   "bigGameGoAction": "Go to Big Game",
   "walletBigTicketsLabel": "Big Tickets",
   "walletBigTicketsForEvent": "Big Tickets · {eventName}",

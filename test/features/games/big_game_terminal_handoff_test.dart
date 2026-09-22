@@ -77,7 +77,7 @@ void main() {
       );
     });
 
-    test('betweenRounds on FINISHED session keeps terminal review host', () {
+    test('finishedReview on FINISHED session keeps terminal review host', () {
       final game = _bigGame(
         status: GameStatus.finished,
         sessionId: 's1',
@@ -87,35 +87,10 @@ void main() {
       expect(
         shouldEmbedBigGameTerminalReviewHost(
           game: game,
-          phase: BigGamePhase.betweenRounds,
+          phase: BigGamePhase.finishedReview,
         ),
         isTrue,
       );
-    });
-
-    test('pin keeps Round 1 when API primary is Round 2 READY', () {
-      final finished = _bigGame(
-        status: GameStatus.finished,
-        sessionId: 's1',
-        roundIndex: 1,
-        roundCount: 3,
-      );
-      final roundTwo = _bigGame(
-        status: GameStatus.ready,
-        sessionId: 's2',
-        roundIndex: 2,
-        roundCount: 3,
-        canRegister: true,
-        registrationOpensAt: _now.subtract(const Duration(minutes: 1)),
-        scheduledStartAt: _now.add(const Duration(minutes: 5)),
-      );
-      final pinned = applyBigGameApiToPinnedTerminal(
-        pinned: finished,
-        apiPrimary: roundTwo,
-      );
-      expect(pinned.sessionId, 's1');
-      expect(pinned.status, GameStatus.finished);
-      expect(pinned.nextRoundRegistration?.sessionId, 's2');
     });
 
     test('slot has more rounds after round 1 finish', () {
@@ -198,8 +173,7 @@ void main() {
   });
 
   group('embedded Big Game advance target', () {
-    test('finds next round via card when window open but canRegister false',
-        () {
+    test('finds next round via operations registrationOpenGame', () {
       final finished = _bigGame(
         status: GameStatus.finished,
         sessionId: 's1',
@@ -215,16 +189,15 @@ void main() {
         registrationOpensAt: _now.subtract(const Duration(minutes: 1)),
         scheduledStartAt: _now.add(const Duration(minutes: 5)),
       );
-      final target = resolveEmbeddedBigGameAdvanceTarget(
-        terminalGame: finished.copyWith(nextRoundRegistration: next),
-        operations: _ops(),
-        now: _now,
+      final operations = _ops(registration: next);
+      final target = operations.resolveAdvanceTargetFor(
+        terminalGame: finished,
       );
       expect(target?.sessionId, 's2');
       expect(
         hasPlayableAdvanceTarget(
-          operations: _ops(),
-          terminalGame: finished.copyWith(nextRoundRegistration: next),
+          operations: operations,
+          terminalGame: finished,
           embeddedBigGame: true,
           now: _now,
         ),

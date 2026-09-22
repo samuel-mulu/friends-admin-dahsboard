@@ -4034,7 +4034,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       'banner=gameFinished status=${status?.name} '
       'round=${_game?.displayRoundIndex}/${_game?.displayRoundCount}',
     );
-    _pinEmbeddedBigGameTerminalForSummary();
     _review.startPostGameSummary(
       scheduleAdvance: scheduleAdvance,
       onStarted: () {
@@ -4466,18 +4465,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  void _pinEmbeddedBigGameTerminalForSummary() {
-    if (!_embeddedBigGame || _game == null || !_game!.isBigGame) {
-      return;
-    }
-    final status = _game!.status;
-    if (status != GameStatus.finished && status != GameStatus.noWinner) {
-      return;
-    }
-    ref.read(bigGameFinishedSummaryPinProvider.notifier).state =
-        _embeddedBigGameTerminalForPostGameSummary(_game!);
-  }
-
   Widget? _buildPostGameSummaryBanner() {
     if (!_showsPostGameSummary) {
       return null;
@@ -4580,9 +4567,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         WinnerPatternClearReason.clearSessionScopedReview,
     bool clearWinnerPatterns = true,
   }) {
-    if (_embeddedBigGame &&
-        ref.read(bigGameFinishedSummaryPinProvider) != null) {
-      ref.read(bigGameFinishedSummaryPinProvider.notifier).state = null;
+    if (_embeddedBigGame) {
       unawaited(ref.read(currentBigGameProvider.notifier).refresh());
     }
     _dismissWinnerCartelaDialogIfOpen();
@@ -4706,13 +4691,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final terminalForAdvance = _embeddedBigGame && currentGame.isBigGame
           ? _embeddedBigGameTerminalForPostGameSummary(currentGame)
           : currentGame;
-      final nextGame = _embeddedBigGame && currentGame.isBigGame
-          ? resolveEmbeddedBigGameAdvanceTarget(
-              terminalGame: terminalForAdvance,
-              operations: operations,
-              now: _countdownNow(),
-            )
-          : operations.resolveAdvanceTargetFor(terminalGame: currentGame);
+      final nextGame = operations.resolveAdvanceTargetFor(
+        terminalGame: terminalForAdvance,
+      );
 
       final registrationEligible = nextGame == null
           ? false
@@ -4729,9 +4710,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             bigGameSlotHasMoreRoundsAfterTerminal(terminalForAdvance)) {
           BigGameDebug.log(
             'advance_deferred slotRound=${terminalForAdvance.displayRoundIndex}/'
-            '${terminalForAdvance.roundCount} nextReg='
-            '${terminalForAdvance.nextRoundRegistration?.sessionId}',
+            '${terminalForAdvance.roundCount} opsReg='
+            '${operations.registrationOpenGame?.sessionId}',
           );
+          _scheduleAdvanceToNextGame();
           return false;
         }
         _applyIdleEmptyAfterTerminal(

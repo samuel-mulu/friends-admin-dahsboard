@@ -48,11 +48,6 @@ BigGamePhase resolveBigGamePhase(
       return BigGamePhase.cancelled;
     case GameStatus.finished:
     case GameStatus.noWinner:
-      // Prefer next READY session from API; if client still sees FINISHED
-      // with a pending next start, treat as registration/waiting handoff.
-      if (_isBetweenRounds(game, now: now)) {
-        return BigGamePhase.betweenRounds;
-      }
       return BigGamePhase.finishedReview;
     case GameStatus.playing:
     case GameStatus.checking:
@@ -84,18 +79,4 @@ BigGamePhase resolveBigGamePhase(
   }
 
   return BigGamePhase.waitingToPlay;
-}
-
-bool _isBetweenRounds(GameModel game, {required DateTime now}) {
-  final nextRoundStartsAt = game.nextRoundStartsAt;
-  if (nextRoundStartsAt != null) {
-    // Armed play-start / registration-close deadline from interRoundDelaySeconds.
-    // Once it passes, do not stay stuck in betweenRounds forever.
-    return now.isBefore(nextRoundStartsAt);
-  }
-
-  final roundCount = game.roundCount ?? 1;
-  final currentRound = game.currentRound ?? game.roundIndex ?? 1;
-  // Recovery only: finished earlier round and next READY not armed on payload yet.
-  return currentRound < roundCount;
 }
