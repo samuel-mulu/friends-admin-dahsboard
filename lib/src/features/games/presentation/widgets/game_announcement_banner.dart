@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/time/server_clock_provider.dart';
-import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/models/game_model.dart';
@@ -232,7 +231,7 @@ class _GameAnnouncementBannerState
       BigGamePhase.live => l10n.announcementBigGameLive,
       BigGamePhase.registrationOpen when bigGame.displayRoundIndex > 1 =>
         l10n.bigGameRegistrationOpenPrompt(bigGame.displayRoundIndex),
-      _ => l10n.announcementBigGamePrize(formatMoney(prize)),
+      _ => l10n.announcementBigGamePrize(prize),
     };
     final target = phase == BigGamePhase.beforeRegistrationOpens
         ? bigGame.registrationOpensAt
@@ -249,28 +248,25 @@ class _GameAnnouncementBannerState
         chipLabel != null && chipLabel.trim() != helperText.trim();
 
     return Positioned.fill(
-      // Pass taps through empty space; only the card receives input.
-      child: IgnorePointer(
-        child: Center(
-          child: IgnorePointer(
-            ignoring: false,
-            child: FadeTransition(
-              opacity: _appear,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.94, end: 1).animate(
-                  CurvedAnimation(
-                    parent: _appear,
-                    curve: Curves.easeOutCubic,
-                  ),
+      // Center only hit-tests the card; taps outside pass through to the shell.
+      child: Center(
+        child: FadeTransition(
+          opacity: _appear,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1).animate(
+              CurvedAnimation(
+                parent: _appear,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 360),
-                      child: Material(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: Material(
                         color: Colors.transparent,
                         elevation: 0,
                         child: Container(
@@ -459,8 +455,6 @@ class _GameAnnouncementBannerState
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 }

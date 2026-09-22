@@ -86,6 +86,74 @@ void main() {
       );
       expect(bigGameSlotHasMoreRoundsAfterTerminal(game), isTrue);
     });
+
+    test('post-game summary has next before Round 2 is READY in ops', () {
+      final finished = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+        roundCount: 3,
+      );
+      expect(
+        hasPlayableAdvanceTarget(
+          operations: null,
+          terminalGame: finished,
+          embeddedBigGame: true,
+          now: _now,
+        ),
+        isTrue,
+      );
+      expect(
+        hasPlayableAdvanceTarget(
+          operations: _ops(),
+          terminalGame: finished,
+          embeddedBigGame: true,
+          now: _now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('last slot round has no summary handoff', () {
+      final finished = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's3',
+        roundIndex: 3,
+        roundCount: 3,
+      );
+      expect(bigGameSlotHasMoreRoundsAfterTerminal(finished), isFalse);
+      expect(
+        hasPlayableAdvanceTarget(
+          operations: _ops(),
+          terminalGame: finished,
+          embeddedBigGame: true,
+          now: _now,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('embedded Big Game terminal handoff merge', () {
+    test('merges queued upcoming onto finished round', () {
+      final finished = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+        roundCount: 3,
+      );
+      final next = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        roundIndex: 2,
+        roundCount: 3,
+      );
+      final merged = mergeEmbeddedBigGameTerminalHandoff(
+        terminalGame: finished,
+        queuedUpcoming: next,
+      );
+      expect(merged.nextRoundRegistration?.sessionId, 's2');
+    });
   });
 
   group('embedded Big Game advance target', () {

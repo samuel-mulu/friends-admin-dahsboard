@@ -699,6 +699,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         roundCount: roundCount,
       ).whenComplete(
         () {
+          if (_isChainRoundPaused) {
+            _review.winnerCartelaDialogAutoShownForPauseKey = null;
+          }
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
           } else {
@@ -1031,6 +1034,42 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _review.winnerCartelaDialogAutoShownForPauseKey = pauseKey;
+    _syncChainPauseEndsAtListenable();
+    _showWinnerCartelaDialogForReview(
+      dialogResults,
+      pauseEndsAt: game.roundPausedUntil,
+      pauseEndsAtListenable: _chainPauseEndsAtListenable,
+      roundIndex: finishedRound,
+      roundCount: game.displayRoundCount,
+    );
+  }
+
+  Future<void> _openChainInterRoundWinnerDialog({
+    required int finishedRound,
+  }) async {
+    if (!_winnerReviewEligibleViewer || !_ownsChainInterRoundBreak) {
+      return;
+    }
+    final game = _game;
+    if (game == null || !game.isChainGame) {
+      return;
+    }
+
+    var dialogResults = _chainInterRoundDialogResults(finishedRound);
+    if (dialogResults.isEmpty) {
+      await _fetchSessionWinnerResultsIfNeeded(
+        force: true,
+        showLoading: false,
+      );
+      if (!mounted) {
+        return;
+      }
+      dialogResults = _chainInterRoundDialogResults(finishedRound);
+    }
+    if (dialogResults.isEmpty) {
+      return;
+    }
+
     _syncChainPauseEndsAtListenable();
     _showWinnerCartelaDialogForReview(
       dialogResults,
@@ -3824,7 +3863,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (isRoundFinished) {
       unawaited(
         _fetchSessionWinnerResultsIfNeeded(
-          force: _review.sessionWinnerResults.isEmpty,
+          force: true,
           showLoading: false,
         ),
       );
@@ -4215,12 +4254,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (pauseKey == null) {
       return;
     }
+    final isNewPause = _review.chainInterRoundSummaryKey != pauseKey;
     final wasShowing = _review.showsChainInterRoundSummary;
     _seedChainRoundWinnersFromGame();
     _review.startChainInterRoundSummary(pauseKey);
     if (mounted &&
         _review.showsChainInterRoundSummary &&
-        !wasShowing) {
+        (!wasShowing || isNewPause)) {
       ChainGameDebug.log(
         'banner=roundBreak pauseKey=$pauseKey '
         'seconds=${_chainRoundPauseSecondsLeft} '
@@ -4229,7 +4269,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       setState(() {});
       unawaited(
         _fetchSessionWinnerResultsIfNeeded(
-          force: _review.sessionWinnerResults.isEmpty,
+          force: isNewPause || _review.sessionWinnerResults.isEmpty,
           showLoading: false,
         ).whenComplete(() {
           if (mounted) {
@@ -4381,7 +4421,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             roundIndex: finishedRound,
           );
     final dialogResults = _chainInterRoundDialogResults(finishedRound);
-    final pauseEndsAt = game?.roundPausedUntil;
 
     return RoundFinishedBanner(
       isLoading:
@@ -4393,18 +4432,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       interRoundTitle: context.l10n.chainRoundBreakTitle(finishedRound),
       secondsRemaining: _chainRoundPauseSecondsLeft,
       onOpenWinners:
-          !_winnerReviewEligibleViewer || dialogResults.isEmpty
+          !_winnerReviewEligibleViewer ||
+              (dialogResults.isEmpty && roundWinnerNumbers.isEmpty)
           ? null
           : () {
-                _syncChainPauseEndsAtListenable();
-                _showWinnerCartelaDialogForReview(
-                  dialogResults,
-                  pauseEndsAt: pauseEndsAt,
-                  pauseEndsAtListenable: _chainPauseEndsAtListenable,
-                  roundIndex: finishedRound,
-                  roundCount: game?.displayRoundCount,
-                );
-              },
+              unawaited(
+                _openChainInterRoundWinnerDialog(finishedRound: finishedRound),
+              );
+            },
     );
   }
 
@@ -4417,6 +4452,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
     _myCartelas = next;
+  }
+
+  GameModel _embeddedBigGameTerminalForPostGameSummary(GameModel terminalGame) {
+    if (!_embeddedBigGame || !terminalGame.isBigGame) {
+      return terminalGame;
+    }
+    return mergeEmbeddedBigGameTerminalHandoff(
+      terminalGame: terminalGame,
+      queuedUpcoming: _nextUpcomingGame,
+      cardSeed: widget.initialGame,
+    );
   }
 
   Widget? _buildPostGameSummaryBanner() {
@@ -4441,6 +4487,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             myCartelas: _myCartelas,
           );
 
+    final terminalForSummary = game == null
+        ? null
+        : _embeddedBigGameTerminalForPostGameSummary(game);
+
     return RoundFinishedBanner(
       isLoading: _review.sessionWinnerResultsLoading,
       isLoaded:
@@ -4456,10 +4506,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         minimumHold: _postGameSummaryHold,
       ),
       isAdvancing: _review.postGameSummaryAdvancing,
-      hasNextGame: game != null &&
+      hasNextGame: terminalForSummary != null &&
           hasPlayableAdvanceTarget(
             operations: _lastOperations,
-            terminalGame: game,
+            terminalGame: terminalForSummary,
             embeddedBigGame: _embeddedBigGame,
             now: _countdownNow(),
           ),
@@ -4635,9 +4685,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         return false;
       }
 
+      final terminalForAdvance = _embeddedBigGame && currentGame.isBigGame
+          ? _embeddedBigGameTerminalForPostGameSummary(currentGame)
+          : currentGame;
       final nextGame = _embeddedBigGame && currentGame.isBigGame
           ? resolveEmbeddedBigGameAdvanceTarget(
-              terminalGame: currentGame,
+              terminalGame: terminalForAdvance,
               operations: operations,
               now: _countdownNow(),
             )
@@ -4655,11 +4708,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           (onlyIfRegistrationAvailable && !registrationEligible)) {
         if (_embeddedBigGame &&
             currentGame.isBigGame &&
-            bigGameSlotHasMoreRoundsAfterTerminal(currentGame)) {
+            bigGameSlotHasMoreRoundsAfterTerminal(terminalForAdvance)) {
           BigGameDebug.log(
-            'advance_deferred slotRound=${currentGame.displayRoundIndex}/'
-            '${currentGame.roundCount} nextReg='
-            '${currentGame.nextRoundRegistration?.sessionId}',
+            'advance_deferred slotRound=${terminalForAdvance.displayRoundIndex}/'
+            '${terminalForAdvance.roundCount} nextReg='
+            '${terminalForAdvance.nextRoundRegistration?.sessionId}',
           );
           return false;
         }

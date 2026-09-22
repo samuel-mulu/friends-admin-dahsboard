@@ -1368,6 +1368,24 @@ abstract class AppLocalizations {
   /// **'Submit withdrawal'**
   String get withdrawSubmit;
 
+  /// No description provided for @withdrawConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm withdrawal'**
+  String get withdrawConfirmTitle;
+
+  /// No description provided for @withdrawConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.'**
+  String get withdrawConfirmMessage;
+
+  /// No description provided for @withdrawSetPasswordFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a password in Settings before you can withdraw.'**
+  String get withdrawSetPasswordFirst;
+
   /// No description provided for @withdrawLatest.
   ///
   /// In en, this message translates to:
@@ -4149,6 +4167,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can still select up to {max} more cartelas for this Chain Game.'**
   String registrationChainCanSelectMore(int max);
+
+  /// No description provided for @registrationNormalLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the cartela limit for this game.'**
+  String get registrationNormalLimitReached;
+
+  /// No description provided for @registrationNormalAllCartelasUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already used all cartelas allowed for this game.'**
+  String get registrationNormalAllCartelasUsed;
+
+  /// No description provided for @registrationNormalCanRegisterMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still register up to {max} more cartelas for this game.'**
+  String registrationNormalCanRegisterMore(int max);
+
+  /// No description provided for @registrationNormalCanSelectMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still select up to {max} more cartelas for this game.'**
+  String registrationNormalCanSelectMore(int max);
 
   /// No description provided for @gameStatusRegistrationOpen.
   ///

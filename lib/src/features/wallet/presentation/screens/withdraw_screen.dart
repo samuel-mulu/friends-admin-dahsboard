@@ -18,9 +18,11 @@ import '../providers/wallet_history_providers.dart';
 import '../providers/wallet_provider.dart';
 import '../../data/wallet_repository.dart';
 import '../widgets/withdraw_balance_strip.dart';
+import '../widgets/withdraw_confirm_dialog.dart';
 import '../widgets/withdraw_provider_chips.dart';
 import '../widgets/withdrawal_confirmation_banner.dart';
 import '../widgets/withdrawal_requests_table.dart';
+import '../../../auth/presentation/widgets/security_password_sheet.dart';
 
 class WithdrawScreen extends ConsumerStatefulWidget {
   const WithdrawScreen({super.key});
@@ -604,30 +606,25 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       return;
     }
 
-    if (ref.read(authControllerProvider).session == null) {
+    final session = ref.read(authControllerProvider).session;
+    if (session == null) {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirm withdrawal'),
-        content: const Text(
-          'Submit this withdrawal request? This cannot be undone from the app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
+    if (!session.user.hasPassword) {
+      if (!mounted) {
+        return;
+      }
+      final l10n = context.l10n;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.withdrawSetPasswordFirst)),
+      );
+      await showSecurityPasswordSheet(context, ref);
+      return;
+    }
+
+    final password = await showWithdrawConfirmDialog(context);
+    if (password == null || !mounted) {
       return;
     }
 
@@ -643,6 +640,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
           .createWithdrawal(
             provider: provider,
             amount: amount,
+            password: password,
             receiverPhone: provider == PaymentProvider.telebirr
                 ? receiverValue
                 : null,

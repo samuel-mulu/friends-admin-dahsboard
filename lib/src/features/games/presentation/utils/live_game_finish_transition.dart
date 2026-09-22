@@ -56,29 +56,36 @@ bool isAdvanceRegistrationEligible({
 }
 
 /// True when ops exposes a different READY session the player can register for.
+///
+/// Embedded Big Game: also true while the slot has later rounds even if Round
+/// N+1 is not READY yet — drives 60s summary + Continue like a normal finish.
 bool hasPlayableAdvanceTarget({
   required GameOperationsCurrentResponse? operations,
   required GameModel terminalGame,
   bool embeddedBigGame = false,
   DateTime? now,
 }) {
-  if (operations == null) {
-    return false;
-  }
+  final clock = now ?? DateTime.now();
   if (embeddedBigGame && terminalGame.isBigGame) {
     final resolved = big_game_advance.resolveEmbeddedBigGameAdvanceTarget(
       terminalGame: terminalGame,
       operations: operations,
-      now: now ?? DateTime.now(),
+      now: clock,
     );
-    return resolved != null;
+    if (resolved != null) {
+      return true;
+    }
+    return big_game_advance.bigGameSlotHasMoreRoundsAfterTerminal(terminalGame);
+  }
+  if (operations == null) {
+    return false;
   }
   final next = operations.resolveAdvanceTargetFor(terminalGame: terminalGame);
   return next != null &&
       isAdvanceRegistrationEligible(
         next: next,
         embeddedBigGame: embeddedBigGame,
-        now: now ?? DateTime.now(),
+        now: clock,
       );
 }
 

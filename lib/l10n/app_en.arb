@@ -729,6 +729,15 @@
   "withdrawSubmit": "Submit withdrawal",
   "@withdrawSubmit": {},
 
+  "withdrawConfirmTitle": "Confirm withdrawal",
+  "@withdrawConfirmTitle": {},
+
+  "withdrawConfirmMessage": "Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.",
+  "@withdrawConfirmMessage": {},
+
+  "withdrawSetPasswordFirst": "Set a password in Settings before you can withdraw.",
+  "@withdrawSetPasswordFirst": {},
+
   "withdrawLatest": "Latest withdrawal",
   "@withdrawLatest": {},
 
@@ -2353,6 +2362,22 @@
 
   "registrationChainCanSelectMore": "You can still select up to {max} more cartelas for this Chain Game.",
   "@registrationChainCanSelectMore": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "registrationNormalLimitReached": "You have reached the cartela limit for this game.",
+  "@registrationNormalLimitReached": {},
+
+  "registrationNormalAllCartelasUsed": "You have already used all cartelas allowed for this game.",
+  "@registrationNormalAllCartelasUsed": {},
+
+  "registrationNormalCanRegisterMore": "You can still register up to {max} more cartelas for this game.",
+  "@registrationNormalCanRegisterMore": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+
+  "registrationNormalCanSelectMore": "You can still select up to {max} more cartelas for this game.",
+  "@registrationNormalCanSelectMore": {
     "placeholders": { "max": { "type": "int" } }
   },
 

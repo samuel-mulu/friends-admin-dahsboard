@@ -184,6 +184,7 @@ class WalletRepository {
   Future<WithdrawalModel> createWithdrawal({
     required PaymentProvider provider,
     required String amount,
+    required String password,
     String? receiverPhone,
     String? receiverAccount,
   }) {
@@ -192,6 +193,7 @@ class WalletRepository {
       data: {
         'provider': provider.apiValue,
         'amount': amount,
+        'password': password,
         if (receiverPhone != null && receiverPhone.isNotEmpty)
           'receiverPhone': receiverPhone,
         if (receiverAccount != null && receiverAccount.isNotEmpty)

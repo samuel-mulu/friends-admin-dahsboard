@@ -338,7 +338,11 @@ class RoundFinishedBanner extends StatelessWidget {
     final countdownColor = _bannerCountdownColor(context);
     final trophyColor = _bannerTrophyColor(context);
     final canOpenDialog =
-        !isAdvancing && !isNoWinner && onOpenWinners != null && results.isNotEmpty;
+        !isAdvancing &&
+        !isNoWinner &&
+        onOpenWinners != null &&
+        (results.isNotEmpty ||
+            (isInterRoundPause && winnerCartelaNumbers.isNotEmpty));
 
     return Material(
       color: AppBranding.panelBackground(context),

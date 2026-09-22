@@ -46,6 +46,33 @@ bool shouldSuppressEmbeddedBigGameEmptyCartelaState({
   return true;
 }
 
+/// Merges [nextRoundRegistration] from prefetch/card seed onto a pinned FINISHED
+/// round so advance + summary handoff see Round N+1 when ops lag.
+GameModel mergeEmbeddedBigGameTerminalHandoff({
+  required GameModel terminalGame,
+  GameModel? queuedUpcoming,
+  GameModel? cardSeed,
+}) {
+  if (!terminalGame.isBigGame || terminalGame.nextRoundRegistration != null) {
+    return terminalGame;
+  }
+
+  final fromCard = cardSeed?.nextRoundRegistration;
+  if (fromCard != null &&
+      fromCard.sessionId != null &&
+      fromCard.sessionId != terminalGame.sessionId) {
+    return terminalGame.copyWith(nextRoundRegistration: fromCard);
+  }
+
+  if (queuedUpcoming != null &&
+      queuedUpcoming.sessionId != null &&
+      queuedUpcoming.sessionId != terminalGame.sessionId) {
+    return terminalGame.copyWith(nextRoundRegistration: queuedUpcoming);
+  }
+
+  return terminalGame;
+}
+
 /// More rounds in the slot after this session ends (or next session already linked).
 bool bigGameSlotHasMoreRoundsAfterTerminal(GameModel terminalGame) {
   if (!terminalGame.isBigGame) {

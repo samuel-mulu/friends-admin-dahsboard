@@ -194,6 +194,9 @@
   "withdrawScreenTitle": "Baasi",
   "withdrawAmount": "Hanga",
   "withdrawSubmit": "Baasii galchi",
+  "withdrawConfirmTitle": "Confirm withdrawal",
+  "withdrawConfirmMessage": "Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.",
+  "withdrawSetPasswordFirst": "Set a password in Settings before you can withdraw.",
   "withdrawLatest": "Baasii dhiyoo",
   "withdrawSubmittedStatus": "Baasiin dhiyaate. Haala: {status}.",
   "withdrawCouldNotSubmit": "Baasii galchuu hin dandeenye.",
@@ -590,6 +593,10 @@
   "chainRoundViewAll": "Raawundiiwwan hunda ilaali",
 
   "registrationChainLimitReached": "Tapha Sanqaa kana irratti daangaa kaartelaa ga'atteetta.",
+  "registrationNormalLimitReached": "You have reached the cartela limit for this game.",
+  "registrationNormalAllCartelasUsed": "You have already used all cartelas allowed for this game.",
+  "registrationNormalCanRegisterMore": "You can still register up to {max} more cartelas for this game.",
+  "registrationNormalCanSelectMore": "You can still select up to {max} more cartelas for this game.",
   "registrationChainAllCartelasUsed": "Tapha Sanqaa kana irratti kaartelawwan hunda fayyadamteetta.",
   "registrationChainCanRegisterMore": "Tapha Sanqaa kana irratti hanga kaartelaa {max} dabalataa galmeessuu dandeessa.",
   "registrationChainCanSelectMore": "Tapha Sanqaa kana irratti hanga kaartelaa {max} dabalataa filachuu dandeessa."

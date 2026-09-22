@@ -1,4 +1,5 @@
 import '../../data/models/game_model.dart';
+import 'big_game_live_presentation.dart';
 
 /// Local operations snapshot derived from the current [game] session.
 ///
@@ -29,7 +30,9 @@ GameOperationsCurrentResponse localOperationsSnapshotForGame(
         registrationOpenGame = nextWhileChecking;
       }
     case GameStatus.ready:
-      if (game.canRegister || game.registrationOpen) {
+      if (game.canRegister ||
+          game.registrationOpen ||
+          (game.isBigGame && bigGameRegistrationEligible(game, serverNow))) {
         registrationOpenGame = game;
       }
     case GameStatus.next:

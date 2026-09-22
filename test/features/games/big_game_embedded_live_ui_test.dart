@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/big_game_phase.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/big_game_live_presentation.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/utils/live_embedded_operations_snapshot.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_ui_mode.dart';
 
 final _now = DateTime.parse('2026-09-08T12:00:00.000Z');
@@ -99,6 +100,93 @@ void main() {
 
       expect(state.registrationTarget, isNull);
       expect(state.mode, LiveUiMode.empty);
+    });
+  });
+
+  group('embedded Big Game local operations snapshot', () {
+    test('READY with open window but canRegister false is registration-open', () {
+      final game = _bigGameReady(
+        canRegister: false,
+        registrationOpensAt: _now.subtract(const Duration(minutes: 5)),
+        scheduledStartAt: _now.add(const Duration(minutes: 3)),
+      );
+      final ops = localOperationsSnapshotForGame(game, serverNow: _now);
+      expect(ops.hasActiveGame, isTrue);
+      expect(ops.registrationOpenGame?.sessionId, 'session-bg');
+      expect(ops.liveGame, isNull);
+    });
+  });
+
+  group('embedded Big Game UI when global ops still has another live game', () {
+    test('registration layout when ops aligned to embedded Big Game card', () {
+      final game = _bigGameReady(
+        canRegister: false,
+        registrationOpensAt: _now.subtract(const Duration(minutes: 5)),
+        scheduledStartAt: _now.add(const Duration(minutes: 3)),
+      );
+      final staleLive = GameModel(
+        id: 'other-slot',
+        sessionId: 'other-session',
+        staticCode: 'CH-1',
+        playCode: 'PLAY-2',
+        name: 'Chain',
+        gameRule: null,
+        gameType: 'ONE_LINE',
+        entryFee: '10',
+        prizePerCartela: '0',
+        companyFeePerCartela: '10',
+        prizeAmount: '100',
+        companyRevenue: '0',
+        status: GameStatus.playing,
+        playOrder: 1,
+        startedAt: _now,
+        finishedAt: null,
+        createdAt: _now,
+        updatedAt: _now,
+        registeredCartelasCount: 1,
+        calledNumbersCount: 10,
+        registrationOpen: false,
+        canRegister: false,
+        category: GameCategory.chainGame,
+      );
+      final aligned = localOperationsSnapshotForGame(game, serverNow: _now);
+
+      final state = resolveLiveUiMode(
+        ResolveLiveUiModeInput(
+          operations: aligned,
+          ownsLiveSessionCartelas: false,
+          hasPrimarySessionCartelas: false,
+          now: _now,
+          embeddedBigGame: true,
+          excludeBigGame: false,
+          holds: const LiveSessionHolds(registrationGridReady: true),
+        ),
+      );
+
+      expect(state.useRegistrationOpenLayout, isTrue);
+      expect(state.showRegistrationGrid, isTrue);
+      expect(state.registrationTarget?.sessionId, 'session-bg');
+
+      final blocked = resolveLiveUiMode(
+        ResolveLiveUiModeInput(
+          operations: GameOperationsCurrentResponse(
+            liveGame: staleLive,
+            checkingGame: null,
+            registrationOpenGame: null,
+            queue: const [],
+            timestamp: _now,
+            serverNow: _now,
+          ),
+          ownsLiveSessionCartelas: false,
+          hasPrimarySessionCartelas: false,
+          now: _now,
+          embeddedBigGame: true,
+          excludeBigGame: false,
+          holds: const LiveSessionHolds(registrationGridReady: true),
+        ),
+      );
+      expect(blocked.useRegistrationOpenLayout, isFalse);
+      expect(blocked.registrationTarget, isNull);
     });
   });
 

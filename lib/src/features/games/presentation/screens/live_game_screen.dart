@@ -537,10 +537,36 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     return ref.watch(registrationStateProvider(sessionId)).hasValue;
   }
 
+  GameOperationsCurrentResponse? get _operationsForLiveUiMode {
+    final game = _game;
+    if (!_embeddedBigGame || game == null || !game.isBigGame) {
+      return _lastOperations;
+    }
+
+    final now = _countdownNow();
+    if (game.status == GameStatus.ready &&
+        bigGameRegistrationEligible(game, now)) {
+      final ops = _lastOperations;
+      final regSessionId = ops?.registrationOpenGame?.sessionId;
+      final liveBlocksRegistration =
+          ops?.liveGame != null &&
+          ops!.liveGame!.sessionId != game.sessionId &&
+          keepsOwnedLiveGamePrimary(ops.liveGame!.status);
+      if (ops == null ||
+          !ops.hasActiveGame ||
+          regSessionId != game.sessionId ||
+          liveBlocksRegistration) {
+        return localOperationsSnapshotForGame(game, serverNow: now);
+      }
+    }
+
+    return _lastOperations;
+  }
+
   LiveUiModeState get _liveUiMode {
     return resolveLiveUiMode(
       ResolveLiveUiModeInput(
-        operations: _lastOperations,
+        operations: _operationsForLiveUiMode,
         pinnedPrimaryGame: _resolverPinsTerminalSession ? _game : null,
         ownedLiveGameFallback: _ownedLiveGameFallback,
         ownsLiveSessionCartelas: _ownsLiveSessionCartelas,

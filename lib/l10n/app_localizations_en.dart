@@ -755,6 +755,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get withdrawSubmit => 'Submit withdrawal';
 
   @override
+  String get withdrawConfirmTitle => 'Confirm withdrawal';
+
+  @override
+  String get withdrawConfirmMessage =>
+      'Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.';
+
+  @override
+  String get withdrawSetPasswordFirst =>
+      'Set a password in Settings before you can withdraw.';
+
+  @override
   String get withdrawLatest => 'Latest withdrawal';
 
   @override
@@ -2392,6 +2403,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String registrationChainCanSelectMore(int max) {
     return 'You can still select up to $max more cartelas for this Chain Game.';
+  }
+
+  @override
+  String get registrationNormalLimitReached =>
+      'You have reached the cartela limit for this game.';
+
+  @override
+  String get registrationNormalAllCartelasUsed =>
+      'You have already used all cartelas allowed for this game.';
+
+  @override
+  String registrationNormalCanRegisterMore(int max) {
+    return 'You can still register up to $max more cartelas for this game.';
+  }
+
+  @override
+  String registrationNormalCanSelectMore(int max) {
+    return 'You can still select up to $max more cartelas for this game.';
   }
 
   @override

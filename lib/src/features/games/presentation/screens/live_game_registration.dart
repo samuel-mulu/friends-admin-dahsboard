@@ -236,7 +236,12 @@ class _CartelaRegistrationPanelState
             : l10n.registrationChainCanRegisterMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
-            ? l10n.registrationInsufficientBalanceRegister
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationNormalLimitReached
+                : l10n.registrationInsufficientBalanceRegister)
+            : _hasNormalCartelaCap
+            ? l10n.registrationNormalCanRegisterMore(maxAffordable)
             : l10n.registrationBalanceAllowsUpTo(maxAffordable),
     };
   }
@@ -267,7 +272,12 @@ class _CartelaRegistrationPanelState
             : l10n.registrationChainCanSelectMore(maxAffordable),
       RegistrationLimitKind.normal =>
         maxAffordable == null || maxAffordable < 1
-            ? l10n.registrationInsufficientBalanceSelect
+            ? (_isCartelaCountLimitReached() &&
+                    !_isWalletBalanceLimited(_walletBalanceValue())
+                ? l10n.registrationNormalAllCartelasUsed
+                : l10n.registrationInsufficientBalanceSelect)
+            : _hasNormalCartelaCap
+            ? l10n.registrationNormalCanSelectMore(maxAffordable)
             : l10n.registrationBalanceAllowsUpTo(maxAffordable),
     };
   }
@@ -277,6 +287,11 @@ class _CartelaRegistrationPanelState
   bool get _isBigGotd => widget.category == GameCategory.bigGotd;
 
   bool get _isBonusLike => widget.category.isBonusLike;
+
+  bool get _isNormalGame => widget.category == GameCategory.normal;
+
+  bool get _hasNormalCartelaCap =>
+      _isNormalGame && widget.maxCartelasPerPlayer != null;
 
   bool get _hasFreeEntry => widget.category.hasFreeEntry;
 
@@ -577,7 +592,7 @@ class _CartelaRegistrationPanelState
   }
 
   int? _cartelaLimitRemaining() {
-    if (_isChainGame) {
+    if (_isChainGame || _hasNormalCartelaCap) {
       final max = widget.maxCartelasPerPlayer;
       if (max == null) {
         return null;
@@ -611,15 +626,15 @@ class _CartelaRegistrationPanelState
   }
 
   bool _isCartelaCountLimitReached() {
-    if (!_isBigGotd && !_isChainGame) {
-      return false;
-    }
     final limit = _cartelaLimitRemaining();
     return limit != null && limit < 1;
   }
 
   bool _isWalletBalanceLimited(String? walletBalance) {
-    if (!_isBigGotd && !_isChainGame) {
+    if (_hasFreeEntry) {
+      return false;
+    }
+    if (!_isBigGotd && !_isChainGame && !_hasNormalCartelaCap) {
       return false;
     }
     final money = _moneyAffordableSelections(walletBalance);
@@ -652,7 +667,10 @@ class _CartelaRegistrationPanelState
           : _moneyAffordableSelections(walletBalance);
       return minCartelaSelectionCap(_cartelaLimitRemaining(), byPayment);
     }
-    return _moneyAffordableSelections(walletBalance);
+    return minCartelaSelectionCap(
+      _cartelaLimitRemaining(),
+      _moneyAffordableSelections(walletBalance),
+    );
   }
 
   bool _canAddMoreSelections(String? walletBalance) {
@@ -1324,7 +1342,10 @@ class _CartelaRegistrationPanelState
     final snapshotSessionId = _effectiveSessionId;
     final registeredNumbers = _toolbarRegisteredNumbers(snapshotSessionId);
     final maxAffordable = _maxAffordableSelections(wallet?.balance);
-    final remainingBonusCartelas = _isBonusLike || _isChainGame || _isBigGame
+    final remainingBonusCartelas = _isBonusLike ||
+            _isChainGame ||
+            _isBigGame ||
+            _hasNormalCartelaCap
         ? _cartelaLimitRemaining()
         : null;
     if (snapshotSessionId != null) {

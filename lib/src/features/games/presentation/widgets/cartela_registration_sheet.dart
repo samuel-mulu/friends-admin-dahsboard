@@ -681,6 +681,9 @@ class _CartelaRegistrationSheetState
                       : (error.message == 'CHAIN_GAME_CARTELA_LIMIT_REACHED' ||
                             error.code == 'CHAIN_GAME_CARTELA_LIMIT_REACHED')
                       ? 'You can register up to ${widget.maxCartelasPerPlayer ?? 5} cartelas for this Chain Game.'
+                      : (error.message == 'NORMAL_CARTELA_LIMIT_REACHED' ||
+                            error.code == 'NORMAL_CARTELA_LIMIT_REACHED')
+                      ? context.l10n.registrationNormalLimitReached
                       : error.displayMessage)
                 : 'Could not register this cartela.',
           ),
@@ -1047,10 +1050,14 @@ class _CartelaRegistrationSheetState
                                           ),
                                     ),
                                   ],
-                                  if (_isChainGame &&
+                                  if ((_isChainGame ||
+                                          widget.category ==
+                                              GameCategory.normal) &&
                                       widget.maxCartelasPerPlayer != null)
                                     Text(
-                                      'Max ${widget.maxCartelasPerPlayer} cartelas',
+                                      l10n.gameBonusMaxCartelas(
+                                        widget.maxCartelasPerPlayer!,
+                                      ),
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
                                             color: theme

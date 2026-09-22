@@ -234,6 +234,9 @@
   "withdrawScreenTitle": "ወጪ",
   "withdrawAmount": "መጠን",
   "withdrawSubmit": "ወጪ አስገባ",
+  "withdrawConfirmTitle": "Confirm withdrawal",
+  "withdrawConfirmMessage": "Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.",
+  "withdrawSetPasswordFirst": "Set a password in Settings before you can withdraw.",
   "withdrawLatest": "የቅርቡ ወጪ",
   "withdrawSubmittedStatus": "ወጪ ቀርቧል። ሁኔታ: {status}።",
   "withdrawCouldNotSubmit": "ወጪ ማስገባት አልተቻለም።",
@@ -704,6 +707,10 @@
   "chainRoundViewAll": "ሁሉንም ዙሮች ይመልከቱ",
 
   "registrationChainLimitReached": "ለዚህ የሰንሰለት ጨዋታ የካርቴላ ገደብ ደርሰዋል።",
+  "registrationNormalLimitReached": "You have reached the cartela limit for this game.",
+  "registrationNormalAllCartelasUsed": "You have already used all cartelas allowed for this game.",
+  "registrationNormalCanRegisterMore": "You can still register up to {max} more cartelas for this game.",
+  "registrationNormalCanSelectMore": "You can still select up to {max} more cartelas for this game.",
   "registrationChainAllCartelasUsed": "ለዚህ የሰንሰለት ጨዋታ ሁሉንም ካርቴሎች ተጠቅመዋል።",
   "registrationChainCanRegisterMore": "ለዚህ የሰንሰለት ጨዋታ እስከ {max} ተጨማሪ ካርቴሎች መመዝገብ ይችላሉ።",
   "registrationChainCanSelectMore": "ለዚህ የሰንሰለት ጨዋታ እስከ {max} ተጨማሪ ካርቴሎች መምረጥ ይችላሉ።"

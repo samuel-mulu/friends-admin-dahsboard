@@ -734,6 +734,17 @@ class AppLocalizationsAm extends AppLocalizations {
   String get withdrawSubmit => 'ወጪ አስገባ';
 
   @override
+  String get withdrawConfirmTitle => 'Confirm withdrawal';
+
+  @override
+  String get withdrawConfirmMessage =>
+      'Enter your account password to submit this withdrawal. You cannot cancel it from the app after submitting.';
+
+  @override
+  String get withdrawSetPasswordFirst =>
+      'Set a password in Settings before you can withdraw.';
+
+  @override
   String get withdrawLatest => 'የቅርቡ ወጪ';
 
   @override
@@ -2335,6 +2346,24 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String registrationChainCanSelectMore(int max) {
     return 'ለዚህ የሰንሰለት ጨዋታ እስከ $max ተጨማሪ ካርቴሎች መምረጥ ይችላሉ።';
+  }
+
+  @override
+  String get registrationNormalLimitReached =>
+      'You have reached the cartela limit for this game.';
+
+  @override
+  String get registrationNormalAllCartelasUsed =>
+      'You have already used all cartelas allowed for this game.';
+
+  @override
+  String registrationNormalCanRegisterMore(int max) {
+    return 'You can still register up to $max more cartelas for this game.';
+  }
+
+  @override
+  String registrationNormalCanSelectMore(int max) {
+    return 'You can still select up to $max more cartelas for this game.';
   }
 
   @override
