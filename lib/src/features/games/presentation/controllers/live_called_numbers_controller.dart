@@ -54,6 +54,9 @@ class LiveCalledNumbersController {
   final Set<int> processedCalledNumberOrders = <int>{};
   final Set<String> processedCalledDrawKeys = <String>{};
   final Set<String> pendingClaimCartelaIds = <String>{};
+  /// Claim HTTP failed and my-cartelas recovery also failed — keep Bingo off
+  /// until a successful cartela sync clears this cartela id.
+  final Set<String> claimRecoveryFailedCartelaIds = <String>{};
   final Set<String> manualMarkedNumbers = <String>{};
   String? lastManualMarkedKey;
   String? marksSessionId;
@@ -173,6 +176,10 @@ class LiveCalledNumbersController {
       calledNumbersCount: effectiveCalledCount,
       chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
     )) {
+      return false;
+    }
+
+    if (claimRecoveryFailedCartelaIds.contains(gameCartela.id)) {
       return false;
     }
 
@@ -351,6 +358,7 @@ class LiveCalledNumbersController {
   }) {
     pendingClaimCartelaIds.clear();
     claimingCartelaIds.clear();
+    claimRecoveryFailedCartelaIds.clear();
     claimStripHoldActive = false;
     preClaimNextAutoCallAt = null;
     processedClaimedIds.clear();

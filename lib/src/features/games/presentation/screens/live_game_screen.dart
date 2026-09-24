@@ -101,6 +101,7 @@ import '../utils/live_resume_sync.dart';
 import '../utils/live_resume_terminal_gate.dart';
 import '../debug/live_realtime_debug.dart';
 import '../debug/chain_game_debug.dart';
+import '../debug/bingo_claim_client_debug.dart';
 import '../widgets/registration_open_pulse.dart';
 import '../widgets/winner_window_countdown.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
@@ -349,7 +350,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   static const _liveRoomSplashMinimum = Duration(milliseconds: 1500);
   static const _liveRoomSplashMaximum = Duration(seconds: 15);
-  static const _checkingCartelaMinimumDisplay = Duration(milliseconds: 800);
 
   GameTimingConfigModel get _effectiveTimingConfig =>
       _timingConfig ?? GameTimingConfigModel.fallback;

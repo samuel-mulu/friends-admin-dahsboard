@@ -132,6 +132,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     _cn.claimStripHoldActive = true;
     _cn.preClaimNextAutoCallAt = preClaimNextAutoCallAt;
     _cn.claimingCartelaIds.add(gameCartela.id);
+    _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
 
     setState(() {
       if (shouldOptimisticPause) {
@@ -143,6 +144,18 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     String? outcomeSnackbarMessage;
     var claimFailed = false;
     var claimStateAppliedEarly = false;
+    var recoveryResolvedTerminal = false;
+    var recoveryFailed = false;
+    String appliedBranch = 'none';
+    int? statusCode;
+    String? errorType;
+    var recoveryMs = 0;
+
+    final requestStartedAt = DateTime.now();
+    BingoClaimClientDebug.log(
+      'tapToRequestMs=${requestStartedAt.difference(claimStartedAt).inMilliseconds} '
+      'cartela=${gameCartela.id}',
+    );
 
     try {
       final result = await _gamesRepository.claimBingo(
@@ -162,6 +175,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           reasonCode: result.reasonCode ?? result.claim.reasonCode,
           serverReason: result.claim.reason,
         );
+        appliedBranch = 'blocked';
         return;
       }
 
@@ -184,9 +198,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         _syncWinnerWindowTicker();
         // Late bingo during Finalizing: continue to finished once checks are idle.
         _releaseCalledNumbersStripHoldIfIdle();
+        appliedBranch = 'winner';
         return;
       }
 
+      appliedBranch = 'pending';
       outcomeSnackbarMessage =
           result.claim.reason ?? context.l10n.gameCheckingMessage;
     } catch (error) {
@@ -194,39 +210,55 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         return;
       }
 
-      if (error is ApiException && error.isConnectivityFailure) {
-        final recovered = await _recoverClaimAfterConnectivityFailure(
-          sessionId: sessionId,
-          gameCartela: gameCartela,
-        );
-        if (recovered) {
-          claimResult = null;
-          return;
-        }
-      }
+      statusCode = error is ApiException ? error.statusCode : null;
+      errorType = error is ApiException
+          ? (error.isConnectivityFailure
+                ? 'connectivity'
+                : 'api_${error.statusCode ?? 'unknown'}')
+          : error.runtimeType.toString();
 
-      claimFailed = true;
+      final recoveryStartedAt = DateTime.now();
+      final recovery = await _recoverClaimAfterAmbiguousFailure(
+        sessionId: sessionId,
+        gameCartela: gameCartela,
+      );
+      recoveryMs = DateTime.now().difference(recoveryStartedAt).inMilliseconds;
 
       if (!mounted) {
         return;
       }
 
-      outcomeSnackbarMessage = error is ApiException
-          ? error.displayMessage
-          : 'Could not submit bingo claim.';
+      if (recovery == _ClaimRecoveryOutcome.winner ||
+          recovery == _ClaimRecoveryOutcome.blocked) {
+        recoveryResolvedTerminal = true;
+        claimResult = null;
+        appliedBranch = recovery == _ClaimRecoveryOutcome.winner
+            ? 'recovery_winner'
+            : 'recovery_blocked';
+        return;
+      }
+
+      if (recovery == _ClaimRecoveryOutcome.registered) {
+        claimFailed = true;
+        appliedBranch = 'recovery_registered';
+        outcomeSnackbarMessage = error is ApiException
+            ? error.displayMessage
+            : 'Could not submit bingo claim.';
+      } else {
+        // recovery == failed — do not silently restore Bingo.
+        recoveryFailed = true;
+        claimFailed = true;
+        appliedBranch = 'recovery_failed';
+        outcomeSnackbarMessage =
+            'Could not confirm bingo result. Check your connection and try again.';
+      }
     } finally {
+      final requestDurationMs = DateTime.now()
+          .difference(requestStartedAt)
+          .inMilliseconds;
       final isWinnerWindowSuccess =
           claimResult?.isWinner == true &&
           claimResult?.gameStatus == GameStatus.winnerWindow;
-
-      if (!isWinnerWindowSuccess) {
-        final elapsed = DateTime.now().difference(claimStartedAt);
-        final remaining =
-            _LiveGameScreenStateBase._checkingCartelaMinimumDisplay - elapsed;
-        if (remaining > Duration.zero) {
-          await Future<void>.delayed(remaining);
-        }
-      }
 
       if (mounted && !claimStateAppliedEarly) {
         setState(() {
@@ -243,10 +275,27 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
             );
           }
 
-          _cn.claimStripHoldActive = false;
-          _cn.claimingCartelaIds.remove(gameCartela.id);
-          _cn.preClaimNextAutoCallAt = null;
-          _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          if (recoveryFailed) {
+            _cn.claimRecoveryFailedCartelaIds.add(gameCartela.id);
+            // Keep strip hold clear but do not treat as a successful claim end
+            // that re-arms Bingo — eligibility checks recovery-failed set.
+            _cn.claimStripHoldActive = false;
+            _cn.claimingCartelaIds.remove(gameCartela.id);
+            _cn.preClaimNextAutoCallAt = null;
+            _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          } else if (recoveryResolvedTerminal) {
+            _cn.claimStripHoldActive = false;
+            _cn.claimingCartelaIds.remove(gameCartela.id);
+            _cn.preClaimNextAutoCallAt = null;
+            _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
+            _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          } else {
+            _cn.claimStripHoldActive = false;
+            _cn.claimingCartelaIds.remove(gameCartela.id);
+            _cn.preClaimNextAutoCallAt = null;
+            _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
+            _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          }
 
           if (_cn.claimingCartelaIds.isEmpty) {
             _flushBufferedCalledNumbers();
@@ -270,6 +319,101 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         // Claim resolved (valid/invalid/failed) — unblock Finalizing if WW expired.
         _releaseCalledNumbersStripHoldIfIdle();
       }
+
+      BingoClaimClientDebug.log(
+        'requestDurationMs=$requestDurationMs recoveryMs=$recoveryMs '
+        'totalTapToResultMs=${DateTime.now().difference(claimStartedAt).inMilliseconds} '
+        'statusCode=${statusCode ?? '-'} errorType=${errorType ?? '-'} '
+        'appliedBranch=$appliedBranch',
+      );
+    }
+  }
+
+  Future<_ClaimRecoveryOutcome> _recoverClaimAfterAmbiguousFailure({
+    required String sessionId,
+    required GameCartelaModel gameCartela,
+  }) async {
+    try {
+      final myCartelas = await _gamesRepository.getMyGameCartelas(sessionId);
+      if (!mounted) {
+        return _ClaimRecoveryOutcome.failed;
+      }
+
+      GameCartelaModel? refreshed;
+      for (final cartela in myCartelas) {
+        if (cartela.id == gameCartela.id) {
+          refreshed = cartela;
+          break;
+        }
+      }
+
+      if (refreshed == null) {
+        return _ClaimRecoveryOutcome.registered;
+      }
+
+      final resolvedCartela = refreshed;
+
+      if (resolvedCartela.isWinner ||
+          resolvedCartela.status == GameCartelaStatus.winner) {
+        final chainPlaying =
+            _game?.isChainGame == true && _game?.status == GameStatus.playing;
+        setState(() {
+          if (!chainPlaying) {
+            _game = _game?.copyWith(status: GameStatus.winnerWindow);
+          }
+          _myCartelas = normalizeChainPlayableCartelas(
+            game: _game,
+            cartelas: _myCartelas
+                .map((cartela) {
+                  if (cartela.id != gameCartela.id) {
+                    return cartela;
+                  }
+
+                  if (chainPlaying) {
+                    return resolvedCartela;
+                  }
+
+                  return resolvedCartela.copyWith(
+                    status: GameCartelaStatus.winner,
+                    isWinner: true,
+                    blockedAt: null,
+                  );
+                })
+                .toList(growable: false),
+          );
+          _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
+        });
+
+        _syncWinnerWindowTicker();
+        return _ClaimRecoveryOutcome.winner;
+      }
+
+      if (resolvedCartela.status == GameCartelaStatus.blocked) {
+        setState(() {
+          _myCartelas = _myCartelas
+              .map((cartela) {
+                if (cartela.id != gameCartela.id) {
+                  return cartela;
+                }
+
+                return resolvedCartela;
+              })
+              .toList(growable: false);
+          for (final cartela in _myCartelas) {
+            if (cartela.id == gameCartela.id) {
+              _freezeBlockedCartela(cartela);
+              break;
+            }
+          }
+          _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
+        });
+
+        return _ClaimRecoveryOutcome.blocked;
+      }
+
+      return _ClaimRecoveryOutcome.registered;
+    } catch (_) {
+      return _ClaimRecoveryOutcome.failed;
     }
   }
 
@@ -278,6 +422,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     required GameCartelaModel gameCartela,
   }) {
     _cn.processedResolvedClaimIds.add(result.claim.id);
+    _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
 
     if (result.gameCartelaStatus == GameCartelaStatus.blocked) {
       _cn.rememberBlockedCartelaReason(
@@ -358,92 +503,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     return game.copyWith(nextAutoCallAt: result.nextAutoCallAt);
   }
 
-  Future<bool> _recoverClaimAfterConnectivityFailure({
-    required String sessionId,
-    required GameCartelaModel gameCartela,
-  }) async {
-    try {
-      final myCartelas = await _gamesRepository.getMyGameCartelas(sessionId);
-      if (!mounted) {
-        return true;
-      }
-
-      GameCartelaModel? refreshed;
-      for (final cartela in myCartelas) {
-        if (cartela.id == gameCartela.id) {
-          refreshed = cartela;
-          break;
-        }
-      }
-
-      if (refreshed == null) {
-        return false;
-      }
-
-      final resolvedCartela = refreshed;
-
-      if (resolvedCartela.isWinner ||
-          resolvedCartela.status == GameCartelaStatus.winner) {
-        final chainPlaying =
-            _game?.isChainGame == true && _game?.status == GameStatus.playing;
-        setState(() {
-          if (!chainPlaying) {
-            _game = _game?.copyWith(status: GameStatus.winnerWindow);
-          }
-          _myCartelas = normalizeChainPlayableCartelas(
-            game: _game,
-            cartelas: _myCartelas
-                .map((cartela) {
-                  if (cartela.id != gameCartela.id) {
-                    return cartela;
-                  }
-
-                  if (chainPlaying) {
-                    return resolvedCartela;
-                  }
-
-                  return resolvedCartela.copyWith(
-                    status: GameCartelaStatus.winner,
-                    isWinner: true,
-                    blockedAt: null,
-                  );
-                })
-                .toList(growable: false),
-          );
-        });
-
-        _syncWinnerWindowTicker();
-        return true;
-      }
-
-      if (resolvedCartela.status == GameCartelaStatus.blocked) {
-        setState(() {
-          _myCartelas = _myCartelas
-              .map((cartela) {
-                if (cartela.id != gameCartela.id) {
-                  return cartela;
-                }
-
-                return resolvedCartela;
-              })
-              .toList(growable: false);
-          for (final cartela in _myCartelas) {
-            if (cartela.id == gameCartela.id) {
-              _freezeBlockedCartela(cartela);
-              break;
-            }
-          }
-        });
-
-        return true;
-      }
-
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   void _toggleMarkedNumber(
     GameCartelaModel cartela,
     String header,
@@ -472,5 +531,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     });
     unawaited(_persistManualMarks());
   }
-
 }
+
+enum _ClaimRecoveryOutcome { winner, blocked, registered, failed }
+

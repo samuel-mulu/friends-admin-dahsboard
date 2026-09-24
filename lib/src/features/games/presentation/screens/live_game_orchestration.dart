@@ -324,6 +324,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _myCartelas = const [];
       _clearMyCartelaDisplayOrder();
       _cn.claimingCartelaIds.clear();
+      _cn.claimRecoveryFailedCartelaIds.clear();
       _cn.processedClaimedIds.clear();
       _cn.processedResolvedClaimIds.clear();
       _cn.processedCalledNumberIds.clear();
@@ -446,6 +447,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _cn.claimStripHoldActive = false;
     _cn.claimingCartelaIds.clear();
     _cn.pendingClaimCartelaIds.clear();
+    _cn.claimRecoveryFailedCartelaIds.clear();
     _cn.preClaimNextAutoCallAt = null;
     _review.sessionCheckingCartelaNumbers = const [];
     _cn.flushBufferedCalledNumbers();
@@ -1724,6 +1726,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _myCartelas = const [];
           _clearMyCartelaDisplayOrder();
           _cn.claimingCartelaIds.clear();
+          _cn.claimRecoveryFailedCartelaIds.clear();
           _cn.processedClaimedIds.clear();
           _cn.processedResolvedClaimIds.clear();
           _cn.processedCalledNumberIds.clear();
@@ -2472,6 +2475,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         }
         _cn.pendingClaimCartelaIds.clear();
         _cn.claimingCartelaIds.clear();
+        _cn.claimRecoveryFailedCartelaIds.clear();
         _cn.processedClaimedIds.clear();
         _cn.processedResolvedClaimIds.clear();
         _cn.bufferedCalledNumbers = const [];
@@ -2637,6 +2641,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             cartelas: myCartelas,
           ),
         );
+        // Authoritative cartela sync reconciles ambiguous claim recovery locks.
+        _cn.claimRecoveryFailedCartelaIds.clear();
       }
       _sortMyCartelas();
       _syncChainPlayableCartelas();
@@ -3629,14 +3635,42 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       });
       _markCalledNumbersPanelDirty();
     }
-    if (gameCartelaId != null && completedPatterns.isNotEmpty) {
-      setState(() {
-        _storeClaimWinningSnapshot(
-          gameCartelaId: gameCartelaId,
-          patterns: completedPatterns,
-          lastCalledNumber: lastCalledNumber,
-        );
-      });
+    if (gameCartelaId != null) {
+      final ownsCartela = _myCartelas.any((cartela) => cartela.id == gameCartelaId);
+      if (ownsCartela) {
+        setState(() {
+          _cn.pendingClaimCartelaIds.remove(gameCartelaId);
+          _cn.claimingCartelaIds.remove(gameCartelaId);
+          _cn.claimRecoveryFailedCartelaIds.remove(gameCartelaId);
+          _myCartelas = _myCartelas
+              .map((cartela) {
+                if (cartela.id != gameCartelaId) {
+                  return cartela;
+                }
+                return cartela.copyWith(
+                  status: GameCartelaStatus.winner,
+                  isWinner: true,
+                  blockedAt: null,
+                );
+              })
+              .toList(growable: false);
+          if (completedPatterns.isNotEmpty) {
+            _storeClaimWinningSnapshot(
+              gameCartelaId: gameCartelaId,
+              patterns: completedPatterns,
+              lastCalledNumber: lastCalledNumber,
+            );
+          }
+        });
+      } else if (completedPatterns.isNotEmpty) {
+        setState(() {
+          _storeClaimWinningSnapshot(
+            gameCartelaId: gameCartelaId,
+            patterns: completedPatterns,
+            lastCalledNumber: lastCalledNumber,
+          );
+        });
+      }
     }
 
     _releaseCalledNumbersStripHoldIfIdle();
