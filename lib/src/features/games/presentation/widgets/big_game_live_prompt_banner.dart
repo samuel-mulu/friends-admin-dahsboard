@@ -37,21 +37,18 @@ class BigGameLivePromptBanner extends ConsumerWidget {
     final phase =
         bigGame == null ? null : resolveBigGamePhase(bigGame, now: now);
 
-    final hasMoreRoundsAfterCurrent = bigGame != null &&
-        bigGame.displayRoundIndex < bigGame.displayRoundCount;
-    final nextWhileLive = bigGame?.nextRoundRegistration;
-    final nextRegistrationOpenWhileLive = phase == BigGamePhase.live &&
-        nextWhileLive != null &&
-        nextWhileLive.canRegister;
+    // Option A: next READY opens only after finish — no overlapping
+    // next-round registration while Round N is still live.
+    final nextAfterFinish = bigGame?.nextRoundRegistration;
     final finishedWithFollowUp = phase == BigGamePhase.finishedReview &&
-        hasMoreRoundsAfterCurrent &&
-        (nextWhileLive != null || bigGame.nextRoundStartsAt != null);
+        bigGame != null &&
+        bigGame.displayRoundIndex < bigGame.displayRoundCount &&
+        (nextAfterFinish != null || bigGame.nextRoundStartsAt != null);
 
     final shouldShow = elsewhere != null ||
         bigGame?.heldWaitingForLiveSlot == true ||
         phase == BigGamePhase.live ||
         phase == BigGamePhase.registrationOpen ||
-        phase == BigGamePhase.betweenRounds ||
         phase == BigGamePhase.waitingToPlay ||
         finishedWithFollowUp;
 
@@ -63,13 +60,11 @@ class BigGameLivePromptBanner extends ConsumerWidget {
       elsewhere: elsewhere,
       bigGame: bigGame,
       phase: phase,
-      nextRegistrationOpenWhileLive: nextRegistrationOpenWhileLive,
     );
     final registrationRound = _registrationRound(
       bigGame: bigGame,
       phase: phase,
-      nextRegistrationOpenWhileLive: nextRegistrationOpenWhileLive,
-      nextWhileLive: nextWhileLive,
+      nextAfterFinish: nextAfterFinish,
     );
     final playingRound = bigGame?.displayRoundIndex ?? 1;
 
@@ -153,7 +148,6 @@ _BigGamePromptKind _resolvePromptKind({
   required BigGameLiveElsewhere? elsewhere,
   required GameModel? bigGame,
   required BigGamePhase? phase,
-  required bool nextRegistrationOpenWhileLive,
 }) {
   final isHeld = elsewhere?.isHeld == true ||
       bigGame?.heldWaitingForLiveSlot == true ||
@@ -163,15 +157,15 @@ _BigGamePromptKind _resolvePromptKind({
   }
 
   final isRegistrationOpen = phase == BigGamePhase.registrationOpen ||
-      nextRegistrationOpenWhileLive ||
       (phase == BigGamePhase.finishedReview &&
           bigGame?.nextRoundRegistration?.canRegister == true);
   if (isRegistrationOpen) {
     return _BigGamePromptKind.registrationOpen;
   }
 
-  if (phase == BigGamePhase.betweenRounds ||
-      phase == BigGamePhase.finishedReview) {
+  // Finished with a follow-up round: point players at /big-game where Live
+  // shows the same finished → next READY handoff as a normal game.
+  if (phase == BigGamePhase.finishedReview) {
     return _BigGamePromptKind.betweenRounds;
   }
 
@@ -196,15 +190,11 @@ String _resolvePromptText({
 int _registrationRound({
   required GameModel? bigGame,
   required BigGamePhase? phase,
-  required bool nextRegistrationOpenWhileLive,
-  required GameModel? nextWhileLive,
+  required GameModel? nextAfterFinish,
 }) {
-  if (nextRegistrationOpenWhileLive && nextWhileLive != null) {
-    return nextWhileLive.displayRoundIndex;
-  }
-  final next = bigGame?.nextRoundRegistration;
-  if (phase == BigGamePhase.finishedReview && next?.canRegister == true) {
-    return next!.displayRoundIndex;
+  if (phase == BigGamePhase.finishedReview &&
+      nextAfterFinish?.canRegister == true) {
+    return nextAfterFinish!.displayRoundIndex;
   }
   return bigGame?.displayRoundIndex ?? 1;
 }

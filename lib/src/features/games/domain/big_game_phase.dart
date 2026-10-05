@@ -6,6 +6,9 @@ enum BigGamePhase {
   registrationOpen,
   waitingToPlay,
   live,
+
+  /// Unused (Option A). Next-round READY resolves as [registrationOpen].
+  /// Kept so older switch sites compile; [resolveBigGamePhase] never returns it.
   betweenRounds,
   finishedReview,
   cancelled,

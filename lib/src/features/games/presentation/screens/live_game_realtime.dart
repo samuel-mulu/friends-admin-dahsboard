@@ -22,6 +22,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.on('game:bingo_claimed', _onBingoClaimed);
     _socketService.on('game:bingo_valid', _onBingoValid);
     _socketService.on('game:bingo_invalid', _onBingoInvalid);
+    _socketService.on('game:bingo_claim_failed', _onBingoClaimFailed);
     _socketService.on('game:winner_window_started', _onWinnerWindowEvent);
     _socketService.on('game:winner_window_joined', _onWinnerWindowEvent);
     _socketService.on('game:finished', _onGameFinished);
@@ -52,6 +53,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     _socketService.off('game:bingo_claimed', _onBingoClaimed);
     _socketService.off('game:bingo_valid', _onBingoValid);
     _socketService.off('game:bingo_invalid', _onBingoInvalid);
+    _socketService.off('game:bingo_claim_failed', _onBingoClaimFailed);
     _socketService.off('game:winner_window_started', _onWinnerWindowEvent);
     _socketService.off('game:winner_window_joined', _onWinnerWindowEvent);
     _socketService.off('game:finished', _onGameFinished);

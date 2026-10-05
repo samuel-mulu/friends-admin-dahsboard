@@ -77,17 +77,41 @@ void main() {
       );
     });
 
-    test('finishedReview on FINISHED session keeps terminal review host', () {
-      final game = _bigGame(
+    test('live and finishedReview share one host key (no remount)', () {
+      final live = _bigGame(
+        status: GameStatus.playing,
+        sessionId: 's1',
+        roundIndex: 1,
+        roundCount: 3,
+      );
+      final finished = _bigGame(
         status: GameStatus.finished,
         sessionId: 's1',
         roundIndex: 1,
         roundCount: 3,
       );
       expect(
-        shouldEmbedBigGameTerminalReviewHost(
-          game: game,
+        bigGameLiveHostInstanceKey(live),
+        bigGameLiveHostInstanceKey(finished),
+      );
+      expect(
+        bigGameEmbeddedLiveInstanceKey('s1'),
+        'big-game-embedded-live-s1',
+      );
+    });
+
+    test('shell banner hidden during finished review (Live owns summary)', () {
+      expect(
+        shouldShowBigGameShellBanner(
           phase: BigGamePhase.finishedReview,
+          embedTerminalReview: true,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldShowBigGameShellBanner(
+          phase: BigGamePhase.live,
+          embedTerminalReview: false,
         ),
         isTrue,
       );

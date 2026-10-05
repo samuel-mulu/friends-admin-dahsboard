@@ -103,3 +103,30 @@ bool shouldEmbedBigGameTerminalReviewHost({
       (game.status == GameStatus.finished ||
           game.status == GameStatus.noWinner);
 }
+
+/// Stable shell key for live + finished review so PLAYING → FINISHED does not
+/// remount [BigGameLiveHost] and tear down the shared 60s summary.
+String bigGameLiveHostInstanceKey(GameModel game) {
+  return 'big-game-live-host-${game.id}';
+}
+
+/// Nested [LiveGameScreen] key — session only. Do not encode terminal /
+/// nextRoundRegistration / missed flags or finish→next READY remounts mid-summary.
+String bigGameEmbeddedLiveInstanceKey(String sessionId) {
+  return 'big-game-embedded-live-$sessionId';
+}
+
+/// Shell chrome during finished review duplicates Live's [RoundFinishedBanner].
+/// Live owns finish → next READY; keep the collapsible banner only while live.
+bool shouldShowBigGameShellBanner({
+  required BigGamePhase phase,
+  required bool embedTerminalReview,
+}) {
+  if (embedTerminalReview || phase == BigGamePhase.finishedReview) {
+    return false;
+  }
+  return phase == BigGamePhase.live ||
+      phase == BigGamePhase.registrationOpen ||
+      phase == BigGamePhase.beforeRegistrationOpens ||
+      phase == BigGamePhase.waitingToPlay;
+}

@@ -448,6 +448,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _cn.claimingCartelaIds.clear();
     _cn.pendingClaimCartelaIds.clear();
     _cn.claimRecoveryFailedCartelaIds.clear();
+    _cn.activeClaimAttemptIdByCartelaId.clear();
     _cn.preClaimNextAutoCallAt = null;
     _review.sessionCheckingCartelaNumbers = const [];
     _cn.flushBufferedCalledNumbers();
@@ -2476,6 +2477,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.pendingClaimCartelaIds.clear();
         _cn.claimingCartelaIds.clear();
         _cn.claimRecoveryFailedCartelaIds.clear();
+        _cn.activeClaimAttemptIdByCartelaId.clear();
         _cn.processedClaimedIds.clear();
         _cn.processedResolvedClaimIds.clear();
         _cn.bufferedCalledNumbers = const [];
@@ -2641,8 +2643,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             cartelas: myCartelas,
           ),
         );
-        // Authoritative cartela sync reconciles ambiguous claim recovery locks.
-        _cn.claimRecoveryFailedCartelaIds.clear();
+        // Do not clear unresolved claim locks from REGISTERED cartela snapshots.
+        // Only clear recovery locks when the cartela is already terminal.
+        for (final cartela in myCartelas) {
+          if (cartela.status == GameCartelaStatus.winner ||
+              cartela.status == GameCartelaStatus.blocked) {
+            _cn.claimRecoveryFailedCartelaIds.remove(cartela.id);
+            _cn.activeClaimAttemptIdByCartelaId.remove(cartela.id);
+          }
+        }
       }
       _sortMyCartelas();
       _syncChainPlayableCartelas();
@@ -3504,6 +3513,60 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _applyBingoInvalidPayload(normalizedPayload);
+  }
+
+  void _onBingoClaimFailed(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalizedPayload = _normalizeSocketPayloadForEvent(
+      payload,
+      eventName: 'game:bingo_claim_failed',
+      includeCalledNumbers: true,
+    );
+    if (normalizedPayload == null) {
+      return;
+    }
+
+    if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
+      return;
+    }
+
+    final gameCartelaId = normalizedPayload['gameCartelaId'] as String?;
+    final claimAttemptId = normalizedPayload['claimAttemptId'] as String?;
+    final retryAllowed = normalizedPayload['retryAllowed'] as bool? ?? true;
+    final cartelaNumber = _cartelaNumberFromPayload(normalizedPayload);
+
+    if (normalizedPayload.containsKey('nextAutoCallAt')) {
+      _applyAutoCallScheduleFromPayload(normalizedPayload);
+    }
+
+    if (!retryAllowed || gameCartelaId == null) {
+      return;
+    }
+
+    final activeAttempt = _cn.activeClaimAttemptIdByCartelaId[gameCartelaId];
+    if (claimAttemptId != null &&
+        activeAttempt != null &&
+        activeAttempt != claimAttemptId) {
+      return;
+    }
+
+    setState(() {
+      if (cartelaNumber != null) {
+        _clearSessionCheckingCartelaNumber(cartelaNumber);
+      }
+      _cn.pendingClaimCartelaIds.remove(gameCartelaId);
+      _cn.claimingCartelaIds.remove(gameCartelaId);
+      _cn.activeClaimAttemptIdByCartelaId.remove(gameCartelaId);
+      _cn.claimRecoveryFailedCartelaIds.remove(gameCartelaId);
+      if (_cn.claimingCartelaIds.isEmpty) {
+        _cn.claimStripHoldActive = false;
+      }
+    });
+    _markCalledNumbersPanelDirty();
+    _releaseCalledNumbersStripHoldIfIdle();
   }
 
   void _applyBingoInvalidPayload(Map<String, dynamic> payload) {

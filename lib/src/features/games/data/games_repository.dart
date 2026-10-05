@@ -646,16 +646,37 @@ class GamesRepository {
   Future<BingoClaimResult> claimBingo({
     required String sessionId,
     required String gameCartelaId,
+    required String claimAttemptId,
+    DateTime? clientTapAt,
   }) {
     return _apiClient.post<BingoClaimResult>(
       '/games/sessions/$sessionId/bingo',
-      data: {'gameCartelaId': gameCartelaId},
+      data: {
+        'gameCartelaId': gameCartelaId,
+        'claimAttemptId': claimAttemptId,
+        if (clientTapAt != null) 'clientTapAt': clientTapAt.toUtc().toIso8601String(),
+      },
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {
           throw StateError('Invalid bingo claim response.');
         }
 
         return BingoClaimResult.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<BingoClaimAttemptStatus> getBingoClaimAttempt({
+    required String sessionId,
+    required String claimAttemptId,
+  }) {
+    return _apiClient.get<BingoClaimAttemptStatus>(
+      '/games/sessions/$sessionId/bingo-claims/$claimAttemptId',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid bingo claim attempt response.');
+        }
+        return BingoClaimAttemptStatus.fromJson(rawData);
       },
     );
   }

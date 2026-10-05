@@ -121,9 +121,10 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       return;
     }
 
-    // Once pressed: commit to claiming and always submit. Do not abort for the
-    // countdown lock race — the button gate already disables presses; a fired
-    // press must get a real winner / blocked / error answer, not gold-ready again.
+    // Reuse claimAttemptId only while the same attempt is unresolved.
+    final claimAttemptId =
+        _cn.activeClaimAttemptIdByCartelaId[gameCartela.id] ??
+        const Uuid().v4();
     final claimStartedAt = DateTime.now();
     final preClaimNextAutoCallAt = _game?.nextAutoCallAt;
     final shouldOptimisticPause =
@@ -132,6 +133,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     _cn.claimStripHoldActive = true;
     _cn.preClaimNextAutoCallAt = preClaimNextAutoCallAt;
     _cn.claimingCartelaIds.add(gameCartela.id);
+    _cn.activeClaimAttemptIdByCartelaId[gameCartela.id] = claimAttemptId;
     _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
 
     setState(() {
@@ -146,6 +148,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     var claimStateAppliedEarly = false;
     var recoveryResolvedTerminal = false;
     var recoveryFailed = false;
+    var returnToReady = false;
     String appliedBranch = 'none';
     int? statusCode;
     String? errorType;
@@ -154,13 +157,15 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     final requestStartedAt = DateTime.now();
     BingoClaimClientDebug.log(
       'tapToRequestMs=${requestStartedAt.difference(claimStartedAt).inMilliseconds} '
-      'cartela=${gameCartela.id}',
+      'cartela=${gameCartela.id} claimAttemptId=$claimAttemptId',
     );
 
     try {
       final result = await _gamesRepository.claimBingo(
         sessionId: sessionId,
         gameCartelaId: gameCartela.id,
+        claimAttemptId: claimAttemptId,
+        clientTapAt: claimStartedAt,
       );
 
       if (!mounted) {
@@ -168,6 +173,21 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       }
 
       claimResult = result;
+
+      if (result.isFailed && result.retryAllowed) {
+        appliedBranch = 'failed_retry_allowed';
+        returnToReady = true;
+        claimFailed = true;
+        outcomeSnackbarMessage =
+            result.claim.reason ??
+            'Bingo could not be checked. You can try again.';
+        if (result.hasNextAutoCallAt) {
+          setState(() {
+            _game = _applyNextAutoCallAtFromClaimResult(_game, result);
+          });
+        }
+        return;
+      }
 
       if (result.gameCartelaStatus == GameCartelaStatus.blocked) {
         _cn.rememberBlockedCartelaReason(
@@ -186,6 +206,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           claimStateAppliedEarly = true;
           _cn.claimStripHoldActive = false;
           _cn.claimingCartelaIds.remove(gameCartela.id);
+          _cn.activeClaimAttemptIdByCartelaId.remove(gameCartela.id);
           _cn.preClaimNextAutoCallAt = null;
           final cartelaNumber = gameCartela.cartela.number;
           _clearSessionCheckingCartelaNumber(cartelaNumber);
@@ -196,7 +217,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           _flushBufferedCalledNumbers();
         }
         _syncWinnerWindowTicker();
-        // Late bingo during Finalizing: continue to finished once checks are idle.
         _releaseCalledNumbersStripHoldIfIdle();
         appliedBranch = 'winner';
         return;
@@ -218,9 +238,10 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           : error.runtimeType.toString();
 
       final recoveryStartedAt = DateTime.now();
-      final recovery = await _recoverClaimAfterAmbiguousFailure(
+      final recovery = await _recoverClaimAttemptAfterAmbiguousFailure(
         sessionId: sessionId,
         gameCartela: gameCartela,
+        claimAttemptId: claimAttemptId,
       );
       recoveryMs = DateTime.now().difference(recoveryStartedAt).inMilliseconds;
 
@@ -238,20 +259,27 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         return;
       }
 
-      if (recovery == _ClaimRecoveryOutcome.registered) {
+      if (recovery == _ClaimRecoveryOutcome.failedRetryAllowed) {
         claimFailed = true;
-        appliedBranch = 'recovery_registered';
-        outcomeSnackbarMessage = error is ApiException
-            ? error.displayMessage
-            : 'Could not submit bingo claim.';
-      } else {
-        // recovery == failed — do not silently restore Bingo.
-        recoveryFailed = true;
-        claimFailed = true;
-        appliedBranch = 'recovery_failed';
+        returnToReady = true;
+        appliedBranch = 'recovery_failed_retry';
         outcomeSnackbarMessage =
-            'Could not confirm bingo result. Check your connection and try again.';
+            'Bingo could not be checked. You can try again.';
+        return;
       }
+
+      if (recovery == _ClaimRecoveryOutcome.stillChecking) {
+        claimStateAppliedEarly = true;
+        appliedBranch = 'recovery_still_checking';
+        outcomeSnackbarMessage = 'Still checking your bingo claim…';
+        return;
+      }
+
+      recoveryFailed = true;
+      claimFailed = true;
+      appliedBranch = 'recovery_failed';
+      outcomeSnackbarMessage =
+          'Could not confirm bingo result. Check your connection and try again.';
     } finally {
       final requestDurationMs = DateTime.now()
           .difference(requestStartedAt)
@@ -263,7 +291,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       if (mounted && !claimStateAppliedEarly) {
         setState(() {
           if (claimFailed) {
-            if (shouldOptimisticPause) {
+            if (shouldOptimisticPause &&
+                returnToReady &&
+                claimResult?.hasNextAutoCallAt != true) {
               _game = _game?.copyWith(
                 nextAutoCallAt: _cn.preClaimNextAutoCallAt,
               );
@@ -275,10 +305,15 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
             );
           }
 
-          if (recoveryFailed) {
+          if (returnToReady) {
+            _cn.claimStripHoldActive = false;
+            _cn.claimingCartelaIds.remove(gameCartela.id);
+            _cn.activeClaimAttemptIdByCartelaId.remove(gameCartela.id);
+            _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
+            _cn.preClaimNextAutoCallAt = null;
+            _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          } else if (recoveryFailed) {
             _cn.claimRecoveryFailedCartelaIds.add(gameCartela.id);
-            // Keep strip hold clear but do not treat as a successful claim end
-            // that re-arms Bingo — eligibility checks recovery-failed set.
             _cn.claimStripHoldActive = false;
             _cn.claimingCartelaIds.remove(gameCartela.id);
             _cn.preClaimNextAutoCallAt = null;
@@ -286,12 +321,16 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           } else if (recoveryResolvedTerminal) {
             _cn.claimStripHoldActive = false;
             _cn.claimingCartelaIds.remove(gameCartela.id);
+            _cn.activeClaimAttemptIdByCartelaId.remove(gameCartela.id);
             _cn.preClaimNextAutoCallAt = null;
             _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
             _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
           } else {
             _cn.claimStripHoldActive = false;
             _cn.claimingCartelaIds.remove(gameCartela.id);
+            if (claimResult?.claim.status.isTerminal == true) {
+              _cn.activeClaimAttemptIdByCartelaId.remove(gameCartela.id);
+            }
             _cn.preClaimNextAutoCallAt = null;
             _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
             _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
@@ -316,7 +355,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           _scheduleCanonicalRefetch();
         }
 
-        // Claim resolved (valid/invalid/failed) — unblock Finalizing if WW expired.
         _releaseCalledNumbersStripHoldIfIdle();
       }
 
@@ -324,42 +362,50 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         'requestDurationMs=$requestDurationMs recoveryMs=$recoveryMs '
         'totalTapToResultMs=${DateTime.now().difference(claimStartedAt).inMilliseconds} '
         'statusCode=${statusCode ?? '-'} errorType=${errorType ?? '-'} '
-        'appliedBranch=$appliedBranch',
+        'appliedBranch=$appliedBranch claimAttemptId=$claimAttemptId',
       );
     }
   }
 
-  Future<_ClaimRecoveryOutcome> _recoverClaimAfterAmbiguousFailure({
+  Future<_ClaimRecoveryOutcome> _recoverClaimAttemptAfterAmbiguousFailure({
     required String sessionId,
     required GameCartelaModel gameCartela,
+    required String claimAttemptId,
   }) async {
     try {
-      final myCartelas = await _gamesRepository.getMyGameCartelas(sessionId);
+      final attempt = await _gamesRepository.getBingoClaimAttempt(
+        sessionId: sessionId,
+        claimAttemptId: claimAttemptId,
+      );
       if (!mounted) {
         return _ClaimRecoveryOutcome.failed;
       }
 
-      GameCartelaModel? refreshed;
-      for (final cartela in myCartelas) {
-        if (cartela.id == gameCartela.id) {
-          refreshed = cartela;
-          break;
+      if (attempt.status == BingoClaimStatus.checking ||
+          attempt.status == BingoClaimStatus.pending) {
+        return _ClaimRecoveryOutcome.stillChecking;
+      }
+
+      if (attempt.status == BingoClaimStatus.failed && attempt.retryAllowed) {
+        if (attempt.nextAutoCallAt != null) {
+          setState(() {
+            _game = _game?.copyWith(nextAutoCallAt: attempt.nextAutoCallAt);
+          });
         }
+        return _ClaimRecoveryOutcome.failedRetryAllowed;
       }
 
-      if (refreshed == null) {
-        return _ClaimRecoveryOutcome.registered;
-      }
-
-      final resolvedCartela = refreshed;
-
-      if (resolvedCartela.isWinner ||
-          resolvedCartela.status == GameCartelaStatus.winner) {
+      if (attempt.isWinner ||
+          attempt.gameCartelaStatus == GameCartelaStatus.winner) {
         final chainPlaying =
             _game?.isChainGame == true && _game?.status == GameStatus.playing;
         setState(() {
           if (!chainPlaying) {
-            _game = _game?.copyWith(status: GameStatus.winnerWindow);
+            _game = _game?.copyWith(
+              status: GameStatus.winnerWindow,
+              winnerWindowEndsAt:
+                  attempt.winnerWindowEndsAt ?? _game?.winnerWindowEndsAt,
+            );
           }
           _myCartelas = normalizeChainPlayableCartelas(
             game: _game,
@@ -368,12 +414,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
                   if (cartela.id != gameCartela.id) {
                     return cartela;
                   }
-
-                  if (chainPlaying) {
-                    return resolvedCartela;
-                  }
-
-                  return resolvedCartela.copyWith(
+                  return cartela.copyWith(
                     status: GameCartelaStatus.winner,
                     isWinner: true,
                     blockedAt: null,
@@ -383,20 +424,23 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           );
           _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
         });
-
         _syncWinnerWindowTicker();
         return _ClaimRecoveryOutcome.winner;
       }
 
-      if (resolvedCartela.status == GameCartelaStatus.blocked) {
+      if (attempt.gameCartelaStatus == GameCartelaStatus.blocked ||
+          attempt.status == BingoClaimStatus.invalid) {
         setState(() {
           _myCartelas = _myCartelas
               .map((cartela) {
                 if (cartela.id != gameCartela.id) {
                   return cartela;
                 }
-
-                return resolvedCartela;
+                return cartela.copyWith(
+                  status: GameCartelaStatus.blocked,
+                  isWinner: false,
+                  blockedAt: DateTime.now(),
+                );
               })
               .toList(growable: false);
           for (final cartela in _myCartelas) {
@@ -407,11 +451,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           }
           _cn.claimRecoveryFailedCartelaIds.remove(gameCartela.id);
         });
-
         return _ClaimRecoveryOutcome.blocked;
       }
 
-      return _ClaimRecoveryOutcome.registered;
+      // REGISTERED alone does not prove claim failure.
+      return _ClaimRecoveryOutcome.failed;
     } catch (_) {
       return _ClaimRecoveryOutcome.failed;
     }
@@ -533,5 +577,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
   }
 }
 
-enum _ClaimRecoveryOutcome { winner, blocked, registered, failed }
+enum _ClaimRecoveryOutcome {
+  winner,
+  blocked,
+  failedRetryAllowed,
+  stillChecking,
+  failed,
+}
 

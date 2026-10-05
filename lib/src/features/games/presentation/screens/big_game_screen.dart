@@ -131,30 +131,22 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             phase: phase,
           );
 
-          // PLAYING + FINISHED review: one host so 60s summary is not unmounted.
+          // PLAYING + FINISHED review: one host so Live owns 60s summary →
+          // next READY (same feel as a normal game). Stable key — do not flip
+          // on live→finished or the nested Live remounts and drops the summary.
           if (phase == BigGamePhase.live || embedTerminalReview) {
-            if (embedTerminalReview) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) {
-                  return;
-                }
-                unawaited(ref.read(currentBigGameProvider.notifier).refresh());
-              });
-            }
-            final hostSessionId = game.sessionId ?? game.id;
             return BigGameLiveHost(
-              key: ValueKey(
-                embedTerminalReview
-                    ? 'big-game-terminal-review-$hostSessionId'
-                    : 'big-game-live-$hostSessionId',
-              ),
+              key: ValueKey(bigGameLiveHostInstanceKey(game)),
               game: game,
               clock: clock,
-              headerTitle: embedTerminalReview
-                  ? context.l10n.gameFinished
-                  : context.l10n.drawerBigGame,
+              headerTitle: context.l10n.drawerBigGame,
               showCountdown: false,
-              showBanner: true,
+              // Live's RoundFinishedBanner owns finished chrome; shell banner
+              // would stack "Game Finished" on top of the same transition.
+              showBanner: shouldShowBigGameShellBanner(
+                phase: phase,
+                embedTerminalReview: embedTerminalReview,
+              ),
               isLivePlaying: true,
               preserveLiveInstanceOnTerminalTransition: true,
             );
@@ -171,7 +163,10 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 countdownLabel: context.l10n.bigGameRegistrationOpensIn,
                 onCountdownExpired: _handleRefresh,
               ),
-              BigGamePhase.registrationOpen => BigGameLiveHost(
+              // Round 2+ READY after Option A handoff resolves here (same as
+              // Round 1 registration). betweenRounds is unused — never returned.
+              BigGamePhase.registrationOpen ||
+              BigGamePhase.betweenRounds => BigGameLiveHost(
                 game: game,
                 clock: clock,
                 headerTitle: context.l10n.bigGameRegistrationOpenTitle,
@@ -183,16 +178,6 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
               BigGamePhase.waitingToPlay => BigGameWaitingView(
                 game: game,
                 onRefresh: _handleRefresh,
-              ),
-              BigGamePhase.betweenRounds => BigGameLiveHost(
-                game: game,
-                clock: clock,
-                headerTitle: context.l10n.bigGameBetweenRoundsTitle,
-                countdownLabel: context.l10n.bigGamePlayStartsIn,
-                countdownTarget:
-                    game.scheduledStartAt ?? game.nextRoundStartsAt,
-                showBanner: true,
-                onCountdownExpired: _handleRefresh,
               ),
               BigGamePhase.live ||
               BigGamePhase.finishedReview ||
