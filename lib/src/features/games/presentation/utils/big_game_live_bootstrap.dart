@@ -18,19 +18,50 @@ class BigGameLiveBootstrap {
   }) async {
     await ref.read(currentBigGameProvider.notifier).refresh();
     final current = ref.read(currentBigGameProvider).value ?? seed;
-    final sessionId = current.sessionId ?? seed.sessionId;
+
+    // Finished-summary pin seed (Round N) must load THAT session even when
+    // /big-game/current operational primary is already Round N+1 READY.
+    final pinTerminalSeed = seed.status == GameStatus.finished ||
+        seed.status == GameStatus.noWinner;
+    final sessionId = pinTerminalSeed
+        ? (seed.sessionId ?? current.sessionId)
+        : (current.sessionId ?? seed.sessionId);
     if (sessionId == null || sessionId.isEmpty) {
-      return current;
+      return pinTerminalSeed ? seed : current;
     }
 
     try {
       final detail = await ref
           .read(gamesRepositoryProvider)
           .getSessionDetail(sessionId);
-      return _mergeBigGameCardOntoSession(card: current, session: detail);
+      final cardForMerge = pinTerminalSeed ? seed : current;
+      final merged =
+          _mergeBigGameCardOntoSession(card: cardForMerge, session: detail);
+      if (!pinTerminalSeed) {
+        return merged;
+      }
+      // Preserve Round N+1 secondary from the pin seed / operational card.
+      final nextRound = seed.nextRoundRegistration ??
+          (current.sessionId != null &&
+                  current.sessionId != seed.sessionId &&
+                  (current.status == GameStatus.ready ||
+                      current.status == GameStatus.next)
+              ? current
+              : null);
+      return merged.copyWith(
+        status: seed.status,
+        finishedAt: seed.finishedAt ?? merged.finishedAt,
+        roundIndex: seed.roundIndex ?? merged.roundIndex,
+        nextRoundRegistration:
+            nextRound ?? merged.nextRoundRegistration,
+        nextRoundStartsAt:
+            seed.nextRoundStartsAt ?? merged.nextRoundStartsAt,
+        canRegister: false,
+        registrationOpen: false,
+      );
     } catch (_) {
       // Keep card snapshot if session detail fails — LiveGameScreen still mounts.
-      return current;
+      return pinTerminalSeed ? seed : current;
     }
   }
 

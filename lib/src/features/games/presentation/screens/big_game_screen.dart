@@ -104,13 +104,18 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
           }
 
           final now = _now(clock);
-          final phase = resolveBigGamePhase(game, now: now);
-          final sessionKey = '${game.sessionId ?? game.id}:${game.status.name}';
+          // Backend operational primary may already be Round N+1 READY while
+          // Round N is FINISHED. Pin Round N locally for the shared finish
+          // summary (Normal A/B semantics) without reverting backend primary.
+          final presentation = resolveBigGamePresentationSeed(game);
+          final phase = resolveBigGamePhase(presentation, now: now);
+          final sessionKey =
+              '${presentation.sessionId ?? presentation.id}:${presentation.status.name}';
           if (_lastLoggedPhase != phase || _lastLoggedSessionKey != sessionKey) {
             BigGameDebug.phase(
               from: _lastLoggedPhase,
               to: phase,
-              game: game,
+              game: presentation,
               now: now,
             );
             _lastLoggedPhase = phase;
@@ -127,7 +132,7 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
           }
 
           final embedTerminalReview = shouldEmbedBigGameTerminalReviewHost(
-            game: game,
+            game: presentation,
             phase: phase,
           );
 
@@ -136,8 +141,8 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
           // on live→finished or the nested Live remounts and drops the summary.
           if (phase == BigGamePhase.live || embedTerminalReview) {
             return BigGameLiveHost(
-              key: ValueKey(bigGameLiveHostInstanceKey(game)),
-              game: game,
+              key: ValueKey(bigGameLiveHostInstanceKey(presentation)),
+              game: presentation,
               clock: clock,
               headerTitle: context.l10n.drawerBigGame,
               showCountdown: false,
@@ -156,25 +161,25 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
             onRefresh: _handleRefresh,
             child: switch (phase) {
               BigGamePhase.beforeRegistrationOpens => BigGameScheduledView(
-                game: game,
+                game: presentation,
                 clock: clock,
-                countdownTarget: game.registrationOpensAt,
+                countdownTarget: presentation.registrationOpensAt,
                 title: context.l10n.bigGameScheduledTitle,
                 countdownLabel: context.l10n.bigGameRegistrationOpensIn,
                 onCountdownExpired: _handleRefresh,
               ),
               // Round 1 create schedule or Round 2+ time-config READY.
               BigGamePhase.registrationOpen => BigGameLiveHost(
-                game: game,
+                game: presentation,
                 clock: clock,
                 headerTitle: context.l10n.bigGameRegistrationOpenTitle,
                 countdownLabel: context.l10n.bigGamePlayStartsIn,
-                countdownTarget: game.scheduledStartAt,
+                countdownTarget: presentation.scheduledStartAt,
                 showBanner: true,
                 onCountdownExpired: _handleRefresh,
               ),
               BigGamePhase.waitingToPlay => BigGameWaitingView(
-                game: game,
+                game: presentation,
                 onRefresh: _handleRefresh,
               ),
               BigGamePhase.live ||

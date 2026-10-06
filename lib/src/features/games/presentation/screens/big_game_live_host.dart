@@ -107,6 +107,29 @@ class _BigGameLiveHostState extends ConsumerState<BigGameLiveHost> {
         _isTerminalStatus(oldWidget.game.status) &&
         _isTerminalStatus(widget.game.status);
 
+    // Backend operational primary flipped to Round N+1 while Live is still
+    // pinning Round N's finished summary — attach N+1 as secondary and keep
+    // the nested Live instance (shared Normal finish machine owns Continue).
+    if (widget.preserveLiveInstanceOnTerminalTransition &&
+        isBigGameIncomingNextRoundAfterMounted(
+          incoming: widget.game,
+          mountedSessionId: _mountedLiveSessionId,
+          mountedGame: _bootstrapped,
+        )) {
+      final base = _bootstrapped;
+      if (base != null && _isTerminalStatus(base.status)) {
+        setState(() {
+          _bootstrapped = base.copyWith(
+            nextRoundRegistration: widget.game.nextRoundRegistration ??
+                widget.game,
+            nextRoundStartsAt:
+                widget.game.scheduledStartAt ?? widget.game.nextRoundStartsAt,
+          );
+        });
+        return;
+      }
+    }
+
     // Shell still reports the finished Round N while Live has already advanced
     // to Round N+1 READY — never remount that Live instance from the card.
     if (sameSession &&

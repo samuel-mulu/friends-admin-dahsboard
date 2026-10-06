@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/domain/big_game_phase.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/big_game_live_presentation.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_game_finish_transition.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_status_socket_patch.dart';
@@ -96,6 +97,188 @@ GameOperationsCurrentResponse _ops({
 }
 
 void main() {
+  group('resolveBigGamePresentationSeed — pin R1 when ops primary is R2', () {
+    test('BG3: R2 READY + previousRound R1 FINISHED → presentation primary is R1',
+        () {
+      final round2 = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        roundIndex: 2,
+        canRegister: true,
+        registrationOpensAt: _now.subtract(const Duration(minutes: 1)),
+        scheduledStartAt: _now.add(const Duration(minutes: 2)),
+      );
+      final operational = round2.copyWith(
+        previousRound: BigGamePreviousRoundSummary(
+          sessionId: 's1',
+          roundIndex: 1,
+          status: GameStatus.finished,
+          finishedAt: _now,
+          registeredCartelasCount: 4,
+          playerOwnedPreviousRound: true,
+        ),
+      );
+      final presentation = resolveBigGamePresentationSeed(operational);
+      expect(presentation.sessionId, 's1');
+      expect(presentation.status, GameStatus.finished);
+      expect(presentation.displayRoundIndex, 1);
+      expect(presentation.nextRoundRegistration?.sessionId, 's2');
+      expect(presentation.nextRoundRegistration?.status, GameStatus.ready);
+      expect(
+        shouldEmbedBigGameTerminalReviewHost(
+          game: presentation,
+          phase: resolveBigGamePhase(presentation, now: _now),
+        ),
+        isTrue,
+      );
+      expect(
+        shouldPinTerminalSession(
+          status: presentation.status,
+          postGameSummaryReviewActive: true,
+        ),
+        isTrue,
+      );
+      // BG4/BG5/BG6: advance target is R2 READY with countdown deadline from R2.
+      expect(
+        hasPlayableAdvanceTarget(
+          operations: _ops(registration: round2),
+          terminalGame: presentation,
+          embeddedBigGame: true,
+          now: _now,
+        ),
+        isTrue,
+      );
+      expect(
+        resolveNextBigGameRound(
+          operations: _ops(registration: round2),
+          terminalRound: presentation,
+        )?.scheduledStartAt,
+        round2.scheduledStartAt,
+      );
+    });
+
+    test('BG1: R1 PLAYING stays presentation primary (no pin rewrite)', () {
+      final round1 = _bigGame(
+        status: GameStatus.playing,
+        sessionId: 's1',
+        roundIndex: 1,
+      );
+      expect(resolveBigGamePresentationSeed(round1).sessionId, 's1');
+    });
+
+    test('BG2: R1 WINNER_WINDOW stays presentation primary', () {
+      final round1 = _bigGame(
+        status: GameStatus.winnerWindow,
+        sessionId: 's1',
+        roundIndex: 1,
+      );
+      expect(resolveBigGamePresentationSeed(round1).sessionId, 's1');
+      expect(resolveBigGamePresentationSeed(round1).status, GameStatus.winnerWindow);
+    });
+
+    test('BG12: final round FINISHED stays presentation primary', () {
+      final finalRound = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's3',
+        roundIndex: 3,
+        roundCount: 3,
+      );
+      final presentation = resolveBigGamePresentationSeed(finalRound);
+      expect(presentation.sessionId, 's3');
+      expect(presentation.status, GameStatus.finished);
+      expect(presentation.nextRoundRegistration, isNull);
+    });
+
+    test('BG9/BG10: wrong previous roundIndex does not synthesize pin', () {
+      final round3 = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's3',
+        roundIndex: 3,
+      );
+      final operational = round3.copyWith(
+        previousRound: const BigGamePreviousRoundSummary(
+          sessionId: 's1',
+          roundIndex: 1,
+          status: GameStatus.finished,
+        ),
+      );
+      expect(resolveBigGamePresentationSeed(operational).sessionId, 's3');
+    });
+  });
+
+  group('isBigGameIncomingNextRoundAfterMounted', () {
+    test('READY N+1 with previousRound matches mounted R1', () {
+      final mounted = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+      );
+      final incoming = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        roundIndex: 2,
+      ).copyWith(
+        previousRound: const BigGamePreviousRoundSummary(
+          sessionId: 's1',
+          roundIndex: 1,
+          status: GameStatus.finished,
+        ),
+      );
+      expect(
+        isBigGameIncomingNextRoundAfterMounted(
+          incoming: incoming,
+          mountedSessionId: 's1',
+          mountedGame: mounted,
+        ),
+        isTrue,
+      );
+    });
+
+    test('BG7: already-PLAYING N+1 matches via roundIndex without previousRound',
+        () {
+      final mounted = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+      );
+      final incoming = _bigGame(
+        status: GameStatus.playing,
+        sessionId: 's2',
+        roundIndex: 2,
+      );
+      expect(
+        isBigGameIncomingNextRoundAfterMounted(
+          incoming: incoming,
+          mountedSessionId: 's1',
+          mountedGame: mounted,
+        ),
+        isTrue,
+      );
+    });
+
+    test('BG9: different slot is rejected', () {
+      final mounted = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's1',
+        roundIndex: 1,
+      );
+      final incoming = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        slotId: 'other-slot',
+        roundIndex: 2,
+      );
+      expect(
+        isBigGameIncomingNextRoundAfterMounted(
+          incoming: incoming,
+          mountedSessionId: 's1',
+          mountedGame: mounted,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('resolveNextBigGameRound (F6, F7: slot + sequence verified)', () {
     test('finds expected Round 2 already PLAYING via operations.liveGame', () {
       final round1Finished = _bigGame(
