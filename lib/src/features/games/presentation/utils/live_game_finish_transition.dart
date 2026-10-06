@@ -37,20 +37,32 @@ bool isTerminalGameStatus(GameStatus status) {
       status == GameStatus.cancelled;
 }
 
+/// Big Game: READY requires normal registration-window eligibility, but an
+/// already-live (PLAYING/CHECKING/WINNER_WINDOW) next round is adopted
+/// directly — the backend already started it, so Flutter must not wait for
+/// a READY state that will never come back. This is the fix for the
+/// `advance_deferred` loop that fired when Round N+1 flipped to PLAYING
+/// before the client's finish-advance check ran.
 bool isAdvanceRegistrationEligible({
   required GameModel next,
   required bool embeddedBigGame,
   required DateTime now,
 }) {
+  if (embeddedBigGame && next.isBigGame) {
+    if (!big_game_advance.isBigGameNextRoundAdoptable(next)) {
+      return false;
+    }
+    if (next.status == GameStatus.ready || next.status == GameStatus.next) {
+      return big_game_advance.liveRegistrationEligible(
+        game: next,
+        now: now,
+        embeddedBigGame: true,
+      );
+    }
+    return true;
+  }
   if (next.status != GameStatus.ready) {
     return false;
-  }
-  if (embeddedBigGame && next.isBigGame) {
-    return big_game_advance.liveRegistrationEligible(
-      game: next,
-      now: now,
-      embeddedBigGame: true,
-    );
   }
   return next.canRegister;
 }
@@ -59,6 +71,9 @@ bool isAdvanceRegistrationEligible({
 ///
 /// Embedded Big Game: also true while the slot has later rounds even if Round
 /// N+1 is not READY yet — drives 60s summary + Continue like a normal finish.
+/// Uses [big_game_advance.resolveNextBigGameRound] (slot + round-sequence
+/// verified) instead of the generic resolver so an unrelated live/queued
+/// session is never mistaken for the next Big Game round.
 bool hasPlayableAdvanceTarget({
   required GameOperationsCurrentResponse? operations,
   required GameModel terminalGame,
@@ -67,18 +82,17 @@ bool hasPlayableAdvanceTarget({
 }) {
   final clock = now ?? DateTime.now();
   if (embeddedBigGame && terminalGame.isBigGame) {
-    if (operations != null) {
-      final resolved = operations.resolveAdvanceTargetFor(
-        terminalGame: terminalGame,
-      );
-      if (resolved != null &&
-          isAdvanceRegistrationEligible(
-            next: resolved,
-            embeddedBigGame: true,
-            now: clock,
-          )) {
-        return true;
-      }
+    final resolved = big_game_advance.resolveNextBigGameRound(
+      operations: operations,
+      terminalRound: terminalGame,
+    );
+    if (resolved != null &&
+        isAdvanceRegistrationEligible(
+          next: resolved,
+          embeddedBigGame: true,
+          now: clock,
+        )) {
+      return true;
     }
     return big_game_advance.bigGameSlotHasMoreRoundsAfterTerminal(terminalGame);
   }

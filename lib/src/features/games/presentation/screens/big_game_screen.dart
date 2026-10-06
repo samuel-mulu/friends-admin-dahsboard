@@ -163,10 +163,8 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
                 countdownLabel: context.l10n.bigGameRegistrationOpensIn,
                 onCountdownExpired: _handleRefresh,
               ),
-              // Round 2+ READY after Option A handoff resolves here (same as
-              // Round 1 registration). betweenRounds is unused — never returned.
-              BigGamePhase.registrationOpen ||
-              BigGamePhase.betweenRounds => BigGameLiveHost(
+              // Round 1 create schedule or Round 2+ time-config READY.
+              BigGamePhase.registrationOpen => BigGameLiveHost(
                 game: game,
                 clock: clock,
                 headerTitle: context.l10n.bigGameRegistrationOpenTitle,

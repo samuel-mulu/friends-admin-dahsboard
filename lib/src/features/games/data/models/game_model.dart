@@ -712,12 +712,15 @@ class GameModel {
     }
 
     final next = nextRoundRegistration;
-    if (next != null &&
-        next.canRegister &&
+    final nextOpen = next != null &&
+        (next.canRegister ||
+            next.registrationOpen ||
+            (next.status == GameStatus.ready && next.scheduledStartAt == null));
+    if (nextOpen &&
         (status == GameStatus.playing ||
             status == GameStatus.checking ||
             status == GameStatus.winnerWindow)) {
-      final previous = next.previousRound;
+      final previous = next!.previousRound;
       if (previous == null) {
         return false;
       }

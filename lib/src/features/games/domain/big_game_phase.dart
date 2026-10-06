@@ -6,17 +6,14 @@ enum BigGamePhase {
   registrationOpen,
   waitingToPlay,
   live,
-
-  /// Unused (Option A). Next-round READY resolves as [registrationOpen].
-  /// Kept so older switch sites compile; [resolveBigGamePhase] never returns it.
-  betweenRounds,
   finishedReview,
   cancelled,
 }
 
 /// Mirrors backend [canRegisterForBigGameWindow]: open when registration has
 /// started and play start is still in the future (or open-ended / null start
-/// for stranded recovery). Option A opens Round N+1 only after Round N finishes.
+/// while previous round is live, or stranded recovery).
+/// Round 1 uses create schedule; Round 2+ use time-config windows.
 bool isBigGameRegistrationWindowOpen(
   GameModel game, {
   required DateTime now,
@@ -35,7 +32,7 @@ bool isBigGameRegistrationWindowOpen(
 
   final scheduledStartAt = game.scheduledStartAt;
   if (scheduledStartAt == null) {
-    // Stranded READY recovery (play start not armed yet).
+    // Open-ended READY (next round while previous is live) or stranded recovery.
     return registrationOpensAt != null || game.canRegister;
   }
 

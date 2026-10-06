@@ -18,7 +18,12 @@ GameOperationsCurrentResponse localOperationsSnapshotForGame(
     case GameStatus.winnerWindow:
       liveGame = game;
       final next = game.nextRoundRegistration;
-      if (next != null && (next.canRegister || next.registrationOpen)) {
+      // Round N+1 READY while live may be open-ended (null scheduledStartAt).
+      if (next != null &&
+          (next.canRegister ||
+              next.registrationOpen ||
+              (next.status == GameStatus.ready &&
+                  next.scheduledStartAt == null))) {
         registrationOpenGame = next;
       }
     case GameStatus.checking:
@@ -26,7 +31,9 @@ GameOperationsCurrentResponse localOperationsSnapshotForGame(
       final nextWhileChecking = game.nextRoundRegistration;
       if (nextWhileChecking != null &&
           (nextWhileChecking.canRegister ||
-              nextWhileChecking.registrationOpen)) {
+              nextWhileChecking.registrationOpen ||
+              (nextWhileChecking.status == GameStatus.ready &&
+                  nextWhileChecking.scheduledStartAt == null))) {
         registrationOpenGame = nextWhileChecking;
       }
     case GameStatus.ready:

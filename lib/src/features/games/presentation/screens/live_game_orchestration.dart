@@ -4788,9 +4788,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final terminalForAdvance = _embeddedBigGame && currentGame.isBigGame
           ? _embeddedBigGameTerminalForPostGameSummary(currentGame)
           : currentGame;
-      final nextGame = operations.resolveAdvanceTargetFor(
-        terminalGame: terminalForAdvance,
-      );
+      // Big Game: slot + round-sequence verified resolver so this never
+      // adopts an unrelated live/queued session as "the next round", and so
+      // an already-PLAYING Round N+1 is found (not just a READY bucket).
+      final nextGame = _embeddedBigGame && currentGame.isBigGame
+          ? resolveNextBigGameRound(
+              operations: operations,
+              terminalRound: terminalForAdvance,
+            )
+          : operations.resolveAdvanceTargetFor(
+              terminalGame: terminalForAdvance,
+            );
 
       final registrationEligible = nextGame == null
           ? false

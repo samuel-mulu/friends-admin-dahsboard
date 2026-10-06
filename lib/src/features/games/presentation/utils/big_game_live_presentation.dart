@@ -130,3 +130,61 @@ bool shouldShowBigGameShellBanner({
       phase == BigGamePhase.beforeRegistrationOpens ||
       phase == BigGamePhase.waitingToPlay;
 }
+
+/// Resolves the expected next Big Game round — same slot, roundIndex + 1 —
+/// from the live operations snapshot. Checks liveGame, checkingGame,
+/// registrationOpenGame, then queue: whichever bucket currently holds the
+/// expected round. Verifying slot identity + round sequence here means an
+/// unrelated live/queued session is never mistaken for the next Big Game
+/// round. Returns null if the next round cannot yet be identified.
+GameModel? resolveNextBigGameRound({
+  required GameOperationsCurrentResponse? operations,
+  required GameModel terminalRound,
+}) {
+  if (operations == null || !terminalRound.isBigGame) {
+    return null;
+  }
+  final expectedRoundIndex = terminalRound.displayRoundIndex + 1;
+
+  bool isExpectedNextRound(GameModel? candidate) {
+    if (candidate == null || !candidate.isBigGame) {
+      return false;
+    }
+    if (candidate.id != terminalRound.id) {
+      return false;
+    }
+    if (candidate.sessionId != null &&
+        candidate.sessionId == terminalRound.sessionId) {
+      return false;
+    }
+    return candidate.displayRoundIndex == expectedRoundIndex;
+  }
+
+  final candidates = [
+    operations.liveGame,
+    operations.checkingGame,
+    operations.registrationOpenGame,
+    ...operations.queue,
+  ];
+  for (final candidate in candidates) {
+    if (isExpectedNextRound(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/// Big Game next-round statuses safe to adopt immediately without waiting:
+/// READY (countdown/registration) and already-live (PLAYING/CHECKING/
+/// WINNER_WINDOW — switch straight to live, do not wait for READY). Backend
+/// remains the only owner of READY -> PLAYING; this never mutates status.
+bool isBigGameNextRoundAdoptable(GameModel candidate) {
+  return switch (candidate.status) {
+    GameStatus.ready ||
+    GameStatus.next ||
+    GameStatus.playing ||
+    GameStatus.checking ||
+    GameStatus.winnerWindow => true,
+    _ => false,
+  };
+}

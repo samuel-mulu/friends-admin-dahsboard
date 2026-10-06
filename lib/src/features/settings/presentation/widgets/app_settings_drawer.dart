@@ -945,7 +945,6 @@ class _DrawerBigGameStatus extends ConsumerWidget {
           BigGamePhase.registrationOpen => l10n.bigGameRegistrationOpenTitle,
           BigGamePhase.waitingToPlay => l10n.bigGameReadyTitle,
           BigGamePhase.live => l10n.announcementBigGameLive,
-          BigGamePhase.betweenRounds => l10n.bigGameBetweenRoundsTitle,
           null => l10n.drawerBigGame,
           _ => l10n.drawerBigGame,
         };
@@ -953,14 +952,12 @@ class _DrawerBigGameStatus extends ConsumerWidget {
         final countdownTarget = switch (phase) {
           BigGamePhase.beforeRegistrationOpens => game?.registrationOpensAt,
           BigGamePhase.registrationOpen => game?.scheduledStartAt,
-          BigGamePhase.betweenRounds => game?.nextRoundStartsAt,
           _ => null,
         };
         final countdownLabel = switch (phase) {
           BigGamePhase.beforeRegistrationOpens =>
             l10n.bigGameRegistrationOpensIn,
           BigGamePhase.registrationOpen => l10n.bigGamePlayStartsIn,
-          BigGamePhase.betweenRounds => l10n.bigGameNextRoundStartsIn,
           _ => null,
         };
         final countdown = countdownTarget != null

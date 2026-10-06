@@ -115,6 +115,69 @@ void main() {
       expect(ops.registrationOpenGame?.sessionId, 'session-bg');
       expect(ops.liveGame, isNull);
     });
+
+    test('PLAYING Round 1 exposes open-ended Round 2 READY as secondary reg', () {
+      final round2 = GameModel(
+        id: 'slot-1',
+        sessionId: 'session-r2',
+        staticCode: 'BG-1',
+        playCode: 'PLAY-2',
+        name: 'Big Game',
+        gameRule: null,
+        gameType: 'FULL_HOUSE',
+        entryFee: '50',
+        prizePerCartela: '40',
+        companyFeePerCartela: '10',
+        prizeAmount: '1000',
+        companyRevenue: '0',
+        status: GameStatus.ready,
+        playOrder: 1,
+        startedAt: null,
+        finishedAt: null,
+        createdAt: _now,
+        updatedAt: _now,
+        registeredCartelasCount: 0,
+        calledNumbersCount: 0,
+        registrationOpen: true,
+        canRegister: true,
+        registrationOpensAt: _now,
+        scheduledStartAt: null,
+        category: GameCategory.bigGame,
+        roundCount: 3,
+        roundIndex: 2,
+      );
+      final live = GameModel(
+        id: 'slot-1',
+        sessionId: 'session-r1',
+        staticCode: 'BG-1',
+        playCode: 'PLAY-1',
+        name: 'Big Game',
+        gameRule: null,
+        gameType: 'FULL_HOUSE',
+        entryFee: '50',
+        prizePerCartela: '40',
+        companyFeePerCartela: '10',
+        prizeAmount: '1000',
+        companyRevenue: '0',
+        status: GameStatus.playing,
+        playOrder: 1,
+        startedAt: _now,
+        finishedAt: null,
+        createdAt: _now,
+        updatedAt: _now,
+        registeredCartelasCount: 2,
+        calledNumbersCount: 5,
+        registrationOpen: false,
+        canRegister: false,
+        category: GameCategory.bigGame,
+        roundCount: 3,
+        roundIndex: 1,
+        nextRoundRegistration: round2,
+      );
+      final ops = localOperationsSnapshotForGame(live, serverNow: _now);
+      expect(ops.liveGame?.sessionId, 'session-r1');
+      expect(ops.registrationOpenGame?.sessionId, 'session-r2');
+    });
   });
 
   group('embedded Big Game UI when global ops still has another live game', () {
