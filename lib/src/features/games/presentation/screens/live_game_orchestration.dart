@@ -1098,14 +1098,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (shouldSuppressBigGameAutoWinnerModalBetweenRounds(
-      game: _game,
-      embeddedBigGame: _embeddedBigGame,
-      postGameSummaryReviewActive: _review.postGameSummaryReviewActive,
-    )) {
-      return;
-    }
-
     final sessionId = _game?.sessionId;
     if (sessionId == null ||
         _review.winnerCartelaDialogAutoShownForSessionId == sessionId) {
@@ -4681,9 +4673,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   bool get _postGameSummaryHoldElapsed => _review.isPostGameSummaryHoldElapsed;
 
-  void _scheduleAdvanceToNextGame() {
+  void _scheduleAdvanceToNextGame({Duration? minimumDelay}) {
     _review.scheduleAdvanceToNextGame(
       runFinishedAdvanceSequence: _runFinishedAdvanceSequence,
+      minimumDelay: minimumDelay,
     );
   }
 
@@ -4710,7 +4703,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final finishedSessionId = _game?.sessionId;
 
-    final advanced = await _advanceToNextGame(
+    final outcome = await _advanceToNextGame(
       onlyIfRegistrationAvailable: true,
       force: force,
     );
@@ -4718,34 +4711,47 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (advanced || !_isTerminalGameStatus) {
-      if (advanced &&
-          finishedSessionId != null &&
-          finishedSessionId.isNotEmpty) {
+    if (outcome == PostGameAdvanceOutcome.advanced) {
+      if (finishedSessionId != null && finishedSessionId.isNotEmpty) {
         unawaited(_clearPersistedMarksForSession(finishedSessionId));
       }
       return;
     }
 
-    if (_review.postGameSummaryAdvancing && mounted) {
+    if (_review.postGameSummaryAdvancing) {
       setState(() => _review.postGameSummaryAdvancing = false);
+    }
+
+    if (shouldSchedulePostGameAdvanceRetry(
+      outcome: outcome,
+      mounted: mounted,
+      reviewActive: _review.postGameSummaryReviewActive,
+      stillTerminal: _isTerminalGameStatus,
+    )) {
+      // Hold-not-elapsed path may already have armed the remaining-hold timer;
+      // do not replace it with the post-hold retry floor.
+      final pending = _review.finishTransitionTimer;
+      if (pending == null || !pending.isActive) {
+        _scheduleAdvanceToNextGame(minimumDelay: kPostGameAdvanceRetryDelay);
+      }
     }
   }
 
-  Future<bool> _advanceToNextGame({
+  Future<PostGameAdvanceOutcome> _advanceToNextGame({
     bool onlyIfRegistrationAvailable = false,
     bool force = false,
   }) async {
     if (!mounted) {
-      return false;
+      return PostGameAdvanceOutcome.retryableFailure;
     }
 
     if (!force &&
         _review.postGameSummaryReviewActive &&
         !_review.postGameSummaryHoldBypassed &&
         !_postGameSummaryHoldElapsed) {
+      // Hold still running — reschedule remaining hold (no retry floor).
       _scheduleAdvanceToNextGame();
-      return false;
+      return PostGameAdvanceOutcome.retryableFailure;
     }
 
     final currentGame = _game;
@@ -4754,13 +4760,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         showLoading: false,
         operationsSyncReason: OperationsSyncReason.inconsistencyRecovery,
       );
-      return _game != null;
+      return _game != null
+          ? PostGameAdvanceOutcome.advanced
+          : PostGameAdvanceOutcome.retryableFailure;
     }
 
     if (currentGame.status != GameStatus.finished &&
         currentGame.status != GameStatus.noWinner &&
         currentGame.status != GameStatus.cancelled) {
-      return false;
+      return PostGameAdvanceOutcome.finishedWithoutTarget;
     }
 
     // Capture before session clear so next READY registration can promo
@@ -4775,14 +4783,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operationsSyncSnapshot,
         context: 'finished_advance',
       )) {
-        return false;
+        return PostGameAdvanceOutcome.retryableFailure;
       }
       final operations = operationsSyncSnapshot.fetchResult.snapshot;
       if (operations == null) {
-        return false;
+        return PostGameAdvanceOutcome.retryableFailure;
       }
       if (!mounted) {
-        return false;
+        return PostGameAdvanceOutcome.retryableFailure;
       }
 
       final terminalForAdvance = _embeddedBigGame && currentGame.isBigGame
@@ -4810,6 +4818,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
       if (nextGame == null ||
           (onlyIfRegistrationAvailable && !registrationEligible)) {
+        // Big Game: more rounds expected but N+1 not adoptable yet — shared
+        // retry (timing owned by _runFinishedAdvanceSequence, not here).
         if (_embeddedBigGame &&
             currentGame.isBigGame &&
             bigGameSlotHasMoreRoundsAfterTerminal(terminalForAdvance)) {
@@ -4818,13 +4828,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             '${terminalForAdvance.roundCount} opsReg='
             '${operations.registrationOpenGame?.sessionId}',
           );
-          _scheduleAdvanceToNextGame();
-          return false;
+          return PostGameAdvanceOutcome.retryableFailure;
         }
         _applyIdleEmptyAfterTerminal(
           finishedSessionId: currentGame.sessionId,
         );
-        return _game == null;
+        return PostGameAdvanceOutcome.finishedWithoutTarget;
       }
 
       _releasedIdleTerminalSessionId = null;
@@ -4856,11 +4865,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             ref.invalidate(registrationStateProvider(_game!.sessionId!));
           }
         }
-        return true;
+        return PostGameAdvanceOutcome.advanced;
       }
-      return false;
+      return PostGameAdvanceOutcome.retryableFailure;
     } catch (_) {
-      return false;
+      return PostGameAdvanceOutcome.retryableFailure;
     }
   }
 

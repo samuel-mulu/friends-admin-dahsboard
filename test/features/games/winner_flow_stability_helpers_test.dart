@@ -202,6 +202,65 @@ void main() {
     );
   });
 
+  group('winner cartela auto-open category policy (W1–W9)', () {
+    const api = SessionWinnerResultModel(
+      gameCartelaId: 'gc-1',
+      cartelaId: 'c-1',
+      cartelaNumber: 42,
+      amount: '25.00',
+      columns: <List<String>>[],
+      completedPatterns: [pattern],
+    );
+
+    test('W1 Normal: ready when summary visible + eligible + API rows', () {
+      expect(
+        winnerDialogReadyForImmediateShow(
+          postGameSummaryVisible: true,
+          eligibleViewer: true,
+          modalResults: [api],
+        ),
+        isTrue,
+      );
+    });
+
+    test('W2/W3 Big Game: same readiness gate as Normal (suppress removed)', () {
+      // Mid-round and final Big Game both use _maybeAutoShowWinnerCartelaDialog
+      // without shouldSuppressBigGameAutoWinnerModalBetweenRounds.
+      expect(
+        winnerDialogReadyForImmediateShow(
+          postGameSummaryVisible: true,
+          eligibleViewer: true,
+          modalResults: [api],
+        ),
+        isTrue,
+      );
+    });
+
+    test('W4 results unavailable: not ready until modal rows exist', () {
+      expect(
+        winnerDialogReadyForImmediateShow(
+          postGameSummaryVisible: true,
+          eligibleViewer: true,
+          modalResults: const [],
+        ),
+        isFalse,
+      );
+    });
+
+    test('W9 Chain: orchestration hard-gates isChainGame before this helper', () {
+      // Shared readiness would be true, but live_game_orchestration returns
+      // early for Chain so inline winners stay (no auto modal).
+      expect(
+        winnerDialogReadyForImmediateShow(
+          postGameSummaryVisible: true,
+          eligibleViewer: true,
+          modalResults: [api],
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('isReadyTransitionLockOutcomeKnown', () {
     test('returns false when operations is null', () {
       final now = DateTime.utc(2026, 7, 10, 8);

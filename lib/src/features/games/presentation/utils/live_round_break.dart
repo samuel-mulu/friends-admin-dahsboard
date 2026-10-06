@@ -92,24 +92,3 @@ LiveRoundBreakOwner resolveLiveRoundBreakOwner({
 
   return LiveRoundBreakOwner.none;
 }
-
-/// Embedded Big Game: skip auto winner modal between slot rounds so the 60s
-/// finished summary + Continue hand off cleanly to the next registration window.
-bool shouldSuppressBigGameAutoWinnerModalBetweenRounds({
-  required GameModel? game,
-  required bool embeddedBigGame,
-  required bool postGameSummaryReviewActive,
-}) {
-  if (!embeddedBigGame || game == null || !game.isBigGame) {
-    return false;
-  }
-  if (!postGameSummaryReviewActive) {
-    return false;
-  }
-  final roundCount = game.roundCount ?? 1;
-  if (roundCount <= 1) {
-    return false;
-  }
-  final roundIndex = game.displayRoundIndex;
-  return roundIndex < roundCount;
-}

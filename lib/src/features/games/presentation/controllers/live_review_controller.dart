@@ -403,7 +403,7 @@ class LiveReviewController {
   void startPostGameSummary({
     required bool scheduleAdvance,
     required void Function() onStarted,
-    required void Function() scheduleAdvanceToNextGame,
+    required void Function({Duration? minimumDelay}) scheduleAdvanceToNextGame,
   }) {
     final started = !postGameSummaryReviewActive;
     postGameSummaryReviewActive = true;
@@ -469,16 +469,24 @@ class LiveReviewController {
 
   void scheduleAdvanceToNextGame({
     required Future<void> Function({bool force}) runFinishedAdvanceSequence,
+    Duration? minimumDelay,
   }) {
     finishTransitionTimer?.cancel();
 
-    final delay = postGameSummaryReviewActive && !postGameSummaryHoldBypassed
+    final remainingHold =
+        postGameSummaryReviewActive && !postGameSummaryHoldBypassed
         ? presentation_phase.postGameSummaryRemainingHold(
             shownAt: postGameSummaryShownAt ?? host.countdownNow(),
             now: host.countdownNow(),
             minimumHold: postGameSummaryHold,
           )
         : Duration.zero;
+    final delay = finish_transition.resolvePostGameAdvanceTimerDelay(
+      reviewActive: postGameSummaryReviewActive,
+      holdBypassed: postGameSummaryHoldBypassed,
+      remainingHold: remainingHold,
+      minimumDelay: minimumDelay,
+    );
     if (postGameSummaryReviewActive && postGameSummaryShownAt == null) {
       postGameSummaryShownAt = host.countdownNow();
     }

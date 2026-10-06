@@ -123,43 +123,4 @@ void main() {
     });
   });
 
-  group('shouldSuppressBigGameAutoWinnerModalBetweenRounds', () {
-    test('suppresses mid-slot embedded rounds', () {
-      final game = GameModel(
-        id: 'bg-1',
-        sessionId: 's1',
-        staticCode: 'BG',
-        playCode: 'P',
-        name: 'Big',
-        gameRule: null,
-        gameType: 'FULL_HOUSE',
-        entryFee: '10',
-        prizePerCartela: '8',
-        companyFeePerCartela: '2',
-        prizeAmount: '100',
-        companyRevenue: '0',
-        status: GameStatus.finished,
-        playOrder: 1,
-        startedAt: _now,
-        finishedAt: _now,
-        createdAt: _now,
-        updatedAt: _now,
-        registeredCartelasCount: 1,
-        calledNumbersCount: 10,
-        registrationOpen: false,
-        canRegister: false,
-        category: GameCategory.bigGame,
-        roundCount: 3,
-        roundIndex: 1,
-      );
-      expect(
-        shouldSuppressBigGameAutoWinnerModalBetweenRounds(
-          game: game,
-          embeddedBigGame: true,
-          postGameSummaryReviewActive: true,
-        ),
-        isTrue,
-      );
-    });
-  });
 }

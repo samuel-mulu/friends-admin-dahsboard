@@ -1,6 +1,58 @@
 import '../../data/models/game_model.dart';
 import 'big_game_live_presentation.dart' as big_game_advance;
 
+/// Result of a finished-summary advance attempt.
+///
+/// Distinguishes temporary infrastructure/eligibility races (retry) from an
+/// authoritative "no next game" outcome (idle/final — do not retry forever).
+enum PostGameAdvanceOutcome {
+  /// Next session/round was adopted; summary should clear.
+  advanced,
+
+  /// Temporary failure — ops skip/null/exception, or next target not yet
+  /// adoptable while more rounds/targets are still expected.
+  retryableFailure,
+
+  /// Authoritative no-next / intentional idle-empty; do not auto-retry.
+  finishedWithoutTarget,
+}
+
+/// Floor delay for post-hold automatic advance retries after a temporary
+/// failure. Prevents [Duration.zero] hot-loops once the summary hold is
+/// bypassed. Not related to winner-window, summary hold, or registration
+/// duration configuration.
+const Duration kPostGameAdvanceRetryDelay = Duration(seconds: 1);
+
+/// Computes the [Timer] delay for [LiveReviewController.scheduleAdvanceToNextGame].
+///
+/// When [minimumDelay] is set (post-hold retry), the delay is never shorter
+/// than that floor — even if the hold is already bypassed.
+Duration resolvePostGameAdvanceTimerDelay({
+  required bool reviewActive,
+  required bool holdBypassed,
+  required Duration remainingHold,
+  Duration? minimumDelay,
+}) {
+  var delay = reviewActive && !holdBypassed ? remainingHold : Duration.zero;
+  if (minimumDelay != null && delay < minimumDelay) {
+    delay = minimumDelay;
+  }
+  return delay;
+}
+
+/// Whether the shared finish machine should schedule another automatic attempt.
+bool shouldSchedulePostGameAdvanceRetry({
+  required PostGameAdvanceOutcome outcome,
+  required bool mounted,
+  required bool reviewActive,
+  required bool stillTerminal,
+}) {
+  return outcome == PostGameAdvanceOutcome.retryableFailure &&
+      mounted &&
+      reviewActive &&
+      stillTerminal;
+}
+
 /// Whether a FINISHED or NO_WINNER transition should run terminal side effects.
 bool shouldRunFinishTransition({
   required GameStatus? currentStatus,
