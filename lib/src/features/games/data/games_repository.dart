@@ -643,6 +643,22 @@ class GamesRepository {
     );
   }
 
+  /// Deliberately short POST wait budget (6s) — much shorter than the Nest
+  /// worst case (accept txn `{maxWait:10s,timeout:10s}` + validate txn
+  /// `{maxWait:20s,timeout:20s}` sequential ≈30s in the same HTTP request).
+  /// A 6s `receiveTimeout` is therefore expected to fire routinely on a
+  /// claim the backend is still processing, not just on a genuinely broken
+  /// connection. This is safe ONLY because every caller treats it as
+  /// ambiguous, never as INVALID/BLOCKED: [LiveCalledNumbersController]
+  /// always falls through to the recovery GET (same claimAttemptId), waits
+  /// through CHECKING, applies VALID/INVALID the moment the GET reports it,
+  /// and on 404 uses the bounded same-UUID POST retry — never inventing a
+  /// terminal result from the timeout itself. Does not delay fast successful
+  /// responses — only when one is missing/slow. GET uses the global 15s Dio
+  /// default (no $transaction) so recovery starts/fails promptly instead of
+  /// blocking behind a larger budget.
+  static const claimPostReceiveTimeout = Duration(seconds: 6);
+
   Future<BingoClaimResult> claimBingo({
     required String sessionId,
     required String gameCartelaId,
@@ -656,6 +672,7 @@ class GamesRepository {
         'claimAttemptId': claimAttemptId,
         if (clientTapAt != null) 'clientTapAt': clientTapAt.toUtc().toIso8601String(),
       },
+      receiveTimeout: claimPostReceiveTimeout,
       decoder: (rawData) {
         if (rawData is! Map<String, dynamic>) {
           throw StateError('Invalid bingo claim response.');

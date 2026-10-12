@@ -7,6 +7,7 @@ class ApiException implements Exception {
     this.code,
     this.details,
     this.reason,
+    this.dioExceptionType,
   });
 
   static const rateLimitMessage =
@@ -18,6 +19,11 @@ class ApiException implements Exception {
   final String? code;
   final Object? details;
   final String? reason;
+
+  /// The originating [DioExceptionType] name (e.g. `receiveTimeout`,
+  /// `connectionError`), preserved only for diagnostics/support correlation.
+  /// Null when this exception did not originate from a [DioException].
+  final String? dioExceptionType;
 
   factory ApiException.fromCaughtError(Object error) {
     if (error is ApiException) {
@@ -43,6 +49,7 @@ class ApiException implements Exception {
           code: error['code'] as String?,
           details: error['details'],
           reason: _extractReason(error),
+          dioExceptionType: exception.type.name,
         );
       }
     }
@@ -53,12 +60,14 @@ class ApiException implements Exception {
         exception.type == DioExceptionType.sendTimeout) {
       return ApiException(
         message: 'Could not reach the server. Please try again.',
+        dioExceptionType: exception.type.name,
       );
     }
 
     return ApiException(
       message: exception.response?.statusMessage ?? 'Something went wrong.',
       statusCode: exception.response?.statusCode,
+      dioExceptionType: exception.type.name,
     );
   }
 

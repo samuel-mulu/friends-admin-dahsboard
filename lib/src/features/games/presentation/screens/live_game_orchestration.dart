@@ -291,6 +291,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _applyIdleEmptyAfterTerminal({required String? finishedSessionId}) {
+    unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, null));
     _releasedIdleTerminalSessionId = finishedSessionId;
     _dismissWinnerCartelaDialogIfOpen();
     _review.clearPostGameSummaryHold(
@@ -446,9 +447,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _forceClearClaimCheckingForWinnerWindowClose() {
     _cn.claimStripHoldActive = false;
     _cn.claimingCartelaIds.clear();
-    _cn.pendingClaimCartelaIds.clear();
-    _cn.claimRecoveryFailedCartelaIds.clear();
-    _cn.activeClaimAttemptIdByCartelaId.clear();
     _cn.preClaimNextAutoCallAt = null;
     _review.sessionCheckingCartelaNumbers = const [];
     _cn.flushBufferedCalledNumbers();
@@ -574,9 +572,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       sessionId,
       join: _socketService.joinGame,
       leave: _socketService.leaveGame,
+      userId: _cachedMarksUserId,
+      connected: _socketService.isConnected,
+      onChanged: () {
+        _joinedGameId = _socketMembership.joinedSessionId;
+        if (isLiveHostActive) _syncActiveCartelasToProvider();
+      },
     );
-    _joinedGameId = _socketMembership.joinedSessionId;
-    _syncActiveCartelasToProvider();
   }
 
   void _clearSessionScopedPlayState({
@@ -597,8 +599,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _cn.cartelaSortSignature = null;
     }
     _chainBingoArmedAfterCalledCount = null;
-    _pendingWinnerWindowPayload = null;
-    _pendingBingoInvalidPayload = null;
+    _pendingWinnerWindowPayloads.clear();
+    _pendingBingoInvalidPayloads.clear();
     _cn.clearSessionScopedState(
       clearCalledNumbers: clearCalledNumbers,
       clearManualMarks: clearManualMarks,
@@ -1564,7 +1566,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         operations: operations,
         advanceTarget: resumeSync
             ? null
-            : (widget.initialGame ?? advanceTarget),
+            : (advanceTarget ??
+                (_embeddedBigGame &&
+                        _game?.sessionId != widget.initialGame?.sessionId
+                    ? null
+                    : widget.initialGame)),
         allowOwnershipLookup:
             resumeSync || includeMyCartelas || showLoading || _game == null,
         operationsSyncReason: operationsSyncReason,
@@ -2466,10 +2472,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         if (game.sessionId == null) {
           _cn.marksOwnerUserId = null;
         }
-        _cn.pendingClaimCartelaIds.clear();
-        _cn.claimingCartelaIds.clear();
-        _cn.claimRecoveryFailedCartelaIds.clear();
-        _cn.activeClaimAttemptIdByCartelaId.clear();
         _cn.processedClaimedIds.clear();
         _cn.processedResolvedClaimIds.clear();
         _cn.bufferedCalledNumbers = const [];
@@ -2635,15 +2637,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             cartelas: myCartelas,
           ),
         );
-        // Do not clear unresolved claim locks from REGISTERED cartela snapshots.
-        // Only clear recovery locks when the cartela is already terminal.
-        for (final cartela in myCartelas) {
-          if (cartela.status == GameCartelaStatus.winner ||
-              cartela.status == GameCartelaStatus.blocked) {
-            _cn.claimRecoveryFailedCartelaIds.remove(cartela.id);
-            _cn.activeClaimAttemptIdByCartelaId.remove(cartela.id);
-          }
-        }
+        // Cartela snapshots are presentation truth, not attempt resolution.
+        // The recovery GET must resolve the retained UUID.
       }
       _sortMyCartelas();
       _syncChainPlayableCartelas();
@@ -2688,6 +2683,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       unawaited(_clearPersistedMarksForSession(previousMarksSessionId));
     }
 
+    unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, game.sessionId));
     final sessionId = game.sessionId;
     if (sessionId != null && sessionId.isNotEmpty && !isGuest) {
       unawaited(_ensureManualMarksReadyForSession(sessionId));
@@ -2846,7 +2842,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
     }
 
-    final gameId = widget.gameId;
+    // The embedded host survives Big Game handoff; its widget seed still
+    // identifies the reviewed round. Fetch the session Live has adopted.
+    final gameId = _embeddedBigGame
+        ? (_game?.sessionId ?? widget.gameId)
+        : widget.gameId;
     if (gameId != null) {
       _joinSessionRoomEarly(gameId);
 
@@ -3344,6 +3344,23 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+    if (_cn.hasResolvedClaimAttempt(
+      normalizedPayload['claimAttemptId'] as String?,
+    )) {
+      return;
+    }
+    final ownedId = normalizedPayload['gameCartelaId'] as String?;
+    final ownedAttempt = ownedId == null ? null : _cn.claimAttemptFor(ownedId);
+    if (ownedAttempt != null) {
+      final incomingId = normalizedPayload['claimAttemptId'] as String?;
+      if (incomingId != ownedAttempt.claimAttemptId ||
+          !_cn.isCurrentClaimAttempt(ownedAttempt)) {
+        return;
+      }
+      _cn.applyAuthoritativeClaimStatus(
+        ownedAttempt, BingoClaimStatus.checking, retryAllowed: false,
+      );
+    }
 
     if (normalizedPayload.containsKey('nextAutoCallAt')) {
       _applyAutoCallScheduleFromPayload(normalizedPayload);
@@ -3377,6 +3394,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+    final ownedId = normalizedPayload['gameCartelaId'] as String?;
+    final ownedAttempt = ownedId == null ? null : _cn.claimAttemptFor(ownedId);
+    if (ownedAttempt == null && ownedId != null &&
+        _cn.hasResolvedClaimForCartela(ownedId)) {
+      _scheduleCanonicalRefetch(includeMyCartelas: true);
+      return;
+    }
+    if (ownedAttempt?.postInFlight == true) return;
+    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
 
     final claimId = normalizedPayload['claimId'] as String?;
     if (claimId == null || _cn.processedClaimedIds.contains(claimId)) {
@@ -3416,6 +3442,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+
+    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
 
     final claimId = normalizedPayload['claimId'] as String?;
     if (claimId == null || _cn.processedResolvedClaimIds.contains(claimId)) {
@@ -3498,78 +3526,84 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final gameCartelaId = normalizedPayload['gameCartelaId'] as String?;
     if (_shouldDeferClaimSocketForCartela(gameCartelaId)) {
-      setState(() {
-        _pendingBingoInvalidPayload = normalizedPayload;
-      });
+      _deferClaimTerminalPresentation(
+        normalizedPayload, _pendingBingoInvalidPayloads,
+      );
       return;
     }
+
+    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
 
     _applyBingoInvalidPayload(normalizedPayload);
   }
 
   void _onBingoClaimFailed(dynamic payload) {
-    if (!mounted) {
-      return;
-    }
-
+    if (!isLiveHostActive) return;
     final normalizedPayload = _normalizeSocketPayloadForEvent(
-      payload,
-      eventName: 'game:bingo_claim_failed',
-      includeCalledNumbers: true,
+      payload, eventName: 'game:bingo_claim_failed', includeCalledNumbers: true,
     );
-    if (normalizedPayload == null) {
+    if (normalizedPayload == null ||
+        !_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
-
-    if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
-      return;
-    }
-
-    final gameCartelaId = normalizedPayload['gameCartelaId'] as String?;
-    final claimAttemptId = normalizedPayload['claimAttemptId'] as String?;
-    final retryAllowed = normalizedPayload['retryAllowed'] as bool? ?? true;
-    final cartelaNumber = _cartelaNumberFromPayload(normalizedPayload);
-
-    if (normalizedPayload.containsKey('nextAutoCallAt')) {
-      _applyAutoCallScheduleFromPayload(normalizedPayload);
-    }
-
-    if (!retryAllowed || gameCartelaId == null) {
-      return;
-    }
-
-    final activeAttempt = _cn.activeClaimAttemptIdByCartelaId[gameCartelaId];
-    if (claimAttemptId != null &&
-        activeAttempt != null &&
-        activeAttempt != claimAttemptId) {
-      return;
-    }
-
-    setState(() {
-      if (cartelaNumber != null) {
-        _clearSessionCheckingCartelaNumber(cartelaNumber);
-      }
-      _cn.pendingClaimCartelaIds.remove(gameCartelaId);
-      _cn.claimingCartelaIds.remove(gameCartelaId);
-      _cn.activeClaimAttemptIdByCartelaId.remove(gameCartelaId);
-      _cn.claimRecoveryFailedCartelaIds.remove(gameCartelaId);
-      if (_cn.claimingCartelaIds.isEmpty) {
-        _cn.claimStripHoldActive = false;
-      }
-    });
-    _markCalledNumbersPanelDirty();
-    _releaseCalledNumbersStripHoldIfIdle();
+    final cartelaId = normalizedPayload['gameCartelaId'] as String?;
+    if (cartelaId == null) return;
+    final attempt = _cn.claimAttemptFor(cartelaId);
+    if (attempt == null || !_cn.isCurrentClaimAttempt(attempt)) return;
+    final incomingId = normalizedPayload['claimAttemptId'] as String?;
+    if (incomingId != null && incomingId != attempt.claimAttemptId) return;
+    // Confirm persisted status AND current eligibility. A socket hint must not
+    // override an already VALID/INVALID database row or a finished game.
+    unawaited(_cn.recoverClaimAttempt(attempt));
   }
 
-  void _applyBingoInvalidPayload(Map<String, dynamic> payload) {
+  bool _reconcileActiveClaimSocket(Map<String, dynamic> payload) {
+    final cartelaId = payload['gameCartelaId'] as String?;
+    if (cartelaId == null) return false;
+    final attempt = _cn.claimAttemptFor(cartelaId);
+    if (attempt == null) {
+      if ((_game?.isChainGame == true ||
+           _cn.hasResolvedClaimForCartela(cartelaId)) &&
+          _myCartelas.any((cartela) => cartela.id == cartelaId)) {
+        _scheduleCanonicalRefetch(includeMyCartelas: true);
+        return true;
+      }
+      return false;
+    }
+    final incomingId = payload['claimAttemptId'] as String?;
+    if (incomingId == null || incomingId == attempt.claimAttemptId) {
+      unawaited(_cn.recoverClaimAttempt(attempt));
+    }
+    return true;
+  }
+
+  void _applyBingoInvalidPayload(Map<String, dynamic> payload, {
+    bool presentationOnly = false,
+  }) {
     final claimId = payload['claimId'] as String?;
-    if (claimId == null || _cn.processedResolvedClaimIds.contains(claimId)) {
+    if (claimId == null || (!presentationOnly &&
+        _cn.processedResolvedClaimIds.contains(claimId))) {
       return;
     }
 
     _cn.processedResolvedClaimIds.add(claimId);
     final gameCartelaId = payload['gameCartelaId'] as String?;
     final cartelaNumber = _cartelaNumberFromPayload(payload);
+
+    if (presentationOnly) {
+      if (gameCartelaId != null) {
+        _cn.rememberBlockedCartelaReason(
+          gameCartelaId: gameCartelaId,
+          reasonCode: payload['reasonCode'] as String?,
+          serverReason: payload['reason'] as String?,
+        );
+      }
+      if (cartelaNumber != null) {
+        setState(() => _recordSessionBlockedCartelaNumber(cartelaNumber));
+      }
+      _markCalledNumbersPanelDirty();
+      return;
+    }
 
     setState(() {
       if (gameCartelaId != null) {
@@ -3643,16 +3677,20 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final gameCartelaId = normalizedPayload['gameCartelaId'] as String?;
     if (_shouldDeferClaimSocketForCartela(gameCartelaId)) {
-      setState(() {
-        _pendingWinnerWindowPayload = normalizedPayload;
-      });
+      _deferClaimTerminalPresentation(
+        normalizedPayload, _pendingWinnerWindowPayloads,
+      );
       return;
     }
+
+    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
 
     _applyWinnerWindowEventPayload(normalizedPayload);
   }
 
-  void _applyWinnerWindowEventPayload(Map<String, dynamic> payload) {
+  void _applyWinnerWindowEventPayload(Map<String, dynamic> payload, {
+    bool presentationOnly = false,
+  }) {
     final eventSessionId =
         payload['sessionId'] as String? ??
         payload['gameSessionId'] as String? ??
@@ -3669,11 +3707,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    _applyWinnerWindowState(
-      winnerWindowEndsAt: _parseWinnerWindowEndsAt(
-        payload['winnerWindowEndsAt'],
-      ),
-    );
+    if (!presentationOnly) {
+      _applyWinnerWindowState(
+        winnerWindowEndsAt: _parseWinnerWindowEndsAt(
+          payload['winnerWindowEndsAt'],
+        ),
+      );
+    }
 
     final gameCartelaId = payload['gameCartelaId'] as String?;
     final cartelaNumber = _cartelaNumberFromPayload(payload);
@@ -3683,6 +3723,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final lastCalledNumber = parseSessionWinnerLastCalledNumber(
       payload['lastCalledNumber'],
     );
+    if (presentationOnly) {
+      setState(() {
+        if (cartelaNumber != null) {
+          _recordSessionWinnerCartelaNumber(cartelaNumber);
+        }
+        if (gameCartelaId != null) {
+          _storeClaimWinningSnapshot(
+            gameCartelaId: gameCartelaId, patterns: completedPatterns,
+            lastCalledNumber: lastCalledNumber,
+          );
+        }
+      });
+      _markCalledNumbersPanelDirty();
+      return;
+    }
     if (cartelaNumber != null) {
       setState(() {
         _clearSessionCheckingCartelaNumber(cartelaNumber);
@@ -5056,18 +5111,128 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.claimingCartelaIds.contains(gameCartelaId);
   }
 
-  void _flushPendingClaimSocketEvents() {
-    final winnerPayload = _pendingWinnerWindowPayload;
-    _pendingWinnerWindowPayload = null;
-    if (winnerPayload != null) {
-      _applyWinnerWindowEventPayload(winnerPayload);
+  void _deferClaimTerminalPresentation(Map<String, dynamic> payload,
+      Map<String, Map<String, dynamic>> events) {
+    final cartelaId = payload['gameCartelaId'] as String?;
+    final attempt = cartelaId == null ? null : _cn.claimAttemptFor(cartelaId);
+    if (attempt == null) return;
+    if ((payload['claimAttemptId'] != null &&
+         payload['claimAttemptId'] != attempt.claimAttemptId) ||
+        (payload['userId'] != null && payload['userId'] != attempt.userId) ||
+        (payload['roundIndex'] != null &&
+         payload['roundIndex'] != attempt.roundIndex)) {
+      _scheduleCanonicalRefetch(includeMyCartelas: true);
+      return;
     }
+    events[cartelaId!] = {
+      ...payload, '_claimRoundIndex': attempt.roundIndex,
+      '_claimAttempt': attempt,
+    };
+  }
 
-    final invalidPayload = _pendingBingoInvalidPayload;
-    _pendingBingoInvalidPayload = null;
-    if (invalidPayload != null) {
-      _applyBingoInvalidPayload(invalidPayload);
+  bool _claimPresentationMatchesView(BingoClaimAttempt attempt) =>
+      isLiveHostActive && _cachedMarksUserId == attempt.userId &&
+      _activeSessionId == attempt.sessionId &&
+      _cn.claimOutcomeMatchesView(attempt, _game) &&
+      _myCartelas.any((cartela) => cartela.id == attempt.gameCartelaId &&
+          cartela.userId == attempt.userId && cartela.gameId == attempt.sessionId);
+
+  Future<void> _reconcileClaimTerminalPresentation(BingoClaimAttempt attempt) {
+    if (attempt.terminalPresentationEnriched ||
+        !_claimPresentationMatchesView(attempt)) {
+      return Future<void>.value();
     }
+    _scheduleCanonicalRefetch(includeMyCartelas: true);
+    if (attempt.terminalStatus != BingoClaimStatus.valid) {
+      return Future<void>.value();
+    }
+    // No attempt UUID in the event and no matching HTTP claim id: use canonical
+    // winner data, never attach the uncertain socket's patterns to this attempt.
+    return attempt.presentationReconciliation ??=
+        _loadCanonicalClaimPresentation(attempt);
+  }
+
+  Future<void> _loadCanonicalClaimPresentation(BingoClaimAttempt attempt) async {
+    try {
+      final results = await _gamesRepository.getSessionWinnerResults(
+        sessionId: attempt.sessionId,
+      );
+      if (attempt.terminalPresentationEnriched ||
+          !_claimPresentationMatchesView(attempt)) {
+        return;
+      }
+      for (final result in results) {
+        if (result.gameCartelaId != attempt.gameCartelaId) continue;
+        final card = _myCartelas.firstWhere(
+          (cartela) => cartela.id == attempt.gameCartelaId,
+        );
+        if (result.cartelaId != card.cartelaId) continue;
+        setState(() {
+          _review.winnerCartelaDisplay.applySessionResult(result);
+          _recordSessionWinnerCartelaNumber(result.cartelaNumber);
+        });
+        attempt.terminalPresentationEnriched = true;
+        _markCalledNumbersPanelDirty();
+        break;
+      }
+    } catch (_) {
+      // Canonical synchronization remains the fallback; no additional poller.
+      if (_claimPresentationMatchesView(attempt)) {
+        _scheduleCanonicalRefetch(includeMyCartelas: true);
+      }
+    } finally {
+      attempt.presentationReconciliation = null;
+    }
+  }
+
+  void _flushPendingClaimSocketEvents() {
+    void flush(Map<String, Map<String, dynamic>> events,
+        BingoClaimStatus expectedStatus,
+        void Function(Map<String, dynamic>) enrich) {
+      for (final entry in events.entries.toList()) {
+        if (_cn.claimingCartelaIds.contains(entry.key)) continue;
+        final payload = entry.value;
+        final captured = payload['_claimAttempt'] as BingoClaimAttempt?;
+        if (captured == null || !_claimPresentationMatchesView(captured) ||
+            payload['_claimRoundIndex'] != _game?.displayRoundIndex) {
+          events.remove(entry.key);
+          continue;
+        }
+        if (_cn.isCurrentClaimAttempt(captured)) {
+          unawaited(_cn.recoverClaimAttempt(captured));
+          continue; // Keep presentation until the GET reaches a terminal result.
+        }
+        if (captured.terminalStatus != expectedStatus ||
+            captured.terminalPresentationEnriched) {
+          events.remove(entry.key);
+          continue;
+        }
+        final eventSessionId = eventSessionIdFromPayload(payload);
+        final eventAttemptId = payload['claimAttemptId'];
+        final claimId = payload['claimId'];
+        final matches = eventSessionId == captured.sessionId &&
+            payload['gameCartelaId'] == captured.gameCartelaId &&
+            (payload['userId'] == null || payload['userId'] == captured.userId) &&
+            (payload['roundIndex'] == null ||
+             payload['roundIndex'] == captured.roundIndex) &&
+            claimId is String &&
+            (eventAttemptId == captured.claimAttemptId ||
+             (eventAttemptId == null && claimId == captured.serverClaimId)) &&
+            (captured.serverClaimId == null || claimId == captured.serverClaimId);
+        if (matches) {
+          events.remove(entry.key);
+          enrich(payload);
+          captured.terminalPresentationEnriched = true;
+        } else if (!captured.postInFlight) {
+          events.remove(entry.key);
+          unawaited(_reconcileClaimTerminalPresentation(captured));
+        }
+      }
+    }
+    flush(_pendingWinnerWindowPayloads, BingoClaimStatus.valid,
+        (payload) => _applyWinnerWindowEventPayload(payload, presentationOnly: true));
+    flush(_pendingBingoInvalidPayloads, BingoClaimStatus.invalid,
+        (payload) => _applyBingoInvalidPayload(payload, presentationOnly: true));
   }
 
   String? get _marksUserId => _cachedMarksUserId;

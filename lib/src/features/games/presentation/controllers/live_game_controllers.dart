@@ -21,7 +21,15 @@ class LiveGameControllers {
         realtime = LiveRealtimeController(host),
         review = LiveReviewController(host),
         registration = LiveRegistrationController(host),
-        calledNumbers = LiveCalledNumbersController(host),
+        calledNumbers = LiveCalledNumbersController(
+          host,
+          // Same claimAttemptId — Nest idempotent findUnique / P2002 path.
+          resubmitClaim: (attempt) => host.gamesRepository.claimBingo(
+            sessionId: attempt.sessionId,
+            gameCartelaId: attempt.gameCartelaId,
+            claimAttemptId: attempt.claimAttemptId,
+          ),
+        ),
         missedPreview = MissedPreviewController(host);
 
   final LiveTransitionController transition;

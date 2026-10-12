@@ -75,13 +75,14 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
     }
 
     LiveRealtimeDebug.socket('connect');
-
+    _socketMembership.onConnected();
     _stopDisconnectedCalledNumbersPolling();
 
-    final joinedGameId = _joinedGameId;
+    final joinedGameId = _socketMembership.desiredSessionId;
     if (joinedGameId != null) {
       _applySocketSessionMembership(joinedGameId);
     }
+    _cn.reconcileClaimAttempts();
 
     _realtime.onSocketConnectivityChanged();
     unawaited(_realtime.syncLatest(reason: 'socket_reconnect'));
@@ -93,6 +94,11 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
       return;
     }
 
+    _applySocketSessionMembership(
+      _game?.sessionId ?? _socketMembership.desiredSessionId,
+    );
+    _socketMembership.setForeground(true);
+    _cn.reconcileClaimAttempts();
     final resumeDecision = AppBackgroundResumeGate.evaluateFullResumeSync(
       socketConnectedNow: _socketService.isConnected,
     );
@@ -113,11 +119,13 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 
   Future<void> _refresh() async {
+    _cn.reconcileClaimAttempts();
     await _realtime.syncLatest(reason: 'manual_refresh');
   }
 
   void _onSocketDisconnected(dynamic _) {
     LiveRealtimeDebug.socket('disconnect');
+    _socketMembership.onDisconnected();
     AppBackgroundResumeGate.onSocketDisconnected();
     _realtime.onSocketConnectivityChanged();
     _startDisconnectedCalledNumbersPolling();

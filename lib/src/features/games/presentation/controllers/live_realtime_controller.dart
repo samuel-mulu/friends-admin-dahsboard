@@ -97,6 +97,7 @@ class LiveRealtimeController {
     _syncOverlayTimer?.cancel();
     _currentBadgeTimer?.cancel();
     disconnectedCalledNumbersPollTimer?.cancel();
+    socketMembership.dispose();
     pendingRefetchWallet = false;
     pendingRefetchIncludeCalledNumbers = false;
     pendingRefetchIncludeMyCartelas = false;
@@ -105,13 +106,20 @@ class LiveRealtimeController {
 
   void applySocketSessionMembership(
     String? sessionId, {
-    required void Function(String sessionId) join,
+    required Future<bool> Function(String sessionId) join,
     required void Function(String sessionId) leave,
     void Function()? onMembershipChanged,
   }) {
-    socketMembership.apply(sessionId, join: join, leave: leave);
-    joinedGameId = socketMembership.joinedSessionId;
-    onMembershipChanged?.call();
+    socketMembership.apply(
+      sessionId,
+      join: join,
+      leave: leave,
+      connected: socketService.isConnected,
+      onChanged: () {
+        joinedGameId = socketMembership.joinedSessionId;
+        onMembershipChanged?.call();
+      },
+    );
   }
 
   void joinSessionRoomEarly(

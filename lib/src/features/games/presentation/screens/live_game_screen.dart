@@ -103,7 +103,7 @@ import '../utils/live_resume_sync.dart';
 import '../utils/live_resume_terminal_gate.dart';
 import '../debug/live_realtime_debug.dart';
 import '../debug/chain_game_debug.dart';
-import '../debug/bingo_claim_client_debug.dart';
+import '../debug/bingo_claim_diagnostics.dart';
 import '../widgets/registration_open_pulse.dart';
 import '../widgets/winner_window_countdown.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
@@ -314,8 +314,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   GameModel? _game;
   String? _joinedGameId;
   List<String> _myCartelaDisplayOrderIds = const [];
-  Map<String, dynamic>? _pendingWinnerWindowPayload;
-  Map<String, dynamic>? _pendingBingoInvalidPayload;
+  final Map<String, Map<String, dynamic>> _pendingWinnerWindowPayloads = {};
+  final Map<String, Map<String, dynamic>> _pendingBingoInvalidPayloads = {};
   bool _awaitingPrizeWalletRefresh = false;
   Timer? _liveRoomSplashTicker;
   bool _awaitingLiveRoom = true;
@@ -1033,6 +1033,31 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     super.initState();
     _serverClock = ref.read(serverClockProvider);
     _syncCachedAuthSession();
+    _cn.onClaimRecovered = _applyRecoveredClaimAttempt;
+    _cn.beforeClaimRecovered = _refreshChainClaimRecoveryContext;
+    _cn.onClaimResubmitResult = (attempt, result) {
+      _applyRecoveredClaimAttempt(
+        attempt,
+        BingoClaimAttemptStatus(
+          claimAttemptId: result.claim.claimAttemptId,
+          status: result.claim.status,
+          gameCartelaStatus: result.gameCartelaStatus,
+          gameStatus: result.gameStatus,
+          isWinner: result.isWinner,
+          retryAllowed: result.retryAllowed,
+          reasonCode: result.reasonCode ?? result.claim.reasonCode,
+          failureCode: result.failureCode ?? result.claim.failureCode,
+          nextAutoCallAt: result.hasNextAutoCallAt ? result.nextAutoCallAt : null,
+          winnerWindowEndsAt: result.winnerWindowEndsAt,
+        ),
+      );
+    };
+    _cn.onClaimRecoveryChanged = () {
+      if (isLiveHostActive) {
+        setState(() {});
+        _markCalledNumbersPanelDirty();
+      }
+    };
     _warmCartelaMarksStorage();
     if (widget.initialGame != null) {
       _game = widget.initialGame;
@@ -1050,6 +1075,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         _initialLoadComplete = true;
       }
     }
+    unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, _activeSessionId));
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
     LiveGameResumeOwnerRegistry.setMasterRefresh(_refresh);
@@ -1101,6 +1127,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
     _applySocketSessionMembership(null);
+    _socketMembership.dispose();
     LiveGameResumeOwnerRegistry.setMasterRefresh(null);
     LiveGameResumeOwnerRegistry.deactivate();
     super.dispose();
@@ -1117,15 +1144,20 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         _isAppInForeground = false;
+        _cn.setClaimRecoveryForeground(false);
+        _socketMembership.setForeground(false);
         _pauseLiveTimersForBackground();
         unawaited(_persistManualMarks());
         break;
       case AppLifecycleState.hidden:
         _isAppInForeground = false;
+        _cn.setClaimRecoveryForeground(false);
+        _socketMembership.setForeground(false);
         _pauseLiveTimersForBackground();
         break;
       case AppLifecycleState.resumed:
         _isAppInForeground = true;
+        _cn.setClaimRecoveryForeground(true);
         unawaited(_recoverFromAppResume());
         break;
     }
@@ -1141,10 +1173,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   void _onAuthSessionChanged(AuthState? previous, AuthState next) {
     final hadSession = previous?.session != null;
     final hasSession = next.session != null;
-    if (hadSession == hasSession) {
+    if (previous?.session?.user.id == next.session?.user.id) {
       return;
     }
 
+    // Invalidate old-user callbacks immediately, before deferred UI work.
+    _applySocketSessionMembership(null);
+    _syncCachedAuthSession();
+    unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, _activeSessionId));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future<void>.microtask(() async {
         _syncCachedAuthSession();
@@ -1744,7 +1780,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       cartelas: orderedCartelas,
       sortResultsByCartelaId: _cn.cartelaSortResults,
       canClaimBingoFor: _canClaimBingoForCartela,
-      claimingCartelaIds: _cn.claimingCartelaIds,
+      claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
       pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
       showPendingClaimState: !_showsPostGameSummary,
       showFinishedOutcome: _showFinishedCartelaOutcome,
@@ -2115,7 +2151,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 ),
                 sortResultsByCartelaId: _cn.cartelaSortResults,
                 canClaimBingoFor: _canClaimBingoForCartela,
-                claimingCartelaIds: _cn.claimingCartelaIds,
+                claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
                 pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
                 showPendingClaimState: !_showsPostGameSummary,
                 showFinishedOutcome: _showFinishedCartelaOutcome,

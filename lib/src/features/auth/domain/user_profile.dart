@@ -57,14 +57,14 @@ enum GamePushMode {
   off;
 
   factory GamePushMode.fromApi(String? value) {
-    switch ((value ?? 'ALWAYS').toUpperCase()) {
-      case 'REGISTERED_ONLY':
-        return GamePushMode.registeredOnly;
+    switch ((value ?? 'REGISTERED_ONLY').toUpperCase()) {
+      case 'ALWAYS':
+        return GamePushMode.always;
       case 'OFF':
         return GamePushMode.off;
-      case 'ALWAYS':
+      case 'REGISTERED_ONLY':
       default:
-        return GamePushMode.always;
+        return GamePushMode.registeredOnly;
     }
   }
 
@@ -115,7 +115,7 @@ class UserProfile {
     this.hasPassword = true,
     this.telegramLinked = false,
     this.telegramUsername,
-    this.gamePushMode = GamePushMode.always,
+    this.gamePushMode = GamePushMode.registeredOnly,
   });
 
   final String id;

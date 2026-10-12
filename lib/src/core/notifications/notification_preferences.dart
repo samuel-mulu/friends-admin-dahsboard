@@ -13,7 +13,7 @@ import 'app_notification_category.dart';
 class NotificationPreferencesState {
   const NotificationPreferencesState({
     this.pushEnabled = true,
-    this.gamePushMode = GamePushMode.always,
+    this.gamePushMode = GamePushMode.registeredOnly,
     this.depositApprovedEnabled = true,
     this.withdrawalApprovedEnabled = true,
     this.withdrawalRejectedEnabled = true,
@@ -131,7 +131,7 @@ class NotificationPreferencesStore {
     if (gameStarted == false && gameFinished == false && winner == false) {
       return GamePushMode.off;
     }
-    return GamePushMode.always;
+    return GamePushMode.registeredOnly;
   }
 
   Future<void> save(NotificationPreferencesState state) async {

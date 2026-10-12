@@ -4,10 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_exception.dart';
+import '../../data/bingo_claim_attempt_storage.dart';
+import '../../data/models/bingo_claim_result.dart';
 import '../../domain/winning_ball_cell.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
+import '../debug/bingo_claim_diagnostics.dart';
 import '../utils/bingo_claim_eligibility.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 import '../utils/live_called_number_monotonic.dart';
@@ -33,10 +36,546 @@ class NumberCalledSocketApplyResult {
 }
 
 /// Called-number strip state, reconciliation buffers, and claim holds.
+class BingoClaimAttempt {
+  BingoClaimAttempt({
+    required this.userId,
+    required this.sessionId,
+    required this.gameCartelaId,
+    required this.claimAttemptId,
+    required this.roundIndex,
+  });
+
+  final String userId;
+  final String sessionId;
+  final String gameCartelaId;
+  final String claimAttemptId;
+  final int roundIndex;
+  bool terminal = false;
+  BingoClaimStatus? terminalStatus;
+  String? serverClaimId;
+  bool terminalPresentationEnriched = false;
+  Future<void>? presentationReconciliation;
+  bool postInFlight = true;
+  int recoveryErrors = 0;
+  /// Bounded same-UUID POST retries after recovery GET 404 (idempotent on Nest).
+  int sameUuidPostRetries = 0;
+  static const maxSameUuidPostRetries = 2;
+  /// True only when the original POST's own TCP connect() never completed —
+  /// by HTTP semantics no request bytes could have left the device. This
+  /// alone is never sufficient proof; it is only combined with an
+  /// independent, simultaneous recovery-GET connection failure before a
+  /// claim is ever cleared without an authoritative server response.
+  bool postConnectNeverCompleted = false;
+  DateTime? nextRecoveryAt;
+  Future<void>? recoveryInFlight;
+
+  Map<String, dynamic> get identity => {
+    'userId': userId,
+    'sessionId': sessionId,
+    'gameCartelaId': gameCartelaId,
+    'claimAttemptId': claimAttemptId,
+    'roundIndex': roundIndex,
+    'retryDenied': terminal,
+  };
+}
+
 class LiveCalledNumbersController {
-  LiveCalledNumbersController(this.host);
+  LiveCalledNumbersController(
+    this.host, {
+    BingoClaimAttemptStorage? claimStorage,
+    Future<BingoClaimAttemptStatus> Function(String, String)? recoverClaim,
+    Future<BingoClaimResult?> Function(BingoClaimAttempt)? resubmitClaim,
+    DateTime Function()? claimNow,
+  }) : _claimStorage = claimStorage ?? BingoClaimAttemptStorage(),
+       _recoverClaim = recoverClaim,
+       _resubmitClaim = resubmitClaim,
+       _claimNow = claimNow ?? DateTime.now;
 
   final LiveGameHost host;
+  final BingoClaimAttemptStorage _claimStorage;
+  final Future<BingoClaimAttemptStatus> Function(String, String)? _recoverClaim;
+  final Future<BingoClaimResult?> Function(BingoClaimAttempt)? _resubmitClaim;
+  final DateTime Function() _claimNow;
+  final Map<String, BingoClaimAttempt> _claimAttempts = {};
+  final Set<String> _resolvedClaimAttemptIds = {};
+  final Set<String> _resolvedClaimCartelaIds = {};
+  Timer? _claimRecoveryTimer;
+  String? _claimUserId;
+  String? _claimSessionId;
+  int _claimScopeGeneration = 0;
+  bool _claimDisposed = false;
+  bool _claimForeground = true;
+  bool claimScopeLoading = false;
+  Object? claimRecoveryStorageError;
+  bool _claimScopeReadInFlight = false;
+  void Function(BingoClaimAttempt, BingoClaimAttemptStatus)? onClaimRecovered;
+  Future<void> Function(BingoClaimAttempt, BingoClaimAttemptStatus)?
+  beforeClaimRecovered;
+  /// Applies a same-UUID POST result recovered outside the GET path.
+  void Function(BingoClaimAttempt, BingoClaimResult)? onClaimResubmitResult;
+  VoidCallback? onClaimRecoveryChanged;
+
+  BingoClaimAttempt? claimAttemptFor(String cartelaId) =>
+      _claimAttempts[cartelaId];
+
+  /// Unresolved attempt still awaiting authoritative GET/HTTP (not retryDenied).
+  /// Drives CONFIRMING UI so the button is never silent gray mid-recovery.
+  bool isConfirmingClaim(String cartelaId) {
+    final attempt = _claimAttempts[cartelaId];
+    return attempt != null && !attempt.terminal;
+  }
+
+  /// Cartelas with an in-flight POST or non-terminal recovery identity.
+  Set<String> get confirmingOrClaimingCartelaIds => {
+    ...claimingCartelaIds,
+    for (final entry in _claimAttempts.entries)
+      if (!entry.value.terminal) entry.key,
+  };
+
+  /// Automatic recovery has done everything it safely can for this cartela
+  /// (same-UUID retry budget exhausted, or no retry hook configured) and the
+  /// claim is still unresolved. Drives a persistent, non-blocking escalation
+  /// banner rather than relying on a one-shot SnackBar having been seen.
+  BingoClaimAttempt? get claimNeedingEscalation {
+    for (final entry in _claimAttempts.entries) {
+      final attempt = entry.value;
+      if (!attempt.terminal &&
+          claimRecoveryFailedCartelaIds.contains(entry.key) &&
+          (attempt.sameUuidPostRetries >=
+                  BingoClaimAttempt.maxSameUuidPostRetries ||
+              _resubmitClaim == null)) {
+        return attempt;
+      }
+    }
+    return null;
+  }
+
+  bool hasResolvedClaimAttempt(String? attemptId) =>
+      _resolvedClaimAttemptIds.contains(attemptId);
+
+  bool hasResolvedClaimForCartela(String cartelaId) =>
+      _resolvedClaimCartelaIds.contains(cartelaId);
+
+  bool isCurrentClaimAttempt(BingoClaimAttempt attempt) =>
+      !_claimDisposed &&
+      !attempt.terminal &&
+      identical(_claimAttempts[attempt.gameCartelaId], attempt) &&
+      attempt.userId == _claimUserId &&
+      attempt.sessionId == _claimSessionId;
+
+  bool claimOutcomeMatchesView(BingoClaimAttempt attempt, GameModel? game) =>
+      !_claimDisposed &&
+      attempt.userId == _claimUserId &&
+      attempt.sessionId == _claimSessionId &&
+      attempt.sessionId == game?.sessionId &&
+      attempt.roundIndex == game?.displayRoundIndex &&
+      (_claimAttempts[attempt.gameCartelaId] == null ||
+          identical(_claimAttempts[attempt.gameCartelaId], attempt));
+
+  List<GameCartelaModel> cartelasAfterClaimRecovery({
+    required BingoClaimAttempt attempt,
+    required BingoClaimAttemptStatus result,
+    required GameModel? game,
+    required List<GameCartelaModel> cartelas,
+  }) {
+    if (!claimOutcomeMatchesView(attempt, game)) return cartelas;
+    final status = result.status == BingoClaimStatus.valid
+        ? GameCartelaStatus.winner
+        : result.status == BingoClaimStatus.invalid
+        ? GameCartelaStatus.blocked
+        : result.gameCartelaStatus;
+    if (status == GameCartelaStatus.registered) return cartelas;
+    return cartelas
+        .map(
+          (cartela) => cartela.id != attempt.gameCartelaId
+              ? cartela
+              : cartela.copyWith(
+                  status: status,
+                  isWinner: status == GameCartelaStatus.winner,
+                  blockedAt: status == GameCartelaStatus.blocked
+                      ? cartela.blockedAt ?? _claimNow()
+                      : null,
+                ),
+        )
+        .toList();
+  }
+
+  Future<void> bindClaimRecoveryScope(String? userId, String? sessionId) async {
+    if (_claimDisposed) return;
+    if (_claimUserId == userId &&
+        _claimSessionId == sessionId &&
+        (!claimScopeLoading || _claimScopeReadInFlight)) {
+      return;
+    }
+    final generation = ++_claimScopeGeneration;
+    _claimUserId = userId;
+    _claimSessionId = sessionId;
+    _claimRecoveryTimer?.cancel();
+    _claimAttempts.clear();
+    _resolvedClaimAttemptIds.clear();
+    _resolvedClaimCartelaIds.clear();
+    activeClaimAttemptIdByCartelaId.clear();
+    claimingCartelaIds.clear();
+    pendingClaimCartelaIds.clear();
+    claimRecoveryFailedCartelaIds.clear();
+    claimStripHoldActive = false;
+    preClaimNextAutoCallAt = null;
+    claimScopeLoading = userId != null && sessionId != null;
+    _claimScopeReadInFlight = claimScopeLoading;
+    if (!claimScopeLoading) return;
+    try {
+      final stored = await _claimStorage.load(userId!, sessionId!);
+      if (_claimDisposed || generation != _claimScopeGeneration) return;
+      for (final identity in stored) {
+        final attempt = BingoClaimAttempt(
+          userId: userId,
+          sessionId: sessionId,
+          gameCartelaId: identity['gameCartelaId'] as String,
+          claimAttemptId: identity['claimAttemptId'] as String,
+          roundIndex: identity['roundIndex'] as int,
+        )..postInFlight = false;
+        attempt.terminal = identity['retryDenied'] == true;
+        _claimAttempts[attempt.gameCartelaId] = attempt;
+        activeClaimAttemptIdByCartelaId[attempt.gameCartelaId] =
+            attempt.claimAttemptId;
+        pendingClaimCartelaIds.add(attempt.gameCartelaId);
+        if (!attempt.terminal) attempt.nextRecoveryAt = _claimNow();
+      }
+      claimScopeLoading = false;
+      claimRecoveryStorageError = null;
+      onClaimRecoveryChanged?.call();
+      _scheduleClaimRecovery();
+    } catch (error) {
+      claimRecoveryStorageError = error;
+      // Fail closed: an unreadable identity cannot authorize a fresh POST.
+      // Resume/refresh can retry loading the same scope.
+    } finally {
+      if (generation == _claimScopeGeneration) _claimScopeReadInFlight = false;
+    }
+  }
+
+  BingoClaimAttempt? beginClaimAttempt({
+    required String gameCartelaId,
+    required String claimAttemptId,
+    required int roundIndex,
+  }) {
+    if (_claimDisposed ||
+        claimScopeLoading ||
+        _claimUserId == null ||
+        _claimSessionId == null ||
+        _claimAttempts.containsKey(gameCartelaId) ||
+        activeClaimAttemptIdByCartelaId.containsKey(gameCartelaId)) {
+      return null;
+    }
+    final attempt = BingoClaimAttempt(
+      userId: _claimUserId!,
+      sessionId: _claimSessionId!,
+      gameCartelaId: gameCartelaId,
+      claimAttemptId: claimAttemptId,
+      roundIndex: roundIndex,
+    );
+    _claimAttempts[gameCartelaId] = attempt;
+    activeClaimAttemptIdByCartelaId[gameCartelaId] = claimAttemptId;
+    claimingCartelaIds.add(gameCartelaId);
+    claimStripHoldActive = true;
+    return attempt;
+  }
+
+  Future<void> persistClaimAttempt(BingoClaimAttempt attempt) =>
+      _claimStorage.save(attempt.identity);
+
+  /// Safe only before the POST is sent (e.g. local persistence failure).
+  void cancelUnsentClaim(BingoClaimAttempt attempt) {
+    unawaited(_claimStorage.remove(attempt.identity).catchError((Object _) {}));
+    if (!isCurrentClaimAttempt(attempt)) return;
+    _clearClaimAttempt(attempt);
+    onClaimRecoveryChanged?.call();
+  }
+
+  void finishClaimSubmission(BingoClaimAttempt attempt) {
+    attempt.postInFlight = false;
+    if (!isCurrentClaimAttempt(attempt)) return;
+    claimingCartelaIds.remove(attempt.gameCartelaId);
+    // Keep pending so strip/eligibility treat this as CONFIRMING until GET.
+    pendingClaimCartelaIds.add(attempt.gameCartelaId);
+    claimStripHoldActive = confirmingOrClaimingCartelaIds.isNotEmpty;
+    if (!claimStripHoldActive) preClaimNextAutoCallAt = null;
+    onClaimRecoveryChanged?.call();
+    _scheduleClaimRecovery();
+  }
+
+  /// The only path that clears a submitted attempt's identity and retry locks.
+  bool applyAuthoritativeClaimStatus(
+    BingoClaimAttempt attempt,
+    BingoClaimStatus status, {
+    required bool retryAllowed,
+  }) {
+    if (!isCurrentClaimAttempt(attempt)) return false;
+    if (!status.isTerminal) {
+      pendingClaimCartelaIds.add(attempt.gameCartelaId);
+      attempt.recoveryErrors = 0;
+      attempt.nextRecoveryAt = _claimNow().add(
+        Duration(seconds: status == BingoClaimStatus.pending ? 15 : 2),
+      );
+    } else {
+      final retryDenied =
+          (status == BingoClaimStatus.failed ||
+              status == BingoClaimStatus.alreadyResolved) &&
+          !retryAllowed;
+      attempt.terminal = true;
+      attempt.terminalStatus = status;
+      _resolvedClaimAttemptIds.add(attempt.claimAttemptId);
+      _resolvedClaimCartelaIds.add(attempt.gameCartelaId);
+      attempt.nextRecoveryAt = null;
+      if (retryDenied) {
+        claimingCartelaIds.remove(attempt.gameCartelaId);
+        pendingClaimCartelaIds.add(attempt.gameCartelaId);
+        unawaited(
+          _claimStorage.save(attempt.identity).catchError((Object _) {}),
+        );
+      } else {
+        _clearClaimAttempt(attempt);
+        unawaited(
+          _claimStorage.remove(attempt.identity).catchError((Object _) {}),
+        );
+      }
+      claimStripHoldActive = confirmingOrClaimingCartelaIds.isNotEmpty;
+      if (!claimStripHoldActive) preClaimNextAutoCallAt = null;
+    }
+    onClaimRecoveryChanged?.call();
+    _scheduleClaimRecovery();
+    return true;
+  }
+
+  void _clearClaimAttempt(BingoClaimAttempt attempt) {
+    _claimAttempts.remove(attempt.gameCartelaId);
+    activeClaimAttemptIdByCartelaId.remove(attempt.gameCartelaId);
+    claimingCartelaIds.remove(attempt.gameCartelaId);
+    pendingClaimCartelaIds.remove(attempt.gameCartelaId);
+    claimRecoveryFailedCartelaIds.remove(attempt.gameCartelaId);
+    claimStripHoldActive = confirmingOrClaimingCartelaIds.isNotEmpty;
+    if (!claimStripHoldActive) preClaimNextAutoCallAt = null;
+  }
+
+  Future<void> recoverClaimAttempt(BingoClaimAttempt attempt) {
+    if (!isCurrentClaimAttempt(attempt) || !_claimForeground) {
+      return Future<void>.value();
+    }
+    final existing = attempt.recoveryInFlight;
+    if (existing != null) return existing;
+    final recovery = _runClaimRecovery(attempt);
+    attempt.recoveryInFlight = recovery;
+    return recovery;
+  }
+
+  Future<void> _runClaimRecovery(BingoClaimAttempt attempt) async {
+    attempt.nextRecoveryAt = null;
+    try {
+      final result =
+          await (_recoverClaim?.call(
+                attempt.sessionId,
+                attempt.claimAttemptId,
+              ) ??
+              host.gamesRepository.getBingoClaimAttempt(
+                sessionId: attempt.sessionId,
+                claimAttemptId: attempt.claimAttemptId,
+              ));
+      if (!isCurrentClaimAttempt(attempt)) return;
+      if (result.claimAttemptId != attempt.claimAttemptId) {
+        throw StateError('Recovery returned another claim attempt');
+      }
+      BingoClaimDiagnostics.record(
+        event: 'bingo.recovery.result',
+        claimAttemptId: attempt.claimAttemptId,
+        sessionId: attempt.sessionId,
+        cartelaId: attempt.gameCartelaId,
+        claimStatus: result.status.name,
+        state: 'get_ok',
+      );
+      // Never POST again once the backend has accepted the attempt (CHECKING+).
+      await beforeClaimRecovered?.call(attempt, result);
+      if (!isCurrentClaimAttempt(attempt)) return;
+      if (applyAuthoritativeClaimStatus(
+        attempt,
+        result.status,
+        retryAllowed: result.retryAllowed,
+      )) {
+        onClaimRecovered?.call(attempt, result);
+      }
+    } catch (error) {
+      if (!isCurrentClaimAttempt(attempt)) return;
+      BingoClaimDiagnostics.record(
+        event: 'bingo.recovery.result',
+        claimAttemptId: attempt.claimAttemptId,
+        sessionId: attempt.sessionId,
+        cartelaId: attempt.gameCartelaId,
+        statusCode: error is ApiException ? error.statusCode : null,
+        dioType: error is ApiException ? error.dioExceptionType : null,
+        state: 'get_error',
+        detail: error is ApiException
+            ? error.message
+            : error.runtimeType.toString(),
+      );
+      // Proof of non-delivery requires TWO independent signals, never one
+      // Dio exception type alone: (1) the original POST's own TCP handshake
+      // never completed — structurally it cannot have sent any request
+      // bytes — AND (2) this separate recovery GET, right now, also cannot
+      // even connect. A 404/5xx/receiveTimeout GET means NestJS WAS reached
+      // and is never treated as proof. This can never fire for a claim that
+      // reached CHECKING, because reaching CHECKING requires the original
+      // POST to have connected in the first place.
+      //
+      // Re-audited for the 6s claimPostReceiveTimeout (down from 32s): this
+      // conclusion is unaffected. `postConnectNeverCompleted` is only ever
+      // set from DioExceptionType.connectionTimeout, which is governed by
+      // Dio's `connectTimeout` (TCP handshake, still the global 15s — never
+      // overridden per-call) and is entirely independent of the shortened
+      // `receiveTimeout`. A 6s POST that times out waiting for a response
+      // throws `receiveTimeout`, not `connectionTimeout` — it already
+      // connected and may well have been dispatched/accepted by Nest — so it
+      // can never satisfy this condition and is correctly left to fall
+      // through to ambiguous retention / same-UUID retry below, the same as
+      // before this timeout change.
+      final getNeverConnected = error is ApiException &&
+          (error.dioExceptionType == 'connectionTimeout' ||
+              error.dioExceptionType == 'connectionError');
+      if (attempt.postConnectNeverCompleted && getNeverConnected) {
+        BingoClaimDiagnostics.record(
+          event: 'bingo.terminal',
+          claimAttemptId: attempt.claimAttemptId,
+          sessionId: attempt.sessionId,
+          cartelaId: attempt.gameCartelaId,
+          state: 'auto_cleared_never_dispatched',
+        );
+        cancelUnsentClaim(attempt);
+        return;
+      }
+      final notFound = error is ApiException && error.statusCode == 404;
+      if (notFound &&
+          !attempt.postInFlight &&
+          attempt.sameUuidPostRetries < BingoClaimAttempt.maxSameUuidPostRetries &&
+          _resubmitClaim != null) {
+        attempt.sameUuidPostRetries++;
+        BingoClaimDiagnostics.record(
+          event: 'bingo.retry.start',
+          claimAttemptId: attempt.claimAttemptId,
+          sessionId: attempt.sessionId,
+          cartelaId: attempt.gameCartelaId,
+          retryCount: attempt.sameUuidPostRetries,
+          state: 'same_uuid_post',
+          detail: 'recovery_get_404',
+        );
+        try {
+          final posted = await _resubmitClaim!(attempt);
+          if (!isCurrentClaimAttempt(attempt)) return;
+          if (posted != null) {
+            BingoClaimDiagnostics.record(
+              event: 'bingo.retry.result',
+              claimAttemptId: attempt.claimAttemptId,
+              sessionId: attempt.sessionId,
+              cartelaId: attempt.gameCartelaId,
+              claimStatus: posted.claim.status.name,
+              retryCount: attempt.sameUuidPostRetries,
+              state: 'same_uuid_ok',
+            );
+            claimRecoveryFailedCartelaIds.remove(attempt.gameCartelaId);
+            attempt.serverClaimId = posted.claim.id;
+            if (applyAuthoritativeClaimStatus(
+              attempt,
+              posted.claim.status,
+              retryAllowed: posted.retryAllowed,
+            )) {
+              onClaimResubmitResult?.call(attempt, posted);
+            }
+            return;
+          }
+        } catch (retryError) {
+          BingoClaimDiagnostics.record(
+            event: 'bingo.retry.result',
+            claimAttemptId: attempt.claimAttemptId,
+            sessionId: attempt.sessionId,
+            cartelaId: attempt.gameCartelaId,
+            retryCount: attempt.sameUuidPostRetries,
+            statusCode:
+                retryError is ApiException ? retryError.statusCode : null,
+            dioType: retryError is ApiException
+                ? retryError.dioExceptionType
+                : null,
+            state: 'same_uuid_failed',
+            detail: retryError is ApiException
+                ? retryError.message
+                : retryError.runtimeType.toString(),
+          );
+          // Fall through to CONFIRMING + backoff; never invent INVALID.
+        }
+      }
+      if (!isCurrentClaimAttempt(attempt)) return;
+      claimRecoveryFailedCartelaIds.add(attempt.gameCartelaId);
+      const backoff = [1, 2, 4, 8, 15];
+      final index = attempt.recoveryErrors.clamp(0, backoff.length - 1);
+      attempt.recoveryErrors++;
+      attempt.nextRecoveryAt = _claimNow().add(
+        Duration(seconds: backoff[index]),
+      );
+      onClaimRecoveryChanged?.call();
+    } finally {
+      attempt.recoveryInFlight = null;
+      _scheduleClaimRecovery();
+    }
+  }
+
+  void reconcileClaimAttempts() {
+    if (claimScopeLoading) {
+      unawaited(bindClaimRecoveryScope(_claimUserId, _claimSessionId));
+      return;
+    }
+    for (final attempt in _claimAttempts.values.toList()) {
+      if (isCurrentClaimAttempt(attempt)) {
+        unawaited(recoverClaimAttempt(attempt));
+      }
+    }
+  }
+
+  void setClaimRecoveryForeground(bool foreground) {
+    _claimForeground = foreground;
+    if (!foreground) {
+      _claimRecoveryTimer?.cancel();
+    } else {
+      reconcileClaimAttempts();
+      _scheduleClaimRecovery();
+    }
+  }
+
+  void _scheduleClaimRecovery() {
+    _claimRecoveryTimer?.cancel();
+    if (_claimDisposed || !_claimForeground) return;
+    DateTime? earliest;
+    for (final attempt in _claimAttempts.values) {
+      final due = attempt.nextRecoveryAt;
+      if (!attempt.terminal &&
+          attempt.recoveryInFlight == null &&
+          due != null &&
+          (earliest == null || due.isBefore(earliest))) {
+        earliest = due;
+      }
+    }
+    if (earliest == null) return;
+    final scheduledAt = earliest;
+    final wait = earliest.difference(_claimNow());
+    _claimRecoveryTimer = Timer(wait.isNegative ? Duration.zero : wait, () {
+      // Timer rounds to milliseconds. Do not abandon an attempt if the callback
+      // fires just before its DateTime deadline (or wall clock moves backwards).
+      final now = _claimNow();
+      final cutoff = now.isBefore(scheduledAt) ? scheduledAt : now;
+      for (final attempt in _claimAttempts.values.toList()) {
+        final due = attempt.nextRecoveryAt;
+        if (due != null && !due.isAfter(cutoff)) {
+          unawaited(recoverClaimAttempt(attempt));
+        }
+      }
+    });
+  }
+
   static const _disconnectedPollInterval = Duration(seconds: 10);
 
   List<CalledNumberModel> calledNumbers = const [];
@@ -54,11 +593,14 @@ class LiveCalledNumbersController {
   final Set<int> processedCalledNumberOrders = <int>{};
   final Set<String> processedCalledDrawKeys = <String>{};
   final Set<String> pendingClaimCartelaIds = <String>{};
+
   /// Claim HTTP failed and my-cartelas recovery also failed — keep Bingo off
   /// until an authoritative claim-attempt recovery clears this cartela id.
   final Set<String> claimRecoveryFailedCartelaIds = <String>{};
+
   /// Active claimAttemptId per gameCartelaId while Checking / unresolved.
-  final Map<String, String> activeClaimAttemptIdByCartelaId = <String, String>{};
+  final Map<String, String> activeClaimAttemptIdByCartelaId =
+      <String, String>{};
   final Set<String> manualMarkedNumbers = <String>{};
   String? lastManualMarkedKey;
   String? marksSessionId;
@@ -71,7 +613,8 @@ class LiveCalledNumbersController {
   final Map<String, CartelaPatternUiResult> blockedCartelaFrozenSortResults =
       <String, CartelaPatternUiResult>{};
   final Map<String, String?> blockedCartelaReasonCodeById = <String, String?>{};
-  final Map<String, String?> blockedCartelaServerReasonById = <String, String?>{};
+  final Map<String, String?> blockedCartelaServerReasonById =
+      <String, String?>{};
 
   void rememberBlockedCartelaReason({
     required String gameCartelaId,
@@ -93,6 +636,7 @@ class LiveCalledNumbersController {
   String? blockedServerReasonFor(String gameCartelaId) {
     return blockedCartelaServerReasonById[gameCartelaId];
   }
+
   List<CalledNumberModel> socketBufferedCalledNumbers = const [];
   bool? socketAutoCallEnabled;
   Timer? disconnectedPollTimer;
@@ -104,6 +648,8 @@ class LiveCalledNumbersController {
       host.effectiveTimingConfig.missedNumberStaggerMaxBalls;
 
   void dispose() {
+    _claimDisposed = true;
+    _claimRecoveryTimer?.cancel();
     disconnectedPollTimer?.cancel();
     calledNumbersPanelRevision.dispose();
   }
@@ -126,7 +672,7 @@ class LiveCalledNumbersController {
   bool isAnyClaimChecking({required bool hasSessionCheckingCartelaNumbers}) {
     return shouldPauseCalledNumbersStripForClaim(
       claimStripHoldActive: claimStripHoldActive,
-      hasClaimingCartelaIds: claimingCartelaIds.isNotEmpty,
+      hasClaimingCartelaIds: confirmingOrClaimingCartelaIds.isNotEmpty,
       hasSessionCheckingCartelaNumbers: hasSessionCheckingCartelaNumbers,
     );
   }
@@ -181,7 +727,10 @@ class LiveCalledNumbersController {
       return false;
     }
 
-    if (claimRecoveryFailedCartelaIds.contains(gameCartela.id)) {
+    if (claimScopeLoading ||
+        _claimAttempts.containsKey(gameCartela.id) ||
+        activeClaimAttemptIdByCartelaId.containsKey(gameCartela.id) ||
+        claimRecoveryFailedCartelaIds.contains(gameCartela.id)) {
       return false;
     }
 
@@ -358,6 +907,14 @@ class LiveCalledNumbersController {
     bool clearManualMarks = true,
     bool clearCartelaSort = false,
   }) {
+    _claimScopeGeneration++;
+    _claimRecoveryTimer?.cancel();
+    _claimAttempts.clear();
+    _resolvedClaimAttemptIds.clear();
+    _resolvedClaimCartelaIds.clear();
+    _claimUserId = null;
+    _claimSessionId = null;
+    claimScopeLoading = false;
     pendingClaimCartelaIds.clear();
     claimingCartelaIds.clear();
     claimRecoveryFailedCartelaIds.clear();
@@ -470,7 +1027,8 @@ class LiveCalledNumbersController {
     required bool hasSessionCheckingCartelaNumbers,
   }) {
     if (!force &&
-        (claimingCartelaIds.isNotEmpty || hasSessionCheckingCartelaNumbers)) {
+        (confirmingOrClaimingCartelaIds.isNotEmpty ||
+            hasSessionCheckingCartelaNumbers)) {
       return;
     }
 

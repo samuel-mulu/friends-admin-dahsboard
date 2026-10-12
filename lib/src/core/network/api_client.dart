@@ -14,12 +14,16 @@ class ApiClient {
   Future<ApiEnvelope<T>> getEnvelope<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Duration? receiveTimeout,
     required T Function(Object? rawData) decoder,
   }) async {
     try {
       final response = await _dio.get<Object?>(
         path,
         queryParameters: queryParameters,
+        options: receiveTimeout == null
+            ? null
+            : Options(receiveTimeout: receiveTimeout),
       );
 
       return _decodeEnvelope(response.data, decoder);
@@ -92,11 +96,13 @@ class ApiClient {
   Future<T> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Duration? receiveTimeout,
     required T Function(Object? rawData) decoder,
   }) async {
     final envelope = await getEnvelope<T>(
       path,
       queryParameters: queryParameters,
+      receiveTimeout: receiveTimeout,
       decoder: decoder,
     );
 

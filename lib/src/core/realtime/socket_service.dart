@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
@@ -119,7 +120,59 @@ class SocketService {
     _socket?.emit('game:leave', {'sessionId': sessionId});
   }
 
-  void joinGame(String sessionId) => joinSession(sessionId);
+  /// Uses the existing gateway ACK; transport connection alone is insufficient.
+  Future<bool> joinGame(String sessionId) async {
+    final socket = _socket;
+    final socketId = socket?.id;
+    final authSignature = _activeAuthSignature;
+    if (socket == null || !socket.connected || isGuestConnection) return false;
+    final result = Completer<bool>();
+    void finish(bool joined) {
+      if (!result.isCompleted) result.complete(joined);
+    }
+
+    void disconnected(dynamic _) => finish(false);
+    void exception(dynamic data) {
+      if (data is! Map) return;
+      final cause = data['cause'];
+      if (cause is Map &&
+          cause['pattern'] == 'game:join' &&
+          cause['data'] is Map &&
+          cause['data']['sessionId'] == sessionId) {
+        finish(false);
+      }
+    }
+
+    socket.on('disconnect', disconnected);
+    socket.on('exception', exception);
+    final timeout = Timer(const Duration(seconds: 3), () => finish(false));
+    try {
+      socket
+          .timeout(3000)
+          .emitWithAck(
+            'game:join',
+            {'sessionId': sessionId},
+            ack: (dynamic error, [dynamic data]) {
+              finish(
+                error == null &&
+                    identical(socket, _socket) &&
+                    socket.connected &&
+                    socket.id == socketId &&
+                    _activeAuthSignature == authSignature &&
+                    data is Map &&
+                    data['joined'] == true &&
+                    data['room'] == 'session:$sessionId',
+              );
+            },
+          );
+      return await result.future;
+    } finally {
+      timeout.cancel();
+      socket.off('disconnect', disconnected);
+      socket.off('exception', exception);
+    }
+  }
+
   void leaveGame(String sessionId) => leaveSession(sessionId);
 
   void on(String event, SocketEventListener listener) {
