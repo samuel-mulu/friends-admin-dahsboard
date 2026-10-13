@@ -15,7 +15,23 @@ import '../utils/bingo_claim_eligibility.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 import '../utils/live_called_number_monotonic.dart';
 import '../utils/live_called_number_sync.dart';
+import '../utils/merge_registered_cartelas.dart';
 import 'live_game_host.dart';
+
+/// Result of applying a terminal (or non-terminal) claim outcome through the
+/// single Flutter claim owner. Cartela list mutation and pending cleanup are
+/// computed together so callers can apply both in one UI frame.
+class ClaimResolution {
+  const ClaimResolution({
+    required this.applied,
+    required this.cartelas,
+    this.cartelaStatus,
+  });
+
+  final bool applied;
+  final List<GameCartelaModel> cartelas;
+  final GameCartelaStatus? cartelaStatus;
+}
 
 class NumberCalledSocketApplyResult {
   const NumberCalledSocketApplyResult({
@@ -179,25 +195,177 @@ class LiveCalledNumbersController {
     required List<GameCartelaModel> cartelas,
   }) {
     if (!claimOutcomeMatchesView(attempt, game)) return cartelas;
-    final status = result.status == BingoClaimStatus.valid
-        ? GameCartelaStatus.winner
-        : result.status == BingoClaimStatus.invalid
-        ? GameCartelaStatus.blocked
-        : result.gameCartelaStatus;
-    if (status == GameCartelaStatus.registered) return cartelas;
-    return cartelas
-        .map(
-          (cartela) => cartela.id != attempt.gameCartelaId
-              ? cartela
-              : cartela.copyWith(
-                  status: status,
-                  isWinner: status == GameCartelaStatus.winner,
-                  blockedAt: status == GameCartelaStatus.blocked
-                      ? cartela.blockedAt ?? _claimNow()
-                      : null,
-                ),
-        )
-        .toList();
+    final status = cartelaStatusForClaimOutcome(
+      status: result.status,
+      reportedCartelaStatus: result.gameCartelaStatus,
+    );
+    if (status == null) return cartelas;
+    return patchCartelaTerminalStatus(
+      cartelas: cartelas,
+      gameCartelaId: attempt.gameCartelaId,
+      status: status,
+      now: _claimNow(),
+    );
+  }
+
+  /// Single owner path for claim resolution (terminal or confirming).
+  ///
+  /// [applyCartelas] runs **before** pending/attempt locks are cleared, so a
+  /// caller wrapping this in one `setState` never exposes REGISTERED + no
+  /// pending between those updates. Use for HTTP, recovery GET, and resubmit.
+  ClaimResolution resolveTerminalClaim({
+    required BingoClaimAttempt attempt,
+    required BingoClaimStatus status,
+    required bool retryAllowed,
+    required List<GameCartelaModel> cartelas,
+    required void Function(List<GameCartelaModel> next) applyCartelas,
+    GameCartelaStatus? reportedCartelaStatus,
+  }) {
+    if (!isCurrentClaimAttempt(attempt)) {
+      return ClaimResolution(applied: false, cartelas: cartelas);
+    }
+
+    final cartelaStatus = cartelaStatusForClaimOutcome(
+      status: status,
+      reportedCartelaStatus: reportedCartelaStatus,
+    );
+    var nextCartelas = cartelas;
+    if (cartelaStatus != null) {
+      nextCartelas = patchCartelaTerminalStatus(
+        cartelas: cartelas,
+        gameCartelaId: attempt.gameCartelaId,
+        status: cartelaStatus,
+        now: _claimNow(),
+      );
+    }
+    applyCartelas(nextCartelas);
+    releaseEligibilityLocksForCartelas(nextCartelas);
+
+    final applied = applyAuthoritativeClaimStatus(
+      attempt,
+      status,
+      retryAllowed: retryAllowed,
+    );
+    if (!applied) {
+      return ClaimResolution(applied: false, cartelas: cartelas);
+    }
+    return ClaimResolution(
+      applied: true,
+      cartelas: nextCartelas,
+      cartelaStatus: cartelaStatus,
+    );
+  }
+
+  /// Socket/presentation path when there is no live attempt to clear: still
+  /// apply terminal cartela status through the same patch helper, then drop
+  /// any leftover pending/claiming flags for that cartela in the same call.
+  List<GameCartelaModel> applyPresentedTerminalCartela({
+    required List<GameCartelaModel> cartelas,
+    required String gameCartelaId,
+    required GameCartelaStatus status,
+  }) {
+    final patched = patchCartelaTerminalStatus(
+      cartelas: cartelas,
+      gameCartelaId: gameCartelaId,
+      status: status,
+      now: _claimNow(),
+    );
+    pendingClaimCartelaIds.remove(gameCartelaId);
+    claimingCartelaIds.remove(gameCartelaId);
+    claimRecoveryFailedCartelaIds.remove(gameCartelaId);
+    releaseEligibilityLocksForCartelas(patched);
+    claimStripHoldActive = confirmingOrClaimingCartelaIds.isNotEmpty;
+    if (!claimStripHoldActive) preClaimNextAutoCallAt = null;
+    return patched;
+  }
+
+  /// Historical / cross-round terminal when [claimOutcomeMatchesView] is false.
+  ///
+  /// INVALID for a verified same-session cartela safely paints BLOCKED (chain
+  /// permanent block). Otherwise retains [claimEligibilityLockedCartelaIds]
+  /// so Bingo cannot reopen while the cartela is still locally REGISTERED.
+  ClaimResolution resolveHistoricalTerminalClaim({
+    required BingoClaimAttempt attempt,
+    required BingoClaimStatus status,
+    required bool retryAllowed,
+    required List<GameCartelaModel> cartelas,
+    required void Function(List<GameCartelaModel> next) applyCartelas,
+    required GameModel? game,
+    GameCartelaStatus? reportedCartelaStatus,
+  }) {
+    if (!isCurrentClaimAttempt(attempt)) {
+      return ClaimResolution(applied: false, cartelas: cartelas);
+    }
+    if (attempt.claimAttemptId.isEmpty || attempt.gameCartelaId.isEmpty) {
+      return ClaimResolution(applied: false, cartelas: cartelas);
+    }
+
+    final sameSession =
+        game != null &&
+        attempt.sessionId == game.sessionId &&
+        attempt.sessionId == _claimSessionId &&
+        attempt.userId == _claimUserId;
+
+    GameCartelaModel? matchingCartela;
+    if (sameSession) {
+      for (final cartela in cartelas) {
+        if (cartela.id == attempt.gameCartelaId &&
+            cartela.userId == attempt.userId &&
+            (cartela.gameId.isEmpty ||
+                cartela.gameId == attempt.sessionId)) {
+          matchingCartela = cartela;
+          break;
+        }
+      }
+    }
+
+    if (status == BingoClaimStatus.invalid) {
+      if (matchingCartela != null) {
+        // Same GameCartela id stays BLOCKED for the whole chain session.
+        final resolved = resolveTerminalClaim(
+          attempt: attempt,
+          status: status,
+          retryAllowed: retryAllowed,
+          cartelas: cartelas,
+          applyCartelas: applyCartelas,
+          reportedCartelaStatus:
+              reportedCartelaStatus ?? GameCartelaStatus.blocked,
+        );
+        claimEligibilityLockedCartelaIds.remove(attempt.gameCartelaId);
+        return resolved;
+      }
+      // No verified local cartela to paint: keep a hard lock, then clear the
+      // attempt identity so storage does not retain a stale UUID.
+      claimEligibilityLockedCartelaIds.add(attempt.gameCartelaId);
+      applyAuthoritativeClaimStatus(
+        attempt,
+        status,
+        retryAllowed: retryAllowed,
+      );
+      return ClaimResolution(applied: true, cartelas: cartelas);
+    }
+
+    // Historical VALID must not paint WINNER onto the newer round.
+    applyAuthoritativeClaimStatus(
+      attempt,
+      status,
+      retryAllowed: retryAllowed,
+    );
+    return ClaimResolution(applied: true, cartelas: cartelas);
+  }
+
+  /// Drop eligibility locks once cartelas show an authoritative terminal
+  /// status (or the cartela left the list).
+  void releaseEligibilityLocksForCartelas(List<GameCartelaModel> cartelas) {
+    if (claimEligibilityLockedCartelaIds.isEmpty) return;
+    final byId = <String, GameCartelaModel>{
+      for (final cartela in cartelas) cartela.id: cartela,
+    };
+    claimEligibilityLockedCartelaIds.removeWhere((id) {
+      final cartela = byId[id];
+      if (cartela == null) return true;
+      return isTerminalCartelaStatus(cartela.status);
+    });
   }
 
   Future<void> bindClaimRecoveryScope(String? userId, String? sessionId) async {
@@ -218,6 +386,7 @@ class LiveCalledNumbersController {
     claimingCartelaIds.clear();
     pendingClaimCartelaIds.clear();
     claimRecoveryFailedCartelaIds.clear();
+    claimEligibilityLockedCartelaIds.clear();
     claimStripHoldActive = false;
     preClaimNextAutoCallAt = null;
     claimScopeLoading = userId != null && sessionId != null;
@@ -395,12 +564,28 @@ class LiveCalledNumbersController {
       // Never POST again once the backend has accepted the attempt (CHECKING+).
       await beforeClaimRecovered?.call(attempt, result);
       if (!isCurrentClaimAttempt(attempt)) return;
-      if (applyAuthoritativeClaimStatus(
+      if (result.status.isTerminal) {
+        // Prefer the screen path (`resolveTerminalClaim` /
+        // `resolveHistoricalTerminalClaim`) so cartela + locks share one
+        // setState. If the callback is absent or leaves the attempt current,
+        // fall back without unlocking a still-REGISTERED INVALID cartela.
+        onClaimRecovered?.call(attempt, result);
+        if (isCurrentClaimAttempt(attempt)) {
+          if (result.status == BingoClaimStatus.invalid) {
+            claimEligibilityLockedCartelaIds.add(attempt.gameCartelaId);
+          }
+          applyAuthoritativeClaimStatus(
+            attempt,
+            result.status,
+            retryAllowed: result.retryAllowed,
+          );
+        }
+      } else if (applyAuthoritativeClaimStatus(
         attempt,
         result.status,
         retryAllowed: result.retryAllowed,
       )) {
-        onClaimRecovered?.call(attempt, result);
+        onClaimRecoveryChanged?.call();
       }
     } catch (error) {
       if (!isCurrentClaimAttempt(attempt)) return;
@@ -466,7 +651,7 @@ class LiveCalledNumbersController {
           detail: 'recovery_get_404',
         );
         try {
-          final posted = await _resubmitClaim!(attempt);
+          final posted = await _resubmitClaim(attempt);
           if (!isCurrentClaimAttempt(attempt)) return;
           if (posted != null) {
             BingoClaimDiagnostics.record(
@@ -480,12 +665,15 @@ class LiveCalledNumbersController {
             );
             claimRecoveryFailedCartelaIds.remove(attempt.gameCartelaId);
             attempt.serverClaimId = posted.claim.id;
-            if (applyAuthoritativeClaimStatus(
-              attempt,
-              posted.claim.status,
-              retryAllowed: posted.retryAllowed,
-            )) {
-              onClaimResubmitResult?.call(attempt, posted);
+            // Prefer screen resolve path; fall back so unit tests / skipped
+            // presentation still clear the attempt.
+            onClaimResubmitResult?.call(attempt, posted);
+            if (isCurrentClaimAttempt(attempt)) {
+              applyAuthoritativeClaimStatus(
+                attempt,
+                posted.claim.status,
+                retryAllowed: posted.retryAllowed,
+              );
             }
             return;
           }
@@ -597,6 +785,11 @@ class LiveCalledNumbersController {
   /// Claim HTTP failed and my-cartelas recovery also failed — keep Bingo off
   /// until an authoritative claim-attempt recovery clears this cartela id.
   final Set<String> claimRecoveryFailedCartelaIds = <String>{};
+
+  /// Historical INVALID (or equivalent) where BLOCKED could not yet be painted.
+  /// Keeps Bingo off per cartela until cartelas show an authoritative terminal
+  /// status — failed canonical refetch must not reopen eligibility.
+  final Set<String> claimEligibilityLockedCartelaIds = <String>{};
 
   /// Active claimAttemptId per gameCartelaId while Checking / unresolved.
   final Map<String, String> activeClaimAttemptIdByCartelaId =
@@ -715,6 +908,10 @@ class LiveCalledNumbersController {
     final effectiveCalledCount = calledNumbers.isNotEmpty
         ? calledNumbers.length
         : (game?.calledNumbersCount ?? 0);
+    if (isTerminalCartelaStatus(gameCartela.status)) {
+      claimEligibilityLockedCartelaIds.remove(gameCartela.id);
+    }
+
     if (!isCartelaEligibleForBingoClaim(
       game: game,
       gameCartela: gameCartela,
@@ -730,7 +927,8 @@ class LiveCalledNumbersController {
     if (claimScopeLoading ||
         _claimAttempts.containsKey(gameCartela.id) ||
         activeClaimAttemptIdByCartelaId.containsKey(gameCartela.id) ||
-        claimRecoveryFailedCartelaIds.contains(gameCartela.id)) {
+        claimRecoveryFailedCartelaIds.contains(gameCartela.id) ||
+        claimEligibilityLockedCartelaIds.contains(gameCartela.id)) {
       return false;
     }
 
@@ -918,6 +1116,7 @@ class LiveCalledNumbersController {
     pendingClaimCartelaIds.clear();
     claimingCartelaIds.clear();
     claimRecoveryFailedCartelaIds.clear();
+    claimEligibilityLockedCartelaIds.clear();
     activeClaimAttemptIdByCartelaId.clear();
     claimStripHoldActive = false;
     preClaimNextAutoCallAt = null;

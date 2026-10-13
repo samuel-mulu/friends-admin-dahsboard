@@ -3,9 +3,37 @@ import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 
+/// True when session metadata proves a prior Chain round has closed and the
+/// current PLAYING view is a later round — not merely a stale same-round
+/// PLAYING snapshot.
+///
+/// Evidence (either is enough):
+/// - [GameModel.roundPausedUntil] set by `chain:round_finished` / server pause
+/// - [GameModel.roundResults] containing a decided round behind
+///   [GameModel.displayRoundIndex]
+///
+/// [GameModel.displayRoundIndex] alone is never sufficient.
+bool hasAuthoritativeChainRoundAdvance(GameModel game) {
+  if (!game.isChainGame) {
+    return false;
+  }
+  if (game.roundPausedUntil != null) {
+    return true;
+  }
+  final current = game.displayRoundIndex;
+  for (final round in game.roundResults) {
+    if (round.roundIndex < current) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// After a non-final Chain Game round, winners are REGISTERED again on the
-/// server so they can Bingo later. Local `isWinner` patches from round 1 must
-/// not survive into round 2. Blocked cartelas stay blocked for the whole chain.
+/// server so they can Bingo later. Local `isWinner` patches from round N must
+/// not survive into round N+1 once advance is proven. Blocked cartelas stay
+/// blocked for the whole chain. Same-round stale PLAYING does not demote
+/// WINNER.
 List<GameCartelaModel> normalizeChainPlayableCartelas({
   required GameModel? game,
   required List<GameCartelaModel> cartelas,
@@ -13,7 +41,8 @@ List<GameCartelaModel> normalizeChainPlayableCartelas({
   if (game == null ||
       !game.isChainGame ||
       game.status != GameStatus.playing ||
-      cartelas.isEmpty) {
+      cartelas.isEmpty ||
+      !hasAuthoritativeChainRoundAdvance(game)) {
     return cartelas;
   }
 

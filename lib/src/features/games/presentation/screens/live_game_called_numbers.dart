@@ -265,25 +265,63 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         return;
       }
       attempt.serverClaimId = result.claim.id;
-      if (!_cn.applyAuthoritativeClaimStatus(
-        attempt, result.claim.status, retryAllowed: result.retryAllowed,
-      )) {
-        return;
-      }
-      BingoClaimDiagnostics.record(
-        event: 'bingo.terminal',
-        claimAttemptId: attempt.claimAttemptId,
-        sessionId: sessionId,
-        cartelaId: gameCartela.id,
-        claimStatus: result.claim.status.name,
-        state: 'applied_http',
-      );
       // A Chain round may have advanced while this HTTP response was in flight.
       if (attempt.roundIndex != _game?.displayRoundIndex) {
+        setState(() {
+          if (_cn.claimOutcomeMatchesView(attempt, _game)) {
+            _cn.resolveTerminalClaim(
+              attempt: attempt,
+              status: result.claim.status,
+              retryAllowed: result.retryAllowed,
+              cartelas: _myCartelas,
+              reportedCartelaStatus: result.gameCartelaStatus,
+              applyCartelas: (next) => _myCartelas = next,
+            );
+          } else if (result.claim.status.isTerminal) {
+            _cn.resolveHistoricalTerminalClaim(
+              attempt: attempt,
+              status: result.claim.status,
+              retryAllowed: result.retryAllowed,
+              cartelas: _myCartelas,
+              reportedCartelaStatus: result.gameCartelaStatus,
+              game: _game,
+              applyCartelas: (next) {
+                _myCartelas = next;
+                for (final cartela in next) {
+                  if (cartela.id == gameCartela.id &&
+                      cartela.status == GameCartelaStatus.blocked) {
+                    _freezeBlockedCartela(cartela);
+                  }
+                }
+              },
+            );
+          }
+        });
+        BingoClaimDiagnostics.record(
+          event: 'bingo.terminal',
+          claimAttemptId: attempt.claimAttemptId,
+          sessionId: sessionId,
+          cartelaId: gameCartela.id,
+          claimStatus: result.claim.status.name,
+          state: 'applied_http',
+        );
+        if (result.claim.status.isTerminal) {
+          _cn.processedResolvedClaimIds.add(result.claim.id);
+        }
         _scheduleCanonicalRefetch(includeMyCartelas: true);
         return;
       }
+      var resolved = const ClaimResolution(applied: false, cartelas: []);
       setState(() {
+        resolved = _cn.resolveTerminalClaim(
+          attempt: attempt,
+          status: result.claim.status,
+          retryAllowed: result.retryAllowed,
+          cartelas: _myCartelas,
+          reportedCartelaStatus: result.gameCartelaStatus,
+          applyCartelas: (next) => _myCartelas = next,
+        );
+        if (!resolved.applied) return;
         if (result.claim.status == BingoClaimStatus.failed ||
             result.claim.status == BingoClaimStatus.alreadyResolved) {
           _applyRetryableClaimSnapshot(
@@ -294,12 +332,33 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           );
           _game = _applyNextAutoCallAtFromClaimResult(_game, result);
         } else {
-          _applyClaimResultState(result: result, gameCartela: gameCartela);
+          _applyClaimResultState(
+            result: result,
+            gameCartela: gameCartela,
+            cartelaAlreadyPatched: true,
+          );
         }
         if (result.claim.status.isTerminal) {
           _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
+          if (resolved.cartelaStatus == GameCartelaStatus.blocked) {
+            for (final cartela in _myCartelas) {
+              if (cartela.id == gameCartela.id) {
+                _freezeBlockedCartela(cartela);
+                break;
+              }
+            }
+          }
         }
       });
+      if (!resolved.applied) return;
+      BingoClaimDiagnostics.record(
+        event: 'bingo.terminal',
+        claimAttemptId: attempt.claimAttemptId,
+        sessionId: sessionId,
+        cartelaId: gameCartela.id,
+        claimStatus: result.claim.status.name,
+        state: 'applied_http',
+      );
       if (result.claim.status.isTerminal) {
         _cn.processedResolvedClaimIds.add(result.claim.id);
       }
@@ -459,10 +518,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     if (cartelaStatus == GameCartelaStatus.blocked ||
         cartelaStatus == GameCartelaStatus.winner ||
         cartelaStatus == GameCartelaStatus.cancelled) {
-      _myCartelas = _myCartelas.map((cartela) => cartela.id != cartelaId
-          ? cartela
-          : cartela.copyWith(status: cartelaStatus,
-              isWinner: cartelaStatus == GameCartelaStatus.winner)).toList();
+      _myCartelas = _cn.applyPresentedTerminalCartela(
+        cartelas: _myCartelas,
+        gameCartelaId: cartelaId,
+        status: cartelaStatus,
+      );
     }
   }
 
@@ -476,12 +536,48 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     }
     if (!_cn.claimOutcomeMatchesView(attempt, _game)) {
       if (result.status.isTerminal) {
+        // Historical / cross-round: INVALID may safely paint BLOCKED on the
+        // same session cartela; otherwise retain eligibility lock. VALID
+        // clears the attempt without painting WINNER onto the newer round.
+        setState(() {
+          _cn.resolveHistoricalTerminalClaim(
+            attempt: attempt,
+            status: result.status,
+            retryAllowed: result.retryAllowed,
+            cartelas: _myCartelas,
+            reportedCartelaStatus: result.gameCartelaStatus,
+            game: _game,
+            applyCartelas: (next) {
+              _myCartelas = next;
+              for (final cartela in next) {
+                if (cartela.id == attempt.gameCartelaId &&
+                    cartela.status == GameCartelaStatus.blocked) {
+                  _cn.rememberBlockedCartelaReason(
+                    gameCartelaId: cartela.id,
+                    reasonCode: result.reasonCode,
+                  );
+                  _freezeBlockedCartela(cartela);
+                }
+              }
+            },
+          );
+        });
         _scheduleCanonicalRefetch(includeMyCartelas: true);
       }
       return;
     }
     if (!result.status.isTerminal) return;
+    var resolved = const ClaimResolution(applied: false, cartelas: []);
     setState(() {
+      resolved = _cn.resolveTerminalClaim(
+        attempt: attempt,
+        status: result.status,
+        retryAllowed: result.retryAllowed,
+        cartelas: _myCartelas,
+        reportedCartelaStatus: result.gameCartelaStatus,
+        applyCartelas: (next) => _myCartelas = next,
+      );
+      if (!resolved.applied) return;
       _game = _game?.copyWith(nextAutoCallAt: result.nextAutoCallAt);
       _applyRetryableClaimSnapshot(
         gameStatus: result.gameStatus,
@@ -491,9 +587,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       );
       _myCartelas = normalizeChainPlayableCartelas(
         game: _game,
-        cartelas: _cn.cartelasAfterClaimRecovery(
-          attempt: attempt, result: result, game: _game, cartelas: _myCartelas,
-        ),
+        cartelas: _myCartelas,
       );
       for (final cartela in _myCartelas) {
         if (cartela.id == attempt.gameCartelaId) {
@@ -507,6 +601,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         }
       }
     });
+    if (!resolved.applied) return;
     if (result.status == BingoClaimStatus.valid) {
       _playGameSound(SoundEvent.validBingo,
           dedupeKey: attempt.serverClaimId ?? attempt.claimAttemptId);
@@ -533,6 +628,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
   void _applyClaimResultState({
     required BingoClaimResult result,
     required GameCartelaModel gameCartela,
+    bool cartelaAlreadyPatched = false,
   }) {
     if (result.claim.status.isTerminal) {
       _cn.processedResolvedClaimIds.add(result.claim.id);
@@ -547,19 +643,13 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         serverReason: result.claim.reason,
       );
       _game = _applyNextAutoCallAtFromClaimResult(_game, result);
-      _myCartelas = _myCartelas
-          .map((cartela) {
-            if (cartela.id != gameCartela.id) {
-              return cartela;
-            }
-
-            return cartela.copyWith(
-              status: GameCartelaStatus.blocked,
-              isWinner: false,
-              blockedAt: DateTime.now(),
-            );
-          })
-          .toList(growable: false);
+      if (!cartelaAlreadyPatched) {
+        _myCartelas = _cn.applyPresentedTerminalCartela(
+          cartelas: _myCartelas,
+          gameCartelaId: gameCartela.id,
+          status: GameCartelaStatus.blocked,
+        );
+      }
       for (final cartela in _myCartelas) {
         if (cartela.id == gameCartela.id) {
           _freezeBlockedCartela(cartela);
@@ -591,19 +681,13 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         columns: gameCartela.cartela.columns,
         lastCalledNumber: result.lastCalledNumber,
       );
-      _myCartelas = _myCartelas
-          .map((cartela) {
-            if (cartela.id != gameCartela.id) {
-              return cartela;
-            }
-
-            return cartela.copyWith(
-              status: GameCartelaStatus.winner,
-              isWinner: true,
-              blockedAt: null,
-            );
-          })
-          .toList(growable: false);
+      if (!cartelaAlreadyPatched) {
+        _myCartelas = _cn.applyPresentedTerminalCartela(
+          cartelas: _myCartelas,
+          gameCartelaId: gameCartela.id,
+          status: GameCartelaStatus.winner,
+        );
+      }
       return;
     }
 

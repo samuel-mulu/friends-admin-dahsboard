@@ -3467,27 +3467,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _clearSessionCheckingCartelaNumber(cartelaNumber);
       }
       if (gameCartelaId != null) {
-        _cn.pendingClaimCartelaIds.remove(gameCartelaId);
-        _cn.claimingCartelaIds.remove(gameCartelaId);
         _storeClaimWinningSnapshot(
           gameCartelaId: gameCartelaId,
           patterns: completedPatterns,
           lastCalledNumber: lastCalledNumber,
         );
+        _myCartelas = _cn.applyPresentedTerminalCartela(
+          cartelas: _myCartelas,
+          gameCartelaId: gameCartelaId,
+          status: GameCartelaStatus.winner,
+        );
       }
-      _myCartelas = _myCartelas
-          .map((cartela) {
-            if (cartela.id != gameCartelaId) {
-              return cartela;
-            }
-
-            return cartela.copyWith(
-              status: GameCartelaStatus.winner,
-              isWinner: true,
-              blockedAt: null,
-            );
-          })
-          .toList(growable: false);
       _syncChainPlayableCartelas();
     });
     _markCalledNumbersPanelDirty();
@@ -3607,30 +3597,20 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     setState(() {
       if (gameCartelaId != null) {
-        _cn.pendingClaimCartelaIds.remove(gameCartelaId);
-        _cn.claimingCartelaIds.remove(gameCartelaId);
         _cn.rememberBlockedCartelaReason(
           gameCartelaId: gameCartelaId,
           reasonCode: payload['reasonCode'] as String?,
           serverReason: payload['reason'] as String?,
         );
+        _myCartelas = _cn.applyPresentedTerminalCartela(
+          cartelas: _myCartelas,
+          gameCartelaId: gameCartelaId,
+          status: GameCartelaStatus.blocked,
+        );
       }
       if (cartelaNumber != null) {
         _recordSessionBlockedCartelaNumber(cartelaNumber);
       }
-      _myCartelas = _myCartelas
-          .map((cartela) {
-            if (cartela.id != gameCartelaId) {
-              return cartela;
-            }
-
-            return cartela.copyWith(
-              status: GameCartelaStatus.blocked,
-              isWinner: false,
-              blockedAt: DateTime.now(),
-            );
-          })
-          .toList(growable: false);
       for (final cartela in _myCartelas) {
         if (cartela.id == gameCartelaId) {
           _freezeBlockedCartela(cartela);
@@ -3749,21 +3729,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       final ownsCartela = _myCartelas.any((cartela) => cartela.id == gameCartelaId);
       if (ownsCartela) {
         setState(() {
-          _cn.pendingClaimCartelaIds.remove(gameCartelaId);
-          _cn.claimingCartelaIds.remove(gameCartelaId);
-          _cn.claimRecoveryFailedCartelaIds.remove(gameCartelaId);
-          _myCartelas = _myCartelas
-              .map((cartela) {
-                if (cartela.id != gameCartelaId) {
-                  return cartela;
-                }
-                return cartela.copyWith(
-                  status: GameCartelaStatus.winner,
-                  isWinner: true,
-                  blockedAt: null,
-                );
-              })
-              .toList(growable: false);
+          _myCartelas = _cn.applyPresentedTerminalCartela(
+            cartelas: _myCartelas,
+            gameCartelaId: gameCartelaId,
+            status: GameCartelaStatus.winner,
+          );
           if (completedPatterns.isNotEmpty) {
             _storeClaimWinningSnapshot(
               gameCartelaId: gameCartelaId,

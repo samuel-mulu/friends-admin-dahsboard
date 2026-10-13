@@ -172,7 +172,12 @@ class LiveRegistrationController {
     }
 
     host.markNeedsBuild(() {
-      myCartelas = sortedMyCartelas(cartelas);
+      myCartelas = sortedMyCartelas(
+        reconcileCartelaSnapshot(
+          current: myCartelas,
+          incoming: cartelas,
+        ),
+      );
     });
     currentCartelaSnapshotGuard.markRemoteApplied(token);
     return true;
