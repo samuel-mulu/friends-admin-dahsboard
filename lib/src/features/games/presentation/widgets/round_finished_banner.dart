@@ -5,6 +5,8 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../../domain/game_category_theme.dart';
+import '../utils/round_winner_history_adapters.dart';
+import 'all_rounds_winner_cards.dart';
 import 'winner_cartela_number_strip.dart';
 
 /// Per-round outcome list shown once a Chain Game reaches its final summary.
@@ -276,6 +278,10 @@ class RoundFinishedBanner extends StatelessWidget {
     this.chainRoundCount,
     this.isInterRoundPause = false,
     this.interRoundTitle,
+    this.allRoundsWinnerCards = const [],
+    this.allRoundsWinnerCardsLoading = false,
+    this.allRoundsWinnerCardsError,
+    this.showAllRoundsWinners = false,
     this.onNext,
     this.onOpenWinners,
     super.key,
@@ -301,6 +307,12 @@ class RoundFinishedBanner extends StatelessWidget {
   /// [interRoundTitle] so the last-round 60s summary stays unchanged.
   final bool isInterRoundPause;
   final String? interRoundTitle;
+
+  /// BIG_GAME / CHAIN final finished PIN only — historical winners by round.
+  final List<AllRoundsWinnerCardData> allRoundsWinnerCards;
+  final bool allRoundsWinnerCardsLoading;
+  final String? allRoundsWinnerCardsError;
+  final bool showAllRoundsWinners;
   final VoidCallback? onNext;
   final VoidCallback? onOpenWinners;
 
@@ -463,6 +475,14 @@ class RoundFinishedBanner extends StatelessWidget {
                         rounds: chainRoundResults,
                         roundCount:
                             chainRoundCount ?? chainRoundResults.length,
+                      ),
+                    ],
+                    if (!isInterRoundPause && showAllRoundsWinners) ...[
+                      const SizedBox(height: 8),
+                      AllRoundsWinnerCards(
+                        cards: allRoundsWinnerCards,
+                        isLoading: allRoundsWinnerCardsLoading,
+                        errorMessage: allRoundsWinnerCardsError,
                       ),
                     ],
                     const SizedBox(height: 6),

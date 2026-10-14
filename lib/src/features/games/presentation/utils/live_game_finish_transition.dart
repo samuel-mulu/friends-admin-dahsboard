@@ -160,6 +160,33 @@ bool hasPlayableAdvanceTarget({
       );
 }
 
+/// Finished-summary UI only: true when a next session/round is already queued
+/// after [terminalGame], even if registration timing (`canRegister`) has not
+/// opened yet.
+///
+/// Do not use for advance adoption or idle-clear — those stay on
+/// [hasPlayableAdvanceTarget] / [isAdvanceRegistrationEligible].
+bool hasQueuedAdvanceTarget({
+  required GameOperationsCurrentResponse? operations,
+  required GameModel terminalGame,
+  bool embeddedBigGame = false,
+}) {
+  if (embeddedBigGame && terminalGame.isBigGame) {
+    final resolved = big_game_advance.resolveNextBigGameRound(
+      operations: operations,
+      terminalRound: terminalGame,
+    );
+    if (resolved != null) {
+      return true;
+    }
+    return big_game_advance.bigGameSlotHasMoreRoundsAfterTerminal(terminalGame);
+  }
+  if (operations == null) {
+    return false;
+  }
+  return operations.resolveAdvanceTargetFor(terminalGame: terminalGame) != null;
+}
+
 /// Keeps the current session on screen during finished review instead of
 /// swapping to the next registration session from a canonical refetch.
 bool shouldPinTerminalSession({

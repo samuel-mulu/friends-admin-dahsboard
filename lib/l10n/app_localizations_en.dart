@@ -2296,6 +2296,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get allRoundsWinnersTitle => 'All Rounds Winners';
+
+  @override
+  String get allRoundsWinnersViewCartela => 'View cartela';
+
+  @override
   String get chainRoundWinnersTitle => 'Round winners';
 
   @override

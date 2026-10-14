@@ -2253,6 +2253,12 @@
     }
   },
 
+  "allRoundsWinnersTitle": "All Rounds Winners",
+  "@allRoundsWinnersTitle": {},
+
+  "allRoundsWinnersViewCartela": "View cartela",
+  "@allRoundsWinnersViewCartela": {},
+
   "chainRoundWinnersTitle": "Round winners",
   "@chainRoundWinnersTitle": {},
 

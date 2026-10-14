@@ -695,6 +695,8 @@
   "chainRoundBreakTitle": "ዙር {round} ተጠናቋል",
   "chainRoundBreakSubtitle": "ምልክቶችዎ ይቀራሉ። ዙር {round} በ {seconds} ሰ ይጀምራል።",
   "chainRoundNextPattern": "ቀጣይ ህግ፦ {pattern}",
+  "allRoundsWinnersTitle": "የሁሉም ዙሮች አሸናፊዎች",
+  "allRoundsWinnersViewCartela": "ካርቴላ ይመልከቱ",
   "chainRoundWinnersTitle": "የዙር አሸናፊዎች",
   "chainRoundWinnerChip": "ዙር {round} · #{cartela}",
   "chainRoundsTitle": "የሰንሰለት ዙሮች",

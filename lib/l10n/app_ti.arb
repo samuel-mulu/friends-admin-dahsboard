@@ -695,6 +695,8 @@
   "chainRoundBreakTitle": "ዙር {round} ተዛዚሙ",
   "chainRoundBreakSubtitle": "ምልክታትካ ይተርፉ። ዙር {round} ኣብ {seconds} ሰ ይጅምር።",
   "chainRoundNextPattern": "ዝቕጽል ሕግ፦ {pattern}",
+  "allRoundsWinnersTitle": "ናይ ኩሎም ዙራት ኣሸነፍቲ",
+  "allRoundsWinnersViewCartela": "ካርቴላ ርአ",
   "chainRoundWinnersTitle": "ኣሸነፍቲ ዙር",
   "chainRoundWinnerChip": "ዙር {round} · #{cartela}",
   "chainRoundsTitle": "ዙራት ሰንሰለት",

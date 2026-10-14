@@ -17,6 +17,7 @@ import 'models/game_model.dart';
 import 'models/game_timing_config_model.dart';
 import 'models/house_champions_model.dart';
 import 'models/registration_state_model.dart';
+import 'models/round_winner_history_model.dart';
 import 'models/session_winner_result_model.dart';
 
 class GamesRepository {
@@ -717,6 +718,34 @@ class GamesRepository {
         }
 
         return SessionWinnerResultModel.parseList(rawData['winnerResults']);
+      },
+    );
+  }
+
+  Future<RoundWinnerHistory> getBigGameSlotRoundWinners({
+    required String slotId,
+  }) {
+    return _apiClient.get<RoundWinnerHistory>(
+      '/games/slots/$slotId/big-game/round-winners',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid Big Game round winners response.');
+        }
+        return RoundWinnerHistory.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<RoundWinnerHistory> getChainSessionRoundWinners({
+    required String sessionId,
+  }) {
+    return _apiClient.get<RoundWinnerHistory>(
+      '/games/sessions/$sessionId/round-winners',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid Chain round winners response.');
+        }
+        return RoundWinnerHistory.fromJson(rawData);
       },
     );
   }

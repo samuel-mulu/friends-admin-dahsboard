@@ -2247,6 +2247,12 @@ class AppLocalizationsTi extends AppLocalizations {
   }
 
   @override
+  String get allRoundsWinnersTitle => 'ናይ ኩሎም ዙራት ኣሸነፍቲ';
+
+  @override
+  String get allRoundsWinnersViewCartela => 'ካርቴላ ርአ';
+
+  @override
   String get chainRoundWinnersTitle => 'ኣሸነፍቲ ዙር';
 
   @override

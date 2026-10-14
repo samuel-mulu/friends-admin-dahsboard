@@ -2317,6 +2317,12 @@ class AppLocalizationsOm extends AppLocalizations {
   }
 
   @override
+  String get allRoundsWinnersTitle => 'Mo\'attoota Raawundii Hunda';
+
+  @override
+  String get allRoundsWinnersViewCartela => 'Kaartelaa ilaali';
+
+  @override
   String get chainRoundWinnersTitle => 'Mo\'attoota raawundii';
 
   @override

@@ -14,6 +14,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   DateTime? _latchedChainRoundPausedUntil;
   String? _latchedChainPauseSessionId;
 
+  /// Final-round All Rounds Winners history (Big Game + Chain only).
+  RoundWinnerHistory? _allRoundsWinnerHistory;
+  List<AllRoundsWinnerCardData> _allRoundsWinnerCards = const [];
+  bool _allRoundsWinnerHistoryLoading = false;
+  String? _allRoundsWinnerHistoryError;
+  String? _allRoundsWinnerHistoryKey;
+
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
   LiveRealtimeController get _realtime => controllers.realtime;
@@ -1310,6 +1317,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       }
 
       setState(() {
+        // Prefetch is the summary's real-time ops refresh — keep the banner's
+        // hasQueuedAdvanceTarget input (_lastOperations) in sync.
+        _lastOperations = operations;
         _nextUpcomingGame = nextGame;
         if (_registration.shouldApplyNextRegistrationCartelasSnapshot(
           snapshotToken: nextCartelasSnapshotToken,
@@ -1671,6 +1681,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (holdingTerminalSummary &&
           (game == null || game.sessionId != priorGame.sessionId)) {
         _safeSetState(generation, () {
+          // Keep ops fresh so finished-summary hasNextGame stays real-time
+          // while the terminal session remains pinned.
+          _lastOperations = operations;
           _nextUpcomingGame = _resolveQueueUpcomingGame(
             operations,
             current: priorGame,
@@ -1767,6 +1780,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
                   releaseTerminalHold: releaseTerminalHold,
                 ))) {
           _safeSetState(generation, () {
+            if (postGameSummaryActive) {
+              _lastOperations = operations;
+              _nextUpcomingGame = _resolveQueueUpcomingGame(
+                operations,
+                current: priorGame,
+              );
+            }
             _isLoading = false;
             _errorMessage = null;
             _emptyMessage = null;
@@ -2561,6 +2581,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _review.sessionWinnerResults = const [];
         _review.sessionWinnerResultsLoaded = false;
         _review.sessionWinnerResultsLoading = false;
+        _clearAllRoundsWinnerHistory();
         if (shouldClearWinnerPatternsOnSessionApply(
           sessionChanged: true,
           postGameSummaryAdvancing: _review.postGameSummaryAdvancing,
@@ -4232,10 +4253,91 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             }
           }),
         );
+        unawaited(_fetchAllRoundsWinnerHistoryIfNeeded());
         unawaited(_prefetchNextRegistrationDuringReview());
       },
       scheduleAdvanceToNextGame: _scheduleAdvanceToNextGame,
     );
+  }
+
+  void _clearAllRoundsWinnerHistory() {
+    _allRoundsWinnerHistory = null;
+    _allRoundsWinnerCards = const [];
+    _allRoundsWinnerHistoryLoading = false;
+    _allRoundsWinnerHistoryError = null;
+    _allRoundsWinnerHistoryKey = null;
+  }
+
+  bool get _shouldShowAllRoundsWinnersSection =>
+      shouldShowAllRoundsWinnersHistory(
+        game: _game,
+        postGameSummaryVisible: _showsPostGameSummary,
+      );
+
+  Future<void> _fetchAllRoundsWinnerHistoryIfNeeded() async {
+    final game = _game;
+    if (!_shouldShowAllRoundsWinnersSection || game == null) {
+      return;
+    }
+
+    final cacheKey = allRoundsWinnerHistoryCacheKey(game);
+    if (cacheKey == null) {
+      return;
+    }
+    if (_allRoundsWinnerHistoryKey == cacheKey &&
+        _allRoundsWinnerHistory != null &&
+        !_allRoundsWinnerHistoryLoading) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _allRoundsWinnerHistoryLoading = true;
+        _allRoundsWinnerHistoryError = null;
+        _allRoundsWinnerHistoryKey = cacheKey;
+      });
+    } else {
+      _allRoundsWinnerHistoryLoading = true;
+      _allRoundsWinnerHistoryError = null;
+      _allRoundsWinnerHistoryKey = cacheKey;
+    }
+
+    try {
+      final RoundWinnerHistory history;
+      if (game.isBigGame) {
+        history = await _gamesRepository.getBigGameSlotRoundWinners(
+          slotId: game.id,
+        );
+      } else if (game.isChainGame) {
+        final sessionId = game.sessionId;
+        if (sessionId == null || sessionId.isEmpty) {
+          throw StateError('Chain session id missing for round winners.');
+        }
+        history = await _gamesRepository.getChainSessionRoundWinners(
+          sessionId: sessionId,
+        );
+      } else {
+        return;
+      }
+
+      if (!mounted || _allRoundsWinnerHistoryKey != cacheKey) {
+        return;
+      }
+      setState(() {
+        _allRoundsWinnerHistory = history;
+        _allRoundsWinnerCards = adaptRoundWinnerHistoryToCards(history);
+        _allRoundsWinnerHistoryLoading = false;
+        _allRoundsWinnerHistoryError = null;
+      });
+    } catch (error) {
+      if (!mounted || _allRoundsWinnerHistoryKey != cacheKey) {
+        return;
+      }
+      setState(() {
+        _allRoundsWinnerHistoryLoading = false;
+        _allRoundsWinnerHistoryError = error.toString();
+      });
+    }
   }
 
   void _applyTerminalWinnerResultsFromSocket(Map<String, dynamic> payload) {
@@ -4673,6 +4775,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         ? null
         : _embeddedBigGameTerminalForPostGameSummary(game);
 
+    final showAllRounds = _shouldShowAllRoundsWinnersSection;
+
     return RoundFinishedBanner(
       isLoading: _review.sessionWinnerResultsLoading,
       isLoaded:
@@ -4681,19 +4785,28 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       winnerCartelaNumbers: winnerNumbers,
       isNoWinner: game?.status == GameStatus.noWinner,
       chainRoundResults: game?.roundResults ?? const [],
-      chainRoundCount: isChainGame ? game?.displayRoundCount : null,
+      chainRoundCount: isChainGame
+          ? game?.displayRoundCount
+          : (game?.isBigGame == true ? game?.displayRoundCount : null),
+      showAllRoundsWinners: showAllRounds,
+      allRoundsWinnerCards: showAllRounds ? _allRoundsWinnerCards : const [],
+      allRoundsWinnerCardsLoading:
+          showAllRounds && _allRoundsWinnerHistoryLoading,
+      allRoundsWinnerCardsError:
+          showAllRounds ? _allRoundsWinnerHistoryError : null,
       secondsRemaining: postGameSummarySecondsRemaining(
         shownAt: _review.postGameSummaryShownAt,
         now: _countdownNow(),
         minimumHold: _postGameSummaryHold,
       ),
       isAdvancing: _review.postGameSummaryAdvancing,
+      // Queued (not yet canRegister) still shows Continue / countdown — only
+      // true idle shows "No next game". Adoption still requires eligibility.
       hasNextGame: terminalForSummary != null &&
-          hasPlayableAdvanceTarget(
+          hasQueuedAdvanceTarget(
             operations: _lastOperations,
             terminalGame: terminalForSummary,
             embeddedBigGame: _embeddedBigGame,
-            now: _countdownNow(),
           ),
       onNext: _onPostGameSummaryNextTapped,
       onOpenWinners: () {
@@ -4948,8 +5061,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
               now: _countdownNow(),
             );
 
-      if (nextGame == null ||
-          (onlyIfRegistrationAvailable && !registrationEligible)) {
+      if (nextGame == null) {
         // Big Game: more rounds expected but N+1 not adoptable yet — shared
         // retry (timing owned by _runFinishedAdvanceSequence, not here).
         if (_embeddedBigGame &&
@@ -4966,6 +5078,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           finishedSessionId: currentGame.sessionId,
         );
         return PostGameAdvanceOutcome.finishedWithoutTarget;
+      }
+
+      // Next session exists but registration/timing not open yet — wait/retry.
+      // Do not treat as authoritative no-next (would clear Live incorrectly).
+      if (onlyIfRegistrationAvailable && !registrationEligible) {
+        return PostGameAdvanceOutcome.retryableFailure;
       }
 
       _releasedIdleTerminalSessionId = null;

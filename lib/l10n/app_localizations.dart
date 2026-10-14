@@ -4006,6 +4006,18 @@ abstract class AppLocalizations {
   /// **'Next pattern: {pattern}'**
   String chainRoundNextPattern(String pattern);
 
+  /// No description provided for @allRoundsWinnersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All Rounds Winners'**
+  String get allRoundsWinnersTitle;
+
+  /// No description provided for @allRoundsWinnersViewCartela.
+  ///
+  /// In en, this message translates to:
+  /// **'View cartela'**
+  String get allRoundsWinnersViewCartela;
+
   /// No description provided for @chainRoundWinnersTitle.
   ///
   /// In en, this message translates to:

@@ -142,6 +142,62 @@ void main() {
         isFalse,
       );
     });
+
+    test('false when next READY exists but canRegister is still closed', () {
+      final finished = _game(sessionId: 'a', status: GameStatus.finished);
+      final next = _game(
+        sessionId: 'b',
+        status: GameStatus.ready,
+        canRegister: false,
+      );
+      expect(
+        hasPlayableAdvanceTarget(
+          operations: _ops(registration: next),
+          terminalGame: finished,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('hasQueuedAdvanceTarget', () {
+    test('true when next READY exists even if canRegister is closed', () {
+      final finished = _game(sessionId: 'a', status: GameStatus.finished);
+      final next = _game(
+        sessionId: 'b',
+        status: GameStatus.ready,
+        canRegister: false,
+      );
+      expect(
+        hasQueuedAdvanceTarget(
+          operations: _ops(registration: next),
+          terminalGame: finished,
+        ),
+        isTrue,
+      );
+    });
+
+    test('false when only terminal fallback remains', () {
+      final finished = _game(sessionId: 'a', status: GameStatus.finished);
+      expect(
+        hasQueuedAdvanceTarget(
+          operations: _ops(live: finished),
+          terminalGame: finished,
+        ),
+        isFalse,
+      );
+    });
+
+    test('false when operations is null', () {
+      final finished = _game(sessionId: 'a', status: GameStatus.finished);
+      expect(
+        hasQueuedAdvanceTarget(
+          operations: null,
+          terminalGame: finished,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('shouldPinTerminalSession cancelled', () {

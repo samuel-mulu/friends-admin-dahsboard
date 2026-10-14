@@ -581,6 +581,8 @@
   "chainRoundBreakTitle": "Raawundii {round} xumurameera",
   "chainRoundBreakSubtitle": "Mallattoon kee ni hafaa. Raawundii {round} sekondii {seconds} keessatti jalqaba.",
   "chainRoundNextPattern": "Seera itti aanu: {pattern}",
+  "allRoundsWinnersTitle": "Mo'attoota Raawundii Hunda",
+  "allRoundsWinnersViewCartela": "Kaartelaa ilaali",
   "chainRoundWinnersTitle": "Mo'attoota raawundii",
   "chainRoundWinnerChip": "R{round} · #{cartela}",
   "chainRoundsTitle": "Raawundiiwwan sanqaa",

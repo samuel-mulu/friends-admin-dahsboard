@@ -2243,6 +2243,12 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get allRoundsWinnersTitle => 'የሁሉም ዙሮች አሸናፊዎች';
+
+  @override
+  String get allRoundsWinnersViewCartela => 'ካርቴላ ይመልከቱ';
+
+  @override
   String get chainRoundWinnersTitle => 'የዙር አሸናፊዎች';
 
   @override
