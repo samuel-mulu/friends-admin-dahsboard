@@ -204,6 +204,126 @@ void main() {
       );
       expect(resolveBigGamePresentationSeed(operational).sessionId, 's3');
     });
+
+    test('Bug A: dismissed previous summary does not pin Round 1 over Round 2',
+        () {
+      final round2 = _bigGame(
+        status: GameStatus.ready,
+        sessionId: 's2',
+        roundIndex: 2,
+        canRegister: true,
+        registrationOpensAt: _now.subtract(const Duration(minutes: 1)),
+        scheduledStartAt: _now.add(const Duration(minutes: 2)),
+      );
+      final operational = round2.copyWith(
+        previousRound: BigGamePreviousRoundSummary(
+          sessionId: 's1',
+          roundIndex: 1,
+          status: GameStatus.finished,
+          finishedAt: _now,
+          registeredCartelasCount: 4,
+          playerOwnedPreviousRound: true,
+        ),
+      );
+      final presentation = resolveBigGamePresentationSeed(
+        operational,
+        isPreviousSummaryDismissed: true,
+      );
+      expect(presentation.sessionId, 's2');
+      expect(presentation.status, GameStatus.ready);
+      expect(
+        resolveBigGamePhase(presentation, now: _now),
+        BigGamePhase.registrationOpen,
+      );
+      expect(
+        shouldEmbedBigGameTerminalReviewHost(
+          game: presentation,
+          phase: resolveBigGamePhase(presentation, now: _now),
+        ),
+        isFalse,
+      );
+    });
+
+    test('isBigGameFinalTerminalCard true only for last finished round', () {
+      expect(
+        isBigGameFinalTerminalCard(
+          _bigGame(
+            status: GameStatus.finished,
+            sessionId: 's2',
+            roundIndex: 2,
+            roundCount: 2,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        isBigGameFinalTerminalCard(
+          _bigGame(
+            status: GameStatus.finished,
+            sessionId: 's1',
+            roundIndex: 1,
+            roundCount: 2,
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        isBigGameFinalTerminalCard(
+          _bigGame(
+            status: GameStatus.ready,
+            sessionId: 's2',
+            roundIndex: 2,
+            roundCount: 2,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+      'Bug B: api null after final PLAYING retains promoted FINISHED card',
+      () {
+        final playingFinal = _bigGame(
+          status: GameStatus.playing,
+          sessionId: 's2',
+          roundIndex: 2,
+          roundCount: 2,
+        );
+        final retained = resolveRetainedBigGameCardAfterCurrentNull(
+          previousCard: playingFinal,
+          alreadyRetained: null,
+          isDismissed: ({required slotId, required sessionId}) => false,
+        );
+        expect(retained, isNotNull);
+        expect(retained!.sessionId, 's2');
+        expect(retained.status, GameStatus.finished);
+        expect(
+          shouldEmbedBigGameTerminalReviewHost(
+            game: retained,
+            phase: resolveBigGamePhase(retained, now: _now),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test('Bug B: dismissed final card is not retained on api null', () {
+      final finished = _bigGame(
+        status: GameStatus.finished,
+        sessionId: 's2',
+        roundIndex: 2,
+        roundCount: 2,
+      );
+      expect(
+        resolveRetainedBigGameCardAfterCurrentNull(
+          previousCard: finished,
+          alreadyRetained: null,
+          isDismissed: ({required slotId, required sessionId}) =>
+              sessionId == 's2',
+        ),
+        isNull,
+      );
+    });
   });
 
   group('isBigGameIncomingNextRoundAfterMounted', () {

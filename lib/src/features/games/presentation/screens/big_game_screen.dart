@@ -11,6 +11,7 @@ import '../../data/games_repository.dart';
 import '../../domain/big_game_phase.dart';
 import '../utils/big_game_live_presentation.dart';
 import '../debug/big_game_debug.dart';
+import '../providers/big_game_summary_ledger_provider.dart';
 import '../providers/current_big_game_provider.dart';
 import 'big_game_live_host.dart';
 import 'big_game_phase_views.dart';
@@ -88,7 +89,17 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
   @override
   Widget build(BuildContext context) {
     final bigGameAsync = ref.watch(currentBigGameProvider);
+    final ledger = ref.watch(bigGameSummaryLedgerProvider);
     final clock = ref.watch(serverClockProvider);
+
+    // Wait for dismissal ledger before pin decisions so async prefs cannot
+    // briefly resurrect a dismissed Round N finished summary.
+    if (!ledger.ready) {
+      return Theme(
+        data: GameCategoryTheme.bigGameTheme(context),
+        child: const BigGameLoadingView(),
+      );
+    }
 
     return Theme(
       data: GameCategoryTheme.bigGameTheme(context),
@@ -104,10 +115,19 @@ class _BigGameScreenState extends ConsumerState<BigGameScreen>
           }
 
           final now = _now(clock);
+          final previousSessionId = game.previousRound?.sessionId;
+          final previousDismissed = previousSessionId != null &&
+              ref.read(bigGameSummaryLedgerProvider.notifier).isDismissed(
+                    slotId: game.id,
+                    sessionId: previousSessionId,
+                  );
           // Backend operational primary may already be Round N+1 READY while
           // Round N is FINISHED. Pin Round N locally for the shared finish
           // summary (Normal A/B semantics) without reverting backend primary.
-          final presentation = resolveBigGamePresentationSeed(game);
+          final presentation = resolveBigGamePresentationSeed(
+            game,
+            isPreviousSummaryDismissed: previousDismissed,
+          );
           final phase = resolveBigGamePhase(presentation, now: now);
           final sessionKey =
               '${presentation.sessionId ?? presentation.id}:${presentation.status.name}';

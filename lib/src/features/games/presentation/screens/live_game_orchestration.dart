@@ -291,6 +291,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _applyIdleEmptyAfterTerminal({required String? finishedSessionId}) {
+    // Big Game only: Continue/timeout with no next round (final summary end).
+    // Capture slot from the finished card before clearing local state.
+    if (_embeddedBigGame) {
+      final finishedSlotId = _game?.id;
+      if (finishedSessionId != null &&
+          finishedSessionId.isNotEmpty &&
+          finishedSlotId != null &&
+          finishedSlotId.isNotEmpty) {
+        _markEmbeddedBigGameSummaryDismissed(
+          slotId: finishedSlotId,
+          finishedSessionId: finishedSessionId,
+        );
+      }
+      // Drop retained final card so shell does not remount the summary.
+      unawaited(ref.read(currentBigGameProvider.notifier).refresh());
+    }
     unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, null));
     _releasedIdleTerminalSessionId = finishedSessionId;
     _dismissWinnerCartelaDialogIfOpen();
@@ -693,6 +709,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _review.winnerCartelaDialogVisible = true;
+    // Embedded Big Game only: do not burn the configured summary hold while
+    // the winner cartela dialog is on top of the PIN summary.
+    final pauseEmbeddedBigGameHold = _embeddedBigGame &&
+        _review.postGameSummaryReviewActive &&
+        !_review.postGameSummaryHoldBypassed &&
+        !_review.postGameSummaryAdvancing;
+    if (pauseEmbeddedBigGameHold) {
+      _review.finishTransitionTimer?.cancel();
+      _review.finishTransitionTimer = null;
+      if (_embeddedBigGame) {
+        BigGameDebug.log(
+          'summary_hold_paused reason=winner_dialog '
+          'session=${_game?.sessionId ?? '-'}',
+        );
+      }
+    }
     setState(() {});
     unawaited(
       showWinnerCartelaDialog(
@@ -711,6 +743,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             setState(() => _review.winnerCartelaDialogVisible = false);
           } else {
             _review.winnerCartelaDialogVisible = false;
+          }
+          // Restart the full configured hold after the dialog closes so the
+          // PIN summary remains visible for finishedResultDisplaySeconds.
+          if (pauseEmbeddedBigGameHold &&
+              mounted &&
+              _embeddedBigGame &&
+              _review.postGameSummaryReviewActive &&
+              !_review.postGameSummaryHoldBypassed &&
+              !_review.postGameSummaryAdvancing) {
+            _review.postGameSummaryShownAt = _countdownNow();
+            _review.syncPostGameSummaryCountdownTicker();
+            _scheduleAdvanceToNextGame();
+            BigGameDebug.log(
+              'summary_hold_restarted reason=winner_dialog_closed '
+              'session=${_game?.sessionId ?? '-'}',
+            );
           }
         },
       ),
@@ -1095,12 +1143,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    // Chain Game keeps winners inline on the banner and pinned bar.
-    if (_game?.isChainGame == true) {
+    // Chain inter-round uses _maybeAutoShowChainInterRoundWinnerDialog.
+    // Chain final terminal summary uses this shared path (no pauseEndsAt).
+    final game = _game;
+    if (game?.isChainGame == true &&
+        !shouldShowChainFinalWinnerCartelaDialog(
+          game: game,
+          postGameSummaryVisible: true,
+        )) {
       return;
     }
 
-    final sessionId = _game?.sessionId;
+    final sessionId = game?.sessionId;
     if (sessionId == null ||
         _review.winnerCartelaDialogAutoShownForSessionId == sessionId) {
       return;
@@ -1108,6 +1162,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final results = _winnerReviewDialogResults;
     if (results.isEmpty) {
+      if (game?.isChainGame == true) {
+        final lastRoundWinners = winnerCartelaNumbersFromChainRoundResults(
+          roundResults: game!.roundResults,
+          roundIndex: game.displayRoundCount,
+        );
+        if (lastRoundWinners.isNotEmpty) {
+          ChainGameDebug.log(
+            'final_winner_dialog skip empty_api_results '
+            'roundResultsWinners=${lastRoundWinners.length} '
+            'session=$sessionId — no new data path added',
+          );
+        }
+      }
       return;
     }
     if (!_review.canAutoShowWinnerDialog(
@@ -1119,6 +1186,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _review.winnerCartelaDialogAutoShownForSessionId = sessionId;
+    // No pauseEndsAt — final dialog matches Big Game / Normal (plain close).
     _showWinnerCartelaDialogForReview(results);
   }
 
@@ -4628,11 +4696,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             now: _countdownNow(),
           ),
       onNext: _onPostGameSummaryNextTapped,
-      onOpenWinners: isChainGame
-          ? null
-          : !_winnerReviewEligibleViewer || _winnerReviewDialogResults.isEmpty
-          ? null
-          : () => _showWinnerCartelaDialogForReview(_winnerReviewDialogResults),
+      onOpenWinners: () {
+        final allowChainFinal = shouldShowChainFinalWinnerCartelaDialog(
+          game: game,
+          postGameSummaryVisible: _showsPostGameSummary,
+        );
+        if (isChainGame && !allowChainFinal) {
+          return null;
+        }
+        if (!_winnerReviewEligibleViewer ||
+            _winnerReviewDialogResults.isEmpty) {
+          return null;
+        }
+        return () =>
+            _showWinnerCartelaDialogForReview(_winnerReviewDialogResults);
+      }(),
     );
   }
 
@@ -4692,6 +4770,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
+  /// Big Game–only dismissal ledger write. Uses the completed finished session
+  /// id (never the newly selected next round). Memory-first so pin/retention
+  /// cannot resurrect while prefs I/O is in flight.
+  void _markEmbeddedBigGameSummaryDismissed({
+    required String slotId,
+    required String finishedSessionId,
+  }) {
+    if (!_embeddedBigGame) {
+      return;
+    }
+    ref.read(bigGameSummaryLedgerProvider.notifier).markDismissed(
+          slotId: slotId,
+          sessionId: finishedSessionId,
+        );
+  }
+
   void _resetRegistrationCountdownAfterSummary() {
     _countdown.registrationCountdownClosed = false;
   }
@@ -4726,7 +4820,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _beginPostGameSummaryAdvance();
     }
 
+    // Capture finished session/slot BEFORE advance adopts N+1.
     final finishedSessionId = _game?.sessionId;
+    final finishedSlotId = _game?.id;
 
     final outcome = await _advanceToNextGame(
       onlyIfRegistrationAvailable: true,
@@ -4737,6 +4833,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     if (outcome == PostGameAdvanceOutcome.advanced) {
+      // Big Game Continue / hold-timeout that adopted the next round.
+      if (_embeddedBigGame &&
+          finishedSessionId != null &&
+          finishedSessionId.isNotEmpty &&
+          finishedSlotId != null &&
+          finishedSlotId.isNotEmpty) {
+        _markEmbeddedBigGameSummaryDismissed(
+          slotId: finishedSlotId,
+          finishedSessionId: finishedSessionId,
+        );
+      }
       if (finishedSessionId != null && finishedSessionId.isNotEmpty) {
         unawaited(_clearPersistedMarksForSession(finishedSessionId));
       }

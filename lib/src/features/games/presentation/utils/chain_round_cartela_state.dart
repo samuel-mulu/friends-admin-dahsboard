@@ -88,6 +88,41 @@ bool shouldSkipLocalChainWinnerWindowFinish(GameModel? game) {
   return game.hasRemainingChainRounds;
 }
 
+/// Whether Chain may open the shared final Winner Cartela Dialog (no pause
+/// countdown) during the finished PIN summary.
+///
+/// Requires terminal session state + finished-summary visibility. Does not use
+/// `roundIndex == roundCount` alone: refuses active pause, remaining rounds,
+/// and (when roundResults exist) a missing last-round result row.
+bool shouldShowChainFinalWinnerCartelaDialog({
+  required GameModel? game,
+  required bool postGameSummaryVisible,
+}) {
+  if (game == null || !game.isChainGame) {
+    return false;
+  }
+  if (!postGameSummaryVisible) {
+    return false;
+  }
+  if (game.status != GameStatus.finished &&
+      game.status != GameStatus.noWinner) {
+    return false;
+  }
+  // Inter-round always keeps PLAYING + pause; refuse any lingering pause.
+  if (game.roundPausedUntil != null) {
+    return false;
+  }
+  if (game.hasRemainingChainRounds) {
+    return false;
+  }
+  final lastRound = game.displayRoundCount;
+  if (game.roundResults.isNotEmpty &&
+      !game.roundResults.any((round) => round.roundIndex == lastRound)) {
+    return false;
+  }
+  return true;
+}
+
 /// After a new Chain round becomes playable, Bingo stays off until at least
 /// one new auto-call ball arrives. Carried marks + old balls must not arm it.
 bool isChainBingoArmedAfterNewBall({

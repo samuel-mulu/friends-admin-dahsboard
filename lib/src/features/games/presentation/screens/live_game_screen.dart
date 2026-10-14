@@ -128,6 +128,7 @@ import '../providers/cartela_sort_mode_provider.dart';
 import '../../domain/cartela_catalog_state.dart';
 import '../../data/cartela_marks_storage.dart';
 import '../providers/cartela_marks_storage_provider.dart';
+import '../providers/big_game_summary_ledger_provider.dart';
 import '../providers/current_big_game_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../providers/game_operations_sync_coordinator.dart';

@@ -110,7 +110,14 @@ bool shouldEmbedBigGameTerminalReviewHost({
 ///
 /// Returns a local seed: Round N FINISHED/NO_WINNER with
 /// [GameModel.nextRoundRegistration] = Round N+1. Does not change backend.
-GameModel resolveBigGamePresentationSeed(GameModel operationalPrimary) {
+///
+/// When [isPreviousSummaryDismissed] is true (Continue / timeout already
+/// recorded for that finished session), returns the operational READY N+1
+/// card unchanged so re-entry restores registration instead of replaying PIN.
+GameModel resolveBigGamePresentationSeed(
+  GameModel operationalPrimary, {
+  bool isPreviousSummaryDismissed = false,
+}) {
   if (!operationalPrimary.isBigGame) {
     return operationalPrimary;
   }
@@ -139,10 +146,76 @@ GameModel resolveBigGamePresentationSeed(GameModel operationalPrimary) {
   if (previous.roundIndex + 1 != operationalPrimary.displayRoundIndex) {
     return operationalPrimary;
   }
+  if (isPreviousSummaryDismissed) {
+    return operationalPrimary;
+  }
 
   return buildBigGamePinnedTerminalSeed(
     operationalNext: operationalPrimary,
     previous: previous,
+  );
+}
+
+/// True when [game] is a final-round terminal Big Game card eligible for
+/// client-side retention after `/big-game/current` returns null.
+bool isBigGameFinalTerminalCard(GameModel? game) {
+  if (game == null || !game.isBigGame) {
+    return false;
+  }
+  if (game.status != GameStatus.finished &&
+      game.status != GameStatus.noWinner) {
+    return false;
+  }
+  return game.displayRoundIndex >= game.displayRoundCount;
+}
+
+/// True when [game] is the slot's last round (any live/terminal status).
+///
+/// Backend tearDown makes `/big-game/current` jump final PLAYING/WW → null
+/// without ever returning FINISHED, so retention must seed from the last
+/// non-null card — not only from an observed FINISHED payload.
+bool isBigGameFinalRoundCard(GameModel? game) {
+  if (game == null || !game.isBigGame) {
+    return false;
+  }
+  return game.displayRoundIndex >= game.displayRoundCount;
+}
+
+/// Builds the card to keep on screen when `/big-game/current` is null after
+/// last-round tearDown. Returns null when there is nothing safe to retain.
+GameModel? resolveRetainedBigGameCardAfterCurrentNull({
+  required GameModel? previousCard,
+  required GameModel? alreadyRetained,
+  required bool Function({
+    required String slotId,
+    required String sessionId,
+  }) isDismissed,
+}) {
+  final candidate = alreadyRetained ?? previousCard;
+  if (candidate == null || !isBigGameFinalRoundCard(candidate)) {
+    return null;
+  }
+  final sessionId = candidate.sessionId;
+  if (sessionId == null || sessionId.isEmpty) {
+    return null;
+  }
+  if (isDismissed(slotId: candidate.id, sessionId: sessionId)) {
+    return null;
+  }
+
+  // Shell needs finishedReview to keep BigGameLiveHost embedded. Promote
+  // live/WW cards to FINISHED for presentation only — Live already owns
+  // local finish from sockets; this does not call the backend.
+  if (candidate.status == GameStatus.finished ||
+      candidate.status == GameStatus.noWinner) {
+    return candidate;
+  }
+
+  return candidate.copyWith(
+    status: GameStatus.finished,
+    finishedAt: candidate.finishedAt ?? DateTime.now(),
+    canRegister: false,
+    registrationOpen: false,
   );
 }
 

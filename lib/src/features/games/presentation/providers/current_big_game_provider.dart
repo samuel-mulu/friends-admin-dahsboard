@@ -8,6 +8,8 @@ import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
 import '../debug/big_game_debug.dart';
+import '../utils/big_game_live_presentation.dart';
+import 'big_game_summary_ledger_provider.dart';
 import 'realtime_connection_provider.dart';
 
 final currentBigGameProvider =
@@ -20,10 +22,16 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
   Timer? _refreshDebounce;
   static const _structuralRefreshDebounce = Duration(milliseconds: 350);
 
+  /// Last final-round terminal card retained while `/big-game/current` is null
+  /// so the embedded summary can finish (Continue / Live hold). Cleared on
+  /// dismiss, newer authoritative event, or auth loss.
+  GameModel? _retainedFinalTerminal;
+
   @override
   Future<GameModel?> build() async {
     ref.watch(authControllerProvider);
     if (ref.read(authControllerProvider).session == null) {
+      _retainedFinalTerminal = null;
       return null;
     }
 
@@ -31,6 +39,25 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
       if (previous != LiveConnectionStatus.live &&
           next == LiveConnectionStatus.live) {
         unawaited(refresh());
+      }
+    });
+
+    ref.listen(bigGameSummaryLedgerProvider, (previous, next) {
+      final retained = _retainedFinalTerminal;
+      final sessionId = retained?.sessionId;
+      final userId = ref.read(authControllerProvider).session?.user.id;
+      if (retained == null || sessionId == null || userId == null) {
+        return;
+      }
+      if (next.isDismissed(
+        userId: userId,
+        slotId: retained.id,
+        sessionId: sessionId,
+      )) {
+        _retainedFinalTerminal = null;
+        if (state.hasValue && state.value?.sessionId == sessionId) {
+          state = const AsyncData(null);
+        }
       }
     });
 
@@ -69,7 +96,7 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
       socket.off('game:cancelled', onCancelled);
     });
 
-    return _loadBigGame();
+    return _resolveCard(await _loadBigGame());
   }
 
   void _scheduleStructuralRefresh({bool immediate = false}) {
@@ -97,7 +124,7 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
       return true;
     }
 
-    final current = state.value;
+    final current = state.value ?? _retainedFinalTerminal;
     if (current == null) {
       // No cache yet — only refresh when category is clearly Big Game.
       return false;
@@ -128,12 +155,13 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
 
   Future<void> refresh() async {
     if (ref.read(authControllerProvider).session == null) {
+      _retainedFinalTerminal = null;
       state = const AsyncData(null);
       return;
     }
 
     final current = state.value;
-    if (current == null) {
+    if (current == null && _retainedFinalTerminal == null) {
       state = const AsyncLoading<GameModel?>();
     }
 
@@ -142,29 +170,107 @@ class CurrentBigGameNotifier extends AsyncNotifier<GameModel?> {
       if (!ref.mounted) {
         return;
       }
+      final resolved = _resolveCard(next);
       final previous = state.value;
       final roundChanged =
-          previous?.sessionId != next?.sessionId ||
-          previous?.status != next?.status ||
-          previous?.roundIndex != next?.roundIndex ||
+          previous?.sessionId != resolved?.sessionId ||
+          previous?.status != resolved?.status ||
+          previous?.roundIndex != resolved?.roundIndex ||
           previous?.nextRoundRegistration?.sessionId !=
-              next?.nextRoundRegistration?.sessionId ||
-          previous?.scheduledStartAt != next?.scheduledStartAt ||
-          previous?.canRegister != next?.canRegister;
+              resolved?.nextRoundRegistration?.sessionId ||
+          previous?.scheduledStartAt != resolved?.scheduledStartAt ||
+          previous?.canRegister != resolved?.canRegister;
       if (roundChanged) {
-        BigGameDebug.snapshot(next, reason: 'refresh_round_change');
+        BigGameDebug.snapshot(resolved, reason: 'refresh_round_change');
       }
-      state = AsyncData(next);
+      state = AsyncData(resolved);
     } catch (error, stackTrace) {
       if (!ref.mounted) {
         return;
       }
-      if (current != null) {
-        state = AsyncData(current);
+      if (current != null || _retainedFinalTerminal != null) {
+        state = AsyncData(current ?? _retainedFinalTerminal);
         return;
       }
       state = AsyncError(error, stackTrace);
     }
+  }
+
+  /// Prefer authoritative API card. On null after last-round tearDown, retain
+  /// the final-round card (promoting live/WW → FINISHED for shell phase) so
+  /// Live can show winner dialog + PIN summary for the configured hold.
+  ///
+  /// Root cause this covers: backend never returns final FINISHED on
+  /// `/big-game/current` (lean set drops torn-down terminals), so retention
+  /// must seed from the previous PLAYING/WW card — not only observed FINISHED.
+  ///
+  /// Limitation: cold process restart after teardown (API already null, no
+  /// in-memory previous card) cannot restore the final PIN without backend grace.
+  GameModel? _resolveCard(GameModel? next) {
+    if (next != null) {
+      if (_retainedFinalTerminal != null &&
+          next.id != _retainedFinalTerminal!.id) {
+        // Newer Big Game event replaces retained finished card.
+        BigGameDebug.log(
+          'retention_drop reason=newer_event '
+          'prevSlot=${_retainedFinalTerminal!.id} nextSlot=${next.id}',
+        );
+        _retainedFinalTerminal = null;
+      } else if (isBigGameFinalTerminalCard(next)) {
+        _retainedFinalTerminal = next;
+        BigGameDebug.log(
+          'retention_seed reason=api_final_finished '
+          'session=${next.sessionId} round=${next.displayRoundIndex}',
+        );
+      } else if (isBigGameFinalRoundCard(next)) {
+        // Keep a live final-round card as retention seed so a later null
+        // refresh can promote it even if FINISHED is never observed.
+        _retainedFinalTerminal = next;
+        BigGameDebug.log(
+          'retention_seed reason=api_final_live '
+          'status=${next.status.name} session=${next.sessionId}',
+        );
+      } else if (_retainedFinalTerminal != null &&
+          next.sessionId != _retainedFinalTerminal!.sessionId) {
+        BigGameDebug.log(
+          'retention_drop reason=session_moved '
+          'retained=${_retainedFinalTerminal!.sessionId} next=${next.sessionId}',
+        );
+        _retainedFinalTerminal = null;
+      }
+      return next;
+    }
+
+    final previous = state.hasValue ? state.value : null;
+    final retained = resolveRetainedBigGameCardAfterCurrentNull(
+      previousCard: previous,
+      alreadyRetained: _retainedFinalTerminal,
+      isDismissed: ({required slotId, required sessionId}) {
+        return ref.read(bigGameSummaryLedgerProvider.notifier).isDismissed(
+              slotId: slotId,
+              sessionId: sessionId,
+            );
+      },
+    );
+    if (retained == null) {
+      BigGameDebug.log(
+        'retention_miss reason=api_null '
+        'prevStatus=${previous?.status.name ?? '-'} '
+        'prevRound=${previous?.displayRoundIndex ?? '-'}/'
+        '${previous?.displayRoundCount ?? '-'} '
+        'hadRetained=${_retainedFinalTerminal != null}',
+      );
+      _retainedFinalTerminal = null;
+      return null;
+    }
+
+    BigGameDebug.log(
+      'retention_keep reason=api_null '
+      'session=${retained.sessionId} status=${retained.status.name} '
+      'round=${retained.displayRoundIndex}/${retained.displayRoundCount}',
+    );
+    _retainedFinalTerminal = retained;
+    return retained;
   }
 
   Future<GameModel?> _loadBigGame() {
