@@ -18,7 +18,11 @@ import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
+import 'package:friends_bingo_app/src/features/games/domain/bingo_claim_source.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_numbers_snapshot.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
+import 'package:friends_bingo_app/src/features/settings/domain/feature_settings.dart';
+import 'package:friends_bingo_app/src/features/settings/presentation/providers/feature_settings_provider.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_timing_config_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/screens/live_game_screen.dart';
@@ -126,6 +130,84 @@ class _Socket extends Fake implements SocketService {
   }
 }
 
+class _AutoSettings extends FeatureSettingsController {
+  @override
+  Future<FeatureSettingsUiState> build() async => const FeatureSettingsUiState(
+    settings: FeatureSettings(autoBingoGranted: true, autoBingoEnabled: true,
+        effectiveAutoBingo: true),
+  );
+}
+
+/// Real scheduler/drain, with only HTTP and socket transport replaced.
+class _AutoRepo extends _Repo {
+  _AutoRepo() {
+    cards = [for (var index = 1; index <= 3; index++)
+      GameCartelaModel(id: 'gc-$index', gameId: 'session-1', userId: 'user-1',
+        cartelaId: 'card-gc-$index', status: GameCartelaStatus.registered,
+        isWinner: false, blockedAt: null, createdAt: _now, updatedAt: _now,
+        cartela: CartelaModel(
+        id: 'card-gc-$index', number: 5204 + index, createdAt: _now,
+        b: const ['1', '2', '3', '4', '5'],
+        i: const ['16', '17', '18', '19', '20'],
+        n: const ['31', '32', 'FREE', '34', '35'],
+        g: const ['46', '47', '48', '49', '50'],
+        o: const ['61', '62', '63', '64', '65'],
+      )),
+    ];
+  }
+  final submissions = <({String uuid, String card, BingoClaimSource source})>[];
+  final pending = <String, Completer<BingoClaimResult>>{};
+  bool recoveryRetryAllowed = true;
+  int recoveryNotFoundResponses = 0;
+  @override
+  Future<CartelaModel> getCartelaBoard({required String cartelaId,
+    required String sessionId}) async =>
+      cards.firstWhere((card) => card.cartelaId == cartelaId).cartela;
+  @override
+  Future<CalledNumbersSnapshot> getCalledNumbers(String sessionId) async =>
+      CalledNumbersSnapshot(totalCount: 5, calledNumbers: [
+        for (var index = 0; index < 5; index++) CalledNumberModel(
+          id: 'draw-$index', sessionId: sessionId,
+          letter: ['B', 'I', 'N', 'G', 'O'][index],
+          number: [1, 16, 31, 46, 61][index], order: index + 1, createdAt: _now,
+        ),
+      ]);
+  @override
+  Future<BingoClaimResult> claimBingo({required String sessionId,
+    required String gameCartelaId, required String claimAttemptId,
+    DateTime? clientTapAt, BingoClaimSource claimSource = BingoClaimSource.manual,
+  }) {
+    submissions.add((uuid: claimAttemptId, card: gameCartelaId, source: claimSource));
+    claimCards[claimAttemptId] = gameCartelaId;
+    if (pending[claimAttemptId]?.isCompleted == true) {
+      pending[claimAttemptId] = Completer<BingoClaimResult>();
+    }
+    return (pending[claimAttemptId] ??= Completer<BingoClaimResult>()).future;
+  }
+  void finish(String uuid, BingoClaimStatus status, {bool retry = true}) {
+    final cardId = claimCards[uuid]!;
+    if (status == BingoClaimStatus.invalid || status == BingoClaimStatus.valid) {
+      cards = cards.map((card) => card.id != cardId ? card : card.copyWith(
+        status: status == BingoClaimStatus.valid ? GameCartelaStatus.winner
+            : GameCartelaStatus.blocked,
+        isWinner: status == BingoClaimStatus.valid,
+      )).toList();
+    }
+    pending[uuid]!.complete(_httpResult(uuid, status, cartelaId: cardId,
+        retryAllowed: retry));
+  }
+  @override
+  Future<BingoClaimAttemptStatus> getBingoClaimAttempt({required String sessionId,
+    required String claimAttemptId}) async {
+    recoveryGets++;
+    if (recoveryNotFoundResponses > 0) {
+      recoveryNotFoundResponses--;
+      throw ApiException(message: 'not yet persisted', statusCode: 404);
+    }
+    return _result(claimAttemptId, recoveryStatus, retry: recoveryRetryAllowed);
+  }
+}
+
 class _Sound extends Fake implements GameSoundService {
   final events = <SoundEvent>[];
   @override
@@ -208,6 +290,7 @@ class _Repo extends Fake implements GamesRepository {
     required String gameCartelaId,
     required String claimAttemptId,
     DateTime? clientTapAt,
+    BingoClaimSource claimSource = BingoClaimSource.manual,
   }) {
     submittedUuid = claimAttemptId;
     claimCards[claimAttemptId] = gameCartelaId;
@@ -261,6 +344,7 @@ Future<ProviderContainer> _pumpLive(
   _Socket socket, {
   _Sound? sound,
   bool realBigGameParent = false,
+  bool autoBingo = false,
 }) async {
   ResumeSyncGuard.resetForTest();
   GameOperationsResumeCache.shared.resetForTest();
@@ -281,6 +365,7 @@ Future<ProviderContainer> _pumpLive(
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith(_Auth.new),
+      if (autoBingo) featureSettingsControllerProvider.overrideWith(_AutoSettings.new),
       gamesRepositoryProvider.overrideWithValue(repo),
       apiClientProvider.overrideWithValue(ApiClient(dio)),
       socketServiceProvider.overrideWithValue(socket),
@@ -414,13 +499,15 @@ BingoClaimResult _httpResult(
   GameStatus gameStatus = GameStatus.playing,
   DateTime? windowEndsAt,
   String claimId = 'server-claim',
+  String cartelaId = 'gc-1',
+  bool? retryAllowed,
 }) => BingoClaimResult(
   claim: BingoClaimModel(
     id: claimId,
     claimAttemptId: uuid,
     gameId: 'session-1',
     userId: 'user-1',
-    gameCartelaId: 'gc-1',
+    gameCartelaId: cartelaId,
     status: status,
     checkedPattern: null,
     reason: null,
@@ -435,7 +522,7 @@ BingoClaimResult _httpResult(
       : status == BingoClaimStatus.invalid
       ? GameCartelaStatus.blocked
       : GameCartelaStatus.registered,
-  retryAllowed: status == BingoClaimStatus.failed,
+  retryAllowed: retryAllowed ?? status == BingoClaimStatus.failed,
   winnerWindowEndsAt: windowEndsAt,
   hasNextAutoCallAt: true,
 );
@@ -504,6 +591,204 @@ SessionWinnerResultModel _canonicalWinner() => SessionWinnerResultModel(
 );
 
 void main() {
+  for (final recovery in ['HTTP', 'GET recovery', 'same-UUID recovery POST']) {
+    final sameUuidPost = recovery == 'same-UUID recovery POST';
+    final extraPost = sameUuidPost ? 1 : 0;
+    testWidgets('AUTO retryable FAILED $recovery releases same-ball key, preserves siblings and UUID fencing', (tester) async {
+      final repo = _AutoRepo()..recoveryStatus = BingoClaimStatus.checking;
+      final socket = _Socket();
+      await _pumpLive(tester, repo, socket, autoBingo: true);
+      final host = tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await host.runResumeSync(allowCachedOperations: false);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repo.submissions, hasLength(1));
+      final first = repo.submissions.first;
+      expect(first.source, BingoClaimSource.auto);
+      if (recovery != 'HTTP') {
+        if (sameUuidPost) repo.recoveryNotFoundResponses = 2;
+        repo.pending[first.uuid]!.completeError(ApiException(message: 'ambiguous timeout'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(repo.submissions, hasLength(1), reason: 'Ambiguous UUID stays pending');
+        expect(host.controllers.calledNumbers.claimAttemptFor(first.card)?.claimAttemptId, first.uuid);
+        socket.emit('connect', null);
+        await tester.pump(const Duration(milliseconds: 100));
+        if (sameUuidPost) {
+          expect(repo.submissions, hasLength(2));
+          expect(repo.submissions.last.uuid, first.uuid);
+          expect(repo.submissions.last.source, BingoClaimSource.auto);
+          repo.finish(first.uuid, BingoClaimStatus.failed);
+        } else {
+          repo.recoveryStatus = BingoClaimStatus.failed;
+          socket.emit('game:bingo_claim_failed', {
+            'sessionId': 'session-1', 'gameCartelaId': first.card,
+            'claimAttemptId': first.uuid, 'roundIndex': 1,
+          });
+        }
+      } else {
+        repo.finish(first.uuid, BingoClaimStatus.failed);
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+      for (var i = 1; i <= 2; i++) {
+        expect(repo.submissions, hasLength(i + 1 + extraPost));
+        final sibling = repo.submissions[i + extraPost];
+        expect(sibling.card, isNot(first.card));
+        repo.finish(sibling.uuid, BingoClaimStatus.invalid);
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(repo.submissions, hasLength(3 + extraPost), reason: 'No retry loop in the current drain');
+      expect(host.controllers.calledNumbers.calledNumbers.last.order, 5);
+      repo.recoveryStatus = BingoClaimStatus.checking;
+      // Independent, existing reconnect reconciliation; no additional draw.
+      socket.emit('connect', null);
+      await host.runResumeSync(allowCachedOperations: false);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(repo.submissions, hasLength(4 + extraPost));
+      final retry = repo.submissions.last;
+      expect(retry.card, first.card);
+      expect(retry.uuid, isNot(first.uuid));
+      expect(host.controllers.calledNumbers.calledNumbers.last.order, 5);
+      socket.emit('connect', null);
+      socket.emit('connect', null);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repo.submissions, hasLength(4 + extraPost));
+      repo.finish(retry.uuid, BingoClaimStatus.invalid);
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+  }
+  for (final boundary in ['retry denied', 'terminal cartela', 'expired window', 'disabled']) {
+    testWidgets('AUTO same-ball retry respects $boundary', (tester) async {
+      final repo = _AutoRepo();
+      repo.cards = repo.cards.take(1).toList();
+      final socket = _Socket();
+      final container = await _pumpLive(tester, repo, socket, autoBingo: true);
+      final host = tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await host.runResumeSync(allowCachedOperations: false);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repo.submissions, hasLength(1));
+      repo.finish(repo.submissions.single.uuid,
+        boundary == 'terminal cartela' ? BingoClaimStatus.invalid : BingoClaimStatus.failed,
+        retry: boundary != 'retry denied');
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repo.submissions, hasLength(1), reason: 'Terminal callback cannot retry itself');
+      if (boundary == 'expired window') {
+        host.game = repo.currentGame.copyWith(status: GameStatus.winnerWindow,
+          winnerWindowEndsAt: DateTime.utc(2020));
+        host.controllers.countdown.winnerWindowEndsAt = DateTime.utc(2020);
+        final settings = container.read(featureSettingsControllerProvider.notifier);
+        settings.applySocketSettings(const FeatureSettings(featureSettingsVersion: 1));
+        settings.applySocketSettings(const FeatureSettings(autoBingoGranted: true,
+          autoBingoEnabled: true, effectiveAutoBingo: true, featureSettingsVersion: 2));
+        expect(repo.submissions, hasLength(1));
+        expect(host.controllers.calledNumbers.autoBingoQueue, isEmpty);
+        // Keep this test on the scheduling boundary, before review navigation.
+        host.game = repo.currentGame;
+        host.controllers.countdown.winnerWindowEndsAt = null;
+        return;
+      }
+      if (boundary == 'disabled') {
+        container.read(featureSettingsControllerProvider.notifier).applySocketSettings(
+          const FeatureSettings(autoBingoGranted: true, featureSettingsVersion: 1));
+        await tester.pump();
+      }
+      unawaited(host.runResumeSync(allowCachedOperations: false));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      socket.emit('connect', null);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repo.submissions, hasLength(1));
+    });
+  }
+  Map<String, dynamic> foreignClaim(String attempt, {
+    String cartela = 'foreign-1', int number = 9001,
+    String session = 'session-1', int round = 1,
+  }) => {
+    'sessionId': session,
+    'gameCartelaId': cartela,
+    'claimAttemptId': attempt,
+    'cartelaNumber': number,
+    'roundIndex': round,
+    'nextAutoCallAt': null,
+  };
+
+  testWidgets('foreign FAILED clears only its matching marker and releases balls', (tester) async {
+    final repo = _Repo();
+    final socket = _Socket();
+    await _pumpLive(tester, repo, socket);
+    final host = tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
+    final payload = foreignClaim('foreign-a');
+    socket.emit('game:bingo_checking', payload);
+    socket.emit('game:number_called', {
+      'id': 'foreign-held-ball', 'sessionId': 'session-1',
+      'gameSessionId': 'session-1', 'letter': 'B', 'number': 4,
+      'order': 1, 'createdAt': _now.toIso8601String(),
+    });
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, [9001]);
+    expect(host.controllers.calledNumbers.bufferedCalledNumbers, hasLength(1));
+    socket.emit('game:bingo_claim_failed', payload);
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, isEmpty);
+    expect(host.controllers.calledNumbers.bufferedCalledNumbers, isEmpty);
+    expect(host.controllers.calledNumbers.calledNumbers.map((n) => n.number), [4]);
+    expect(repo.recoveryGets, 0, reason: 'Foreign claims must not use the private recovery GET');
+    socket.emit('game:bingo_claim_failed', payload);
+    socket.emit('game:bingo_checking', payload);
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, isEmpty);
+  });
+
+  testWidgets('foreign FAILED cannot clear newer, unrelated, or owned attempts', (tester) async {
+    final socket = _Socket();
+    await _pumpLive(tester, _Repo(), socket);
+    final host = tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
+    final c = host.controllers.calledNumbers;
+    final owned = _begin(c, 'owned-pending');
+    final old = foreignClaim('foreign-a');
+    final newer = foreignClaim('foreign-b');
+    final other = foreignClaim('foreign-c', cartela: 'foreign-2', number: 9002);
+    socket.emit('game:bingo_checking', old);
+    socket.emit('game:bingo_checking', newer);
+    socket.emit('game:bingo_checking', other);
+    socket.emit('game:bingo_claim_failed', old);
+    socket.emit('game:bingo_claim_failed', {...newer}..remove('claimAttemptId'));
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, [9001, 9002]);
+    socket.emit('game:bingo_claim_failed', newer);
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, [9002]);
+    expect(c.claimAttemptFor('gc-1'), same(owned));
+    expect(c.claimStripHoldActive, isTrue);
+    socket.emit('game:bingo_checking', old);
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, [9002]);
+  });
+
+  testWidgets('foreign checking events reject old sessions and rounds', (tester) async {
+    final socket = _Socket();
+    final repo = _Repo()..currentGame = _game(category: GameCategory.chainGame, round: 2);
+    await _pumpLive(tester, repo, socket);
+    final host = tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
+    final current = foreignClaim('round-two', round: 2);
+    socket.emit('game:bingo_checking', current);
+    socket.emit('game:bingo_claim_failed', {...current, 'sessionId': 'old-session'});
+    socket.emit('game:bingo_claim_failed', {...current, 'roundIndex': 1});
+    socket.emit('game:bingo_checking', foreignClaim('round-one', round: 1, number: 9002));
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, [9001]);
+    socket.emit('game:bingo_claim_failed', current);
+    await tester.pump();
+    expect(host.controllers.review.sessionCheckingCartelaNumbers, isEmpty);
+  });
+
   testWidgets('stage3a: Unauthorized join is not successful membership', (
     tester,
   ) async {

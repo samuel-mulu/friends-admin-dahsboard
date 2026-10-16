@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AuthFormField extends StatelessWidget {
   const AuthFormField({
@@ -13,6 +14,7 @@ class AuthFormField extends StatelessWidget {
     this.validator,
     this.onFieldSubmitted,
     this.autofillHints,
+    this.inputFormatters,
     super.key,
   });
 
@@ -27,6 +29,7 @@ class AuthFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final void Function(String)? onFieldSubmitted;
   final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +53,7 @@ class AuthFormField extends StatelessWidget {
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
           autofillHints: autofillHints,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon == null

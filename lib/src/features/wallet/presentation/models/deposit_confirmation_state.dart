@@ -2,6 +2,7 @@ import '../../data/models/payment_provider.dart';
 
 enum DepositConfirmationKind {
   verifying,
+  verificationInProgress,
   approved,
   pending,
   underReview,
@@ -17,7 +18,10 @@ class DepositConfirmationState {
     this.transactionRef,
     this.verifiedAt,
     this.depositId,
+    this.attemptId,
     this.canRetry = false,
+    this.canCheckAgain = false,
+    this.checkAgainAvailableAt,
   });
 
   const DepositConfirmationState.verifying()
@@ -28,7 +32,10 @@ class DepositConfirmationState {
       transactionRef = null,
       verifiedAt = null,
       depositId = null,
-      canRetry = false;
+      attemptId = null,
+      canRetry = false,
+      canCheckAgain = false,
+      checkAgainAvailableAt = null;
 
   final DepositConfirmationKind kind;
   final String? message;
@@ -37,12 +44,19 @@ class DepositConfirmationState {
   final String? transactionRef;
   final DateTime? verifiedAt;
   final String? depositId;
+  final String? attemptId;
 
   /// When true, rejected card shows "Fix and submit again".
   final bool canRetry;
 
+  /// When true, verification-in-progress card can poll again.
+  final bool canCheckAgain;
+  final DateTime? checkAgainAvailableAt;
+
   String get switchKey => switch (kind) {
     DepositConfirmationKind.verifying => 'verifying',
+    DepositConfirmationKind.verificationInProgress =>
+      'verificationInProgress-${attemptId ?? transactionRef}-$message',
     DepositConfirmationKind.approved =>
       'approved-${depositId ?? transactionRef}-$amount',
     DepositConfirmationKind.pending =>

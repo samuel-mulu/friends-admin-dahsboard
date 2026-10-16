@@ -4,6 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/paginated_response.dart';
 import '../../../core/network/pagination_meta.dart';
 import '../domain/attended_game_history_entry.dart';
+import '../domain/bingo_claim_source.dart';
 import '../domain/bulk_register_result.dart';
 import 'models/bingo_claim_result.dart';
 import 'models/bulk_reserve_cartelas_result.dart';
@@ -665,6 +666,7 @@ class GamesRepository {
     required String gameCartelaId,
     required String claimAttemptId,
     DateTime? clientTapAt,
+    BingoClaimSource claimSource = BingoClaimSource.manual,
   }) {
     return _apiClient.post<BingoClaimResult>(
       '/games/sessions/$sessionId/bingo',
@@ -672,6 +674,10 @@ class GamesRepository {
         'gameCartelaId': gameCartelaId,
         'claimAttemptId': claimAttemptId,
         if (clientTapAt != null) 'clientTapAt': clientTapAt.toUtc().toIso8601String(),
+        // Omit MANUAL so older Nest builds that ignore unknown fields stay happy;
+        // AUTO must be sent for A6.1 grant gating.
+        if (claimSource != BingoClaimSource.manual)
+          'claimSource': claimSource.apiValue,
       },
       receiveTimeout: claimPostReceiveTimeout,
       decoder: (rawData) {

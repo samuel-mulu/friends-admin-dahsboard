@@ -8,6 +8,7 @@ import 'models/deposit_config_model.dart';
 import 'models/deposit_model.dart';
 import 'models/deposit_reference_check_result.dart';
 import 'models/payment_provider.dart';
+import 'models/pending_deposit_verification.dart';
 import 'models/telebirr_client_receipt_payload.dart';
 import 'models/wallet_model.dart';
 import 'models/wallet_transaction_model.dart';
@@ -61,7 +62,7 @@ class WalletRepository {
     );
   }
 
-  Future<DepositModel> createDeposit({
+  Future<DepositSubmitResult> createDeposit({
     required PaymentProvider provider,
     required String amount,
     required String transactionRef,
@@ -78,7 +79,7 @@ class WalletRepository {
     }
 
     try {
-      final deposit = await _apiClient.post<DepositModel>(
+      final result = await _apiClient.post<DepositSubmitResult>(
         '/deposits',
         data: {
           'provider': provider.apiValue,
@@ -91,24 +92,26 @@ class WalletRepository {
             'clientReceipt': clientReceipt.toJson(),
         },
         receiveTimeout: const Duration(seconds: 60),
-        decoder: (rawData) {
-          if (rawData is! Map<String, dynamic>) {
-            throw StateError('Invalid deposit response.');
-          }
-
-          return DepositModel.fromJson(rawData);
-        },
+        decoder: _decodeDepositSubmitResult,
       );
 
       if (provider == PaymentProvider.telebirr) {
-        TelebirrDepositDebug.createResponse(
-          depositId: deposit.id,
-          status: deposit.status.name,
-          rejectionReason: deposit.rejectionReason,
-        );
+        if (result is DepositSubmitApproved) {
+          TelebirrDepositDebug.createResponse(
+            depositId: result.deposit.id,
+            status: result.deposit.status.name,
+            rejectionReason: result.deposit.rejectionReason,
+          );
+        } else if (result is DepositSubmitPendingVerification) {
+          TelebirrDepositDebug.createResponse(
+            depositId: result.pending.attemptId,
+            status: 'verification_pending',
+            rejectionReason: result.pending.message,
+          );
+        }
       }
 
-      return deposit;
+      return result;
     } on ApiException catch (error) {
       if (provider == PaymentProvider.telebirr) {
         TelebirrDepositDebug.error(
@@ -118,6 +121,53 @@ class WalletRepository {
       }
       rethrow;
     }
+  }
+
+  Future<DepositSubmitResult> checkVerificationAttempt({
+    required String attemptId,
+  }) {
+    return _apiClient.post<DepositSubmitResult>(
+      '/deposits/verification-attempts/$attemptId/check',
+      receiveTimeout: const Duration(seconds: 45),
+      decoder: _decodeDepositSubmitResult,
+    );
+  }
+
+  Future<PendingDepositVerification?> getActiveVerificationAttempt({
+    required PaymentProvider provider,
+    required String transactionRef,
+  }) {
+    return _apiClient.get<PendingDepositVerification?>(
+      '/deposits/verification-attempts/active',
+      queryParameters: {
+        'provider': provider.apiValue,
+        'transactionRef': transactionRef,
+      },
+      decoder: (rawData) {
+        if (rawData == null) {
+          return null;
+        }
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid verification attempt response.');
+        }
+        if (!PendingDepositVerification.isPendingJson(rawData)) {
+          return null;
+        }
+        return PendingDepositVerification.fromJson(rawData);
+      },
+    );
+  }
+
+  DepositSubmitResult _decodeDepositSubmitResult(Object? rawData) {
+    if (rawData is! Map<String, dynamic>) {
+      throw StateError('Invalid deposit response.');
+    }
+    if (PendingDepositVerification.isPendingJson(rawData)) {
+      return DepositSubmitPendingVerification(
+        PendingDepositVerification.fromJson(rawData),
+      );
+    }
+    return DepositSubmitApproved(DepositModel.fromJson(rawData));
   }
 
   Future<DepositReferenceCheckResult> checkDepositReference({

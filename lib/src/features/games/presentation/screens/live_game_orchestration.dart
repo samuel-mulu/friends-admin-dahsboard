@@ -1,6 +1,9 @@
 part of 'live_game_screen.dart';
 
 mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
+  /// Implemented by [_LiveGameCalledNumbers] (R1/R4 Auto Bingo scheduler).
+  void _scheduleAutoBingoEvaluation({String reason = 'trigger'});
+
   // Chain Game inter-round state. All null/inert for the other four categories.
   Timer? _chainPauseTicker;
   /// Live [GameModel.roundPausedUntil] for the winner dialog (admin delay / +time).
@@ -345,6 +348,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _nextUpcomingGame = null;
       _nextRegistrationCartelas = const [];
       _cn.calledNumbers = const [];
+      _cn.calledMarkKeys.clear();
       _myCartelas = const [];
       _clearMyCartelaDisplayOrder();
       _cn.claimingCartelaIds.clear();
@@ -361,6 +365,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _cn.marksSessionId = null;
       _cn.marksOwnerUserId = null;
       _cn.restoredMarksSessionId = null;
+      _cn.invalidateEffectiveMarkedNumbersCache();
       _emptyMessage =
           'No game is open right now. Pull down to refresh when the next round starts.';
       _isLoading = false;
@@ -471,7 +476,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _cn.claimStripHoldActive = false;
     _cn.claimingCartelaIds.clear();
     _cn.preClaimNextAutoCallAt = null;
-    _review.sessionCheckingCartelaNumbers = const [];
+    _review.clearClaimCheckingState();
     _cn.flushBufferedCalledNumbers();
   }
 
@@ -838,10 +843,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       ..._review.sessionBlockedCartelaNumbers,
       cartelaNumber,
     ]);
-    _review.sessionCheckingCartelaNumbers = _review
-        .sessionCheckingCartelaNumbers
-        .where((number) => number != cartelaNumber)
-        .toList(growable: false);
+    _clearSessionCheckingCartelaNumber(cartelaNumber);
   }
 
   void _recordSessionCheckingCartelaNumber(int cartelaNumber) {
@@ -852,10 +854,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _clearSessionCheckingCartelaNumber(int cartelaNumber) {
-    _review.sessionCheckingCartelaNumbers = _review
-        .sessionCheckingCartelaNumbers
-        .where((number) => number != cartelaNumber)
-        .toList(growable: false);
+    _review.clearCheckingCartela(cartelaNumber);
   }
 
   bool get _isAnyClaimChecking => _cn.isAnyClaimChecking(
@@ -1810,6 +1809,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _nextUpcomingGame = null;
           _nextRegistrationCartelas = const [];
           _cn.calledNumbers = const [];
+          _cn.calledMarkKeys.clear();
           _myCartelas = const [];
           _clearMyCartelaDisplayOrder();
           _cn.claimingCartelaIds.clear();
@@ -1826,6 +1826,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _cn.marksSessionId = null;
           _cn.marksOwnerUserId = null;
           _cn.restoredMarksSessionId = null;
+          _cn.invalidateEffectiveMarkedNumbersCache();
           _emptyMessage = waitingForRealtime
               ? null
               : 'No game is open right now. Pull down to refresh when the next round starts.';
@@ -2218,6 +2219,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           operations: operations,
           forceAuxiliaryRefresh: !effectiveAllowCachedOperations,
         );
+        _scheduleAutoBingoEvaluation(reason: 'resume_sync');
       }
       _evaluateLiveRoomSplash();
     } catch (error) {
@@ -2555,6 +2557,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _cn.manualMarkedNumbers.clear();
           _cn.lastManualMarkedKey = null;
           _cn.restoredMarksSessionId = null;
+          _cn.notifyManualMarksChanged();
         }
         _cn.marksSessionId = game.sessionId;
         if (game.sessionId == null) {
@@ -2566,7 +2569,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.deferredCalledNumbers = const [];
         _review.sessionWinnerCartelaNumbers = const [];
         _review.sessionBlockedCartelaNumbers = const [];
-        _review.sessionCheckingCartelaNumbers = const [];
+        _review.clearClaimCheckingState();
       }
 
       if (sessionChanged) {
@@ -2809,9 +2812,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
   }
 
-  void _flushBufferedCalledNumbers() => _cn.flushBufferedCalledNumbers();
+  void _flushBufferedCalledNumbers() {
+    final hadBuffered = _cn.bufferedCalledNumbers.isNotEmpty;
+    _cn.flushBufferedCalledNumbers();
+    if (hadBuffered) {
+      _scheduleAutoBingoEvaluation(reason: 'flush_buffered_called_numbers');
+    }
+  }
 
   void _releaseCalledNumbersStripHoldIfIdle({bool force = false}) {
+    final hadHold = _cn.claimStripHoldActive;
+    final hadBuffered = _cn.bufferedCalledNumbers.isNotEmpty;
+    final hadDeferred = _cn.deferredCalledNumbers.isNotEmpty;
     _cn.releaseCalledNumbersStripHoldIfIdle(
       force: force,
       hasSessionCheckingCartelaNumbers:
@@ -2819,6 +2831,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
 
     _requestFinishedAfterPendingClaimsCleared();
+    if (hadHold || hadBuffered || hadDeferred) {
+      _scheduleAutoBingoEvaluation(reason: 'strip_hold_released');
+    }
   }
 
   void _syncCalledNumbersForFinishedReview() {
@@ -3406,6 +3421,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         includeCalledNumbers: true,
       );
     }
+
+    // Auto Bingo: only after a committed strip update (not while claim-paused).
+    if (!pauseStripForClaim &&
+        applyResult.applied &&
+        !applyResult.requiresCanonicalSync) {
+      _scheduleAutoBingoEvaluation(reason: 'number_called_committed');
+    }
   }
 
   void _onBingoChecking(dynamic payload) {
@@ -3433,6 +3455,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+    final eventRound = (normalizedPayload['roundIndex'] as num?)?.toInt();
+    if (eventRound != null && eventRound != _game?.displayRoundIndex) return;
+    _review.syncClaimCheckingScope(_activeSessionId, _game?.displayRoundIndex ?? 1);
     if (_cn.hasResolvedClaimAttempt(
       normalizedPayload['claimAttemptId'] as String?,
     )) {
@@ -3451,13 +3476,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
     }
 
-    if (normalizedPayload.containsKey('nextAutoCallAt')) {
-      _applyAutoCallScheduleFromPayload(normalizedPayload);
-    }
-
     final cartelaNumber = _cartelaNumberFromPayload(normalizedPayload);
     if (cartelaNumber == null) {
       return;
+    }
+
+    final attemptId = normalizedPayload['claimAttemptId'] as String?;
+    if (ownedId != null && attemptId != null &&
+        !_review.recordCheckingClaim(ownedId, attemptId, cartelaNumber)) {
+      return;
+    }
+
+    if (normalizedPayload.containsKey('nextAutoCallAt')) {
+      _applyAutoCallScheduleFromPayload(normalizedPayload);
     }
 
     setState(() {
@@ -3627,9 +3658,24 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
     final cartelaId = normalizedPayload['gameCartelaId'] as String?;
     if (cartelaId == null) return;
+    final eventRound = (normalizedPayload['roundIndex'] as num?)?.toInt();
+    if (eventRound != null && eventRound != _game?.displayRoundIndex) return;
+    _review.syncClaimCheckingScope(_activeSessionId, _game?.displayRoundIndex ?? 1);
     final attempt = _cn.claimAttemptFor(cartelaId);
-    if (attempt == null || !_cn.isCurrentClaimAttempt(attempt)) return;
     final incomingId = normalizedPayload['claimAttemptId'] as String?;
+    if (attempt == null) {
+      if (incomingId == null || incomingId.isEmpty) return;
+      var resolved = false;
+      setState(() {
+        resolved = _review.resolveCheckingClaim(cartelaId, incomingId) != null;
+      });
+      if (resolved) {
+        _markCalledNumbersPanelDirty();
+        _releaseCalledNumbersStripHoldIfIdle();
+      }
+      return;
+    }
+    if (!_cn.isCurrentClaimAttempt(attempt)) return;
     if (incomingId != null && incomingId != attempt.claimAttemptId) return;
     // Confirm persisted status AND current eligibility. A socket hint must not
     // override an already VALID/INVALID database row or a finished game.
@@ -5441,6 +5487,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _cn.marksSessionId = sessionId;
     _cn.marksOwnerUserId = userId;
     _cn.restoredMarksSessionId = null;
+    _cn.notifyManualMarksChanged();
   }
 
   void _freezeBlockedCartela(GameCartelaModel cartela) {
@@ -5652,6 +5699,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.marksSessionId = sessionId;
         _cn.marksOwnerUserId = userId;
         _cn.restoredMarksSessionId = sessionId;
+        _cn.notifyManualMarksChanged();
         _sortMyCartelas();
       });
 

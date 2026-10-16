@@ -19,8 +19,12 @@ String? validatePassword(String? value, AppLocalizations l10n) {
 }
 
 String? validateFullName(String? value, AppLocalizations l10n) {
-  if ((value?.trim().length ?? 0) < 3) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.length < 3) {
     return l10n.validatorFullNameLength;
+  }
+  if (RegExp(r'[0-9]').hasMatch(trimmed)) {
+    return l10n.validatorFullNameNoNumbers;
   }
   return null;
 }

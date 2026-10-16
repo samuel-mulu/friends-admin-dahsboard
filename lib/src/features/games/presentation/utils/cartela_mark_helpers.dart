@@ -125,15 +125,44 @@ Set<String> clearManualMarksForCartela({
   return globalMarks.difference(markKeysOnCartela(cartela));
 }
 
-Set<String> reviewMarksIncludingCalled({
+/// Mark keys (`B:5`) for authoritative called numbers only.
+Set<String> calledNumberMarkKeys(
+  Iterable<CalledNumberModel> calledNumbers,
+) {
+  final keys = <String>{};
+  for (final call in calledNumbers) {
+    keys.add(manualMarkKey(call.letter, call.number.toString()));
+  }
+  return keys;
+}
+
+/// Visual cartela marks: always include manual marks; when
+/// [effectiveAutoMark] is true, also include marks derived from
+/// authoritative [calledNumbers]. Auto-derived marks are never persisted.
+Set<String> visualMarkedNumbers({
   required Set<String> manualMarkedNumbers,
-  required List<CalledNumberModel> calledNumbers,
+  required Iterable<CalledNumberModel> calledNumbers,
+  required bool effectiveAutoMark,
 }) {
-  final marks = Set<String>.from(
-    normalizeManualMarkedNumbers(manualMarkedNumbers),
-  );
+  final manual = normalizeManualMarkedNumbers(manualMarkedNumbers);
+  if (!effectiveAutoMark) {
+    return manual;
+  }
+
+  final marks = Set<String>.from(manual);
   for (final call in calledNumbers) {
     marks.add(manualMarkKey(call.letter, call.number.toString()));
   }
   return marks;
+}
+
+Set<String> reviewMarksIncludingCalled({
+  required Set<String> manualMarkedNumbers,
+  required List<CalledNumberModel> calledNumbers,
+}) {
+  return visualMarkedNumbers(
+    manualMarkedNumbers: manualMarkedNumbers,
+    calledNumbers: calledNumbers,
+    effectiveAutoMark: true,
+  );
 }

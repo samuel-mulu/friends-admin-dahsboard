@@ -10,12 +10,14 @@ class DepositConfirmationBanner extends StatefulWidget {
     required this.state,
     required this.onDismiss,
     this.onRetry,
+    this.onCheckAgain,
     super.key,
   });
 
   final DepositConfirmationState state;
   final VoidCallback onDismiss;
   final VoidCallback? onRetry;
+  final VoidCallback? onCheckAgain;
 
   @override
   State<DepositConfirmationBanner> createState() =>
@@ -65,6 +67,7 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
     final showDetails =
         widget.state.kind == DepositConfirmationKind.approved ||
         widget.state.kind == DepositConfirmationKind.pending ||
+        widget.state.kind == DepositConfirmationKind.verificationInProgress ||
         widget.state.kind == DepositConfirmationKind.underReview ||
         widget.state.kind == DepositConfirmationKind.rejected;
 
@@ -149,6 +152,15 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                               style: theme.textTheme.bodyMedium,
                             ),
                           ],
+                          if (widget.state.kind ==
+                              DepositConfirmationKind.verificationInProgress) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.state.message ??
+                                  l10n.depositVerificationInProgressMessage,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -190,6 +202,18 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                     label: Text(l10n.depositFixAndResubmit),
                   ),
                 ],
+                if (widget.state.kind ==
+                        DepositConfirmationKind.verificationInProgress &&
+                    widget.onCheckAgain != null) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: widget.state.canCheckAgain
+                        ? widget.onCheckAgain
+                        : null,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(l10n.depositCheckAgain),
+                  ),
+                ],
               ],
             ),
           ),
@@ -201,6 +225,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
   String _title(dynamic l10n) {
     return switch (widget.state.kind) {
       DepositConfirmationKind.verifying => l10n.depositVerifying,
+      DepositConfirmationKind.verificationInProgress =>
+        l10n.depositVerificationInProgressTitle,
       DepositConfirmationKind.approved => l10n.depositApprovedTitle,
       DepositConfirmationKind.pending => l10n.depositPendingTitle,
       DepositConfirmationKind.underReview => l10n.depositUnderReviewTitle,
@@ -210,7 +236,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
 
   Color _backgroundColor(ThemeData theme) {
     return switch (widget.state.kind) {
-      DepositConfirmationKind.verifying =>
+      DepositConfirmationKind.verifying ||
+      DepositConfirmationKind.verificationInProgress =>
         AppBranding.casinoPurple.withValues(alpha: 0.18),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.14),
@@ -224,7 +251,8 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
 
   Color _borderColor(ThemeData theme) {
     return switch (widget.state.kind) {
-      DepositConfirmationKind.verifying =>
+      DepositConfirmationKind.verifying ||
+      DepositConfirmationKind.verificationInProgress =>
         AppBranding.casinoPurple.withValues(alpha: 0.35),
       DepositConfirmationKind.approved =>
         AppBranding.feltGreen.withValues(alpha: 0.45),
@@ -246,6 +274,7 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = switch (kind) {
       DepositConfirmationKind.verifying ||
+      DepositConfirmationKind.verificationInProgress ||
       DepositConfirmationKind.pending ||
       DepositConfirmationKind.underReview =>
         WalletReviewVisualStatus.loading,

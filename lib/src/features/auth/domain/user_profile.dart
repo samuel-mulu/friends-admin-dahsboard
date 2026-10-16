@@ -116,6 +116,13 @@ class UserProfile {
     this.telegramLinked = false,
     this.telegramUsername,
     this.gamePushMode = GamePushMode.registeredOnly,
+    this.autoMarkGranted = false,
+    this.autoBingoGranted = false,
+    this.autoMarkEnabled = false,
+    this.autoBingoEnabled = false,
+    this.effectiveAutoMark = false,
+    this.effectiveAutoBingo = false,
+    this.featureSettingsVersion = 0,
   });
 
   final String id;
@@ -130,6 +137,13 @@ class UserProfile {
   final bool telegramLinked;
   final String? telegramUsername;
   final GamePushMode gamePushMode;
+  final bool autoMarkGranted;
+  final bool autoBingoGranted;
+  final bool autoMarkEnabled;
+  final bool autoBingoEnabled;
+  final bool effectiveAutoMark;
+  final bool effectiveAutoBingo;
+  final int featureSettingsVersion;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -151,6 +165,13 @@ class UserProfile {
           : json['telegramId'] != null,
       telegramUsername: json['telegramUsername'] as String?,
       gamePushMode: GamePushMode.fromApi(json['gamePushMode'] as String?),
+      autoMarkGranted: json['autoMarkGranted'] == true,
+      autoBingoGranted: json['autoBingoGranted'] == true,
+      autoMarkEnabled: json['autoMarkEnabled'] == true,
+      autoBingoEnabled: json['autoBingoEnabled'] == true,
+      effectiveAutoMark: json['effectiveAutoMark'] == true,
+      effectiveAutoBingo: json['effectiveAutoBingo'] == true,
+      featureSettingsVersion: _readVersion(json['featureSettingsVersion']),
     );
   }
 
@@ -166,6 +187,13 @@ class UserProfile {
       'hasPassword': hasPassword,
       'telegramLinked': telegramLinked,
       'gamePushMode': gamePushMode.apiValue,
+      'autoMarkGranted': autoMarkGranted,
+      'autoBingoGranted': autoBingoGranted,
+      'autoMarkEnabled': autoMarkEnabled,
+      'autoBingoEnabled': autoBingoEnabled,
+      'effectiveAutoMark': effectiveAutoMark,
+      'effectiveAutoBingo': effectiveAutoBingo,
+      'featureSettingsVersion': featureSettingsVersion,
       if (telegramUsername != null) 'telegramUsername': telegramUsername,
       if (wallet != null) 'wallet': wallet!.toJson(),
     };
@@ -178,6 +206,13 @@ class UserProfile {
     String? telegramUsername,
     WalletModel? wallet,
     GamePushMode? gamePushMode,
+    bool? autoMarkGranted,
+    bool? autoBingoGranted,
+    bool? autoMarkEnabled,
+    bool? autoBingoEnabled,
+    bool? effectiveAutoMark,
+    bool? effectiveAutoBingo,
+    int? featureSettingsVersion,
   }) {
     return UserProfile(
       id: id,
@@ -192,6 +227,24 @@ class UserProfile {
       telegramLinked: telegramLinked ?? this.telegramLinked,
       telegramUsername: telegramUsername ?? this.telegramUsername,
       gamePushMode: gamePushMode ?? this.gamePushMode,
+      autoMarkGranted: autoMarkGranted ?? this.autoMarkGranted,
+      autoBingoGranted: autoBingoGranted ?? this.autoBingoGranted,
+      autoMarkEnabled: autoMarkEnabled ?? this.autoMarkEnabled,
+      autoBingoEnabled: autoBingoEnabled ?? this.autoBingoEnabled,
+      effectiveAutoMark: effectiveAutoMark ?? this.effectiveAutoMark,
+      effectiveAutoBingo: effectiveAutoBingo ?? this.effectiveAutoBingo,
+      featureSettingsVersion:
+          featureSettingsVersion ?? this.featureSettingsVersion,
     );
+  }
+
+  static int _readVersion(Object? raw) {
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw.toInt();
+    }
+    return 0;
   }
 }

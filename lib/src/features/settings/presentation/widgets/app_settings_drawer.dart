@@ -27,6 +27,7 @@ import '../../../games/presentation/utils/big_game_countdown.dart';
 import '../../../games/presentation/providers/cartela_sort_mode_provider.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
+import '../providers/feature_settings_provider.dart';
 import 'terms_conditions_dialog.dart';
 import 'drawer_app_version_card.dart';
 import 'drawer_preference_icons.dart';
@@ -51,6 +52,13 @@ class AppSettingsDrawer extends ConsumerWidget {
     final notificationNotifier = ref.read(
       notificationPreferencesControllerProvider.notifier,
     );
+    final featureSettingsAsync = isGuest
+        ? null
+        : ref.watch(featureSettingsControllerProvider);
+    final featureSettingsUi = featureSettingsAsync?.value;
+    final featureSettingsNotifier = isGuest
+        ? null
+        : ref.read(featureSettingsControllerProvider.notifier);
 
     void refreshDrawerData() {
       if (!isGuest) {
@@ -217,6 +225,46 @@ class AppSettingsDrawer extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (!isGuest &&
+                      featureSettingsUi != null &&
+                      featureSettingsUi.settings.hasAnyGrant) ...[
+                    VGap.md,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                      ),
+                      child: _DrawerSectionCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs,
+                        ),
+                        child: _FeatureSettingsQuickCard(
+                          showAutoMark: featureSettingsUi.showAutoMark,
+                          showAutoBingo: featureSettingsUi.showAutoBingo,
+                          autoMarkEnabled:
+                              featureSettingsUi.settings.autoMarkEnabled,
+                          autoBingoEnabled:
+                              featureSettingsUi.settings.autoBingoEnabled,
+                          autoMarkPending: featureSettingsUi.autoMarkPending,
+                          autoBingoPending: featureSettingsUi.autoBingoPending,
+                          onAutoMarkChanged: (value) {
+                            unawaited(
+                              featureSettingsNotifier!.setAutoMarkEnabled(
+                                value,
+                              ),
+                            );
+                          },
+                          onAutoBingoChanged: (value) {
+                            unawaited(
+                              featureSettingsNotifier!.setAutoBingoEnabled(
+                                value,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                   VGap.md,
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -1406,6 +1454,114 @@ class _CartelaRemainsSortCard extends ConsumerWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _FeatureSettingsQuickCard extends StatelessWidget {
+  const _FeatureSettingsQuickCard({
+    required this.showAutoMark,
+    required this.showAutoBingo,
+    required this.autoMarkEnabled,
+    required this.autoBingoEnabled,
+    required this.autoMarkPending,
+    required this.autoBingoPending,
+    required this.onAutoMarkChanged,
+    required this.onAutoBingoChanged,
+  });
+
+  final bool showAutoMark;
+  final bool showAutoBingo;
+  final bool autoMarkEnabled;
+  final bool autoBingoEnabled;
+  final bool autoMarkPending;
+  final bool autoBingoPending;
+  final ValueChanged<bool> onAutoMarkChanged;
+  final ValueChanged<bool> onAutoBingoChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+
+    return Column(
+      children: [
+        if (showAutoMark)
+          SizedBox(
+            height: 40,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.touch_app_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                HGap.sm,
+                Expanded(
+                  child: Text(
+                    l10n.drawerAutoMark,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (autoMarkPending)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Transform.scale(
+                    scale: 0.78,
+                    child: Switch.adaptive(
+                      value: autoMarkEnabled,
+                      onChanged: autoMarkPending ? null : onAutoMarkChanged,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        if (showAutoMark && showAutoBingo) const SizedBox(height: 2),
+        if (showAutoBingo)
+          SizedBox(
+            height: 40,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                HGap.sm,
+                Expanded(
+                  child: Text(
+                    l10n.drawerAutoBingo,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (autoBingoPending)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Transform.scale(
+                    scale: 0.78,
+                    child: Switch.adaptive(
+                      value: autoBingoEnabled,
+                      onChanged: autoBingoPending ? null : onAutoBingoChanged,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }

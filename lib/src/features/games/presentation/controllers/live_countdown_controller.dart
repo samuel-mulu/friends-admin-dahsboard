@@ -45,6 +45,10 @@ class LiveCountdownController {
   /// BINGO claim button lock during pre-call / awaiting ball — does not dirty the cartela list.
   final ValueNotifier<bool> bingoClaimLocked = ValueNotifier<bool>(false);
 
+  /// Fired when [bingoClaimLocked] transitions true → false (post-call hold,
+  /// winner window unlock, force unlock). Used to resume Auto Bingo drain.
+  VoidCallback? onBingoClaimUnlocked;
+
   /// When set, BINGO stays locked until this instant (post-call hold).
   DateTime? bingoPostCallLockUntil;
 
@@ -73,7 +77,11 @@ class LiveCountdownController {
     if (bingoClaimLocked.value == value) {
       return;
     }
+    final wasLocked = bingoClaimLocked.value;
     bingoClaimLocked.value = value;
+    if (wasLocked && !value) {
+      onBingoClaimUnlocked?.call();
+    }
   }
 
   /// Recompute BINGO pre-call / post-call lock from schedule + called order.

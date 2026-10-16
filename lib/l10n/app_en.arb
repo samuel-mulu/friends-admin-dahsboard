@@ -190,6 +190,9 @@
   "validatorFullNameLength": "Full name must be at least 3 characters.",
   "@validatorFullNameLength": {},
 
+  "validatorFullNameNoNumbers": "Full name cannot contain numbers.",
+  "@validatorFullNameNoNumbers": {},
+
   "validatorPasswordMismatch": "Passwords do not match.",
   "@validatorPasswordMismatch": {},
 
@@ -530,6 +533,18 @@
   "depositVerifying": "Verifying your payment…",
   "@depositVerifying": {},
 
+  "depositVerificationInProgressTitle": "Verification in progress",
+  "@depositVerificationInProgressTitle": {},
+
+  "depositVerificationInProgressMessage": "Your payment is still being verified. Keep this receipt and tap Check Again shortly—do not submit a new payment.",
+  "@depositVerificationInProgressMessage": {},
+
+  "depositCheckAgain": "Check Again",
+  "@depositCheckAgain": {},
+
+  "depositVerificationTemporaryUnavailable": "Payment verification is temporarily unavailable. Please try Check Again shortly.",
+  "@depositVerificationTemporaryUnavailable": {},
+
   "depositApprovedTitle": "Deposit approved",
   "@depositApprovedTitle": {},
 
@@ -607,6 +622,51 @@
 
   "depositStepSubmitDetails": "2. Enter amount and receipt",
   "@depositStepSubmitDetails": {},
+
+  "depositTabSmart": "SMS full message",
+  "@depositTabSmart": {},
+
+  "depositTabRegular": "Regular Deposit",
+  "@depositTabRegular": {},
+
+  "depositSmartHint": "Paste your {provider} SMS, receipt link, or transaction reference. Provider stays {provider}.",
+  "@depositSmartHint": {
+    "placeholders": { "provider": { "type": "String" } }
+  },
+
+  "depositSmartMessageLabel": "SMS / receipt",
+  "@depositSmartMessageLabel": {},
+
+  "depositSmartMessageHint": "Paste {provider} SMS, receipt link, or reference",
+  "@depositSmartMessageHint": {
+    "placeholders": { "provider": { "type": "String" } }
+  },
+
+  "depositSmartParsedTitle": "Confirm parsed details",
+  "@depositSmartParsedTitle": {},
+
+  "depositSmartParsedReady": "Details extracted. Confirm and submit.",
+  "@depositSmartParsedReady": {},
+
+  "depositSmartWrongProvider": "This looks like a different payment method. Stay on {provider}, or Change provider and try again. Telebirr messages cannot be submitted as CBE.",
+  "@depositSmartWrongProvider": {
+    "placeholders": { "provider": { "type": "String" } }
+  },
+
+  "depositSmartCbeUnsupported": "CBE SMS full message supports an official receipt URL or transaction reference only. Full SMS paste is not supported yet — use Regular Deposit.",
+  "@depositSmartCbeUnsupported": {},
+
+  "depositSmartUnsupported": "Could not read this SMS full message. Use Regular Deposit to enter amount and reference.",
+  "@depositSmartUnsupported": {},
+
+  "depositSmartIncomplete": "Could not find a valid transaction reference in this text. Check the paste or use Regular Deposit.",
+  "@depositSmartIncomplete": {},
+
+  "depositSmartUseRegular": "Use Regular Deposit",
+  "@depositSmartUseRegular": {},
+
+  "depositSmartConfirmSubmit": "Confirm and submit",
+  "@depositSmartConfirmSubmit": {},
 
   "depositStepInstructions": "3. How to send",
   "@depositStepInstructions": {},
@@ -1535,6 +1595,12 @@
 
   "drawerSounds": "Sounds",
   "@drawerSounds": {},
+
+  "drawerAutoMark": "Auto Mark",
+  "@drawerAutoMark": {},
+
+  "drawerAutoBingo": "Auto Bingo",
+  "@drawerAutoBingo": {},
 
   "drawerSortCartelasByLines": "Sort cartelas by lines",
   "@drawerSortCartelasByLines": {},

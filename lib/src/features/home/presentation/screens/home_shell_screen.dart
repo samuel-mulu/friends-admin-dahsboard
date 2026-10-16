@@ -9,6 +9,7 @@ import '../../../messages/presentation/widgets/broadcast_realtime_sync.dart';
 import '../../../messages/presentation/widgets/broadcast_top_banner.dart';
 import '../../../messages/presentation/widgets/forced_broadcast_overlay.dart';
 import '../../../settings/presentation/widgets/app_settings_drawer.dart';
+import '../../../settings/presentation/widgets/feature_settings_realtime_sync.dart';
 import '../../../support/presentation/widgets/support_realtime_sync.dart';
 import '../widgets/app_shell_app_bar.dart';
 
@@ -23,21 +24,23 @@ class HomeShellScreen extends ConsumerWidget {
       child: ForcedBroadcastOverlay(
         child: BroadcastRealtimeSync(
           child: SupportRealtimeSync(
-            child: Scaffold(
-              appBar: AppShellAppBar(navigationShell: navigationShell),
-              drawer: AppSettingsDrawer(navigationShell: navigationShell),
-              body: Stack(
-                children: [
-                  Column(
-                    children: [
-                      const BroadcastTopBanner(),
-                      Expanded(
-                        child: WalletRealtimeSync(child: navigationShell),
-                      ),
-                    ],
-                  ),
-                  const GameAnnouncementBanner(),
-                ],
+            child: FeatureSettingsRealtimeSync(
+              child: Scaffold(
+                appBar: AppShellAppBar(navigationShell: navigationShell),
+                drawer: AppSettingsDrawer(navigationShell: navigationShell),
+                body: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        const BroadcastTopBanner(),
+                        Expanded(
+                          child: WalletRealtimeSync(child: navigationShell),
+                        ),
+                      ],
+                    ),
+                    const GameAnnouncementBanner(),
+                  ],
+                ),
               ),
             ),
           ),

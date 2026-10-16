@@ -9,9 +9,12 @@ import '../../../../core/utils/l10n.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/realtime/wallet_entity_realtime.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../settings/presentation/providers/theme_mode_provider.dart';
 import '../../data/models/deposit_model.dart';
 import '../../data/models/deposit_config_model.dart';
 import '../../data/models/payment_provider.dart';
+import '../../data/models/pending_deposit_verification.dart';
 import '../../data/models/telebirr_client_receipt_payload.dart';
 import '../../data/models/telebirr_receipt_preview.dart';
 import '../../data/telebirr_receipt_preview_service.dart';
@@ -23,13 +26,19 @@ import '../providers/wallet_provider.dart';
 import '../debug/telebirr_deposit_debug.dart';
 import '../models/deposit_confirmation_state.dart';
 import '../utils/cbe_manual_receipt_reference.dart';
+import '../utils/cbe_smart_deposit_parser.dart';
 import '../utils/deposit_receipt_code.dart';
+import '../utils/smart_deposit_parse_result.dart';
+import '../utils/telebirr_smart_deposit_parser.dart';
 import '../widgets/deposit_confirmation_banner.dart';
 import '../widgets/deposit_form_section.dart';
 import '../widgets/deposit_guide_steps.dart';
 import '../widgets/deposit_provider_chips.dart';
 import '../widgets/deposit_settlement_account_card.dart';
+import '../widgets/deposit_smart_section.dart';
 import '../guides/deposit_guide_config.dart';
+
+enum _DepositEntryTab { smart, regular }
 
 class DepositScreen extends ConsumerStatefulWidget {
   const DepositScreen({super.key});
@@ -51,10 +60,15 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   final _guideTabIndex = ValueNotifier<int>(0);
   final _amountController = TextEditingController();
   final _transactionRefController = TextEditingController();
+  final _smartMessageController = TextEditingController();
 
   PaymentProvider? _provider;
   bool _isChoosingProvider = true;
+  _DepositEntryTab _entryTab = _DepositEntryTab.smart;
+  SmartDepositParseResult? _smartParseResult;
   bool _isSubmitting = false;
+  /// Synchronous guard so rapid Check Again taps cannot start parallel GETs.
+  bool _checkInFlight = false;
   DepositConfirmationState? _confirmation;
   String? _trackedDepositId;
   Timer? _autoDismissTimer;
@@ -65,12 +79,17 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   bool _ignoreFieldChanges = false;
   String? _lastSeenLocation;
   GoRouter? _router;
+  Timer? _checkAgainCooldownTimer;
+  String? _pendingAttemptId;
 
   @override
   void initState() {
     super.initState();
     _socketService = ref.read(socketServiceProvider);
     _bindDepositSocketListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restorePendingVerificationAttempt();
+    });
   }
 
   void _bindDepositSocketListeners() {
@@ -95,10 +114,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     _router?.routerDelegate.removeListener(_onRouteChanged);
     _socketService.off('wallet:updated', _onWalletUpdatedWhilePending);
     _autoDismissTimer?.cancel();
+    _checkAgainCooldownTimer?.cancel();
     _scrollController.dispose();
     _guideTabIndex.dispose();
     _amountController.dispose();
     _transactionRefController.dispose();
+    _smartMessageController.dispose();
     super.dispose();
   }
 
@@ -124,10 +145,32 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     if (_isSubmitting) {
       return false;
     }
+    if (_confirmation?.kind ==
+        DepositConfirmationKind.verificationInProgress) {
+      return false;
+    }
     if (!WalletAmountLimits.isSubmittableDeposit(_amountController.text)) {
       return false;
     }
     return true;
+  }
+
+  bool get _canSubmitSmartDeposit {
+    final parsed = _smartParseResult;
+    if (parsed == null || !parsed.isSuccess) {
+      return false;
+    }
+    if (_provider == null || _isChoosingProvider || _isSubmitting) {
+      return false;
+    }
+    if (_confirmation?.kind ==
+        DepositConfirmationKind.verificationInProgress) {
+      return false;
+    }
+    final amount = (parsed.amount != null && parsed.amount!.isNotEmpty)
+        ? parsed.amount!
+        : _amountController.text;
+    return WalletAmountLimits.isSubmittableDeposit(amount);
   }
 
   static const _depositRoute = '/wallet/deposit';
@@ -167,6 +210,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     _ignoreFieldChanges = true;
     _amountController.clear();
     _transactionRefController.clear();
+    _smartMessageController.clear();
     _formKey.currentState?.reset();
     _ignoreFieldChanges = false;
     setState(() {
@@ -176,6 +220,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       _isSubmitting = false;
       _provider = null;
       _isChoosingProvider = true;
+      _entryTab = _DepositEntryTab.smart;
+      _smartParseResult = null;
     });
   }
 
@@ -186,11 +232,14 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     _ignoreFieldChanges = true;
     _amountController.clear();
     _transactionRefController.clear();
+    _smartMessageController.clear();
     _formKey.currentState?.reset();
     _ignoreFieldChanges = false;
     setState(() {
       _provider = provider;
       _isChoosingProvider = false;
+      _entryTab = _DepositEntryTab.smart;
+      _smartParseResult = null;
       _guideTabIndex.value = 0;
       _clearServerErrors();
       _previewNotice = null;
@@ -202,15 +251,82 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     _ignoreFieldChanges = true;
     _amountController.clear();
     _transactionRefController.clear();
+    _smartMessageController.clear();
     _formKey.currentState?.reset();
     _ignoreFieldChanges = false;
     setState(() {
       _isChoosingProvider = true;
+      _entryTab = _DepositEntryTab.smart;
+      _smartParseResult = null;
       _guideTabIndex.value = 0;
       _clearServerErrors();
       _previewNotice = null;
       _clearConfirmation();
     });
+  }
+
+  void _setEntryTab(_DepositEntryTab tab) {
+    if (_entryTab == tab) {
+      return;
+    }
+    setState(() {
+      _entryTab = tab;
+    });
+  }
+
+  void _onSmartMessageChanged(String value) {
+    final provider = _provider;
+    if (provider == null) {
+      return;
+    }
+    final parsed = _parseSmartInput(provider, value);
+    setState(() {
+      _smartParseResult = value.trim().isEmpty ? null : parsed;
+      if (parsed.isSuccess) {
+        _ignoreFieldChanges = true;
+        _transactionRefController.text = parsed.transactionRef ?? '';
+        if (parsed.amount != null && parsed.amount!.isNotEmpty) {
+          _amountController.text = parsed.amount!;
+        }
+        _ignoreFieldChanges = false;
+      }
+    });
+  }
+
+  SmartDepositParseResult _parseSmartInput(
+    PaymentProvider provider,
+    String value,
+  ) {
+    if (provider == PaymentProvider.telebirr) {
+      return parseTelebirrSmartDepositInput(value);
+    }
+    if (provider == PaymentProvider.cbe) {
+      final config = ref.read(depositConfigProvider).asData?.value;
+      final cbeConfig = config?.providerForKey(PaymentProvider.cbe.apiValue);
+      final baseUrl = (cbeConfig?.receiptBaseUrl.isEmpty ?? true)
+          ? kDefaultCbeReceiptBaseUrl
+          : cbeConfig!.receiptBaseUrl;
+      return parseCbeSmartDepositInput(value, receiptBaseUrl: baseUrl);
+    }
+    return const SmartDepositParseResult.unsupported();
+  }
+
+  Future<void> _submitSmartDeposit() async {
+    final parsed = _smartParseResult;
+    if (parsed == null || !parsed.isSuccess || parsed.transactionRef == null) {
+      return;
+    }
+    final amount = (parsed.amount != null && parsed.amount!.isNotEmpty)
+        ? parsed.amount!
+        : _amountController.text.trim();
+    if (!WalletAmountLimits.isSubmittableDeposit(amount)) {
+      return;
+    }
+    _ignoreFieldChanges = true;
+    _transactionRefController.text = parsed.transactionRef!;
+    _amountController.text = amount;
+    _ignoreFieldChanges = false;
+    await _submit();
   }
 
   @override
@@ -224,6 +340,26 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         return;
       }
       _handleDepositEntityUpdate(update);
+    });
+
+    ref.listen(authControllerProvider, (previous, next) {
+      final hadSession = previous?.session != null;
+      final hasSession = next.session != null;
+      if (hadSession && !hasSession) {
+        final previousUserId = previous?.session?.user.id;
+        _pendingAttemptId = null;
+        _checkAgainCooldownTimer?.cancel();
+        if (previousUserId != null) {
+          ref
+              .read(appPreferencesStorageProvider.future)
+              .then((storage) => storage.clearPendingDepositAttempt(previousUserId));
+        }
+        if (mounted) {
+          setState(() {
+            _confirmation = null;
+          });
+        }
+      }
     });
 
     final l10n = context.l10n;
@@ -252,10 +388,6 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
             config: config,
             providerConfig: providerConfig,
           );
-    final helpText = selectedProvider == null
-        ? null
-        : _localizedDepositInstruction(l10n, selectedProvider);
-
     return Scaffold(
       appBar: AppBar(title: Text(l10n.depositScreenTitle)),
       body: SafeArea(
@@ -282,7 +414,6 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   if (settlementAccounts.isNotEmpty)
                     DepositSettlementAccountCard(
                       providerName: selectedProvider.label,
-                      helpText: helpText,
                       accounts: [
                         for (
                           var index = 0;
@@ -308,48 +439,83 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                     step: 2,
                     title: l10n.depositStepSubmitDetails,
                   ),
-                  VGap.sm,
-                  Text(
-                    helpText!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  VGap.md,
+                  SegmentedButton<_DepositEntryTab>(
+                    segments: [
+                      ButtonSegment(
+                        value: _DepositEntryTab.smart,
+                        label: Text(l10n.depositTabSmart),
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                      ),
+                      ButtonSegment(
+                        value: _DepositEntryTab.regular,
+                        label: Text(l10n.depositTabRegular),
+                        icon: const Icon(Icons.edit_note_outlined),
+                      ),
+                    ],
+                    selected: {_entryTab},
+                    onSelectionChanged: (selection) {
+                      if (selection.isEmpty) {
+                        return;
+                      }
+                      _setEntryTab(selection.first);
+                    },
                   ),
                   VGap.md,
-                  DepositFormSection(
-                    provider: selectedProvider,
-                    amountController: _amountController,
-                    transactionRefController: _transactionRefController,
-                    receiptLabel: receiptLabel,
-                    amountValidator: _validateAmount,
-                    transactionRefValidator: (value) => _validateTransactionRef(
-                      value,
-                      providerConfig: providerConfig,
+                  if (_entryTab == _DepositEntryTab.smart)
+                    DepositSmartSection(
+                      provider: selectedProvider,
+                      messageController: _smartMessageController,
+                      amountController: _amountController,
+                      parseResult: _smartParseResult,
+                      onMessageChanged: _onSmartMessageChanged,
+                      onAmountChanged: (_) {
+                        setState(() {});
+                        _onFormFieldChanged();
+                      },
+                      onSubmit: _submitSmartDeposit,
+                      onSwitchToRegular: () =>
+                          _setEntryTab(_DepositEntryTab.regular),
+                      isSubmitting: _isSubmitting,
+                      canSubmit: _canSubmitSmartDeposit,
+                    )
+                  else ...[
+                    DepositFormSection(
+                      provider: selectedProvider,
+                      amountController: _amountController,
+                      transactionRefController: _transactionRefController,
+                      receiptLabel: receiptLabel,
+                      amountValidator: _validateAmount,
+                      transactionRefValidator: (value) =>
+                          _validateTransactionRef(
+                            value,
+                            providerConfig: providerConfig,
+                          ),
+                      onFieldChanged: _onFormFieldChanged,
+                      amountServerError: _amountServerError,
+                      transactionRefServerError: _transactionRefServerError,
+                      previewNotice: _previewNotice,
+                      preserveTransactionRefCase:
+                          selectedProvider == PaymentProvider.cbe &&
+                          providerConfig?.approvalMode == 'manual',
                     ),
-                    onFieldChanged: _onFormFieldChanged,
-                    amountServerError: _amountServerError,
-                    transactionRefServerError: _transactionRefServerError,
-                    previewNotice: _previewNotice,
-                    preserveTransactionRefCase:
-                        selectedProvider == PaymentProvider.cbe &&
-                        providerConfig?.approvalMode == 'manual',
-                  ),
-                  VGap.xl,
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppBranding.goldAccent,
-                      foregroundColor: AppBranding.brandPurple,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    VGap.xl,
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppBranding.goldAccent,
+                        foregroundColor: AppBranding.brandPurple,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      onPressed: _canSubmitDeposit ? _submit : null,
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(l10n.depositSubmit),
                     ),
-                    onPressed: _canSubmitDeposit ? _submit : null,
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.depositSubmit),
-                  ),
+                  ],
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -365,6 +531,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                                 onDismiss: _clearConfirmation,
                                 onRetry: _confirmation!.canRetry
                                     ? _prepareRetryAfterReject
+                                    : null,
+                                onCheckAgain:
+                                    _confirmation!.kind ==
+                                        DepositConfirmationKind
+                                            .verificationInProgress
+                                    ? _checkPendingVerification
                                     : null,
                               ),
                             ),
@@ -666,9 +838,9 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
             ?.approvalMode;
         final isLocalMode = approvalMode == 'local';
 
-        // Receipt URL fetch + parse is local-mode only.
-        // Automatic → verify.et on backend. Manual → pending for admin.
-        // Wallet credit always happens on the backend in all modes.
+        // LOCAL: device fetches/parses the official Telebirr receipt, then Nest
+        // validates clientReceipt and auto-approves (original LOCAL trust model).
+        // Automatic → Verify.ET. Manual → pending for admin + PIN.
         if (isLocalMode) {
           final preview = await ref
               .read(telebirrReceiptPreviewServiceProvider)
@@ -763,7 +935,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         return;
       }
 
-      final deposit = await walletRepository.createDeposit(
+      final result = await walletRepository.createDeposit(
         provider: provider,
         amount: submittedAmount,
         // The backend canonicalizes a CBE manual URL and stores the original
@@ -773,46 +945,11 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         clientReceipt: clientReceipt,
       );
 
-      ref.invalidate(depositHistoryProvider);
-
-      if (deposit.status == DepositStatus.approved) {
-        ref.invalidate(myWalletProvider);
-        ref.invalidate(walletTransactionsProvider);
-      }
-
       if (!mounted) {
         return;
       }
 
-      if (deposit.status == DepositStatus.pending) {
-        setState(() {
-          _trackedDepositId = deposit.id;
-          _confirmation = DepositConfirmationState(
-            kind: DepositConfirmationKind.pending,
-            depositId: deposit.id,
-            provider: deposit.provider,
-            amount: deposit.amount,
-            transactionRef: deposit.transactionRef,
-          );
-        });
-        _clearDepositFormFields();
-        _consumeCachedDepositUpdate();
-        return;
-      }
-
-      setState(() {
-        _trackedDepositId = deposit.id;
-        _confirmation = DepositConfirmationState(
-          kind: DepositConfirmationKind.approved,
-          depositId: deposit.id,
-          provider: deposit.provider,
-          amount: deposit.amount,
-          transactionRef: deposit.transactionRef,
-          verifiedAt: deposit.verifiedAt ?? deposit.createdAt,
-        );
-      });
-      _clearDepositFormFields();
-      _scheduleApprovedDismiss();
+      await _handleDepositSubmitResult(result);
     } catch (error) {
       if (provider == PaymentProvider.telebirr) {
         TelebirrDepositDebug.error('submit failed', error);
@@ -849,21 +986,304 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     }
   }
 
+  Future<void> _handleDepositSubmitResult(DepositSubmitResult result) async {
+    ref.invalidate(depositHistoryProvider);
+
+    switch (result) {
+      case DepositSubmitPendingVerification(:final pending):
+        await _showPendingVerification(pending);
+      case DepositSubmitApproved(:final deposit):
+        if (deposit.status == DepositStatus.approved) {
+          ref.invalidate(myWalletProvider);
+          ref.invalidate(walletTransactionsProvider);
+        }
+        if (!mounted) {
+          return;
+        }
+        if (deposit.status == DepositStatus.pending) {
+          setState(() {
+            _trackedDepositId = deposit.id;
+            _pendingAttemptId = null;
+            _confirmation = DepositConfirmationState(
+              kind: DepositConfirmationKind.pending,
+              depositId: deposit.id,
+              provider: deposit.provider,
+              amount: deposit.amount,
+              transactionRef: deposit.transactionRef,
+            );
+          });
+          _clearDepositFormFields();
+          _consumeCachedDepositUpdate();
+          return;
+        }
+
+        await _clearStoredPendingAttempt();
+        setState(() {
+          _trackedDepositId = deposit.id;
+          _pendingAttemptId = null;
+          _confirmation = DepositConfirmationState(
+            kind: DepositConfirmationKind.approved,
+            depositId: deposit.id,
+            provider: deposit.provider,
+            amount: deposit.amount,
+            transactionRef: deposit.transactionRef,
+            verifiedAt: deposit.verifiedAt ?? deposit.createdAt,
+          );
+        });
+        _clearDepositFormFields();
+        _scheduleApprovedDismiss();
+    }
+  }
+
+  Future<void> _showPendingVerification(
+    PendingDepositVerification pending,
+  ) async {
+    final availableAt = DateTime.now().add(
+      Duration(seconds: pending.retryAfterSeconds),
+    );
+    _pendingAttemptId = pending.attemptId;
+    await _persistPendingAttempt(pending);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _confirmation = DepositConfirmationState(
+        kind: DepositConfirmationKind.verificationInProgress,
+        message: _mapDepositCodeToMessage(pending.code) ?? pending.message,
+        provider: pending.provider,
+        amount: pending.amount,
+        transactionRef: pending.transactionRef,
+        attemptId: pending.attemptId,
+        canCheckAgain: false,
+        checkAgainAvailableAt: availableAt,
+      );
+    });
+    _scheduleCheckAgainCooldown(availableAt);
+  }
+
+  void _scheduleCheckAgainCooldown(DateTime availableAt) {
+    _checkAgainCooldownTimer?.cancel();
+    final delay = availableAt.difference(DateTime.now());
+    if (delay.isNegative) {
+      if (mounted) {
+        setState(() {
+          _confirmation = _confirmation?.kind ==
+                  DepositConfirmationKind.verificationInProgress
+              ? DepositConfirmationState(
+                  kind: DepositConfirmationKind.verificationInProgress,
+                  message: _confirmation?.message,
+                  provider: _confirmation?.provider,
+                  amount: _confirmation?.amount,
+                  transactionRef: _confirmation?.transactionRef,
+                  attemptId: _confirmation?.attemptId,
+                  canCheckAgain: true,
+                  checkAgainAvailableAt: availableAt,
+                )
+              : _confirmation;
+        });
+      }
+      return;
+    }
+    _checkAgainCooldownTimer = Timer(delay, () {
+      if (!mounted) {
+        return;
+      }
+      if (_confirmation?.kind !=
+          DepositConfirmationKind.verificationInProgress) {
+        return;
+      }
+      setState(() {
+        _confirmation = DepositConfirmationState(
+          kind: DepositConfirmationKind.verificationInProgress,
+          message: _confirmation?.message,
+          provider: _confirmation?.provider,
+          amount: _confirmation?.amount,
+          transactionRef: _confirmation?.transactionRef,
+          attemptId: _confirmation?.attemptId,
+          canCheckAgain: true,
+          checkAgainAvailableAt: availableAt,
+        );
+      });
+    });
+  }
+
+  Future<void> _checkPendingVerification() async {
+    final attemptId = _pendingAttemptId ?? _confirmation?.attemptId;
+    if (attemptId == null || _isSubmitting || _checkInFlight) {
+      return;
+    }
+    if (_confirmation?.canCheckAgain != true) {
+      return;
+    }
+
+    _checkInFlight = true;
+    setState(() {
+      _isSubmitting = true;
+      _confirmation = DepositConfirmationState(
+        kind: DepositConfirmationKind.verificationInProgress,
+        message: context.l10n.depositVerifying,
+        provider: _confirmation?.provider,
+        amount: _confirmation?.amount,
+        transactionRef: _confirmation?.transactionRef,
+        attemptId: attemptId,
+        canCheckAgain: false,
+        checkAgainAvailableAt: DateTime.now().add(const Duration(seconds: 5)),
+      );
+    });
+
+    try {
+      final result = await ref
+          .read(walletRepositoryProvider)
+          .checkVerificationAttempt(attemptId: attemptId);
+      if (!mounted) {
+        return;
+      }
+      await _handleDepositSubmitResult(result);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error is ApiException
+          ? _handleDepositError(error)
+          : context.l10n.depositCouldNotSubmit;
+      final code = error is ApiException ? error.code : null;
+      if (code == 'VERIFICATION_PENDING' ||
+          code == 'VERIFICATION_UNAVAILABLE') {
+        await _showPendingVerification(
+          PendingDepositVerification(
+            attemptId: attemptId,
+            code: code ?? 'VERIFICATION_PENDING',
+            message: message,
+            retryAfterSeconds: 5,
+            provider: _confirmation?.provider ?? _provider!,
+            amount: _confirmation?.amount ?? _amountController.text.trim(),
+            transactionRef:
+                _confirmation?.transactionRef ??
+                _transactionRefController.text.trim(),
+          ),
+        );
+      } else {
+        await _clearStoredPendingAttempt();
+        setState(() {
+          _pendingAttemptId = null;
+          _confirmation = DepositConfirmationState(
+            kind: code == 'UNDER_REVIEW'
+                ? DepositConfirmationKind.underReview
+                : DepositConfirmationKind.rejected,
+            message: message,
+            provider: _confirmation?.provider ?? _provider,
+            amount: _confirmation?.amount ?? _amountController.text.trim(),
+            transactionRef:
+                _confirmation?.transactionRef ??
+                _transactionRefController.text.trim(),
+            canRetry: code != 'ALREADY_USED' && code != 'UNDER_REVIEW',
+          );
+        });
+      }
+    } finally {
+      _checkInFlight = false;
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _persistPendingAttempt(
+    PendingDepositVerification pending,
+  ) async {
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    if (userId == null) {
+      return;
+    }
+    final storage = await ref.read(appPreferencesStorageProvider.future);
+    await storage.writePendingDepositAttempt(
+      userId: userId,
+      attemptId: pending.attemptId,
+      provider: pending.provider.apiValue,
+      amount: pending.amount,
+      transactionRef: pending.transactionRef,
+    );
+  }
+
+  Future<void> _clearStoredPendingAttempt() async {
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    if (userId == null) {
+      return;
+    }
+    final storage = await ref.read(appPreferencesStorageProvider.future);
+    await storage.clearPendingDepositAttempt(userId);
+  }
+
+  Future<void> _restorePendingVerificationAttempt() async {
+    final session = ref.read(authControllerProvider).session;
+    final userId = session?.user.id;
+    if (userId == null) {
+      return;
+    }
+    final storage = await ref.read(appPreferencesStorageProvider.future);
+    final raw = storage.readPendingDepositAttempt(userId);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    final parts = raw.split('|');
+    if (parts.length < 4) {
+      await storage.clearPendingDepositAttempt(userId);
+      return;
+    }
+    final attemptId = parts[0];
+    final provider = PaymentProvider.fromApi(parts[1]);
+    final amount = parts[2];
+    final transactionRef = parts.sublist(3).join('|');
+
+    try {
+      final active = await ref
+          .read(walletRepositoryProvider)
+          .getActiveVerificationAttempt(
+            provider: provider,
+            transactionRef: transactionRef,
+          );
+      if (!mounted) {
+        return;
+      }
+      if (active == null) {
+        await storage.clearPendingDepositAttempt(userId);
+        return;
+      }
+      _provider = provider;
+      _isChoosingProvider = false;
+      _entryTab = _DepositEntryTab.regular;
+      _ignoreFieldChanges = true;
+      _amountController.text = amount;
+      _transactionRefController.text = transactionRef;
+      _ignoreFieldChanges = false;
+      await _showPendingVerification(active);
+    } catch (_) {
+      // Keep local fields if network fails; user can still Check Again by id.
+      if (!mounted) {
+        return;
+      }
+      _provider = provider;
+      _isChoosingProvider = false;
+      _entryTab = _DepositEntryTab.regular;
+      await _showPendingVerification(
+        PendingDepositVerification(
+          attemptId: attemptId,
+          code: 'VERIFICATION_PENDING',
+          message: context.l10n.depositVerificationInProgressMessage,
+          retryAfterSeconds: 5,
+          provider: provider,
+          amount: amount,
+          transactionRef: transactionRef,
+        ),
+      );
+    }
+  }
+
   void _clearServerErrors() {
     _amountServerError = null;
     _transactionRefServerError = null;
-  }
-
-  String _localizedDepositInstruction(
-    AppLocalizations l10n,
-    PaymentProvider provider,
-  ) {
-    return switch (provider) {
-      PaymentProvider.cbe => l10n.depositInstructionCbe,
-      PaymentProvider.telebirr => l10n.depositInstructionTelebirr,
-      PaymentProvider.awash => l10n.depositInstructionAwash,
-      PaymentProvider.boa => l10n.depositInstructionBoa,
-    };
   }
 
   String _receiptLabel(DepositConfigModel? config, PaymentProvider provider) {
@@ -980,9 +1400,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       case 'SETTLEMENT_MISMATCH':
         return l10n.depositReceiverMismatch;
       case 'INVALID_RECEIPT':
+      case 'INVALID_TRANSACTION':
         return l10n.depositReceiptInvalid;
+      case 'VERIFICATION_PENDING':
+        return l10n.depositVerificationInProgressMessage;
       case 'VERIFICATION_UNAVAILABLE':
-        return l10n.depositCouldNotSubmit;
+        return l10n.depositVerificationTemporaryUnavailable;
     }
 
     return null;

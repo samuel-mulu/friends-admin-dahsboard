@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -133,6 +134,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: Icons.person_rounded,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.name],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                        ],
                         validator: (v) => validateFullName(v, l10n),
                       ),
                       const SizedBox(height: 18),

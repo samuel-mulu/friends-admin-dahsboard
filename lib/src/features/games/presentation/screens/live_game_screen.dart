@@ -145,6 +145,10 @@ import '../utils/live_resume_provider_policy.dart';
 import '../../domain/registration_state_patch.dart';
 import '../../domain/resolved_cartela_availability.dart';
 import '../utils/registration_ux_metrics.dart';
+import '../../../settings/domain/feature_settings.dart';
+import '../../../settings/presentation/providers/feature_settings_provider.dart';
+import '../../domain/bingo_claim_source.dart';
+import '../utils/auto_bingo_runtime.dart';
 
 part 'live_game_orchestration.dart';
 part 'live_game_realtime.dart';
@@ -327,6 +331,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   DateTime? _liveRoomSplashStartedAt;
   int _loadGeneration = 0;
   ProviderSubscription<AuthState>? _authSessionSubscription;
+  ProviderSubscription<AsyncValue<FeatureSettingsUiState>>?
+  _featureSettingsSubscription;
   LivePresentationPhase? _lastDebugPhase;
   final bool _isSyncingLiveGame = false;
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
@@ -1059,7 +1065,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       if (isLiveHostActive) {
         setState(() {});
         _markCalledNumbersPanelDirty();
+        _scheduleAutoBingoEvaluation(reason: 'claim_recovery_changed');
       }
+    };
+    _countdown.onBingoClaimUnlocked = () {
+      _scheduleAutoBingoEvaluation(reason: 'bingo_claim_unlocked');
     };
     _warmCartelaMarksStorage();
     if (widget.initialGame != null) {
@@ -1089,6 +1099,16 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       authControllerProvider,
       _onAuthSessionChanged,
     );
+    final initialFeatureSettings =
+        ref.read(featureSettingsControllerProvider).asData?.value.settings;
+    _cn.setEffectiveAutoMark(initialFeatureSettings?.effectiveAutoMark ?? false);
+    _cn.setEffectiveAutoBingo(
+      initialFeatureSettings?.effectiveAutoBingo ?? false,
+    );
+    _featureSettingsSubscription = ref.listenManual(
+      featureSettingsControllerProvider,
+      _onFeatureSettingsChanged,
+    );
     unawaited(_bootstrapLiveRoomSplash());
     _registerSocketListeners();
     _joinSessionRoomEarly(widget.gameId ?? widget.initialGame?.sessionId);
@@ -1100,6 +1120,43 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
   }
 
+  void _onFeatureSettingsChanged(
+    AsyncValue<FeatureSettingsUiState>? previous,
+    AsyncValue<FeatureSettingsUiState> next,
+  ) {
+    final settings = next.asData?.value.settings;
+    final nextAutoMark = settings?.effectiveAutoMark ?? false;
+    final nextAutoBingo = settings?.effectiveAutoBingo ?? false;
+    final autoMarkChanged = _cn.effectiveAutoMark != nextAutoMark;
+    final autoBingoChanged = _cn.effectiveAutoBingo != nextAutoBingo;
+    if (!autoMarkChanged && !autoBingoChanged) {
+      return;
+    }
+
+    if (!mounted || !isLiveHostActive) {
+      if (autoMarkChanged) {
+        _cn.setEffectiveAutoMark(nextAutoMark);
+      }
+      if (autoBingoChanged) {
+        _cn.setEffectiveAutoBingo(nextAutoBingo);
+      }
+      return;
+    }
+
+    setState(() {
+      if (autoMarkChanged) {
+        _cn.setEffectiveAutoMark(nextAutoMark);
+        _sortMyCartelas();
+      }
+      if (autoBingoChanged) {
+        _cn.setEffectiveAutoBingo(nextAutoBingo);
+      }
+    });
+    if (autoBingoChanged && nextAutoBingo) {
+      _scheduleAutoBingoEvaluation(reason: 'feature_settings_enabled');
+    }
+  }
+
   @override
   void dispose() {
     _hostTornDown = true;
@@ -1107,6 +1164,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _loadGeneration++;
     _authSessionSubscription?.close();
     _authSessionSubscription = null;
+    _featureSettingsSubscription?.close();
+    _featureSettingsSubscription = null;
+    _countdown.onBingoClaimUnlocked = null;
     // Riverpod forbids provider writes during widget-tree finalization; defer clear.
     final cartelasNotifier = _activeCartelasNotifier;
     _activeCartelasNotifier = null;
@@ -1183,6 +1243,11 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     // Invalidate old-user callbacks immediately, before deferred UI work.
     _applySocketSessionMembership(null);
     _syncCachedAuthSession();
+    // Stop Auto Mark/Bingo scheduling for the prior user; do not cancel
+    // SharedPreferences claim identities (scoped by userId/sessionId).
+    _cn.setEffectiveAutoMark(false);
+    _cn.setEffectiveAutoBingo(false);
+    _cn.ensureAutoBingoScope(sessionId: null, roundIndex: 0);
     unawaited(_cn.bindClaimRecoveryScope(_cachedMarksUserId, _activeSessionId));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future<void>.microtask(() async {
@@ -1216,6 +1281,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             _cn.marksSessionId = null;
             _cn.marksOwnerUserId = null;
             _cn.restoredMarksSessionId = null;
+            _cn.notifyManualMarksChanged();
           });
         }
 
@@ -1775,38 +1841,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
 
     final cartelaSortMode = ref.watch(cartelaSortModeProvider);
     final cartelaSortMaxRemains = ref.watch(cartelaSortMaxRemainsProvider);
-    final orderedCartelas = _orderedMyCartelas(
-      cartelaSortMode,
-      cartelaSortMaxRemains,
-    );
-    final cartelaList = _InlineRegisteredCartelaList(
-      cartelas: orderedCartelas,
-      sortResultsByCartelaId: _cn.cartelaSortResults,
-      canClaimBingoFor: _canClaimBingoForCartela,
-      claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
-      pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
-      showPendingClaimState: !_showsPostGameSummary,
-      showFinishedOutcome: _showFinishedCartelaOutcome,
-      freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
-      manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-      lastManualMarkedKey: _cn.lastManualMarkedKey,
-      markedNumbersFor: _markedNumbersForCartela,
-      sortResultFor: _sortResultForCartela,
-      winningPatternCellsByGameCartelaId:
-          _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
-      winningPatternOverlayByGameCartelaId:
-          _review.winnerCartelaDisplay.overlayByGameCartelaId,
-      winningBallCellIndexByGameCartelaId:
-          _review.winnerCartelaDisplay.winningBallCellIndexByGameCartelaId,
-      prizeAmountFor: _prizeAmountForGameCartela,
-      onMarkedNumberToggled: _toggleMarkedNumber,
-      onClaimBingo: _claimBingo,
-      blockedReasonCodeFor: _blockedReasonCodeForCartela,
-      blockedServerReasonFor: _blockedServerReasonForCartela,
-      onReorder: cartelaSortMode.allowsManualReorder && _myCartelas.length > 1
-          ? _reorderMyCartela
-          : null,
-      bingoLockListenable: _countdown.bingoClaimLocked,
+    final cartelaList = _buildPlayCartelaList(
+      cartelaSortMode: cartelaSortMode,
+      cartelaSortMaxRemains: cartelaSortMaxRemains,
       decorativeMotionAllowedListenable: _liveCartelaScrollIdle,
     );
 
@@ -2147,40 +2184,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               final cartelaSortMode = ref.watch(cartelaSortModeProvider);
               final cartelaSortMaxRemains =
                   ref.watch(cartelaSortMaxRemainsProvider);
-              return _InlineRegisteredCartelaList(
-                cartelas: _orderedMyCartelas(
-                  cartelaSortMode,
-                  cartelaSortMaxRemains,
-                ),
-                sortResultsByCartelaId: _cn.cartelaSortResults,
-                canClaimBingoFor: _canClaimBingoForCartela,
-                claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
-                pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
-                showPendingClaimState: !_showsPostGameSummary,
-                showFinishedOutcome: _showFinishedCartelaOutcome,
-                freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
-                manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-                lastManualMarkedKey: _cn.lastManualMarkedKey,
-                markedNumbersFor: _markedNumbersForCartela,
-                sortResultFor: _sortResultForCartela,
-                winningPatternCellsByGameCartelaId:
-                    _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
-                winningPatternOverlayByGameCartelaId:
-                    _review.winnerCartelaDisplay.overlayByGameCartelaId,
-                winningBallCellIndexByGameCartelaId: _review
-                    .winnerCartelaDisplay
-                    .winningBallCellIndexByGameCartelaId,
-                prizeAmountFor: _prizeAmountForGameCartela,
-                onMarkedNumberToggled: _toggleMarkedNumber,
-                onClaimBingo: _claimBingo,
-                blockedReasonCodeFor: _blockedReasonCodeForCartela,
-                blockedServerReasonFor: _blockedServerReasonForCartela,
-                onReorder:
-                    cartelaSortMode.allowsManualReorder &&
-                        _myCartelas.length > 1
-                    ? _reorderMyCartela
-                    : null,
-                bingoLockListenable: _countdown.bingoClaimLocked,
+              return _buildPlayCartelaList(
+                cartelaSortMode: cartelaSortMode,
+                cartelaSortMaxRemains: cartelaSortMaxRemains,
               );
             },
           ),

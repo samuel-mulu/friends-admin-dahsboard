@@ -43,6 +43,52 @@ class LiveReviewController {
   List<int> sessionWinnerCartelaNumbers = const [];
   List<int> sessionBlockedCartelaNumbers = const [];
   List<int> sessionCheckingCartelaNumbers = const [];
+  final Map<String, ({String attemptId, int cartelaNumber})>
+      _checkingClaims = {};
+  final Set<String> _resolvedCheckingAttempts = {};
+  String? _checkingScope;
+
+  void syncClaimCheckingScope(String? sessionId, int roundIndex) {
+    final scope = '$sessionId|$roundIndex';
+    if (_checkingScope == scope) return;
+    clearClaimCheckingState();
+    _checkingScope = scope;
+  }
+
+  bool recordCheckingClaim(String cartelaId, String attemptId, int number) {
+    if (_resolvedCheckingAttempts.contains(attemptId)) return false;
+    final previous = _checkingClaims[cartelaId];
+    if (previous != null && previous.attemptId != attemptId) {
+      _resolvedCheckingAttempts.add(previous.attemptId);
+    }
+    _checkingClaims[cartelaId] = (attemptId: attemptId, cartelaNumber: number);
+    return true;
+  }
+
+  int? resolveCheckingClaim(String cartelaId, String attemptId) {
+    _resolvedCheckingAttempts.add(attemptId);
+    final checking = _checkingClaims[cartelaId];
+    if (checking == null || checking.attemptId != attemptId) return null;
+    clearCheckingCartela(checking.cartelaNumber);
+    return checking.cartelaNumber;
+  }
+
+  void clearCheckingCartela(int number) {
+    _checkingClaims.removeWhere((_, checking) {
+      if (checking.cartelaNumber != number) return false;
+      _resolvedCheckingAttempts.add(checking.attemptId);
+      return true;
+    });
+    sessionCheckingCartelaNumbers = sessionCheckingCartelaNumbers
+        .where((value) => value != number).toList(growable: false);
+  }
+
+  void clearClaimCheckingState() {
+    sessionCheckingCartelaNumbers = const [];
+    _checkingClaims.clear();
+    _resolvedCheckingAttempts.clear();
+    _checkingScope = null;
+  }
   final WinnerCartelaDisplayCache winnerCartelaDisplay =
       WinnerCartelaDisplayCache();
 
@@ -183,7 +229,7 @@ class LiveReviewController {
     sessionWinnerResultsLoaded = false;
     sessionWinnerCartelaNumbers = const [];
     sessionBlockedCartelaNumbers = const [];
-    sessionCheckingCartelaNumbers = const [];
+    clearClaimCheckingState();
     clearFinishedReviewVisualState(
       reason: WinnerPatternClearReason.sessionChanged,
     );

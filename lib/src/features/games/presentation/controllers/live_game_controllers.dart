@@ -28,6 +28,7 @@ class LiveGameControllers {
             sessionId: attempt.sessionId,
             gameCartelaId: attempt.gameCartelaId,
             claimAttemptId: attempt.claimAttemptId,
+            claimSource: attempt.claimSource,
           ),
         ),
         missedPreview = MissedPreviewController(host);

@@ -438,6 +438,12 @@ abstract class AppLocalizations {
   /// **'Full name must be at least 3 characters.'**
   String get validatorFullNameLength;
 
+  /// No description provided for @validatorFullNameNoNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name cannot contain numbers.'**
+  String get validatorFullNameNoNumbers;
+
   /// No description provided for @validatorPasswordMismatch.
   ///
   /// In en, this message translates to:
@@ -1026,6 +1032,30 @@ abstract class AppLocalizations {
   /// **'Verifying your payment…'**
   String get depositVerifying;
 
+  /// No description provided for @depositVerificationInProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification in progress'**
+  String get depositVerificationInProgressTitle;
+
+  /// No description provided for @depositVerificationInProgressMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment is still being verified. Keep this receipt and tap Check Again shortly—do not submit a new payment.'**
+  String get depositVerificationInProgressMessage;
+
+  /// No description provided for @depositCheckAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Again'**
+  String get depositCheckAgain;
+
+  /// No description provided for @depositVerificationTemporaryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment verification is temporarily unavailable. Please try Check Again shortly.'**
+  String get depositVerificationTemporaryUnavailable;
+
   /// No description provided for @depositApprovedTitle.
   ///
   /// In en, this message translates to:
@@ -1169,6 +1199,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'2. Enter amount and receipt'**
   String get depositStepSubmitDetails;
+
+  /// No description provided for @depositTabSmart.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS full message'**
+  String get depositTabSmart;
+
+  /// No description provided for @depositTabRegular.
+  ///
+  /// In en, this message translates to:
+  /// **'Regular Deposit'**
+  String get depositTabRegular;
+
+  /// No description provided for @depositSmartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste your {provider} SMS, receipt link, or transaction reference. Provider stays {provider}.'**
+  String depositSmartHint(String provider);
+
+  /// No description provided for @depositSmartMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS / receipt'**
+  String get depositSmartMessageLabel;
+
+  /// No description provided for @depositSmartMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste {provider} SMS, receipt link, or reference'**
+  String depositSmartMessageHint(String provider);
+
+  /// No description provided for @depositSmartParsedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm parsed details'**
+  String get depositSmartParsedTitle;
+
+  /// No description provided for @depositSmartParsedReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Details extracted. Confirm and submit.'**
+  String get depositSmartParsedReady;
+
+  /// No description provided for @depositSmartWrongProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'This looks like a different payment method. Stay on {provider}, or Change provider and try again. Telebirr messages cannot be submitted as CBE.'**
+  String depositSmartWrongProvider(String provider);
+
+  /// No description provided for @depositSmartCbeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'CBE SMS full message supports an official receipt URL or transaction reference only. Full SMS paste is not supported yet — use Regular Deposit.'**
+  String get depositSmartCbeUnsupported;
+
+  /// No description provided for @depositSmartUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read this SMS full message. Use Regular Deposit to enter amount and reference.'**
+  String get depositSmartUnsupported;
+
+  /// No description provided for @depositSmartIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not find a valid transaction reference in this text. Check the paste or use Regular Deposit.'**
+  String get depositSmartIncomplete;
+
+  /// No description provided for @depositSmartUseRegular.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Regular Deposit'**
+  String get depositSmartUseRegular;
+
+  /// No description provided for @depositSmartConfirmSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm and submit'**
+  String get depositSmartConfirmSubmit;
 
   /// No description provided for @depositStepInstructions.
   ///
@@ -2759,6 +2867,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sounds'**
   String get drawerSounds;
+
+  /// No description provided for @drawerAutoMark.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Mark'**
+  String get drawerAutoMark;
+
+  /// No description provided for @drawerAutoBingo.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Bingo'**
+  String get drawerAutoBingo;
 
   /// No description provided for @drawerSortCartelasByLines.
   ///

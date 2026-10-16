@@ -192,6 +192,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full name must be at least 3 characters.';
 
   @override
+  String get validatorFullNameNoNumbers => 'Full name cannot contain numbers.';
+
+  @override
   String get validatorPasswordMismatch => 'Passwords do not match.';
 
   @override
@@ -547,6 +550,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get depositVerifying => 'Verifying your payment…';
 
   @override
+  String get depositVerificationInProgressTitle => 'Verification in progress';
+
+  @override
+  String get depositVerificationInProgressMessage =>
+      'Your payment is still being verified. Keep this receipt and tap Check Again shortly—do not submit a new payment.';
+
+  @override
+  String get depositCheckAgain => 'Check Again';
+
+  @override
+  String get depositVerificationTemporaryUnavailable =>
+      'Payment verification is temporarily unavailable. Please try Check Again shortly.';
+
+  @override
   String get depositApprovedTitle => 'Deposit approved';
 
   @override
@@ -630,6 +647,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositStepSubmitDetails => '2. Enter amount and receipt';
+
+  @override
+  String get depositTabSmart => 'SMS full message';
+
+  @override
+  String get depositTabRegular => 'Regular Deposit';
+
+  @override
+  String depositSmartHint(String provider) {
+    return 'Paste your $provider SMS, receipt link, or transaction reference. Provider stays $provider.';
+  }
+
+  @override
+  String get depositSmartMessageLabel => 'SMS / receipt';
+
+  @override
+  String depositSmartMessageHint(String provider) {
+    return 'Paste $provider SMS, receipt link, or reference';
+  }
+
+  @override
+  String get depositSmartParsedTitle => 'Confirm parsed details';
+
+  @override
+  String get depositSmartParsedReady =>
+      'Details extracted. Confirm and submit.';
+
+  @override
+  String depositSmartWrongProvider(String provider) {
+    return 'This looks like a different payment method. Stay on $provider, or Change provider and try again. Telebirr messages cannot be submitted as CBE.';
+  }
+
+  @override
+  String get depositSmartCbeUnsupported =>
+      'CBE SMS full message supports an official receipt URL or transaction reference only. Full SMS paste is not supported yet — use Regular Deposit.';
+
+  @override
+  String get depositSmartUnsupported =>
+      'Could not read this SMS full message. Use Regular Deposit to enter amount and reference.';
+
+  @override
+  String get depositSmartIncomplete =>
+      'Could not find a valid transaction reference in this text. Check the paste or use Regular Deposit.';
+
+  @override
+  String get depositSmartUseRegular => 'Use Regular Deposit';
+
+  @override
+  String get depositSmartConfirmSubmit => 'Confirm and submit';
 
   @override
   String get depositStepInstructions => '3. How to send';
@@ -1582,6 +1648,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerSounds => 'Sounds';
+
+  @override
+  String get drawerAutoMark => 'Auto Mark';
+
+  @override
+  String get drawerAutoBingo => 'Auto Bingo';
 
   @override
   String get drawerSortCartelasByLines => 'Sort cartelas by lines';

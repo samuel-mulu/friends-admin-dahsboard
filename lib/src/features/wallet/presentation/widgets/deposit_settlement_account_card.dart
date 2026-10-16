@@ -19,14 +19,12 @@ class DepositSettlementAccountCard extends StatelessWidget {
   const DepositSettlementAccountCard({
     required this.accounts,
     this.providerName,
-    this.helpText,
     this.onShowInstructions,
     super.key,
   });
 
   final List<DepositSettlementAccountItem> accounts;
   final String? providerName;
-  final String? helpText;
   final VoidCallback? onShowInstructions;
 
   @override
@@ -40,62 +38,41 @@ class DepositSettlementAccountCard extends StatelessWidget {
 
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final isMultiAccount = visibleAccounts.length > 1;
-    final trimmedHelp = helpText?.trim();
     final provider = providerName?.trim();
+    final hasProviderWarning = provider != null && provider.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                isMultiAccount
-                    ? l10n.depositSendToOneOfAccounts
-                    : l10n.depositSendToAccount,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+        if (hasProviderWarning || onShowInstructions != null)
+          Row(
+            children: [
+              if (hasProviderWarning)
+                Expanded(
+                  child: Text(
+                    l10n.depositOnlyUseProvider(provider),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              if (onShowInstructions != null)
+                IconButton(
+                  tooltip: l10n.depositShowInstructions,
+                  onPressed: onShowInstructions,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.menu_book_outlined, size: 20),
                 ),
-              ),
-            ),
-            if (onShowInstructions != null)
-              IconButton(
-                tooltip: l10n.depositShowInstructions,
-                onPressed: onShowInstructions,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.menu_book_outlined, size: 20),
-              ),
-          ],
-        ),
-        if (provider != null && provider.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            l10n.depositOnlyUseProvider(provider),
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.error,
-              fontWeight: FontWeight.w600,
-            ),
+            ],
           ),
-        ],
-        if (trimmedHelp != null && trimmedHelp.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            trimmedHelp,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-        const SizedBox(height: 10),
+        if (hasProviderWarning || onShowInstructions != null)
+          const SizedBox(height: 10),
         for (var index = 0; index < visibleAccounts.length; index++) ...[
           if (index > 0) const SizedBox(height: 8),
-          _CompactAccountTile(
-            account: visibleAccounts[index],
-            showSendHint: isMultiAccount,
-          ),
+          _CompactAccountTile(account: visibleAccounts[index]),
         ],
       ],
     );
@@ -103,13 +80,9 @@ class DepositSettlementAccountCard extends StatelessWidget {
 }
 
 class _CompactAccountTile extends StatelessWidget {
-  const _CompactAccountTile({
-    required this.account,
-    this.showSendHint = false,
-  });
+  const _CompactAccountTile({required this.account});
 
   final DepositSettlementAccountItem account;
-  final bool showSendHint;
 
   @override
   Widget build(BuildContext context) {
@@ -162,17 +135,6 @@ class _CompactAccountTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  if (showSendHint) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.depositCopyThenSend,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),

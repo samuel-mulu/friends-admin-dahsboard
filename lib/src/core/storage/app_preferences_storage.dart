@@ -19,6 +19,7 @@ class AppPreferencesStorage {
   static const _profileAvatarPrefix = 'profile_avatar_';
   static const _dismissedGameAnnouncementsKey = 'dismissed_game_announcements';
   static const _cbeWithdrawAccountPrefix = 'cbe_withdraw_account_';
+  static const _pendingDepositAttemptPrefix = 'pending_deposit_attempt_';
   static const defaultCbeWithdrawAccount = '1000';
 
   final SharedPreferences _prefs;
@@ -151,11 +152,36 @@ class AppPreferencesStorage {
     return _prefs.setString(_cbeWithdrawAccountKey(userId), trimmed);
   }
 
+  String? readPendingDepositAttempt(String userId) {
+    return _prefs.getString(_pendingDepositAttemptKey(userId));
+  }
+
+  Future<void> writePendingDepositAttempt({
+    required String userId,
+    required String attemptId,
+    required String provider,
+    required String amount,
+    required String transactionRef,
+  }) {
+    return _prefs.setString(
+      _pendingDepositAttemptKey(userId),
+      '$attemptId|$provider|$amount|$transactionRef',
+    );
+  }
+
+  Future<void> clearPendingDepositAttempt(String userId) {
+    return _prefs.remove(_pendingDepositAttemptKey(userId));
+  }
+
   String _profileAvatarKey(String userId) {
     return '$_profileAvatarPrefix$userId';
   }
 
   String _cbeWithdrawAccountKey(String userId) {
     return '$_cbeWithdrawAccountPrefix$userId';
+  }
+
+  String _pendingDepositAttemptKey(String userId) {
+    return '$_pendingDepositAttemptPrefix$userId';
   }
 }

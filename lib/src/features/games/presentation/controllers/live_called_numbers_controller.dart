@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../data/bingo_claim_attempt_storage.dart';
 import '../../data/models/bingo_claim_result.dart';
+import '../../domain/bingo_claim_source.dart';
 import '../../domain/winning_ball_cell.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../debug/bingo_claim_diagnostics.dart';
 import '../utils/bingo_claim_eligibility.dart';
+import '../utils/cartela_mark_helpers.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 import '../utils/live_called_number_monotonic.dart';
 import '../utils/live_called_number_sync.dart';
@@ -59,6 +61,8 @@ class BingoClaimAttempt {
     required this.gameCartelaId,
     required this.claimAttemptId,
     required this.roundIndex,
+    this.claimSource = BingoClaimSource.manual,
+    this.autoBingoAttemptKey,
   });
 
   final String userId;
@@ -66,6 +70,8 @@ class BingoClaimAttempt {
   final String gameCartelaId;
   final String claimAttemptId;
   final int roundIndex;
+  final BingoClaimSource claimSource;
+  final String? autoBingoAttemptKey;
   bool terminal = false;
   BingoClaimStatus? terminalStatus;
   String? serverClaimId;
@@ -91,6 +97,7 @@ class BingoClaimAttempt {
     'gameCartelaId': gameCartelaId,
     'claimAttemptId': claimAttemptId,
     'roundIndex': roundIndex,
+    'claimSource': claimSource.apiValue,
     'retryDenied': terminal,
   };
 }
@@ -402,6 +409,7 @@ class LiveCalledNumbersController {
           gameCartelaId: identity['gameCartelaId'] as String,
           claimAttemptId: identity['claimAttemptId'] as String,
           roundIndex: identity['roundIndex'] as int,
+          claimSource: BingoClaimSource.fromIdentity(identity['claimSource']),
         )..postInFlight = false;
         attempt.terminal = identity['retryDenied'] == true;
         _claimAttempts[attempt.gameCartelaId] = attempt;
@@ -427,6 +435,8 @@ class LiveCalledNumbersController {
     required String gameCartelaId,
     required String claimAttemptId,
     required int roundIndex,
+    BingoClaimSource claimSource = BingoClaimSource.manual,
+    String? autoBingoAttemptKey,
   }) {
     if (_claimDisposed ||
         claimScopeLoading ||
@@ -442,6 +452,8 @@ class LiveCalledNumbersController {
       gameCartelaId: gameCartelaId,
       claimAttemptId: claimAttemptId,
       roundIndex: roundIndex,
+      claimSource: claimSource,
+      autoBingoAttemptKey: autoBingoAttemptKey,
     );
     _claimAttempts[gameCartelaId] = attempt;
     activeClaimAttemptIdByCartelaId[gameCartelaId] = claimAttemptId;
@@ -799,6 +811,42 @@ class LiveCalledNumbersController {
   String? marksSessionId;
   String? marksOwnerUserId;
   String? restoredMarksSessionId;
+
+  /// Server-authoritative Auto Mark gate (`effectiveAutoMark`).
+  /// When true, [effectiveMarkedNumbers] merges called-number keys for display.
+  bool effectiveAutoMark = false;
+
+  /// Server-authoritative Auto Bingo gate (`effectiveAutoBingo`).
+  /// Independent of [effectiveAutoMark]; Nest remains claim authority.
+  bool effectiveAutoBingo = false;
+
+  /// FIFO gameCartelaIds awaiting AUTO claim submit (local scheduler only).
+  List<String> autoBingoQueue = <String>[];
+
+  /// Non-reentrant drain guard (R4).
+  bool autoBingoDrainActive = false;
+
+  /// Bumped on session/round transition; fences stale async drain work (R4).
+  int autoBingoGeneration = 0;
+
+  /// True while an AUTO `_submitBingoClaim` await is in flight.
+  bool autoBingoSubmitInFlight = false;
+
+  /// Attempt-level dedupe: session|round|cartela|completingOrder (R2).
+  final Set<String> autoBingoAttemptDedupeKeys = <String>{};
+  final Set<String> autoBingoDrainAttemptKeys = <String>{};
+
+  /// Terminal suppress: session|round|cartela (R2).
+  final Set<String> autoBingoTerminalSuppressKeys = <String>{};
+
+  String? _autoBingoScopeSessionId;
+  int _autoBingoScopeRoundIndex = 0;
+
+  /// Called-number mark keys for the active strip (`B:5`). Session-scoped.
+  final Set<String> calledMarkKeys = <String>{};
+
+  Set<String>? _cachedEffectiveMarkedNumbers;
+
   Map<String, CartelaPatternUiResult> cartelaSortResults = const {};
   String? cartelaSortSignature;
   final Map<String, Set<String>> blockedCartelaFrozenMarks =
@@ -847,7 +895,78 @@ class LiveCalledNumbersController {
     calledNumbersPanelRevision.dispose();
   }
 
-  Set<String> get effectiveMarkedNumbers => manualMarkedNumbers;
+  /// Visual marks for cartela cells. Manual marks are always included.
+  /// When [effectiveAutoMark] is true, also includes marks derived from the
+  /// authoritative called-number strip. Never write this set to storage.
+  Set<String> get effectiveMarkedNumbers {
+    if (!effectiveAutoMark) {
+      return manualMarkedNumbers;
+    }
+
+    final cached = _cachedEffectiveMarkedNumbers;
+    if (cached != null) {
+      return cached;
+    }
+
+    final next = visualMarkedNumbers(
+      manualMarkedNumbers: manualMarkedNumbers,
+      calledNumbers: calledNumbers,
+      effectiveAutoMark: true,
+    );
+    _cachedEffectiveMarkedNumbers = next;
+    return next;
+  }
+
+  void setEffectiveAutoMark(bool value) {
+    if (effectiveAutoMark == value) {
+      return;
+    }
+    effectiveAutoMark = value;
+    invalidateEffectiveMarkedNumbersCache();
+  }
+
+  void setEffectiveAutoBingo(bool value) {
+    if (effectiveAutoBingo == value) {
+      return;
+    }
+    effectiveAutoBingo = value;
+    if (!value) {
+      // Stop scheduling only — never cancel accepted recovery identities.
+      clearAutoBingoQueue();
+    }
+  }
+
+  void clearAutoBingoQueue() {
+    autoBingoQueue = <String>[];
+  }
+
+  /// Aligns Auto Bingo dedupe/queue with the active session/round (R2/R4).
+  void ensureAutoBingoScope({
+    required String? sessionId,
+    required int roundIndex,
+  }) {
+    if (sessionId == _autoBingoScopeSessionId &&
+        roundIndex == _autoBingoScopeRoundIndex) {
+      return;
+    }
+    _autoBingoScopeSessionId = sessionId;
+    _autoBingoScopeRoundIndex = roundIndex;
+    autoBingoGeneration++;
+    clearAutoBingoQueue();
+    autoBingoAttemptDedupeKeys.clear();
+    autoBingoDrainAttemptKeys.clear();
+    autoBingoTerminalSuppressKeys.clear();
+  }
+
+  void notifyManualMarksChanged() {
+    invalidateEffectiveMarkedNumbersCache();
+  }
+
+  void invalidateEffectiveMarkedNumbersCache() {
+    _cachedEffectiveMarkedNumbers = null;
+  }
+
+  bool isCalledMarkKey(String key) => calledMarkKeys.contains(key);
 
   int get highestKnownCalledOrder {
     if (processedCalledNumberOrders.isEmpty) {
@@ -953,6 +1072,10 @@ class LiveCalledNumbersController {
 
   void markCalledNumbersPanelDirty() {
     calledNumbersPanelRevision.value++;
+    // Auto Mark paints from the called strip; rebuild cartelas when it changes.
+    if (effectiveAutoMark) {
+      host.markNeedsBuild();
+    }
   }
 
   void rebuildCalledNumberTracking() {
@@ -979,6 +1102,12 @@ class LiveCalledNumbersController {
     processedCalledDrawKeys
       ..clear()
       ..addAll(drawKeys);
+
+    // Visual Auto Mark follows the committed strip only (not claim buffers).
+    calledMarkKeys
+      ..clear()
+      ..addAll(calledNumberMarkKeys(calledNumbers));
+    invalidateEffectiveMarkedNumbersCache();
   }
 
   void applyCalledNumbersSnapshot({
@@ -1120,6 +1249,7 @@ class LiveCalledNumbersController {
     activeClaimAttemptIdByCartelaId.clear();
     claimStripHoldActive = false;
     preClaimNextAutoCallAt = null;
+    ensureAutoBingoScope(sessionId: null, roundIndex: 0);
     processedClaimedIds.clear();
     processedResolvedClaimIds.clear();
     processedCalledNumberIds.clear();
@@ -1141,7 +1271,9 @@ class LiveCalledNumbersController {
     }
     if (clearCalledNumbers) {
       calledNumbers = const [];
+      calledMarkKeys.clear();
     }
+    invalidateEffectiveMarkedNumbersCache();
     isSyncingCalledNumbers = false;
   }
 

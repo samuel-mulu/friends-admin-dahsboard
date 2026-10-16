@@ -173,18 +173,34 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     return _cn.blockedServerReasonFor(gameCartela.id);
   }
 
-  Future<void> _claimBingo(GameCartelaModel gameCartela) async {
+  Future<void> _claimBingo(GameCartelaModel gameCartela) =>
+      _submitBingoClaim(gameCartela, source: BingoClaimSource.manual);
+
+  /// Shared MANUAL/AUTO claim path. Nest remains authority; AUTO only changes
+  /// `claimSource` and quiets expected business rejections (R3).
+  Future<_BingoClaimSubmitOutcome> _submitBingoClaim(
+    GameCartelaModel gameCartela, {
+    BingoClaimSource source = BingoClaimSource.manual,
+    String? autoBingoAttemptKey,
+  }) async {
     final sessionId = _activeSessionId;
-    if (sessionId == null || !_canClaimBingoForCartela(gameCartela)) return;
+    if (sessionId == null || !_canClaimBingoForCartela(gameCartela)) {
+      return const _BingoClaimSubmitOutcome(skipped: true);
+    }
+    final isAuto = source == BingoClaimSource.auto;
     final startedAt = DateTime.now();
     final attempt = _cn.beginClaimAttempt(
       gameCartelaId: gameCartela.id,
       claimAttemptId: const Uuid().v4(),
       roundIndex: _game?.displayRoundIndex ?? 1,
+      claimSource: source,
+      autoBingoAttemptKey: autoBingoAttemptKey,
     );
-    if (attempt == null) return;
+    if (attempt == null) {
+      return const _BingoClaimSubmitOutcome(skipped: true);
+    }
     BingoClaimDiagnostics.record(
-      event: 'bingo.tap',
+      event: isAuto ? 'bingo.auto' : 'bingo.tap',
       claimAttemptId: attempt.claimAttemptId,
       sessionId: sessionId,
       cartelaId: gameCartela.id,
@@ -210,16 +226,18 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
               _game = _game?.copyWith(nextAutoCallAt: previousSchedule);
             }
           });
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Could not save your claim. Please try again.'),
-          ));
+          if (!isAuto) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Could not save your claim. Please try again.'),
+            ));
+          }
         }
       }
-      return;
+      return const _BingoClaimSubmitOutcome(skipped: true);
     }
     if (!_claimCallbackIsCurrent(attempt)) {
       _cn.cancelUnsentClaim(attempt);
-      return;
+      return const _BingoClaimSubmitOutcome(skipped: true);
     }
     final requestStartedAt = DateTime.now();
     BingoClaimDiagnostics.record(
@@ -231,12 +249,14 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       state: 'post_in_flight',
       retryCount: attempt.sameUuidPostRetries,
     );
+    var outcome = const _BingoClaimSubmitOutcome();
     try {
       final result = await _gamesRepository.claimBingo(
         sessionId: sessionId,
         gameCartelaId: gameCartela.id,
         claimAttemptId: attempt.claimAttemptId,
         clientTapAt: startedAt,
+        claimSource: source,
       );
       BingoClaimDiagnostics.record(
         event: 'bingo.post.response',
@@ -247,7 +267,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         claimStatus: result.claim.status.name,
         state: 'http_ok',
       );
-      if (!isLiveHostActive) return;
+      if (!isLiveHostActive) {
+        return outcome;
+      }
       if (result.claim.claimAttemptId != attempt.claimAttemptId ||
           result.claim.gameCartelaId != attempt.gameCartelaId ||
           result.claim.gameId != attempt.sessionId ||
@@ -262,9 +284,15 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           attempt.serverClaimId = result.claim.id;
           _flushPendingClaimSocketEvents();
         }
-        return;
+        return outcome;
       }
       attempt.serverClaimId = result.claim.id;
+      outcome = _BingoClaimSubmitOutcome(
+        status: result.claim.status,
+        retryAllowed: result.retryAllowed,
+        failureCode: result.failureCode ?? result.claim.failureCode,
+        cartelaStatus: result.gameCartelaStatus,
+      );
       // A Chain round may have advanced while this HTTP response was in flight.
       if (attempt.roundIndex != _game?.displayRoundIndex) {
         setState(() {
@@ -309,9 +337,14 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           _cn.processedResolvedClaimIds.add(result.claim.id);
         }
         _scheduleCanonicalRefetch(includeMyCartelas: true);
-        return;
+        return outcome;
       }
       var resolved = const ClaimResolution(applied: false, cartelas: []);
+      _releaseRetryableAutoBingoAttempt(attempt,
+        status: result.claim.status, retryAllowed: result.retryAllowed,
+        failureCode: result.failureCode ?? result.claim.failureCode,
+        cartelaStatus: result.gameCartelaStatus,
+      );
       setState(() {
         resolved = _cn.resolveTerminalClaim(
           attempt: attempt,
@@ -350,7 +383,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           }
         }
       });
-      if (!resolved.applied) return;
+      if (!resolved.applied) return outcome;
       BingoClaimDiagnostics.record(
         event: 'bingo.terminal',
         claimAttemptId: attempt.claimAttemptId,
@@ -368,10 +401,22 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         _syncWinnerWindowTicker();
       }
       if (result.claim.status == BingoClaimStatus.failed && result.retryAllowed) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(result.claim.reason ??
-              'Bingo could not be checked. You can try again.'),
-        ));
+        final quietAuto = isAuto &&
+            isQuietAutoBingoFailureCode(
+              result.failureCode ?? result.claim.failureCode,
+            );
+        if (!quietAuto) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(result.claim.reason ??
+                'Bingo could not be checked. You can try again.'),
+          ));
+        }
+      } else if (isAuto &&
+          result.claim.status == BingoClaimStatus.failed &&
+          isQuietAutoBingoFailureCode(
+            result.failureCode ?? result.claim.failureCode,
+          )) {
+        // Quiet expected AUTO business rejection (R3).
       }
       if (result.claim.status.isTerminal) {
         _scheduleCanonicalRefetch(includeMyCartelas: true);
@@ -394,7 +439,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       // _runClaimRecovery before anything is dropped.
       attempt.postConnectNeverCompleted =
           error is ApiException && error.dioExceptionType == 'connectionTimeout';
-      if (!mounted || !_claimCallbackIsCurrent(attempt)) return;
+      if (!mounted || !_claimCallbackIsCurrent(attempt)) return outcome;
       BingoClaimDiagnostics.record(
         event: 'bingo.recovery.start',
         claimAttemptId: attempt.claimAttemptId,
@@ -408,7 +453,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         // Ambiguous only — never treat timeout/404 as INVALID. Retain UUID;
         // CONFIRMING UI + manual recheck / same-UUID retry until authoritative.
         // Offline gets its own copy so a dropped connection never reads like
-        // a rejected claim.
+        // a rejected claim. Manual snackbars unchanged; AUTO keeps same recovery.
         final isOffline = error is ApiException && error.isConnectivityFailure;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -460,12 +505,233 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         retryCount: attempt.sameUuidPostRetries,
       );
     }
+    return outcome;
+  }
+
+  @override
+  void _scheduleAutoBingoEvaluation({String reason = 'trigger'}) {
+    if (!isLiveHostActive || !_cn.effectiveAutoBingo) {
+      return;
+    }
+    unawaited(_runAutoBingoScheduler(reason: reason));
+  }
+
+  Future<void> _runAutoBingoScheduler({required String reason}) async {
+    if (!isLiveHostActive || !_cn.effectiveAutoBingo) {
+      return;
+    }
+    final sessionId = _activeSessionId;
+    final game = _game;
+    if (sessionId == null || game == null) {
+      return;
+    }
+    final roundIndex = game.displayRoundIndex;
+    _cn.ensureAutoBingoScope(sessionId: sessionId, roundIndex: roundIndex);
+    if (!gameAllowsAutoBingoClaims(game) || _winnerWindowExpired) {
+      _cn.clearAutoBingoQueue();
+      return;
+    }
+    // Do not scan while strip is paused — only committed strip numbers.
+    if (_cn.claimStripHoldActive ||
+        _cn.confirmingOrClaimingCartelaIds.isNotEmpty ||
+        _cn.bufferedCalledNumbers.isNotEmpty) {
+      if (_cn.autoBingoQueue.isNotEmpty) {
+        await _drainAutoBingoQueue();
+      }
+      return;
+    }
+
+    final completingOrder = completingCalledOrderOf(_cn.calledNumbers);
+    final eligible = selectAutoBingoPatternCompleteCartelas(
+      cartelas: _myCartelas,
+      calledNumbers: _cn.calledNumbers,
+      ruleKey: game.ruleKey,
+      terminalSuppressKeys: _cn.autoBingoTerminalSuppressKeys,
+      attemptDedupeKeys: _cn.autoBingoAttemptDedupeKeys,
+      sessionId: sessionId,
+      roundIndex: roundIndex,
+      completingCalledOrder: completingOrder,
+    );
+    if (eligible.isNotEmpty) {
+      _cn.autoBingoQueue = enqueueAutoBingoCartelas(
+        queue: _cn.autoBingoQueue,
+        incomingIds: eligible.map((c) => c.id),
+      );
+    }
+    await _drainAutoBingoQueue();
+  }
+
+  Future<void> _drainAutoBingoQueue() async {
+    if (_cn.autoBingoDrainActive) {
+      return;
+    }
+    _cn.autoBingoDrainActive = true;
+    final drainGeneration = _cn.autoBingoGeneration;
+    // Terminal callbacks may scan/requeue while this drain awaits HTTP.
+    // Reconsider the same key only through a later existing trigger.
+    final submittedKeys = _cn.autoBingoDrainAttemptKeys;
+    try {
+      while (isLiveHostActive &&
+          _cn.effectiveAutoBingo &&
+          _cn.autoBingoQueue.isNotEmpty &&
+          drainGeneration == _cn.autoBingoGeneration) {
+        final sessionId = _activeSessionId;
+        final game = _game;
+        if (sessionId == null || game == null) {
+          _cn.clearAutoBingoQueue();
+          return;
+        }
+        final roundIndex = game.displayRoundIndex;
+        _cn.ensureAutoBingoScope(sessionId: sessionId, roundIndex: roundIndex);
+        if (drainGeneration != _cn.autoBingoGeneration) {
+          return;
+        }
+
+        final completingOrder = completingCalledOrderOf(_cn.calledNumbers);
+        final headIndex = _cn.autoBingoQueue.indexWhere((id) =>
+            !submittedKeys.contains(autoBingoAttemptDedupeKey(
+              sessionId: sessionId, roundIndex: roundIndex,
+              gameCartelaId: id, completingCalledOrder: completingOrder,
+            )));
+        if (headIndex < 0) return;
+        final headId = _cn.autoBingoQueue[headIndex];
+        GameCartelaModel? cartela;
+        for (final candidate in _myCartelas) {
+          if (candidate.id == headId) {
+            cartela = candidate;
+            break;
+          }
+        }
+        final suppressKey = autoBingoTerminalSuppressKey(
+          sessionId: sessionId,
+          roundIndex: roundIndex,
+          gameCartelaId: headId,
+        );
+        final block = classifyAutoBingoQueueHead(
+          effectiveAutoBingo: _cn.effectiveAutoBingo,
+          gameAllowsClaims: gameAllowsAutoBingoClaims(game),
+          winnerWindowExpired: _winnerWindowExpired,
+          cartela: cartela,
+          sessionRoundMatches: true,
+          isConfirmingOrClaimingAny:
+              _cn.confirmingOrClaimingCartelaIds.isNotEmpty,
+          claimStripHoldActive: _cn.claimStripHoldActive,
+          hasUnresolvedAttemptForCartela: _cn.claimAttemptFor(headId) != null,
+          bingoClaimLocked: _countdown.bingoClaimLocked.value,
+          claimScopeLoading: _cn.claimScopeLoading,
+          autoSubmitInFlight: _cn.autoBingoSubmitInFlight,
+          terminalSuppressed:
+              _cn.autoBingoTerminalSuppressKeys.contains(suppressKey),
+        );
+
+        if (block == AutoBingoBlockKind.temporary) {
+          // Keep head queued; resume via claim/strip/recovery triggers (R1).
+          return;
+        }
+        if (block == AutoBingoBlockKind.permanent) {
+          _cn.autoBingoQueue = _cn.autoBingoQueue.where((id) => id != headId).toList(growable: false);
+          continue;
+        }
+
+        final attemptKey = autoBingoAttemptDedupeKey(
+          sessionId: sessionId,
+          roundIndex: roundIndex,
+          gameCartelaId: headId,
+          completingCalledOrder: completingOrder,
+        );
+        if (_cn.autoBingoAttemptDedupeKeys.contains(attemptKey)) {
+          _cn.autoBingoQueue = _cn.autoBingoQueue.where((id) => id != headId).toList(growable: false);
+          continue;
+        }
+        // Mark attempt dedupe before await so parallel scans cannot double-mint.
+        _cn.autoBingoAttemptDedupeKeys.add(attemptKey);
+        submittedKeys.add(attemptKey);
+        _cn.autoBingoQueue = _cn.autoBingoQueue.where((id) => id != headId).toList(growable: false);
+
+        final submitCartela = cartela!;
+        _cn.autoBingoSubmitInFlight = true;
+        late final _BingoClaimSubmitOutcome outcome;
+        try {
+          outcome = await _submitBingoClaim(
+            submitCartela,
+            source: BingoClaimSource.auto,
+            autoBingoAttemptKey: attemptKey,
+          );
+        } finally {
+          _cn.autoBingoSubmitInFlight = false;
+        }
+
+        if (drainGeneration != _cn.autoBingoGeneration || !isLiveHostActive) {
+          return;
+        }
+
+        if (outcome.skipped) {
+          // beginClaim / persist / eligibility race: do not burn attempt dedupe
+          // for this completing ball; re-queue and wait for a resume trigger.
+          final alreadySuppressed =
+              _cn.autoBingoTerminalSuppressKeys.contains(suppressKey);
+          if (!shouldReleaseAutoBingoAttemptAfterSkip(
+            cartelaStatus: submitCartela.status,
+            alreadyTerminalSuppressed: alreadySuppressed,
+          )) {
+            _cn.autoBingoTerminalSuppressKeys.add(suppressKey);
+            continue;
+          }
+          _cn.autoBingoAttemptDedupeKeys.remove(attemptKey);
+          _cn.autoBingoQueue = requeueAutoBingoCartelaFront(
+            queue: _cn.autoBingoQueue,
+            cartelaId: headId,
+          );
+          return;
+        }
+
+        if (shouldTerminalSuppressAutoBingo(
+          status: outcome.status,
+          retryAllowed: outcome.retryAllowed,
+          failureCode: outcome.failureCode,
+          cartelaStatus: outcome.cartelaStatus,
+        )) {
+          _cn.autoBingoTerminalSuppressKeys.add(suppressKey);
+        }
+      }
+    } finally {
+      submittedKeys.clear();
+      if (drainGeneration == _cn.autoBingoGeneration) {
+        _cn.autoBingoDrainActive = false;
+      } else {
+        _cn.autoBingoDrainActive = false;
+      }
+    }
   }
 
   bool _claimCallbackIsCurrent(BingoClaimAttempt attempt) =>
       isLiveHostActive && _cachedMarksUserId == attempt.userId &&
       _activeSessionId == attempt.sessionId &&
       _cn.isCurrentClaimAttempt(attempt);
+
+  void _releaseRetryableAutoBingoAttempt(BingoClaimAttempt attempt, {
+    required BingoClaimStatus status,
+    required bool retryAllowed,
+    required String? failureCode,
+    required GameCartelaStatus cartelaStatus,
+  }) {
+    final key = attempt.autoBingoAttemptKey;
+    if (key == null || attempt.claimSource != BingoClaimSource.auto ||
+        !_claimCallbackIsCurrent(attempt) ||
+        !_cn.claimOutcomeMatchesView(attempt, _game) ||
+        status != BingoClaimStatus.failed || !retryAllowed ||
+        cartelaStatus != GameCartelaStatus.registered ||
+        shouldTerminalSuppressAutoBingo(status: status, retryAllowed: retryAllowed,
+          failureCode: failureCode, cartelaStatus: cartelaStatus)) {
+      return;
+    }
+    _cn.autoBingoAttemptDedupeKeys.remove(key);
+    // Recovery may itself start a drain for siblings. Defer this key until
+    // that pass has finished, just as for a direct HTTP terminal callback.
+    if (_cn.effectiveAutoBingo) {
+      _cn.autoBingoDrainAttemptKeys.add(key);
+    }
+  }
 
   Future<void> _recoverClaimAttemptAfterAmbiguousFailure(
     BingoClaimAttempt attempt,
@@ -567,6 +833,10 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       return;
     }
     if (!result.status.isTerminal) return;
+    _releaseRetryableAutoBingoAttempt(attempt,
+      status: result.status, retryAllowed: result.retryAllowed,
+      failureCode: result.failureCode, cartelaStatus: result.gameCartelaStatus,
+    );
     var resolved = const ClaimResolution(applied: false, cartelas: []);
     setState(() {
       resolved = _cn.resolveTerminalClaim(
@@ -707,6 +977,52 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     return game.copyWith(nextAutoCallAt: result.nextAutoCallAt);
   }
 
+  /// Builds the play cartela grid. When Auto Mark is on, refreshes pattern
+  /// sort from derived visual marks before paint.
+  _InlineRegisteredCartelaList _buildPlayCartelaList({
+    required CartelaSortMode cartelaSortMode,
+    required int cartelaSortMaxRemains,
+    ValueListenable<bool>? decorativeMotionAllowedListenable,
+  }) {
+    if (_cn.effectiveAutoMark) {
+      _sortMyCartelas();
+    }
+
+    return _InlineRegisteredCartelaList(
+      cartelas: _orderedMyCartelas(
+        cartelaSortMode,
+        cartelaSortMaxRemains,
+      ),
+      sortResultsByCartelaId: _cn.cartelaSortResults,
+      canClaimBingoFor: _canClaimBingoForCartela,
+      claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
+      pendingClaimCartelaIds: _cn.pendingClaimCartelaIds,
+      showPendingClaimState: !_showsPostGameSummary,
+      showFinishedOutcome: _showFinishedCartelaOutcome,
+      freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
+      manualMarkedNumbers: _cn.effectiveMarkedNumbers,
+      lastManualMarkedKey: _cn.lastManualMarkedKey,
+      markedNumbersFor: _markedNumbersForCartela,
+      sortResultFor: _sortResultForCartela,
+      winningPatternCellsByGameCartelaId:
+          _review.winnerCartelaDisplay.patternCellsByGameCartelaId,
+      winningPatternOverlayByGameCartelaId:
+          _review.winnerCartelaDisplay.overlayByGameCartelaId,
+      winningBallCellIndexByGameCartelaId:
+          _review.winnerCartelaDisplay.winningBallCellIndexByGameCartelaId,
+      prizeAmountFor: _prizeAmountForGameCartela,
+      onMarkedNumberToggled: _toggleMarkedNumber,
+      onClaimBingo: _claimBingo,
+      blockedReasonCodeFor: _blockedReasonCodeForCartela,
+      blockedServerReasonFor: _blockedServerReasonForCartela,
+      onReorder: cartelaSortMode.allowsManualReorder && _myCartelas.length > 1
+          ? _reorderMyCartela
+          : null,
+      bingoLockListenable: _countdown.bingoClaimLocked,
+      decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+    );
+  }
+
   void _toggleMarkedNumber(
     GameCartelaModel cartela,
     String header,
@@ -716,8 +1032,14 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       return;
     }
 
+    // Auto-marked called numbers stay visually marked; do not pollute manual
+    // storage or fight the derived mark while effectiveAutoMark is on.
+    final toggledKey = manualMarkKey(header, value);
+    if (_cn.effectiveAutoMark && _cn.isCalledMarkKey(toggledKey)) {
+      return;
+    }
+
     setState(() {
-      final toggledKey = manualMarkKey(header, value);
       final next = toggleManualMarkedNumber(
         manualMarkedNumbers: _cn.manualMarkedNumbers,
         header: header,
@@ -731,9 +1053,27 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         nextMarks: next,
         toggledKey: toggledKey,
       );
+      _cn.notifyManualMarksChanged();
       _sortMyCartelas();
     });
     unawaited(_persistManualMarks());
   }
+}
+
+/// Result of [_LiveGameCalledNumbers._submitBingoClaim] for Auto Bingo drain.
+class _BingoClaimSubmitOutcome {
+  const _BingoClaimSubmitOutcome({
+    this.skipped = false,
+    this.status,
+    this.retryAllowed = false,
+    this.failureCode,
+    this.cartelaStatus,
+  });
+
+  final bool skipped;
+  final BingoClaimStatus? status;
+  final bool retryAllowed;
+  final String? failureCode;
+  final GameCartelaStatus? cartelaStatus;
 }
 
