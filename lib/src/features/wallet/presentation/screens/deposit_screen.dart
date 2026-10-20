@@ -39,10 +39,7 @@ class DepositScreen extends ConsumerStatefulWidget {
 
 class _DepositScreenState extends ConsumerState<DepositScreen> {
   static const _approvedDismissDelay = Duration(seconds: 8);
-  static const _comingSoonProviders = {
-    PaymentProvider.awash,
-    PaymentProvider.boa,
-  };
+  static const _comingSoonProviders = <PaymentProvider>{};
 
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();

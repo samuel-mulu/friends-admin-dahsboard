@@ -1,34 +1,21 @@
-import 'dart:js_util' as js_util;
+import 'dart:js_interop';
 
-/// Converts JS socket objects (e.g. LegacyJavaScriptObject) to Dart values on web.
+/// Converts JS socket objects to Dart values on web using modern dart:js_interop.
 Object? dartifySocketPayload(Object? payload) {
   if (payload == null) {
     return null;
   }
 
-  try {
-    final dartified = js_util.dartify(payload);
-    if (dartified != null && !identical(dartified, payload)) {
-      return dartified;
-    }
-  } catch (_) {
-    // Fall through to manual key walk.
-  }
-
-  try {
-    final keys = js_util.objectKeys(payload);
-    if (keys.isEmpty) {
+  if (payload is JSAny) {
+    try {
+      final dartified = payload.dartify();
+      if (dartified != null && !identical(dartified, payload)) {
+        return dartified;
+      }
+    } catch (_) {
       return payload;
     }
-
-    final map = <String, dynamic>{};
-    for (final key in keys) {
-      final keyStr = key.toString();
-      final value = js_util.getProperty<dynamic>(payload, keyStr);
-      map[keyStr] = js_util.dartify(value);
-    }
-    return map;
-  } catch (_) {
-    return payload;
   }
+
+  return payload;
 }

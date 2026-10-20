@@ -220,7 +220,7 @@ class GamesRepository {
 
       onProgress?.call(total, total);
 
-      return _reconcileBulkRegistration(
+      return await _reconcileBulkRegistration(
         slotId: slotId,
         providedSessionId: sessionId,
         requestedCartelas: cartelas,
