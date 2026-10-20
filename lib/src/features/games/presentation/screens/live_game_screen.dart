@@ -943,7 +943,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _activeCartelasNotifier = null;
     if (cartelasNotifier != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        cartelasNotifier.clear();
+        try {
+          cartelasNotifier.clear();
+        } catch (_) {}
       });
     }
     WidgetsBinding.instance.removeObserver(this);
@@ -958,6 +960,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     controllers.dispose();
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
+    _myCartelasRefreshDebounceTimer?.cancel();
+    _nextCartelasRefreshDebounceTimer?.cancel();
     _applySocketSessionMembership(null);
     LiveGameResumeOwnerRegistry.setMasterRefresh(null);
     LiveGameResumeOwnerRegistry.deactivate();

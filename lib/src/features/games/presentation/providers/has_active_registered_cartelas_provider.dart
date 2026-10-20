@@ -61,12 +61,16 @@ class HasActiveRegisteredCartelasNotifier
   /// Clear the active session state
   /// Call this when user leaves live game or session ends
   void clear() {
-    state = const ActiveRegisteredCartelasState();
+    if (ref.mounted) {
+      state = const ActiveRegisteredCartelasState();
+    }
   }
 
   /// Update just the cartela count (when cartelas are registered/unregistered)
   void updateCartelaCount(int count) {
-    state = state.copyWith(registeredCartelaCount: count);
+    if (ref.mounted) {
+      state = state.copyWith(registeredCartelaCount: count);
+    }
   }
 }
 
