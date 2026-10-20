@@ -13,6 +13,7 @@ class CartelaBoardWidget extends StatelessWidget {
     this.isBlocked = false,
     this.isWinner = false,
     this.interactive = true,
+    this.showHeader = true,
     this.onCellTapped,
     this.boardSize = CartelaBoardSize.standard,
     this.cardHeaderTrailing,
@@ -25,6 +26,7 @@ class CartelaBoardWidget extends StatelessWidget {
   final bool isBlocked;
   final bool isWinner;
   final bool interactive;
+  final bool showHeader;
   final void Function(int number)? onCellTapped;
   final CartelaBoardSize boardSize;
   final Widget? cardHeaderTrailing;
@@ -61,28 +63,29 @@ class CartelaBoardWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Header: Cartela # and status
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: theme.colorScheme.surfaceContainerHighest,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.style_outlined, size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      '#${cartela.number}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+          if (showHeader)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              color: theme.colorScheme.surfaceContainerHighest,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.style_outlined, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        '#${cartela.number}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                ?cardHeaderTrailing,
-              ],
+                    ],
+                  ),
+                  ?cardHeaderTrailing,
+                ],
+              ),
             ),
-          ),
           // B-I-N-G-O Title Bar
           Container(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -113,7 +116,7 @@ class CartelaBoardWidget extends StatelessWidget {
                   child: Column(
                     children: List.generate(5, (rowIdx) {
                       final isFreeSpace = colIdx == 2 && rowIdx == 2;
-                      final rawVal = (colData.length > rowIdx) ? colData[rowIdx] : '0';
+                      final rawVal = (colData.length > rowIdx) ? colData[rowIdx] : '';
                       final number = isFreeSpace ? 0 : (int.tryParse(rawVal) ?? 0);
                       final isMarked = isFreeSpace || (number > 0 && markedCells.contains(number));
                       final isWinningCell = number > 0 && (winningPatternCells?.contains(number) ?? false);
@@ -122,6 +125,7 @@ class CartelaBoardWidget extends StatelessWidget {
                       return _buildCell(
                         context: context,
                         number: number,
+                        displayLabel: isFreeSpace ? 'FREE' : (number > 0 ? number.toString() : rawVal),
                         isFreeSpace: isFreeSpace,
                         isMarked: isMarked,
                         isWinningCell: isWinningCell,
@@ -143,6 +147,7 @@ class CartelaBoardWidget extends StatelessWidget {
   Widget _buildCell({
     required BuildContext context,
     required int number,
+    required String displayLabel,
     required bool isFreeSpace,
     required bool isMarked,
     required bool isWinningCell,
@@ -197,7 +202,7 @@ class CartelaBoardWidget extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      number.toString(),
+                      displayLabel,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: isMarked ? FontWeight.w900 : FontWeight.w600,
                         color: textColor,

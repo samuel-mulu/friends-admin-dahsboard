@@ -14,6 +14,8 @@ import '../utils/cartela_pattern_progress_overlay.dart';
 import 'blocked_cartela_reason_dialog.dart';
 import 'cartela_pattern_progress_painter.dart';
 import 'cartela_number_badge.dart';
+import '../components/cartela_mark_color_dropdown.dart';
+import '../components/bingo_claim_button.dart';
 
 class LiveCartelaCard extends StatelessWidget {
   const LiveCartelaCard({
@@ -239,7 +241,7 @@ class LiveCartelaCard extends StatelessWidget {
                       !readOnlyMarks &&
                       !isBlocked &&
                       !isWinner) ...[
-                    _CartelaMarkColorDropdown(iconColor: headerActionColor),
+                    CartelaMarkColorDropdown(iconColor: headerActionColor),
                   ] else
                     const SizedBox(width: 4),
                 ],
@@ -331,7 +333,7 @@ class LiveCartelaCard extends StatelessWidget {
   }) {
     final lockListenable = bingoLockListenable;
     if (lockListenable == null) {
-      return _BingoButton(
+      return BingoClaimButton(
         canClaim: canClaimBase,
         showReadyPulse: showReadyPulse,
         isClaiming: isClaiming,
@@ -342,139 +344,13 @@ class LiveCartelaCard extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: lockListenable,
       builder: (context, locked, _) {
-        return _BingoButton(
+        return BingoClaimButton(
           canClaim: canClaimBase && !locked,
           showReadyPulse: showReadyPulse && !locked,
           isClaiming: isClaiming,
           onPressed: onClaimBingo,
         );
       },
-    );
-  }
-}
-
-class _BingoButton extends StatefulWidget {
-  const _BingoButton({
-    required this.canClaim,
-    required this.showReadyPulse,
-    required this.isClaiming,
-    required this.onPressed,
-  });
-
-  final bool canClaim;
-  final bool showReadyPulse;
-  final bool isClaiming;
-  final VoidCallback onPressed;
-
-  @override
-  State<_BingoButton> createState() => _BingoButtonState();
-}
-
-class _BingoButtonState extends State<_BingoButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 480),
-    );
-    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _syncAnimation();
-  }
-
-  @override
-  void didUpdateWidget(covariant _BingoButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.canClaim != widget.canClaim ||
-        oldWidget.showReadyPulse != widget.showReadyPulse ||
-        oldWidget.isClaiming != widget.isClaiming) {
-      _syncAnimation();
-    }
-  }
-
-  void _syncAnimation() {
-    if (widget.showReadyPulse && !widget.isClaiming) {
-      _controller.repeat(reverse: true);
-    } else {
-      _controller
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final button = SizedBox(
-      height: 22,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppBranding.goldAccent,
-          foregroundColor: AppBranding.brandPurple,
-          disabledBackgroundColor: isDark
-              ? Colors.white24
-              : AppBranding.lightOnDisabled.withValues(alpha: 0.25),
-          disabledForegroundColor: isDark
-              ? Colors.white54
-              : AppBranding.lightOnDisabled,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        onPressed: widget.canClaim && !widget.isClaiming ? widget.onPressed : null,
-        child: widget.isClaiming
-            ? const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text(
-                'BINGO',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                ),
-              ),
-      ),
-    );
-
-    if (!widget.showReadyPulse || widget.isClaiming) {
-      return button;
-    }
-
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) {
-        final t = _pulse.value;
-        return Transform.scale(
-          scale: 1 + (t * 0.05),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: AppBranding.feltGreen.withValues(alpha: 0.2 + (t * 0.5)),
-                  blurRadius: 4 + (t * 8),
-                  spreadRadius: t * 0.8,
-                ),
-              ],
-            ),
-            child: child,
-          ),
-        );
-      },
-      child: button,
     );
   }
 }
@@ -623,122 +499,6 @@ class _MarkedCartelaGrid extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _CartelaMarkColorDropdown extends ConsumerWidget {
-  const _CartelaMarkColorDropdown({required this.iconColor});
-
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final selected = ref.watch(cartelaMarkColorProvider);
-    final selectedPalette = CartelaMarkColorPalette.forColor(selected);
-
-    return PopupMenuButton<CartelaMarkColor>(
-      tooltip: l10n.cartelaMarkColorMenu,
-      padding: EdgeInsets.zero,
-      offset: const Offset(0, 28),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      onSelected: (color) =>
-          ref.read(cartelaMarkColorProvider.notifier).setColor(color),
-      itemBuilder: (context) {
-        return CartelaMarkColor.values
-            .map((color) {
-              final palette = CartelaMarkColorPalette.forColor(color);
-              final label = switch (color) {
-                CartelaMarkColor.green => l10n.cartelaMarkColorGreen,
-                CartelaMarkColor.red => l10n.cartelaMarkColorRed,
-                CartelaMarkColor.yellow => l10n.cartelaMarkColorYellow,
-                CartelaMarkColor.blue => l10n.cartelaMarkColorBlue,
-              };
-
-              return PopupMenuItem<CartelaMarkColor>(
-                value: color,
-                height: 36,
-                child: Row(
-                  children: [
-                    _CartelaMarkColorSwatch(
-                      color: palette.swatch,
-                      selected: color == selected,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: color == selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    if (color == selected)
-                      Icon(
-                        Icons.check_rounded,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                  ],
-                ),
-              );
-            })
-            .toList(growable: false);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _CartelaMarkColorSwatch(
-              color: selectedPalette.swatch,
-              selected: true,
-              size: 16,
-            ),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 18,
-              color: iconColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CartelaMarkColorSwatch extends StatelessWidget {
-  const _CartelaMarkColorSwatch({
-    required this.color,
-    required this.selected,
-    required this.size,
-  });
-
-  final Color color;
-  final bool selected;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color,
-          border: Border.all(
-            color: selected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.45),
-            width: selected ? 1.8 : 1,
-          ),
-        ),
-      ),
     );
   }
 }

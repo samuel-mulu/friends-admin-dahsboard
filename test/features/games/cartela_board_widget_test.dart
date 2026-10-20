@@ -53,4 +53,41 @@ void main() {
     await tester.tap(find.text('1'));
     expect(tappedNumber, 1);
   });
+
+  testWidgets('CartelaBoardWidget respects showHeader: false', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CartelaBoardWidget(
+            cartela: sampleCartela,
+            markedCells: const {},
+            showHeader: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('#42'), findsNothing);
+    expect(find.text('B'), findsOneWidget);
+    expect(find.text('FREE'), findsOneWidget);
+  });
+
+  testWidgets('CartelaBoardWidget renders winning ball and winning pattern highlights', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CartelaBoardWidget(
+            cartela: sampleCartela,
+            markedCells: const {1, 2},
+            winningPatternCells: const {1, 2},
+            winningBallNumber: 2,
+            isWinner: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+  });
 }
