@@ -342,6 +342,101 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     );
     _joinedGameId = _socketMembership.joinedSessionId;
     _syncActiveCartelasToProvider();
+    _syncLiveGameStateToProvider();
+  }
+
+  void _syncLiveGameStateToProvider() {
+    _runAfterBuild(() {
+      if (!mounted) return;
+      final game = _game;
+      final phase = _livePresentationPhase;
+      final stateNotifier = ref.read(liveGameStateNotifierProvider.notifier);
+      final ballsNotifier = ref.read(calledBallsNotifierProvider.notifier);
+      final cartelasNotifier = ref.read(playerCartelasNotifierProvider.notifier);
+
+      ballsNotifier.setInitialBalls(_cn.calledNumbers);
+
+      final markedInts = <int>{};
+      for (final key in _cn.manualMarkedNumbers) {
+        final parts = key.split(':');
+        if (parts.length == 2) {
+          final num = int.tryParse(parts[1]);
+          if (num != null) markedInts.add(num);
+        }
+      }
+      for (final cartela in _myCartelas) {
+        cartelasNotifier.setMarksForCartela(cartela.id, markedInts);
+      }
+
+      if (game == null) {
+        if (_isLoading) {
+          stateNotifier.setLoading();
+        } else {
+          stateNotifier.reset();
+        }
+        return;
+      }
+
+      if (game.status == GameStatus.cancelled) {
+        stateNotifier.setCancelled(reason: game.cancelledReason ?? 'Game cancelled');
+        return;
+      }
+
+      if (game.status == GameStatus.finished || game.status == GameStatus.noWinner) {
+        final results = _review.sessionWinnerResults.isNotEmpty
+            ? _review.sessionWinnerResults.first
+            : const SessionWinnerResultModel(
+                gameCartelaId: '',
+                cartelaId: '',
+                cartelaNumber: 0,
+                amount: '0',
+                columns: [],
+                completedPatterns: [],
+              );
+        stateNotifier.setFinished(game: game, results: results);
+        return;
+      }
+
+      if (phase == LivePresentationPhase.winnerWindow) {
+        final windowEndsAt = _countdown.effectiveWinnerWindowEndsAt();
+        final remaining = windowEndsAt != null
+            ? windowEndsAt.difference(DateTime.now()).inSeconds.clamp(0, 999)
+            : 0;
+        stateNotifier.setWinnerWindow(
+          game: game,
+          windowSecondsRemaining: remaining,
+          winnerNames: _review.sessionWinnerCartelaNumbers
+              .map((n) => 'Cartela #$n')
+              .toList(growable: false),
+        );
+        return;
+      }
+
+      if (game.status == GameStatus.playing || phase == LivePresentationPhase.checking) {
+        final marksMap = <String, Set<int>>{};
+        for (final cartela in _myCartelas) {
+          marksMap[cartela.id] = markedInts;
+        }
+        stateNotifier.setPlaying(
+          game: game,
+          calledNumbers: _cn.calledNumbers,
+          myCartelas: _myCartelas,
+          markedCellsByCartelaId: marksMap,
+          isClaiming: _isAnyClaimChecking,
+        );
+        return;
+      }
+
+      final deadline = _countdown.countdownDeadline;
+      final remaining = deadline != null
+          ? deadline.difference(DateTime.now()).inSeconds.clamp(0, 9999)
+          : 0;
+      stateNotifier.setReady(
+        game: game,
+        remainingSeconds: remaining,
+        registeredCount: game.registeredCartelasCount,
+      );
+    });
   }
 
   void _clearSessionScopedPlayState({
@@ -354,6 +449,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _clearMyCartelaDisplayOrder();
       _gameInfoExpanded = false;
       _syncActiveCartelasToProvider();
+      _syncLiveGameStateToProvider();
       _review.clearSessionScopedReviewState();
       _cn.blockedCartelaFrozenMarks.clear();
       _cn.blockedCartelaFrozenSortResults.clear();
@@ -2043,6 +2139,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
     });
     _syncActiveCartelasToProvider();
+    _syncLiveGameStateToProvider();
     if (!resumeSync || !includeCalledNumbers) {
       _markCalledNumbersPanelDirty();
     }

@@ -119,6 +119,9 @@ import '../utils/live_resume_provider_policy.dart';
 import '../../domain/registration_state_patch.dart';
 import '../../domain/resolved_cartela_availability.dart';
 import '../utils/registration_ux_metrics.dart';
+import '../providers/live_game_state_provider.dart';
+import '../controllers/called_balls_notifier.dart';
+import '../controllers/player_cartelas_notifier.dart';
 
 part 'live_game_orchestration.dart';
 part 'live_game_realtime.dart';
