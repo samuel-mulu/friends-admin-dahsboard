@@ -60,11 +60,11 @@ test/features/games/
 - Consumes: `PaymentProvider` enum (`TELEBIRR`, `CBE`, `AWASH`, `BOA`)
 - Produces: Active provider selector supporting Awash Bank and Bank of Abyssinia alongside CBE and Telebirr; zero analyzer errors in Flutter toolchain.
 
-- [ ] **Step 1: Delete orphaned directory and fix analyzer error in `socket_payload_dartify_web.dart`**
+- [x] **Step 1: Delete orphaned directory and fix analyzer error in `socket_payload_dartify_web.dart`**
 
 Delete the empty vestigial directory `lib/src/features/gamess`. In `socket_payload_dartify_web.dart`, replace obsolete `dart:js_util` with modern `dart:js_interop` (or safe type guards) to eliminate the analyzer compilation error. In `games_repository.dart:223`, add missing `await` inside the try-catch block.
 
-- [ ] **Step 2: Write test verifying Awash and BOA are selectable in deposit options**
+- [x] **Step 2: Write test verifying Awash and BOA are selectable in deposit options**
 
 ```dart
 // test/features/wallet/deposit_screen_providers_test.dart
@@ -91,21 +91,21 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `flutter test test/features/wallet/deposit_screen_providers_test.dart`  
 Expected: FAIL (Awash and BOA are currently marked "Coming Soon" or disabled).
 
-- [ ] **Step 4: Enable Awash and BOA in `deposit_screen.dart`**
+- [x] **Step 4: Enable Awash and BOA in `deposit_screen.dart`**
 
 Remove "Coming Soon" chips from Awash and BOA options, wire account number and deposit guide dialogs to match backend provider configs.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `flutter test test/features/wallet/deposit_screen_providers_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/src/features/wallet/presentation/screens/deposit_screen.dart test/features/wallet/deposit_screen_providers_test.dart
@@ -124,7 +124,7 @@ git commit -m "fix(wallet): enable Awash and BOA deposit options and remove orph
 - Consumes: `number: int` (1–75), optional `size: double`, `isLatest: bool`, `animated: bool`
 - Produces: `BingoBallBadge` widget deriving letter (`B`, `I`, `N`, `G`, `O`) and standard colorway.
 
-- [ ] **Step 1: Write the failing test for `BingoBallBadge`**
+- [x] **Step 1: Write the failing test for `BingoBallBadge`**
 
 ```dart
 // test/features/games/bingo_ball_badge_test.dart
@@ -170,12 +170,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/games/bingo_ball_badge_test.dart`  
 Expected: FAIL (file does not exist).
 
-- [ ] **Step 3: Implement `BingoBallBadge`**
+- [x] **Step 3: Implement `BingoBallBadge`**
 
 ```dart
 // lib/src/features/games/presentation/components/bingo_ball_badge.dart
@@ -277,12 +277,12 @@ class BingoBallBadge extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/games/bingo_ball_badge_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/components/bingo_ball_badge.dart test/features/games/bingo_ball_badge_test.dart
@@ -301,7 +301,7 @@ git commit -m "feat(games): create standalone reusable BingoBallBadge component"
 - Consumes: `cartela: CartelaModel`, `markedCells: Set<int>`, optional `winningPatternCells: Set<int>?`, `isBlocked: bool`, `isWinner: bool`, `onCellTapped: Function(int)?`
 - Produces: Completely decoupled, pure presentation 5x5 Bingo Board usable across Live Game, Catalog Preview, Review Sheet, Winner Dialog, and Game History.
 
-- [ ] **Step 1: Write the failing test for `CartelaBoardWidget`**
+- [x] **Step 1: Write the failing test for `CartelaBoardWidget`**
 
 ```dart
 // test/features/games/cartela_board_widget_test.dart
@@ -362,12 +362,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/games/cartela_board_widget_test.dart`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `CartelaBoardWidget`**
+- [x] **Step 3: Implement `CartelaBoardWidget`**
 
 ```dart
 // lib/src/features/games/presentation/components/cartela_board_widget.dart
@@ -580,12 +580,12 @@ class CartelaBoardWidget extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/games/cartela_board_widget_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/components/cartela_board_widget.dart test/features/games/cartela_board_widget_test.dart
@@ -605,7 +605,7 @@ git commit -m "feat(games): implement standalone reusable CartelaBoardWidget"
 - Consumes: `calledNumbers: List<CalledNumberModel>`, `remaining: Duration`, `total: Duration`
 - Produces: Auto-scrolling animated ball strip and circular/linear countdown with audio tick callbacks.
 
-- [ ] **Step 1: Write tests for `CalledNumbersStrip`**
+- [x] **Step 1: Write tests for `CalledNumbersStrip`**
 
 ```dart
 // test/features/games/called_numbers_strip_test.dart
@@ -635,7 +635,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Implement `CalledNumbersStrip` and `GameCountdownRing`**
+- [x] **Step 2: Implement `CalledNumbersStrip` and `GameCountdownRing`**
 
 ```dart
 // lib/src/features/games/presentation/components/called_numbers_strip.dart
@@ -697,12 +697,12 @@ class CalledNumbersStrip extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `flutter test test/features/games/called_numbers_strip_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/components/called_numbers_strip.dart lib/src/features/games/presentation/components/game_countdown_ring.dart test/features/games/called_numbers_strip_test.dart
@@ -720,7 +720,7 @@ git commit -m "feat(games): implement standalone CalledNumbersStrip and GameCoun
 **Interfaces:**
 - Produces: Sealed union `LiveGameState` with variants `initial`, `loading`, `ready`, `playing`, `winnerWindow`, `finished`, `cancelled`, and `error`.
 
-- [ ] **Step 1: Write unit tests for `LiveGameState`**
+- [x] **Step 1: Write unit tests for `LiveGameState`**
 
 ```dart
 // test/features/games/live_game_state_test.dart
@@ -743,7 +743,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Implement `LiveGameState`**
+- [x] **Step 2: Implement `LiveGameState`**
 
 ```dart
 // lib/src/features/games/domain/live_game_state.dart
@@ -858,12 +858,12 @@ class _Error extends LiveGameState {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `flutter test test/features/games/live_game_state_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/src/features/games/domain/live_game_state.dart test/features/games/live_game_state_test.dart
@@ -883,7 +883,7 @@ git commit -m "feat(games): implement sealed LiveGameState domain state machine"
 - `CalledBallsNotifier`: Manages incoming balls stream, guarantees monotonic draw order (`order > lastOrder`), triggers sound effects.
 - `PlayerCartelasNotifier`: Manages active user cartelas, marked cells, auto-daub toggles, local persistence, and BINGO claim submissions.
 
-- [ ] **Step 1: Write unit tests for `CalledBallsNotifier` and `PlayerCartelasNotifier`**
+- [x] **Step 1: Write unit tests for `CalledBallsNotifier` and `PlayerCartelasNotifier`**
 
 ```dart
 // test/features/games/live_game_notifiers_test.dart
@@ -910,7 +910,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Implement `CalledBallsNotifier`**
+- [x] **Step 2: Implement `CalledBallsNotifier`**
 
 ```dart
 // lib/src/features/games/presentation/controllers/called_balls_notifier.dart
@@ -945,12 +945,12 @@ final calledBallsNotifierProvider =
 );
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `flutter test test/features/games/live_game_notifiers_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/controllers/called_balls_notifier.dart test/features/games/live_game_notifiers_test.dart
@@ -969,7 +969,7 @@ git commit -m "feat(games): implement Riverpod CalledBallsNotifier with monotoni
 - Consumes: Reusable components (`CartelaBoardWidget`, `CalledNumbersStrip`, `BingoBallBadge`, `GameCountdownRing`) and Riverpod Notifiers.
 - Produces: Clean, declarative, thin `LiveGameScreen` coordinator (< 400 lines) that replaces the 10,000+ line God Component without changing any external routes.
 
-- [ ] **Step 1: Write smoke widget test for refactored `LiveGameScreen`**
+- [x] **Step 1: Write smoke widget test for refactored `LiveGameScreen`**
 
 ```dart
 // test/features/games/live_game_screen_refactored_test.dart
@@ -992,16 +992,16 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Refactor `LiveGameScreen`**
+- [x] **Step 2: Refactor `LiveGameScreen`**
 
 Refactor `LiveGameScreen` to watch `calledBallsNotifierProvider` and delegate board rendering to `CartelaBoardWidget`, ball history to `CalledNumbersStrip`, and registration to `RegistrationCartelaGrid`. Eliminate the redundant mutable variables in `_LiveGameScreenState`.
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `flutter test test/features/games/live_game_screen_refactored_test.dart`  
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/screens/live_game_screen.dart test/features/games/live_game_screen_refactored_test.dart
@@ -1015,17 +1015,17 @@ git commit -m "refactor(games): decouple LiveGameScreen into clean declarative c
 **Files:**
 - Entire `friends-bingo-mobile` repository
 
-- [ ] **Step 1: Run static analysis across the entire project**
+- [x] **Step 1: Run static analysis across the entire project**
 
 Run: `flutter analyze`  
 Expected: 0 errors, clean output.
 
-- [ ] **Step 2: Run all unit and widget tests**
+- [x] **Step 2: Run all unit and widget tests**
 
 Run: `flutter test`  
 Expected: All tests PASS.
 
-- [ ] **Step 3: Final commit and summary**
+- [x] **Step 3: Final commit and summary**
 
 ```bash
 git add .

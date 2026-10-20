@@ -79,7 +79,7 @@ class CartelaBoardWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (cardHeaderTrailing != null) cardHeaderTrailing!,
+                ?cardHeaderTrailing,
               ],
             ),
           ),

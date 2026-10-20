@@ -433,10 +433,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _ownsSessionForPreview(String? sessionId) =>
       ownsSessionByCartelas(sessionId, _ownershipCartelaSessionIds);
 
-  /// The session currently in play (PLAYING / CHECKING), not the READY queue game.
-  GameModel? get _blockingLiveSessionGame =>
-      _lastOperations?.liveGame ?? _lastOperations?.checkingGame;
-
   String? get _registrationGridSessionId {
     final registrationOpen = _lastOperations?.registrationOpenGame;
     if (registrationOpen?.sessionId != null &&

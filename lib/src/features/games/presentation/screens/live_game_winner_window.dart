@@ -93,6 +93,4 @@ mixin _LiveGameWinnerWindow on _LiveGameOrchestration {
       ],
     );
   }
-
-  bool get _isAutomaticRule => _game?.isAutomaticRule ?? true;
 }

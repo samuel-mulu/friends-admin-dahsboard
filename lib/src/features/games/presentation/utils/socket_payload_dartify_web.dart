@@ -6,9 +6,9 @@ Object? dartifySocketPayload(Object? payload) {
     return null;
   }
 
-  if (payload is JSAny) {
+  if (payload.isA<JSAny>()) {
     try {
-      final dartified = payload.dartify();
+      final dartified = (payload as JSAny).dartify();
       if (dartified != null && !identical(dartified, payload)) {
         return dartified;
       }

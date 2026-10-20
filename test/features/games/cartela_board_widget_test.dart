@@ -44,7 +44,7 @@ void main() {
           body: CartelaBoardWidget(
             cartela: sampleCartela,
             markedCells: const {},
-            onCellTapped: (num) => tappedNumber = num,
+            onCellTapped: (number) => tappedNumber = number,
           ),
         ),
       ),
