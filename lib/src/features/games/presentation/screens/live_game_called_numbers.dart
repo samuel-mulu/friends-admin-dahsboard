@@ -119,12 +119,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     if (sessionId == null || _cn.claimingCartelaIds.contains(gameCartela.id)) {
       return;
     }
-
-    if (_isBingoClaimCountdownLocked) {
-      return;
-    }
-
-    final claimStartedAt = DateTime.now();
     final preClaimNextAutoCallAt = _game?.nextAutoCallAt;
     final shouldOptimisticPause =
         _isAutoCallActiveForSession && preClaimNextAutoCallAt != null;
@@ -145,11 +139,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     var claimStateAppliedEarly = false;
 
     try {
-      if (_isBingoClaimCountdownLocked) {
-        claimFailed = true;
-        return;
-      }
-
       final result = await _gamesRepository.claimBingo(
         sessionId: sessionId,
         gameCartelaId: gameCartela.id,
@@ -224,15 +213,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           claimResult?.isWinner == true &&
           claimResult?.gameStatus == GameStatus.winnerWindow;
 
-      if (!isWinnerWindowSuccess) {
-        final elapsed = DateTime.now().difference(claimStartedAt);
-        final remaining =
-            _LiveGameScreenStateBase._checkingCartelaMinimumDisplay - elapsed;
-        if (remaining > Duration.zero) {
-          await Future<void>.delayed(remaining);
-        }
-      }
-
       if (mounted && !claimStateAppliedEarly) {
         setState(() {
           if (claimFailed) {
@@ -260,16 +240,19 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
 
         _flushPendingClaimSocketEvents();
 
-        if (outcomeSnackbarMessage != null &&
-            !isWinnerWindowSuccess &&
-            claimResult?.gameCartelaStatus != GameCartelaStatus.blocked) {
+        if (claimResult != null &&
+            claimResult.gameCartelaStatus == GameCartelaStatus.blocked) {
+          _scheduleCanonicalRefetch();
+          showBlockedCartelaReasonDialog(
+            context: context,
+            gameCartela: gameCartela,
+            reasonCode: claimResult.reasonCode ?? claimResult.claim.reasonCode,
+            serverReason: claimResult.claim.reason,
+          );
+        } else if (outcomeSnackbarMessage != null && !isWinnerWindowSuccess) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(outcomeSnackbarMessage)));
-        }
-
-        if (claimResult?.gameCartelaStatus == GameCartelaStatus.blocked) {
-          _scheduleCanonicalRefetch();
         }
 
         // Claim resolved (valid/invalid/failed) — unblock Finalizing if WW expired.

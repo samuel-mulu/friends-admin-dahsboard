@@ -36,6 +36,7 @@ import '../widgets/live_next_round_registration_section.dart';
 import '../widgets/live_cartela_card.dart';
 import '../widgets/round_finished_banner.dart';
 import '../widgets/winner_cartela_dialog.dart';
+import '../widgets/blocked_cartela_reason_dialog.dart';
 import '../widgets/registration_action_dock.dart';
 import '../widgets/registration_cartela_grid.dart';
 import '../widgets/registration_grid_scroll_isolation.dart';
@@ -294,7 +295,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   static const _liveRoomSplashMinimum = Duration(milliseconds: 1500);
   static const _liveRoomSplashMaximum = Duration(seconds: 15);
-  static const _checkingCartelaMinimumDisplay = Duration(milliseconds: 800);
 
   GameTimingConfigModel get _effectiveTimingConfig =>
       _timingConfig ?? GameTimingConfigModel.fallback;
@@ -848,18 +848,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     _myCartelaDisplayOrderIds = const [];
   }
 
-  /// Copies current-round cartela numbers so the next READY registration panel
-  /// can auto-open single/bulk review with the same cards.
   void _capturePreviousCartelasForAutoOpen() {
-    if (isGuest || _myCartelas.isEmpty) {
-      return;
-    }
-
-    _pendingAutoOpenCartelaNumbers =
-        _myCartelas
-            .map((cartela) => cartela.cartela.number)
-            .toList(growable: false)
-          ..sort();
+    _pendingAutoOpenCartelaNumbers = null;
   }
 
   void _reorderMyCartela(int fromIndex, int toIndex) {
@@ -2234,6 +2224,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
       freezeCartelaMarks: freezeCartelaMarks,
       isOneAwayFromWin: sortResult?.isOneAway ?? false,
       hasLocalPatternComplete: sortResult?.hasLocalPatternComplete ?? false,
+      isLateClaim: sortResult?.isLateClaim ?? false,
       oneAwayCellIndexes: sortResult?.oneAwayCellIndexes ?? const {},
       winningPatternOverlay: useStoredWinnerOverlay
           ? storedWinnerOverlay
@@ -2268,46 +2259,49 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     required Widget card,
   }) {
     final onReorder = this.onReorder;
-    if (onReorder == null) {
-      return card;
-    }
-
     final theme = Theme.of(context);
-    return LongPressDraggable<int>(
-      data: index,
-      delay: const Duration(milliseconds: 400),
-      hapticFeedbackOnStart: true,
-      feedback: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          width: cellWidth,
-          height: cellHeight,
-          child: Opacity(opacity: 0.92, child: card),
-        ),
-      ),
-      childWhenDragging: SizedBox(width: cellWidth, height: cellHeight),
-      child: DragTarget<int>(
-        onWillAcceptWithDetails: (details) => details.data != index,
-        onAcceptWithDetails: (details) => onReorder(details.data, index),
-        builder: (context, candidateData, rejectedData) {
-          final isTarget = candidateData.isNotEmpty;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
-            decoration: isTarget
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 2,
-                    ),
-                  )
-                : null,
-            child: card,
+    final wrapped = onReorder == null
+        ? card
+        : LongPressDraggable<int>(
+            data: index,
+            delay: const Duration(milliseconds: 400),
+            hapticFeedbackOnStart: true,
+            feedback: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                width: cellWidth,
+                height: cellHeight,
+                child: Opacity(opacity: 0.92, child: card),
+              ),
+            ),
+            childWhenDragging: SizedBox(width: cellWidth, height: cellHeight),
+            child: DragTarget<int>(
+              onWillAcceptWithDetails: (details) => details.data != index,
+              onAcceptWithDetails: (details) => onReorder(details.data, index),
+              builder: (context, candidateData, rejectedData) {
+                final isTarget = candidateData.isNotEmpty;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  decoration: isTarget
+                      ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          ),
+                        )
+                      : null,
+                  child: card,
+                );
+              },
+            ),
           );
-        },
-      ),
+
+    return KeyedSubtree(
+      key: ValueKey('cartela_cell_${cartelas[index].id}'),
+      child: wrapped,
     );
   }
 
@@ -2352,50 +2346,66 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
   }
 
   static const _crossAxisSpacing = 6.0;
-  static const _childAspectRatio = 0.72;
   static const _mainAxisSpacing = 6.0;
+
+  static double _resolveChildAspectRatio(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1.0);
+    if (scale > 1.25) {
+      return 0.62;
+    }
+    if (scale > 1.05) {
+      return 0.67;
+    }
+    return 0.72;
+  }
 
   /// Real scrolling 2-col grid for sticky live play ([CustomScrollView]).
   Widget asSliver({required double crossAxisExtent}) {
-    final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
-    final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
-    final cellHeight = cellWidth / _childAspectRatio;
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final ratio = _resolveChildAspectRatio(context);
+        final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
+        final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
+        final cellHeight = cellWidth / ratio;
 
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: _mainAxisSpacing,
-        crossAxisSpacing: _crossAxisSpacing,
-        childAspectRatio: _childAspectRatio,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) => _buildGridItem(
-          context: context,
-          index: index,
-          cellWidth: cellWidth,
-          cellHeight: cellHeight,
-        ),
-        childCount: cartelas.length,
-      ),
+        return SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: _mainAxisSpacing,
+            crossAxisSpacing: _crossAxisSpacing,
+            childAspectRatio: ratio,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildGridItem(
+              context: context,
+              index: index,
+              cellWidth: cellWidth,
+              cellHeight: cellHeight,
+            ),
+            childCount: cartelas.length,
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     // Nested inside a parent [ListView] (non-sticky layouts only).
+    final ratio = _resolveChildAspectRatio(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellWidth = (constraints.maxWidth - _crossAxisSpacing) / 2;
-        final cellHeight = cellWidth / _childAspectRatio;
+        final cellHeight = cellWidth / ratio;
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: _mainAxisSpacing,
             crossAxisSpacing: _crossAxisSpacing,
-            childAspectRatio: _childAspectRatio,
+            childAspectRatio: ratio,
           ),
           itemCount: cartelas.length,
           itemBuilder: (context, index) => _buildGridItem(

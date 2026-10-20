@@ -549,6 +549,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         () {
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
+            _beginPostGameSummaryAdvance();
+            unawaited(_runFinishedAdvanceSequence(force: true));
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
@@ -659,23 +661,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     localCalledCount: _cn.calledNumbers.length,
     highestCalledOrder: _highestKnownCalledOrder,
   );
-
-  bool get _isBingoClaimCountdownLocked {
-    if (_game?.status == GameStatus.winnerWindow && !_winnerWindowExpired) {
-      return false;
-    }
-
-    return isBingoClaimCountdownLocked(
-      gameStatus: _game?.status,
-      autoCallActive: _isAutoCallActiveForSession,
-      nextAutoCallAt: _countdown.effectiveNextAutoCallAt(_game),
-      clock: _serverClock,
-      playPhase: _countdown.nextBallPlayPhase,
-      highestKnownCalledOrder: _highestKnownCalledOrder,
-      callingPhaseBaselineOrder: _countdown.callingPhaseBaselineOrder,
-      postCallLockUntil: _countdown.bingoPostCallLockUntil,
-    );
-  }
 
   bool get _showFinishedCartelaOutcome {
     return _showsPostGameSummary ||
@@ -3824,11 +3809,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _ensureBlockedCartelaSnapshots();
 
     final evaluated = <String, CartelaPatternUiResult>{};
+    final latestBall =
+        _cn.calledNumbers.isNotEmpty ? _cn.calledNumbers.last.number : null;
     for (final cartela in _myCartelas) {
       evaluated[cartela.id] = CartelaMarkedPatternEvaluator.evaluate(
         cartela: cartela,
         manualMarkedNumbers: _markedNumbersForCartela(cartela),
         ruleKey: game.ruleKey,
+        latestCalledNumber: latestBall,
       );
     }
 

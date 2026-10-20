@@ -513,7 +513,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           receiptParseStatus = preview.receiptParseStatus;
           clientReceipt = preview.toClientReceiptPayload();
 
-          if (preview.status != TelebirrReceiptPreviewStatus.valid ||
+          if (preview.status == TelebirrReceiptPreviewStatus.previewUnavailable) {
+            // Receipt preview fetch failed on device (e.g. mobile carrier blocks or timeout);
+            // proceed to backend for server-side verification / admin review rather than hard-rejecting
+            receiptParseStatus = TelebirrReceiptParseStatus.unavailable;
+            clientReceipt = null;
+          } else if (preview.status != TelebirrReceiptPreviewStatus.valid ||
               clientReceipt == null) {
             if (!mounted) {
               return;

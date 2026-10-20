@@ -30,6 +30,7 @@ class LiveCartelaCard extends StatelessWidget {
     this.freezeCartelaMarks = false,
     this.isOneAwayFromWin = false,
     this.hasLocalPatternComplete = false,
+    this.isLateClaim = false,
     this.oneAwayCellIndexes = const {},
     this.winningPatternOverlay = const CartelaPatternProgressOverlay(),
     this.winningHighlightCells = const {},
@@ -51,6 +52,7 @@ class LiveCartelaCard extends StatelessWidget {
   final bool freezeCartelaMarks;
   final bool isOneAwayFromWin;
   final bool hasLocalPatternComplete;
+  final bool isLateClaim;
   final Set<int> oneAwayCellIndexes;
   final CartelaPatternProgressOverlay winningPatternOverlay;
   final Set<int> winningHighlightCells;
@@ -95,6 +97,7 @@ class LiveCartelaCard extends StatelessWidget {
 
     final showClaimReadyHighlight =
         hasLocalPatternComplete &&
+        !isLateClaim &&
         canClaimBingo &&
         !isClaiming &&
         !isBlocked &&

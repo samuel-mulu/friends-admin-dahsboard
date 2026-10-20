@@ -47,6 +47,7 @@ class CartelaPatternUiResult {
     required this.missingCellCount,
     required this.markedCellCount,
     required this.sortScore,
+    this.isLateClaim = false,
   });
 
   final String cartelaId;
@@ -60,6 +61,9 @@ class CartelaPatternUiResult {
   final int missingCellCount;
   final int markedCellCount;
   final int sortScore;
+  final bool isLateClaim;
+
+  bool get isClaimReady => hasLocalPatternComplete && !isLateClaim;
 }
 
 class CartelaMarkedPatternEvaluator {
@@ -70,10 +74,22 @@ class CartelaMarkedPatternEvaluator {
   static final Map<String, _RuleDefinition> _ruleDefinitions =
       Map<String, _RuleDefinition>.unmodifiable(_buildRuleDefinitions());
 
+  static int? _cellIndexForNumber(List<List<String>> columns, int number) {
+    for (var col = 0; col < columns.length && col < 5; col++) {
+      for (var row = 0; row < columns[col].length && row < 5; row++) {
+        if (int.tryParse(columns[col][row]) == number) {
+          return row * 5 + col;
+        }
+      }
+    }
+    return null;
+  }
+
   static CartelaPatternUiResult evaluate({
     required GameCartelaModel cartela,
     required Set<String> manualMarkedNumbers,
     required String ruleKey,
+    int? latestCalledNumber,
   }) {
     final columns = cartela.cartela.columns;
     final markedIndexes = markedCellIndexes(
@@ -120,6 +136,14 @@ class CartelaMarkedPatternEvaluator {
 
     final isOneAway = oneAwayCellIndexes.isNotEmpty;
 
+    bool isLateClaim = false;
+    if (hasLocalPatternComplete && latestCalledNumber != null) {
+      final latestCell = _cellIndexForNumber(columns, latestCalledNumber);
+      if (latestCell != null && !completedPatternCells.contains(latestCell)) {
+        isLateClaim = true;
+      }
+    }
+
     return CartelaPatternUiResult(
       cartelaId: cartela.id,
       hasLocalPatternComplete: hasLocalPatternComplete,
@@ -129,6 +153,7 @@ class CartelaMarkedPatternEvaluator {
       oneAwayCellIndexes: oneAwayCellIndexes,
       missingCellCount: missingCellCount,
       markedCellCount: markedCount,
+      isLateClaim: isLateClaim,
       sortScore: _sortScore(
         hasLocalPatternComplete: hasLocalPatternComplete,
         isOneAway: isOneAway,
@@ -142,6 +167,7 @@ class CartelaMarkedPatternEvaluator {
     required Iterable<GameCartelaModel> cartelas,
     required Set<String> manualMarkedNumbers,
     required String ruleKey,
+    int? latestCalledNumber,
   }) {
     return {
       for (final cartela in cartelas)
@@ -149,6 +175,7 @@ class CartelaMarkedPatternEvaluator {
           cartela: cartela,
           manualMarkedNumbers: manualMarkedNumbers,
           ruleKey: ruleKey,
+          latestCalledNumber: latestCalledNumber,
         ),
     };
   }

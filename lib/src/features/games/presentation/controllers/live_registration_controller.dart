@@ -15,6 +15,7 @@ import '../../domain/registration_state_patch.dart';
 import '../providers/games_providers.dart';
 import '../providers/registration_state_patch_provider.dart';
 import '../utils/cartela_display_order.dart';
+import '../utils/merge_registered_cartelas.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../utils/registration_error_helpers.dart';
 import '../utils/registration_ux_metrics.dart';
@@ -826,6 +827,24 @@ class LiveRegistrationController {
     }
 
     final registeredSessionId = registeredCartelas.first.gameId;
+
+    // Immediately merge newly registered cartelas optimistically so they are never lost on rapid registrations
+    host.markNeedsBuild(() {
+      if (registeredSessionId == game.sessionId) {
+        myCartelas = mergeRegisteredCartelas(
+          current: myCartelas,
+          incoming: registeredCartelas,
+          sessionId: registeredSessionId,
+        );
+      } else if (registeredSessionId == trackedRegistrationSessionId) {
+        nextRegistrationCartelas = mergeRegisteredCartelas(
+          current: nextRegistrationCartelas,
+          incoming: registeredCartelas,
+          sessionId: registeredSessionId,
+        );
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!host.mounted) {
         return;
@@ -870,10 +889,12 @@ class LiveRegistrationController {
           }
 
           host.markNeedsBuild(() {
-            myCartelas = cartelas
-              ..sort((left, right) {
-                return left.cartela.number.compareTo(right.cartela.number);
-              });
+            // Append-safe merge: keep already registered cartelas even if server snapshot was slightly stale
+            myCartelas = mergeRegisteredCartelas(
+              current: myCartelas,
+              incoming: cartelas,
+              sessionId: sessionId,
+            );
           });
           onUpdated?.call();
         } catch (_) {
@@ -912,10 +933,11 @@ class LiveRegistrationController {
           }
 
           host.markNeedsBuild(() {
-            nextRegistrationCartelas =
-                List<GameCartelaModel>.from(nextCartelas)..sort((left, right) {
-                  return left.cartela.number.compareTo(right.cartela.number);
-                });
+            nextRegistrationCartelas = mergeRegisteredCartelas(
+              current: nextRegistrationCartelas,
+              incoming: nextCartelas,
+              sessionId: sessionId,
+            );
           });
         } catch (_) {
           // Keep current next-registration cartelas if the silent refresh fails.
