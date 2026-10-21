@@ -2,27 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/realtime/wallet_entity_realtime.dart';
-import '../../../../core/storage/app_preferences_storage.dart';
-import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../settings/presentation/providers/theme_mode_provider.dart';
-import '../../data/models/payment_provider.dart';
 import '../../data/models/withdrawal_model.dart';
-import '../../domain/wallet_amount_limits.dart';
-import '../models/withdrawal_confirmation_state.dart';
+import '../controllers/withdraw_controller.dart';
 import '../providers/wallet_history_providers.dart';
 import '../providers/wallet_provider.dart';
-import '../../data/wallet_repository.dart';
 import '../widgets/withdraw_balance_strip.dart';
-import '../widgets/withdraw_confirm_dialog.dart';
+import '../widgets/withdraw_form_section.dart';
 import '../widgets/withdraw_provider_chips.dart';
-import '../widgets/withdrawal_confirmation_banner.dart';
 import '../widgets/withdrawal_requests_table.dart';
-import '../../../auth/presentation/widgets/security_password_sheet.dart';
 
 class WithdrawScreen extends ConsumerStatefulWidget {
   const WithdrawScreen({super.key});
@@ -32,324 +24,7 @@ class WithdrawScreen extends ConsumerStatefulWidget {
 }
 
 class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
-  static const _approvedDismissDelay = Duration(seconds: 8);
-
-  final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
-  final _receiverController = TextEditingController();
-
-  PaymentProvider? _provider;
-  bool _isChoosingProvider = true;
-  bool _isSubmitting = false;
-  WithdrawalConfirmationState? _confirmation;
-  String? _trackedWithdrawalId;
-  String? _availableBalance;
-  String? _ownPhoneNumber;
-  String _savedCbeAccount = AppPreferencesStorage.defaultCbeWithdrawAccount;
-  bool _cbeAccountLoaded = false;
-  String? _loadedCbeUserId;
-  Timer? _autoDismissTimer;
-  Timer? _cbeSaveDebounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _amountController.addListener(_onFormFieldChanged);
-    _receiverController.addListener(_onFormFieldChanged);
-    final session = ref.read(authControllerProvider).session;
-    final sessionPhone = session?.user.phoneNumber;
-    if (sessionPhone != null && sessionPhone.trim().isNotEmpty) {
-      _ownPhoneNumber = sessionPhone.trim();
-    }
-    final userId = session?.user.id;
-    if (userId != null) {
-      unawaited(_loadSavedCbeAccount(userId));
-    }
-  }
-
-  Future<void> _loadSavedCbeAccount(String userId) async {
-    if (_loadedCbeUserId == userId && _cbeAccountLoaded) {
-      return;
-    }
-    final storage = await ref.read(appPreferencesStorageProvider.future);
-    if (!mounted) {
-      return;
-    }
-    final saved = storage.readCbeWithdrawAccount(userId);
-    setState(() {
-      _savedCbeAccount = saved;
-      _cbeAccountLoaded = true;
-      _loadedCbeUserId = userId;
-      if (_provider == PaymentProvider.cbe && !_isChoosingProvider) {
-        _receiverController.text = saved;
-      }
-    });
-  }
-
-  Future<void> _persistCbeAccount(String account) async {
-    final userId = ref.read(authControllerProvider).session?.user.id;
-    if (userId == null) {
-      return;
-    }
-    final trimmed = account.trim();
-    if (trimmed.isEmpty || trimmed == _savedCbeAccount) {
-      return;
-    }
-    final storage = await ref.read(appPreferencesStorageProvider.future);
-    await storage.writeCbeWithdrawAccount(userId, trimmed);
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _savedCbeAccount = trimmed;
-    });
-  }
-
-  void _schedulePersistCbeAccount(String account) {
-    _cbeSaveDebounce?.cancel();
-    _cbeSaveDebounce = Timer(const Duration(milliseconds: 400), () {
-      unawaited(_persistCbeAccount(account));
-    });
-  }
-
-  void _applyReceiverForProvider(PaymentProvider provider) {
-    if (provider == PaymentProvider.telebirr) {
-      if (_ownPhoneNumber != null && _ownPhoneNumber!.isNotEmpty) {
-        _receiverController.text = _ownPhoneNumber!;
-      } else if (_receiverController.text.trim().startsWith('1000')) {
-        _receiverController.clear();
-      }
-      return;
-    }
-
-    if (provider == PaymentProvider.cbe) {
-      final current = _receiverController.text.trim();
-      if (current.isEmpty || _looksLikePhone(current)) {
-        _receiverController.text = _savedCbeAccount.isNotEmpty
-            ? _savedCbeAccount
-            : AppPreferencesStorage.defaultCbeWithdrawAccount;
-      }
-    }
-  }
-
-  void _selectWithdrawProvider(PaymentProvider provider) {
-    setState(() {
-      _provider = provider;
-      _isChoosingProvider = false;
-      _clearConfirmation();
-      _amountController.clear();
-      _applyReceiverForProvider(provider);
-    });
-  }
-
-  void _changeWithdrawProvider() {
-    setState(() {
-      _isChoosingProvider = true;
-      _clearConfirmation();
-      _amountController.clear();
-      _receiverController.clear();
-    });
-  }
-
-  bool _looksLikePhone(String value) {
-    final digits = _digitsOnly(value);
-    if (digits.length < 9 || digits.length > 15) {
-      return false;
-    }
-    return digits.startsWith('09') ||
-        digits.startsWith('9') ||
-        digits.startsWith('251') ||
-        digits.startsWith('07') ||
-        digits.startsWith('7');
-  }
-
-  @override
-  void dispose() {
-    _autoDismissTimer?.cancel();
-    _cbeSaveDebounce?.cancel();
-    _amountController.dispose();
-    _receiverController.dispose();
-    super.dispose();
-  }
-
-  void _handleWithdrawalEntityUpdate(WalletEntityUpdate update) {
-    if (!mounted || !update.isTerminal) {
-      return;
-    }
-
-    if (_trackedWithdrawalId == null || update.id != _trackedWithdrawalId) {
-      return;
-    }
-
-    if (update.isApproved) {
-      _applyWithdrawalTerminalStatus(
-        kind: WithdrawalConfirmationKind.approved,
-        withdrawalId: update.id,
-        amount: update.amount,
-      );
-      return;
-    }
-
-    if (update.isRejected) {
-      _applyWithdrawalTerminalStatus(
-        kind: WithdrawalConfirmationKind.rejected,
-        withdrawalId: update.id,
-        amount: update.amount,
-        message: update.message,
-      );
-    }
-  }
-
-  void _consumeCachedWithdrawalUpdate() {
-    final update = ref.read(walletEntityRealtimeProvider).find(
-      kind: WalletEntityKind.withdrawal,
-      id: _trackedWithdrawalId,
-    );
-    if (update != null) {
-      _handleWithdrawalEntityUpdate(update);
-    }
-  }
-
-  void _applyWithdrawalTerminalStatus({
-    required WithdrawalConfirmationKind kind,
-    required String withdrawalId,
-    String? amount,
-    String? message,
-  }) {
-    if (!mounted) {
-      return;
-    }
-
-    void apply() {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _trackedWithdrawalId =
-            kind == WithdrawalConfirmationKind.approved ? withdrawalId : null;
-        _confirmation = WithdrawalConfirmationState(
-          kind: kind,
-          provider: _provider,
-          amount: amount ?? _confirmation?.amount,
-          withdrawalId: withdrawalId,
-          message: message,
-        );
-      });
-      if (kind == WithdrawalConfirmationKind.approved) {
-        _scheduleApprovedDismiss();
-      }
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => apply());
-  }
-
-  void _scheduleApprovedDismiss() {
-    _autoDismissTimer?.cancel();
-    _autoDismissTimer = Timer(_approvedDismissDelay, () {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _confirmation = null;
-        _trackedWithdrawalId = null;
-      });
-    });
-  }
-
-  void _clearConfirmation() {
-    _autoDismissTimer?.cancel();
-    setState(() {
-      _confirmation = null;
-      _trackedWithdrawalId = null;
-    });
-  }
-
-  void _onFormFieldChanged() {
-    if (!mounted) {
-      return;
-    }
-    // Keep the pending admin-review card while waiting for approval.
-    if (_confirmation?.kind == WithdrawalConfirmationKind.pending) {
-      return;
-    }
-    setState(() {
-      if (_confirmation != null) {
-        _autoDismissTimer?.cancel();
-        _confirmation = null;
-        _trackedWithdrawalId = null;
-      }
-    });
-  }
-
-  bool get _canSubmitWithdraw {
-    if (_provider == null || _isChoosingProvider) {
-      return false;
-    }
-    if (_isSubmitting) {
-      return false;
-    }
-    if (!WalletAmountLimits.isSubmittableWithdraw(_amountController.text)) {
-      return false;
-    }
-    final parsed = WalletAmountLimits.tryParseAmount(_amountController.text);
-    final available = double.tryParse(_availableBalance ?? '');
-    if (parsed != null && available != null && parsed > available) {
-      return false;
-    }
-    if (_receiverController.text.trim().isEmpty) {
-      return false;
-    }
-    return true;
-  }
-
-  bool get _isOtherTelebirrNumber {
-    if (_provider != PaymentProvider.telebirr) {
-      return false;
-    }
-    final own = _ownPhoneNumber;
-    final entered = _receiverController.text.trim();
-    if (own == null || own.isEmpty || entered.isEmpty) {
-      return false;
-    }
-    return !_phonesMatch(own, entered);
-  }
-
-  String _digitsOnly(String value) => value.replaceAll(RegExp(r'\D'), '');
-
-  bool _phonesMatch(String a, String b) {
-    final left = _normalizePhoneKey(a);
-    final right = _normalizePhoneKey(b);
-    if (left.isEmpty || right.isEmpty) {
-      return false;
-    }
-    return left == right || left.endsWith(right) || right.endsWith(left);
-  }
-
-  String _normalizePhoneKey(String phone) {
-    final digits = _digitsOnly(phone);
-    if (digits.startsWith('251') && digits.length >= 12) {
-      return digits.substring(digits.length - 9);
-    }
-    if (digits.startsWith('0') && digits.length >= 10) {
-      return digits.substring(digits.length - 9);
-    }
-    if (digits.length == 9) {
-      return digits;
-    }
-    return digits;
-  }
-
-  void _useOwnPhoneNumber() {
-    final own = _ownPhoneNumber;
-    if (own == null || own.isEmpty) {
-      return;
-    }
-    setState(() {
-      _receiverController.text = own;
-      _provider = PaymentProvider.telebirr;
-      _isChoosingProvider = false;
-    });
-  }
+  String? _initializedUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -361,396 +36,106 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
       if (update == null || update.kind != WalletEntityKind.withdrawal) {
         return;
       }
-      _handleWithdrawalEntityUpdate(update);
+      ref.read(withdrawControllerProvider.notifier).handleRealtimeUpdate(update);
     });
 
     final l10n = context.l10n;
+    final state = ref.watch(withdrawControllerProvider);
     final walletAsync = ref.watch(myWalletProvider);
     final withdrawalsAsync = ref.watch(withdrawalHistoryProvider);
-    final session = ref.watch(authControllerProvider).session;
-    final sessionPhone = session?.user.phoneNumber.trim();
-    final sessionUserId = session?.user.id;
-    if (sessionPhone != null &&
-        sessionPhone.isNotEmpty &&
-        _ownPhoneNumber != sessionPhone) {
+    final sessionUserId = ref.watch(authControllerProvider).session?.user.id;
+
+    if (sessionUserId != null && _initializedUserId != sessionUserId) {
+      _initializedUserId = sessionUserId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          final hadEmptyReceiver = _receiverController.text.trim().isEmpty;
-          _ownPhoneNumber = sessionPhone;
-          if (_provider == PaymentProvider.telebirr && hadEmptyReceiver) {
-            _receiverController.text = sessionPhone;
-          }
-        });
+        if (!mounted) return;
+        unawaited(
+          ref
+              .read(withdrawControllerProvider.notifier)
+              .loadSavedCbeAccount(sessionUserId),
+        );
       });
     }
-    if (sessionUserId != null &&
-        (!_cbeAccountLoaded || _loadedCbeUserId != sessionUserId)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        unawaited(_loadSavedCbeAccount(sessionUserId));
-      });
-    }
+
     final availableBalance = walletAsync.asData?.value.balance;
-    if (availableBalance != null) {
-      _availableBalance = availableBalance;
-    }
-    final minLabel = WalletAmountLimits.formatLimit(
-      WalletAmountLimits.minWithdraw,
-    );
-    final maxLabel = WalletAmountLimits.formatLimit(
-      WalletAmountLimits.maxWithdraw,
-    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.withdrawScreenTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                walletAsync.maybeWhen(
-                  data: (wallet) => WithdrawBalanceStrip(
-                    availableBalance: wallet.balance,
-                    lockedBalance: wallet.lockedBalance,
-                    totalBalance: wallet.totalBalance,
-                  ),
-                  orElse: () => const SizedBox.shrink(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              walletAsync.maybeWhen(
+                data: (wallet) => WithdrawBalanceStrip(
+                  availableBalance: wallet.balance,
+                  lockedBalance: wallet.lockedBalance,
+                  totalBalance: wallet.totalBalance,
                 ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+              WithdrawProviderChips(
+                value: state.provider,
+                isChoosing: state.isChoosingProvider || state.provider == null,
+                onChangePressed: () => ref
+                    .read(withdrawControllerProvider.notifier)
+                    .changeProvider(),
+                onChanged: (provider) => ref
+                    .read(withdrawControllerProvider.notifier)
+                    .selectProvider(provider),
+              ),
+              if (!state.isChoosingProvider && state.provider != null) ...[
                 const SizedBox(height: 16),
-                WithdrawProviderChips(
-                  value: _provider,
-                  isChoosing: _isChoosingProvider || _provider == null,
-                  onChangePressed: _changeWithdrawProvider,
-                  onChanged: _selectWithdrawProvider,
-                ),
-                if (!_isChoosingProvider && _provider != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _provider == PaymentProvider.telebirr
-                        ? l10n.withdrawTelebirrOnlyHint
-                        : l10n.withdrawCbeOnlyHint,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                  controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: const [
-                    WalletAmountInputFormatter(
-                      maxAmount: WalletAmountLimits.maxWithdraw,
-                    ),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: l10n.withdrawAmount,
-                    hintText: minLabel,
-                    helperText: l10n.withdrawAmountRangeHelper(
-                      minLabel,
-                      maxLabel,
-                    ),
-                  ),
-                  validator: _validateAmount,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _receiverController,
-                  keyboardType: _provider == PaymentProvider.telebirr
-                      ? TextInputType.phone
-                      : TextInputType.number,
-                  style: _isOtherTelebirrNumber
-                      ? TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        )
-                      : null,
-                  decoration: InputDecoration(
-                    labelText: _provider!.receiverFieldLabel,
-                    hintText: _provider == PaymentProvider.telebirr
-                        ? (_ownPhoneNumber ?? _provider!.receiverFieldHint)
-                        : _provider!.receiverFieldHint,
-                    helperText: _provider == PaymentProvider.telebirr
-                        ? (_isOtherTelebirrNumber
-                              ? 'Other number — payout goes here (not your account phone).'
-                              : 'Own number (recommended)')
-                        : (_provider == PaymentProvider.cbe
-                              ? 'Starts with 1000. Your account is saved on this device.'
-                              : null),
-                    helperStyle: TextStyle(
-                      color: _isOtherTelebirrNumber
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    suffixIcon: _provider == PaymentProvider.telebirr &&
-                            _ownPhoneNumber != null &&
-                            _isOtherTelebirrNumber
-                        ? TextButton(
-                            onPressed: _useOwnPhoneNumber,
-                            child: const Text('Use mine'),
-                          )
-                        : null,
-                  ),
-                  validator: _validateReceiver,
-                  onChanged: (value) {
-                    if (_provider != PaymentProvider.cbe) {
-                      return;
-                    }
-                    final trimmed = value.trim();
-                    if (trimmed.startsWith('1000') && trimmed.length >= 5) {
-                      _schedulePersistCbeAccount(trimmed);
-                    }
-                  },
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppBranding.goldAccent,
-                    foregroundColor: AppBranding.brandPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: _canSubmitWithdraw ? _submit : null,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.withdrawSubmit),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  child: _confirmation == null
-                      ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 280),
-                            child: WithdrawalConfirmationBanner(
-                              key: ValueKey(_confirmation!.switchKey),
-                              state: _confirmation!,
-                              onDismiss: _clearConfirmation,
-                            ),
-                          ),
-                        ),
-                ),
-                ],
-                const SizedBox(height: 28),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.withdrawRequestsTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                withdrawalsAsync.when(
-                  data: (result) {
-                    if (result.items.isEmpty) {
-                      return Text(
-                        l10n.withdrawHistoryEmptyMessage,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      );
-                    }
-
-                    return WithdrawalRequestsTable(
-                      withdrawals: result.items,
-                      compact: true,
-                      initialFilter: result.items.any(
-                            (w) => w.status == WithdrawalStatus.pending,
-                          )
-                          ? WithdrawalHistoryFilter.pending
-                          : WithdrawalHistoryFilter.all,
-                    );
-                  },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: FriendsBingoLoader.inline(),
-                  ),
-                  error: (_, _) => Text(
-                    l10n.withdrawHistoryCouldNotLoad,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ),
+                WithdrawFormSection(availableBalance: availableBalance),
               ],
-            ),
+              const SizedBox(height: 28),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                l10n.withdrawRequestsTitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              withdrawalsAsync.when(
+                data: (result) {
+                  if (result.items.isEmpty) {
+                    return Text(
+                      l10n.withdrawHistoryEmptyMessage,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    );
+                  }
+
+                  return WithdrawalRequestsTable(
+                    withdrawals: result.items,
+                    compact: true,
+                    initialFilter: result.items.any(
+                      (w) => w.status == WithdrawalStatus.pending,
+                    )
+                        ? WithdrawalHistoryFilter.pending
+                        : WithdrawalHistoryFilter.all,
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: FriendsBingoLoader.inline(),
+                ),
+                error: (_, _) => Text(
+                  l10n.withdrawHistoryCouldNotLoad,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _submit() async {
-    final provider = _provider;
-    if (provider == null || _isChoosingProvider) {
-      return;
-    }
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final session = ref.read(authControllerProvider).session;
-    if (session == null) {
-      return;
-    }
-
-    if (!session.user.hasPassword) {
-      if (!mounted) {
-        return;
-      }
-      final l10n = context.l10n;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.withdrawSetPasswordFirst)),
-      );
-      await showSecurityPasswordSheet(context, ref);
-      return;
-    }
-
-    final password = await showWithdrawConfirmDialog(context);
-    if (password == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      final receiverValue = _receiverController.text.trim();
-      final amount = _amountController.text.trim();
-      final withdrawal = await ref
-          .read(walletRepositoryProvider)
-          .createWithdrawal(
-            provider: provider,
-            amount: amount,
-            password: password,
-            receiverPhone: provider == PaymentProvider.telebirr
-                ? receiverValue
-                : null,
-            receiverAccount: provider == PaymentProvider.cbe
-                ? receiverValue
-                : null,
-          );
-
-      if (provider == PaymentProvider.cbe) {
-        await _persistCbeAccount(receiverValue);
-      }
-
-      ref.invalidate(myWalletProvider);
-      ref.invalidate(withdrawalHistoryProvider);
-      ref.invalidate(walletTransactionsProvider);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _trackedWithdrawalId = withdrawal.id;
-        _confirmation = WithdrawalConfirmationState.pending(
-          provider: provider,
-          amount: amount,
-          withdrawalId: withdrawal.id,
-        );
-      });
-      _consumeCachedWithdrawalUpdate();
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is ApiException
-                ? error.message
-                : context.l10n.withdrawCouldNotSubmit,
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-  }
-
-  String? _validateAmount(String? value) {
-    final l10n = context.l10n;
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return l10n.validatorAmountRequired;
-    }
-    if (!WalletAmountLimits.amountPattern.hasMatch(trimmed)) {
-      return l10n.validatorAmountInvalid;
-    }
-    final parsed = double.tryParse(trimmed);
-    if (parsed == null || parsed <= 0) {
-      return l10n.validatorAmountPositive;
-    }
-    if (parsed < WalletAmountLimits.minWithdraw) {
-      return l10n.validatorWithdrawAmountMin(
-        WalletAmountLimits.formatLimit(WalletAmountLimits.minWithdraw),
-      );
-    }
-    if (parsed > WalletAmountLimits.maxWithdraw) {
-      return l10n.validatorWithdrawAmountMax(
-        WalletAmountLimits.formatLimit(WalletAmountLimits.maxWithdraw),
-      );
-    }
-
-    final available = double.tryParse(_availableBalance ?? '');
-    if (available != null && parsed > available) {
-      return l10n.withdrawAmountExceedsAvailable;
-    }
-
-    return null;
-  }
-
-  String? _validateReceiver(String? value) {
-    final provider = _provider;
-    if (provider == null) {
-      return null;
-    }
-    final l10n = context.l10n;
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return '${provider.receiverFieldLabel} ${l10n.validatorPhoneRequired.replaceFirst('Phone number', '').trim()}';
-    }
-    if (provider == PaymentProvider.telebirr &&
-        !RegExp(r'^\d{10,15}$').hasMatch(trimmed)) {
-      return l10n.validatorPhoneInvalid;
-    }
-    if (provider == PaymentProvider.cbe) {
-      final digits = _digitsOnly(trimmed);
-      if (digits != trimmed) {
-        return 'CBE account must be numbers only.';
-      }
-      if (!digits.startsWith('1000')) {
-        return 'CBE account should start with 1000.';
-      }
-      if (digits.length < 5) {
-        return 'Enter your full CBE account number.';
-      }
-    }
-    return null;
   }
 }
