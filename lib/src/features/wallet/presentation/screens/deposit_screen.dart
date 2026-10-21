@@ -222,8 +222,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           )
           .map(
             (a) => DepositSettlementAccountItem(
-              accountNumber: a.settlementAccount,
-              accountHolderName: a.receiverName,
+              settlementAccount: a.settlementAccount,
+              receiverName: a.receiverName,
             ),
           )
           .toList(growable: false);
@@ -232,8 +232,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         providerConfig.settlementAccount.trim().isNotEmpty) {
       return [
         DepositSettlementAccountItem(
-          accountNumber: providerConfig.settlementAccount,
-          accountHolderName: providerConfig.receiverName,
+          settlementAccount: providerConfig.settlementAccount,
+          receiverName: providerConfig.receiverName,
         ),
       ];
     }
