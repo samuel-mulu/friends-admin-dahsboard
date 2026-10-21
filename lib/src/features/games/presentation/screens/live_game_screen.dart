@@ -144,11 +144,14 @@ import '../utils/live_embedded_operations_snapshot.dart';
 import '../utils/live_resume_provider_policy.dart';
 import '../../domain/registration_state_patch.dart';
 import '../../domain/resolved_cartela_availability.dart';
-import '../utils/registration_ux_metrics.dart';
-import '../../../settings/domain/feature_settings.dart';
-import '../../../settings/presentation/providers/feature_settings_provider.dart';
 import '../../domain/bingo_claim_source.dart';
+import '../utils/registration_ux_metrics.dart';
 import '../utils/auto_bingo_runtime.dart';
+import '../providers/live_game_state_provider.dart';
+import '../controllers/called_balls_notifier.dart';
+import '../controllers/player_cartelas_notifier.dart';
+import '../../../settings/presentation/providers/feature_settings_provider.dart';
+import '../../../settings/domain/feature_settings.dart';
 
 part 'live_game_orchestration.dart';
 part 'live_game_realtime.dart';
@@ -270,15 +273,17 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     }
     final game = _game;
     unawaited(
-      ref.read(gameSoundServiceProvider).play(
-        event,
-        sessionId: sessionId ?? game?.sessionId,
-        dedupeKey: dedupeKey,
-        // A Chain Game replays the one-shot cues every round inside one session.
-        roundKey: game != null && game.isChainGame
-            ? game.displayRoundIndex
-            : null,
-      ),
+      ref
+          .read(gameSoundServiceProvider)
+          .play(
+            event,
+            sessionId: sessionId ?? game?.sessionId,
+            dedupeKey: dedupeKey,
+            // A Chain Game replays the one-shot cues every round inside one session.
+            roundKey: game != null && game.isChainGame
+                ? game.displayRoundIndex
+                : null,
+          ),
     );
   }
 
@@ -335,6 +340,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   _featureSettingsSubscription;
   LivePresentationPhase? _lastDebugPhase;
   final bool _isSyncingLiveGame = false;
+
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
   final ValueNotifier<bool> _liveCartelaScrollIdle = ValueNotifier<bool>(true);
   Timer? _invalidSocketPayloadRefetchTimer;
@@ -344,6 +350,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _timingConfigLoaded = false;
   GameModel? _nextUpcomingGame;
   GameOperationsCurrentResponse? _lastOperations;
+
   /// After finish/cancel with no next READY, ignore ops terminal fallback for
   /// this session until a real next game appears.
   String? _releasedIdleTerminalSessionId;
@@ -383,8 +390,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         initialLoadComplete: _initialLoadComplete,
         isLoading: _isLoading,
         resumeSyncInFlight: controllers.realtime.resumeSyncInFlight,
-        canonicalRefetchInFlight:
-            controllers.realtime.canonicalRefetchInFlight,
+        canonicalRefetchInFlight: controllers.realtime.canonicalRefetchInFlight,
       );
 
   DateTime? get _resolverWinnerWindowEndsAt {
@@ -523,10 +529,6 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   bool _ownsSessionForPreview(String? sessionId) =>
       ownsSessionByCartelas(sessionId, _ownershipCartelaSessionIds);
 
-  /// The session currently in play (PLAYING / CHECKING), not the READY queue game.
-  GameModel? get _blockingLiveSessionGame =>
-      _lastOperations?.liveGame ?? _lastOperations?.checkingGame;
-
   String? get _registrationGridSessionId {
     final registrationOpen = _lastOperations?.registrationOpenGame;
     if (registrationOpen?.sessionId != null &&
@@ -595,8 +597,9 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
           canonicalRefetchInFlight:
               controllers.realtime.canonicalRefetchInFlight,
           postGameSummaryAdvancing: _review.postGameSummaryAdvancing,
-          registrationGridReady:
-              _isRegistrationGridReady(_registrationGridSessionId),
+          registrationGridReady: _isRegistrationGridReady(
+            _registrationGridSessionId,
+          ),
         ),
         now: _countdownNow(),
         preparingStaleAfter: _preparingPhaseCap,
@@ -921,7 +924,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       return true;
     }
 
-    if (_review.postGameSummaryReviewActive || _review.postGameSummaryAdvancing) {
+    if (_review.postGameSummaryReviewActive ||
+        _review.postGameSummaryAdvancing) {
       return true;
     }
 
@@ -989,18 +993,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
     _myCartelaDisplayOrderIds = const [];
   }
 
-  /// Copies current-round cartela numbers so the next READY registration panel
-  /// can auto-open single/bulk review with the same cards.
   void _capturePreviousCartelasForAutoOpen() {
-    if (isGuest || _myCartelas.isEmpty) {
-      return;
-    }
-
-    _pendingAutoOpenCartelaNumbers =
-        _myCartelas
-            .map((cartela) => cartela.cartela.number)
-            .toList(growable: false)
-          ..sort();
+    _pendingAutoOpenCartelaNumbers = null;
   }
 
   void _reorderMyCartela(int fromIndex, int toIndex) {
@@ -1056,7 +1050,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           retryAllowed: result.retryAllowed,
           reasonCode: result.reasonCode ?? result.claim.reasonCode,
           failureCode: result.failureCode ?? result.claim.failureCode,
-          nextAutoCallAt: result.hasNextAutoCallAt ? result.nextAutoCallAt : null,
+          nextAutoCallAt: result.hasNextAutoCallAt
+              ? result.nextAutoCallAt
+              : null,
           winnerWindowEndsAt: result.winnerWindowEndsAt,
         ),
       );
@@ -1099,9 +1095,14 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
       authControllerProvider,
       _onAuthSessionChanged,
     );
-    final initialFeatureSettings =
-        ref.read(featureSettingsControllerProvider).asData?.value.settings;
-    _cn.setEffectiveAutoMark(initialFeatureSettings?.effectiveAutoMark ?? false);
+    final initialFeatureSettings = ref
+        .read(featureSettingsControllerProvider)
+        .asData
+        ?.value
+        .settings;
+    _cn.setEffectiveAutoMark(
+      initialFeatureSettings?.effectiveAutoMark ?? false,
+    );
     _cn.setEffectiveAutoBingo(
       initialFeatureSettings?.effectiveAutoBingo ?? false,
     );
@@ -1172,7 +1173,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _activeCartelasNotifier = null;
     if (cartelasNotifier != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        cartelasNotifier.clear();
+        try {
+          cartelasNotifier.clear();
+        } catch (_) {}
       });
     }
     WidgetsBinding.instance.removeObserver(this);
@@ -1189,6 +1192,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     controllers.dispose();
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
+    _myCartelasRefreshDebounceTimer?.cancel();
+    _nextCartelasRefreshDebounceTimer?.cancel();
     _applySocketSessionMembership(null);
     _socketMembership.dispose();
     LiveGameResumeOwnerRegistry.setMasterRefresh(null);
@@ -1464,9 +1469,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             padding: AppSpacing.screenPadding.copyWith(top: 0, bottom: 0),
             child: _buildStickyLiveHeader(),
           ),
-          Expanded(
-            child: _buildStickyLiveScrollView(),
-          ),
+          Expanded(child: _buildStickyLiveScrollView()),
         ],
       );
     }
@@ -1481,7 +1484,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
               physics: const AlwaysScrollableScrollPhysics(),
               padding: AppSpacing.screenPadding.copyWith(
                 top: 0,
-                bottom: AppSpacing.screenPadding.bottom +
+                bottom:
+                    AppSpacing.screenPadding.bottom +
                     MediaQuery.viewPaddingOf(context).bottom,
               ),
               children: _buildFullScrollContent(),
@@ -1651,9 +1655,8 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                           children: [
                             _GuestSpectatorHint(
                               onSignUp: () => context.go('/register'),
-                              onSignIn: () => context.go(
-                                loginPathWithRedirect('/games'),
-                              ),
+                              onSignIn: () =>
+                                  context.go(loginPathWithRedirect('/games')),
                             ),
                           ],
                         )
@@ -1663,9 +1666,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
                 : showRegistrationActions
                 ? registrationBody
                 : widget.embedded && game.isBigGame
-                ? _BigGameEmbeddedWaitingPanel(
-                    isRefetching: _isLoading,
-                  )
+                ? _BigGameEmbeddedWaitingPanel(isRefetching: _isLoading)
                 : _PreparingGamePanel(
                     registeredCartelas: registeredCartelas,
                     isRefetching: showRegistrationHandoffPreparing,
@@ -1773,9 +1774,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     }
     if (_isLoading) {
       return const [
-        SizedBox.expand(
-          child: FriendsBingoLoader.inline(compact: true),
-        ),
+        SizedBox.expand(child: FriendsBingoLoader.inline(compact: true)),
       ];
     }
     if (_errorMessage != null) {
@@ -1963,7 +1962,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     );
 
     return LiveNextRoundRegistrationSection(
-      gameName: isBigGameMissed ? nextRoundLabel : target.localizedRuleName(ref),
+      gameName: isBigGameMissed
+          ? nextRoundLabel
+          : target.localizedRuleName(ref),
       currentRoundGameName: isBigGameMissed
           ? previousRoundLabel
           : controllers.missedPreview.blockingLiveGame?.localizedRuleName(ref),
@@ -1972,9 +1973,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           : controllers.missedPreview.blockingLiveGame,
       nextGame: target,
       sectionTitle: isBigGameMissed
-          ? l10n.bigGameMissedRoundRegistrationTitle(
-              target.displayRoundIndex,
-            )
+          ? l10n.bigGameMissedRoundRegistrationTitle(target.displayRoundIndex)
           : l10n.liveNextRoundRegistrationTitle,
       helperText: isBigGameMissed
           ? l10n.bigGameMissedRoundHelper(
@@ -2182,8 +2181,9 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           Builder(
             builder: (context) {
               final cartelaSortMode = ref.watch(cartelaSortModeProvider);
-              final cartelaSortMaxRemains =
-                  ref.watch(cartelaSortMaxRemainsProvider);
+              final cartelaSortMaxRemains = ref.watch(
+                cartelaSortMaxRemainsProvider,
+              );
               return _buildPlayCartelaList(
                 cartelaSortMode: cartelaSortMode,
                 cartelaSortMaxRemains: cartelaSortMaxRemains,
@@ -2197,9 +2197,7 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
           ],
         ] else if (_hasVisibleCurrentSessionCartelas)
           widget.embedded && (_game?.isBigGame ?? false)
-              ? _BigGameEmbeddedWaitingPanel(
-                  isRefetching: _isLoading,
-                )
+              ? _BigGameEmbeddedWaitingPanel(isRefetching: _isLoading)
               : _RegisteredCartelaList(cartelas: _myCartelas),
       ],
     );
@@ -2562,6 +2560,7 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
       freezeCartelaMarks: freezeCartelaMarks,
       isOneAwayFromWin: sortResult?.isOneAway ?? false,
       hasLocalPatternComplete: sortResult?.hasLocalPatternComplete ?? false,
+      isLateClaim: sortResult?.isLateClaim ?? false,
       oneAwayCellIndexes: sortResult?.oneAwayCellIndexes ?? const {},
       winningPatternOverlay: useStoredWinnerOverlay
           ? storedWinnerOverlay
@@ -2596,46 +2595,49 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
     required Widget card,
   }) {
     final onReorder = this.onReorder;
-    if (onReorder == null) {
-      return card;
-    }
-
     final theme = Theme.of(context);
-    return LongPressDraggable<int>(
-      data: index,
-      delay: const Duration(milliseconds: 400),
-      hapticFeedbackOnStart: true,
-      feedback: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          width: cellWidth,
-          height: cellHeight,
-          child: Opacity(opacity: 0.92, child: card),
-        ),
-      ),
-      childWhenDragging: SizedBox(width: cellWidth, height: cellHeight),
-      child: DragTarget<int>(
-        onWillAcceptWithDetails: (details) => details.data != index,
-        onAcceptWithDetails: (details) => onReorder(details.data, index),
-        builder: (context, candidateData, rejectedData) {
-          final isTarget = candidateData.isNotEmpty;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
-            decoration: isTarget
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 2,
-                    ),
-                  )
-                : null,
-            child: card,
+    final wrapped = onReorder == null
+        ? card
+        : LongPressDraggable<int>(
+            data: index,
+            delay: const Duration(milliseconds: 400),
+            hapticFeedbackOnStart: true,
+            feedback: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                width: cellWidth,
+                height: cellHeight,
+                child: Opacity(opacity: 0.92, child: card),
+              ),
+            ),
+            childWhenDragging: SizedBox(width: cellWidth, height: cellHeight),
+            child: DragTarget<int>(
+              onWillAcceptWithDetails: (details) => details.data != index,
+              onAcceptWithDetails: (details) => onReorder(details.data, index),
+              builder: (context, candidateData, rejectedData) {
+                final isTarget = candidateData.isNotEmpty;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  decoration: isTarget
+                      ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          ),
+                        )
+                      : null,
+                  child: card,
+                );
+              },
+            ),
           );
-        },
-      ),
+
+    return KeyedSubtree(
+      key: ValueKey('cartela_cell_${cartelas[index].id}'),
+      child: wrapped,
     );
   }
 
@@ -2680,50 +2682,66 @@ class _InlineRegisteredCartelaList extends StatelessWidget {
   }
 
   static const _crossAxisSpacing = 6.0;
-  static const _childAspectRatio = 0.72;
   static const _mainAxisSpacing = 6.0;
+
+  static double _resolveChildAspectRatio(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1.0);
+    if (scale > 1.25) {
+      return 0.62;
+    }
+    if (scale > 1.05) {
+      return 0.67;
+    }
+    return 0.72;
+  }
 
   /// Real scrolling 2-col grid for sticky live play ([CustomScrollView]).
   Widget asSliver({required double crossAxisExtent}) {
-    final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
-    final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
-    final cellHeight = cellWidth / _childAspectRatio;
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final ratio = _resolveChildAspectRatio(context);
+        final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
+        final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
+        final cellHeight = cellWidth / ratio;
 
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: _mainAxisSpacing,
-        crossAxisSpacing: _crossAxisSpacing,
-        childAspectRatio: _childAspectRatio,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) => _buildGridItem(
-          context: context,
-          index: index,
-          cellWidth: cellWidth,
-          cellHeight: cellHeight,
-        ),
-        childCount: cartelas.length,
-      ),
+        return SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: _mainAxisSpacing,
+            crossAxisSpacing: _crossAxisSpacing,
+            childAspectRatio: ratio,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildGridItem(
+              context: context,
+              index: index,
+              cellWidth: cellWidth,
+              cellHeight: cellHeight,
+            ),
+            childCount: cartelas.length,
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     // Nested inside a parent [ListView] (non-sticky layouts only).
+    final ratio = _resolveChildAspectRatio(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellWidth = (constraints.maxWidth - _crossAxisSpacing) / 2;
-        final cellHeight = cellWidth / _childAspectRatio;
+        final cellHeight = cellWidth / ratio;
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: _mainAxisSpacing,
             crossAxisSpacing: _crossAxisSpacing,
-            childAspectRatio: _childAspectRatio,
+            childAspectRatio: ratio,
           ),
           itemCount: cartelas.length,
           itemBuilder: (context, index) => _buildGridItem(
@@ -3452,7 +3470,10 @@ class _GuestPromoCongratsCard extends StatelessWidget {
                       Text(
                         l10n.guestPromoCongratsAmountWon(amountLabel),
                         textAlign: TextAlign.center,
-                        style: AppBranding.wordmarkBrandAccent(context, size: 24),
+                        style: AppBranding.wordmarkBrandAccent(
+                          context,
+                          size: 24,
+                        ),
                       ),
                       VGap.sm,
                       Text(
@@ -3907,7 +3928,10 @@ class _LiveSyncOverlay extends StatelessWidget {
                       ),
                     ),
                     if (showRetry) ...[
-                      TextButton(onPressed: onRetry, child: const Text('Retry')),
+                      TextButton(
+                        onPressed: onRetry,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ],
                 ),

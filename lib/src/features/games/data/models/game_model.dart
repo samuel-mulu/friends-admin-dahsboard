@@ -720,7 +720,7 @@ class GameModel {
         (status == GameStatus.playing ||
             status == GameStatus.checking ||
             status == GameStatus.winnerWindow)) {
-      final previous = next!.previousRound;
+      final previous = next.previousRound;
       if (previous == null) {
         return false;
       }

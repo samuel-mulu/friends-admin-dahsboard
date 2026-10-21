@@ -978,7 +978,7 @@ class _CartelaRegistrationPanelState
       if (result.hasSuccesses) {
         // KISS: Just notify and clear selection
         _bulkDebugLog('bulk_register_success count=${result.successes.length}');
-        _notifyRegistered(result.successes);
+        _notifyRegistered(result.myCartelas ?? result.successes);
 
         // Clear selected state for successfully registered cartelas
         setState(() {
@@ -1071,6 +1071,14 @@ class _CartelaRegistrationPanelState
   }
 
   void _scheduleAutoOpenIfNeeded(List<CartelaModel> loadedCartelas) {
+    if (widget.gameStatus == GameStatus.playing ||
+        widget.gameStatus == GameStatus.checking ||
+        widget.gameStatus == GameStatus.winnerWindow) {
+      _autoOpenConsumed = true;
+      widget.onAutoOpenConsumed?.call();
+      return;
+    }
+
     final numbers = widget.autoOpenCartelaNumbers;
     if (_autoOpenConsumed ||
         _autoOpenScheduled ||
@@ -1154,6 +1162,14 @@ class _CartelaRegistrationPanelState
     List<_RegisterCartelaOption> options,
   ) {
     if (_autoOpenConsumed) {
+      return true;
+    }
+
+    if (widget.gameStatus == GameStatus.playing ||
+        widget.gameStatus == GameStatus.checking ||
+        widget.gameStatus == GameStatus.winnerWindow) {
+      _autoOpenConsumed = true;
+      widget.onAutoOpenConsumed?.call();
       return true;
     }
 

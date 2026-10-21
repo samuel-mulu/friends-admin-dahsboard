@@ -21,6 +21,7 @@ Future<void> showWinnerCartelaDialog({
   ValueListenable<DateTime?>? pauseEndsAtListenable,
   int? roundIndex,
   int? roundCount,
+  Duration? autoDismissDuration,
 }) {
   if (results.isEmpty) {
     return Future<void>.value();
@@ -36,6 +37,7 @@ Future<void> showWinnerCartelaDialog({
         pauseEndsAtListenable: pauseEndsAtListenable,
         roundIndex: roundIndex,
         roundCount: roundCount,
+        autoDismissDuration: autoDismissDuration,
       );
     },
   );
@@ -48,6 +50,7 @@ class _WinnerCartelaDialog extends StatefulWidget {
     this.pauseEndsAtListenable,
     this.roundIndex,
     this.roundCount,
+    this.autoDismissDuration,
   });
 
   final List<SessionWinnerResultModel> results;
@@ -55,6 +58,7 @@ class _WinnerCartelaDialog extends StatefulWidget {
   final ValueListenable<DateTime?>? pauseEndsAtListenable;
   final int? roundIndex;
   final int? roundCount;
+  final Duration? autoDismissDuration;
 
   @override
   State<_WinnerCartelaDialog> createState() => _WinnerCartelaDialogState();
@@ -67,6 +71,8 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
   Duration _pauseRemaining = Duration.zero;
   Duration _pauseTotal = Duration.zero;
   DateTime? _activePauseEndsAt;
+  Timer? _autoDismissTimer;
+  int? _secondsRemaining;
 
   List<int> get _winnerNumbers => widget.results
       .map((result) => result.cartelaNumber)
@@ -80,6 +86,25 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
     super.initState();
     widget.pauseEndsAtListenable?.addListener(_onPauseEndsAtChanged);
     _startPauseCountdown();
+    final duration = widget.autoDismissDuration;
+    if (duration != null && duration > Duration.zero) {
+      _secondsRemaining = duration.inSeconds;
+      _autoDismissTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        final current = _secondsRemaining ?? 0;
+        if (current <= 1) {
+          timer.cancel();
+          Navigator.of(context, rootNavigator: true).pop();
+        } else {
+          setState(() {
+            _secondsRemaining = current - 1;
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -146,6 +171,7 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
   void dispose() {
     widget.pauseEndsAtListenable?.removeListener(_onPauseEndsAtChanged);
     _pauseTicker?.cancel();
+    _autoDismissTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -287,6 +313,27 @@ class _WinnerCartelaDialogState extends State<_WinnerCartelaDialog> {
                       ],
                     ),
                   ),
+                  if (_secondsRemaining != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withValues(
+                          alpha: 0.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_secondsRemaining}s',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   _buildCloseControl(theme),
                 ],
               ),

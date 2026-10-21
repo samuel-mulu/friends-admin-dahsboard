@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_branding.dart';
+import '../../data/models/cartela_model.dart';
+import '../components/cartela_board_widget.dart';
 
 /// Placeholder columns for instant B-I-N-G-O chrome while board numbers load.
 List<List<String>> emptyCartelaBoardColumns() => [
@@ -11,7 +12,7 @@ List<List<String>> emptyCartelaBoardColumns() => [
   ['', '', '', '', ''],
 ];
 
-/// Read-only B-I-N-G-O grid for cartela preview modals.
+/// Read-only B-I-N-G-O grid for cartela preview modals delegating to [CartelaBoardWidget].
 class CartelaBoardPreview extends StatelessWidget {
   const CartelaBoardPreview({
     required this.columns,
@@ -27,103 +28,20 @@ class CartelaBoardPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const headers = ['B', 'I', 'N', 'G', 'O'];
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppBranding.feltGreen.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppBranding.gold.withValues(alpha: 0.35),
-        ),
+    return CartelaBoardWidget(
+      cartela: CartelaModel(
+        id: '',
+        number: 0,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        b: columns.isNotEmpty ? columns[0] : const [],
+        i: columns.length > 1 ? columns[1] : const [],
+        n: columns.length > 2 ? columns[2] : const [],
+        g: columns.length > 3 ? columns[3] : const [],
+        o: columns.length > 4 ? columns[4] : const [],
       ),
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(headers.length, (index) {
-              return Expanded(
-                child: Text(
-                  headers[index],
-                  textAlign: TextAlign.center,
-                  style: AppBranding.wordmarkGold(size: 18),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 6),
-          ...List.generate(5, (rowIndex) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: List.generate(headers.length, (columnIndex) {
-                  final value = columns[columnIndex].length > rowIndex
-                      ? columns[columnIndex][rowIndex]
-                      : '';
-                  final isFree = value == 'FREE';
-                  final cellNumber = int.tryParse(value);
-                  final isCalled = isFree ||
-                      (cellNumber != null && calledNumbers.contains(cellNumber));
-
-                  return Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isFree
-                            ? AppBranding.gold
-                                .withValues(alpha: isDark ? 0.25 : 0.35)
-                            : AppBranding.cellBackground(
-                                context,
-                                marked: isCalled,
-                              ),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isFree || isCalled
-                              ? AppBranding.gold
-                              : theme.colorScheme.outlineVariant
-                                  .withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            value,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: isFree ? 22 : 26,
-                              fontWeight:
-                                  isFree || isCalled
-                                      ? FontWeight.w800
-                                      : FontWeight.w700,
-                              height: 1,
-                              color: isFree
-                                  ? AppBranding.casinoPurpleDeep
-                                  : isCalled
-                                      ? AppBranding.cellForeground(
-                                          context,
-                                          marked: true,
-                                        )
-                                      : theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            );
-          }),
-        ],
-      ),
+      markedCells: calledNumbers,
+      showHeader: false,
+      interactive: false,
     );
   }
 }

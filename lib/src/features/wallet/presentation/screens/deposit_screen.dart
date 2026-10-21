@@ -49,10 +49,7 @@ class DepositScreen extends ConsumerStatefulWidget {
 
 class _DepositScreenState extends ConsumerState<DepositScreen> {
   static const _approvedDismissDelay = Duration(seconds: 8);
-  static const _comingSoonProviders = {
-    PaymentProvider.awash,
-    PaymentProvider.boa,
-  };
+  static const _comingSoonProviders = <PaymentProvider>{};
 
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
@@ -853,7 +850,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
           receiptParseStatus = preview.receiptParseStatus;
           clientReceipt = preview.toClientReceiptPayload();
 
-          if (preview.status != TelebirrReceiptPreviewStatus.valid ||
+          if (preview.status == TelebirrReceiptPreviewStatus.previewUnavailable) {
+            // Receipt preview fetch failed on device (e.g. mobile carrier blocks or timeout);
+            // proceed to backend for server-side verification / admin review rather than hard-rejecting
+            receiptParseStatus = TelebirrReceiptParseStatus.unavailable;
+            clientReceipt = null;
+          } else if (preview.status != TelebirrReceiptPreviewStatus.valid ||
               clientReceipt == null) {
             if (!mounted) {
               return;
@@ -903,36 +905,6 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         }
       } else {
         transactionRef = rawTransactionInput.toUpperCase();
-      }
-
-      final checkResult = await walletRepository.checkDepositReference(
-        provider: provider,
-        transactionRef: transactionRef,
-      );
-
-      if (!checkResult.isAvailable) {
-        if (!mounted) {
-          return;
-        }
-
-        final message =
-            _mapDepositCodeToMessage(checkResult.code) ?? checkResult.message;
-        final isUnderReview = checkResult.code == 'UNDER_REVIEW';
-        final isAlreadyUsed = checkResult.code == 'ALREADY_USED';
-        setState(() {
-          _transactionRefServerError = message;
-          _confirmation = DepositConfirmationState(
-            kind: isUnderReview
-                ? DepositConfirmationKind.underReview
-                : DepositConfirmationKind.rejected,
-            message: message,
-            provider: provider,
-            amount: submittedAmount,
-            transactionRef: transactionRef,
-            canRetry: !isUnderReview && !isAlreadyUsed,
-          );
-        });
-        return;
       }
 
       final result = await walletRepository.createDeposit(

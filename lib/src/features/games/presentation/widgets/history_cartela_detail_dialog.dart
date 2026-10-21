@@ -6,6 +6,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/session_winner_result_model.dart';
+import '../components/bingo_ball_badge.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
 import '../utils/cartela_board_layout.dart';
 import 'cartela_board_preview.dart';
@@ -212,7 +213,6 @@ class _HistoryCalledNumbersScroller extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final latestOrder = calledNumbers.isEmpty
         ? null
         : calledNumbers.last.order;
@@ -232,10 +232,10 @@ class _HistoryCalledNumbersScroller extends StatelessWidget {
         itemBuilder: (context, index) {
           final call = calledNumbers[index];
           final isLatest = call.order == latestOrder;
-          return _HistoryCalledBallChip(
-            label: call.displayValue,
+          return BingoBallBadge(
+            number: call.number,
             isLatest: isLatest,
-            theme: theme,
+            size: 40,
           );
         },
       ),
@@ -243,45 +243,3 @@ class _HistoryCalledNumbersScroller extends StatelessWidget {
   }
 }
 
-class _HistoryCalledBallChip extends StatelessWidget {
-  const _HistoryCalledBallChip({
-    required this.label,
-    required this.isLatest,
-    required this.theme,
-  });
-
-  final String label;
-  final bool isLatest;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isLatest
-            ? AppBranding.gold.withValues(alpha: 0.25)
-            : theme.colorScheme.surfaceContainerHighest,
-        border: Border.all(
-          color: isLatest
-              ? AppBranding.gold
-              : theme.colorScheme.outlineVariant,
-          width: isLatest ? 1.5 : 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: isLatest
-              ? AppBranding.brandPurple
-              : theme.colorScheme.onSurface,
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
-}

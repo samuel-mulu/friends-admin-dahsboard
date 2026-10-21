@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/called_number_model.dart';
 import '../../domain/live_connection_status.dart';
+import '../components/bingo_ball_badge.dart';
 import 'latest_call_pulse.dart';
 import 'live_status_chip.dart';
 
@@ -880,128 +881,16 @@ class _CalledBall extends StatelessWidget {
   final double size;
   final bool isLatest;
 
-  static Color _baseColorForLetter(String letter) {
-    return AppBranding.bingoColumnColor(letter);
-  }
-
-  static BoxDecoration _ballDecoration({
-    required Color baseColor,
-    required bool isLatest,
-    required bool isEmpty,
-    required bool isDark,
-  }) {
-    if (isEmpty) {
-      return BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          center: const Alignment(-0.35, -0.35),
-          radius: 1.05,
-          colors: [
-            isDark ? const Color(0xFF3A3A3A) : AppBranding.lightSurface,
-            isDark ? const Color(0xFF2A2A2A) : AppBranding.lightSurfaceMuted,
-            isDark ? const Color(0xFF1F1F1F) : AppBranding.lightOutline,
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.45),
-          width: 1.2,
-        ),
-      );
-    }
-
-    final highlight = Color.lerp(baseColor, Colors.white, 0.42)!;
-    final shadowTone = Color.lerp(baseColor, Colors.black, 0.28)!;
-
-    return BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(
-        center: const Alignment(-0.35, -0.35),
-        radius: 1.05,
-        colors: [highlight, baseColor, shadowTone],
-        stops: const [0.0, 0.58, 1.0],
-      ),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: isLatest ? 0.18 : 0.28),
-        width: isLatest ? 1 : 1.2,
-      ),
-      boxShadow: isLatest
-          ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ]
-          : [
-              BoxShadow(
-                color: baseColor.withValues(alpha: 0.38),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isEmpty = calledNumber == null;
-    final isDark = theme.brightness == Brightness.dark;
-    final baseColor = isEmpty
-        ? theme.colorScheme.surfaceContainerHighest
-        : isLatest
-        ? (isDark ? AppBranding.gold : AppBranding.goldDark)
-        : _baseColorForLetter(calledNumber!.letter);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final ball = SizedBox(
-      width: size,
-      height: size,
-      child: DecoratedBox(
-        decoration: _ballDecoration(
-          baseColor: baseColor,
-          isLatest: isLatest,
-          isEmpty: isEmpty,
-          isDark: isDark,
-        ),
-        child: Center(
-          child: isEmpty
-              ? Text(
-                  '--',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                )
-              : Text(
-                  '${calledNumber!.letter}-${calledNumber!.number}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: isLatest
-                        ? (size >= 60 ? 20 : 16)
-                        : (size >= 42 ? 15 : 12),
-                    height: 1,
-                    letterSpacing: isLatest ? -0.3 : 0,
-                    color: isLatest
-                        ? AppBranding.casinoPurpleDeep
-                        : Colors.white,
-                    shadows: const [
-                      Shadow(
-                        color: Color(0x66000000),
-                        offset: Offset(0, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
+    final ball = BingoBallBadge(
+      number: calledNumber?.number,
+      letter: calledNumber?.letter,
+      size: size,
+      isLatest: isLatest,
     );
 
     if (isLatest && !isEmpty) {

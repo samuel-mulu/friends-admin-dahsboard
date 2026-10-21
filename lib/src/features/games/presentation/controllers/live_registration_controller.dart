@@ -991,6 +991,24 @@ class LiveRegistrationController {
     }
 
     final registeredSessionId = registeredCartelas.first.gameId;
+
+    // Immediately merge newly registered cartelas optimistically so they are never lost on rapid registrations
+    host.markNeedsBuild(() {
+      if (registeredSessionId == game.sessionId) {
+        myCartelas = mergeRegisteredCartelas(
+          current: myCartelas,
+          incoming: registeredCartelas,
+          sessionId: registeredSessionId,
+        );
+      } else if (registeredSessionId == trackedRegistrationSessionId) {
+        nextRegistrationCartelas = mergeRegisteredCartelas(
+          current: nextRegistrationCartelas,
+          incoming: registeredCartelas,
+          sessionId: registeredSessionId,
+        );
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!host.mounted || host.game == null) {
         return;
@@ -1100,7 +1118,11 @@ class LiveRegistrationController {
 
           host.markNeedsBuild(() {
             nextRegistrationCartelas = sortedNextRegistrationCartelas(
-              nextCartelas,
+              mergeRegisteredCartelas(
+                current: nextRegistrationCartelas,
+                incoming: nextCartelas,
+                sessionId: sessionId,
+              ),
             );
           });
         } catch (_) {

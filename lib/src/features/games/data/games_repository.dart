@@ -183,7 +183,7 @@ class GamesRepository {
         '/games/sessions/$sessionId/register-cartela',
         data: {
           'cartelaId': cartelaId,
-          ?'paymentSource': paymentSource,
+          if (paymentSource != null) 'paymentSource': paymentSource,
         },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
@@ -217,7 +217,7 @@ class GamesRepository {
         '/games/slots/$slotId/register-cartela',
         data: {
           'cartelaId': cartelaId,
-          ?'paymentSource': paymentSource,
+          if (paymentSource != null) 'paymentSource': paymentSource,
         },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
@@ -285,7 +285,7 @@ class GamesRepository {
                 'cartelaNumber': cartela.cartelaNumber,
               },
           ],
-          ?'paymentSource': paymentSource,
+          if (paymentSource != null) 'paymentSource': paymentSource,
         },
         receiveTimeout: _bulkOperationTimeout,
         decoder: (rawData) => _decodeBulkRegisterResult(rawData),
@@ -293,7 +293,7 @@ class GamesRepository {
 
       onProgress?.call(total, total);
 
-      return _reconcileBulkRegistration(
+      return await _reconcileBulkRegistration(
         slotId: slotId,
         providedSessionId: sessionId,
         requestedCartelas: cartelas,
@@ -371,7 +371,22 @@ class GamesRepository {
         )
         .toList(growable: false);
 
-    return BulkRegisterResult(successes: successes, failures: failures);
+    final myCartelaItems = rawData['myCartelas'];
+    List<GameCartelaModel>? myCartelas;
+    if (myCartelaItems is List) {
+      myCartelas = <GameCartelaModel>[];
+      for (final item in myCartelaItems.whereType<Map<String, dynamic>>()) {
+        try {
+          myCartelas.add(GameCartelaModel.fromJson(item));
+        } catch (_) {}
+      }
+    }
+
+    return BulkRegisterResult(
+      successes: successes,
+      failures: failures,
+      myCartelas: myCartelas,
+    );
   }
 
   Future<BulkRegisterResult> _recoverBulkRegistrationAfterConnectivityFailure({

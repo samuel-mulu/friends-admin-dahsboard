@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_branding.dart';
-import '../utils/cartela_board_layout.dart';
-import '../utils/cartela_mark_helpers.dart';
+import '../../data/models/cartela_model.dart';
+import '../components/cartela_board_widget.dart';
 import '../utils/cartela_pattern_progress_overlay.dart';
-import 'cartela_pattern_progress_painter.dart';
 
+/// Read-only B-I-N-G-O winning pattern board for review sheets and winner modals,
+/// delegating to the unified [CartelaBoardWidget].
 class WinningPatternCartelaGrid extends StatelessWidget {
   const WinningPatternCartelaGrid({
     required this.columns,
@@ -39,234 +39,46 @@ class WinningPatternCartelaGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final headerFontSize = compact
-        ? CartelaBoardLayout.compactReviewHeaderFontSize
-        : CartelaBoardLayout.reviewHeaderFontSize;
     final effectiveHighlights = _effectiveHighlightCellIndexes;
+    final winningNumbers = <int>{};
+    int? winningBallNum;
 
-    return Column(
-      children: [
-        Row(
-          children: List.generate(bingoColumnHeaders.length, (index) {
-            final header = bingoColumnHeaders[index];
-            return Expanded(
-              child: Text(
-                header,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: headerFontSize,
-                  fontWeight: FontWeight.w900,
-                  color: AppBranding.bingoColumnColor(header),
-                ),
-              ),
-            );
-          }),
-        ),
-        SizedBox(height: CartelaBoardLayout.headerToGridGap),
-        Expanded(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppBranding.cartelaBoardBackground(context),
-              borderRadius:
-                  BorderRadius.circular(CartelaBoardLayout.boardBorderRadius),
-              border: isDark
-                  ? null
-                  : Border.all(
-                      color: AppBranding.lightOutline.withValues(alpha: 0.55),
-                    ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(CartelaBoardLayout.boardPadding),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Column(
-                        children: List.generate(5, (rowIndex) {
-                          return Expanded(
-                            child: Row(
-                              children: List.generate(5, (columnIndex) {
-                                final value =
-                                    columns[columnIndex].length > rowIndex
-                                    ? columns[columnIndex][rowIndex]
-                                    : '';
-                                final cellIndex = rowIndex * 5 + columnIndex;
-                                final isWinningBall =
-                                    winningBallCellIndex == cellIndex;
-                                final isHighlighted =
-                                    effectiveHighlights.contains(cellIndex);
-                                final isFree = value == 'FREE';
-                                final cellNumber = int.tryParse(value);
-                                final isCalled = isFree ||
-                                    (cellNumber != null &&
-                                        calledNumbers.contains(cellNumber));
-
-                                return Expanded(
-                                  child: _WinningPatternCell(
-                                    value: value,
-                                    isWinningBall: isWinningBall,
-                                    isHighlighted: isHighlighted,
-                                    isCalled: isCalled,
-                                    isFree: isFree,
-                                  ),
-                                );
-                              }),
-                            ),
-                          );
-                        }),
-                      ),
-                      if (!patternOverlay.isEmpty)
-                        IgnorePointer(
-                          child: CustomPaint(
-                            painter: CartelaPatternProgressPainter(
-                              overlay: patternOverlay,
-                              cellInset: CartelaBoardLayout.cellPadding,
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _WinningPatternCell extends StatelessWidget {
-  const _WinningPatternCell({
-    required this.value,
-    required this.isWinningBall,
-    required this.isHighlighted,
-    required this.isCalled,
-    required this.isFree,
-  });
-
-  final String value;
-  final bool isWinningBall;
-  final bool isHighlighted;
-  final bool isCalled;
-  final bool isFree;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final displayValue = isFree ? 'F' : value;
-
-    final Color fillColor;
-    final Color borderColor;
-    final List<BoxShadow> shadows;
-    final Color textColor;
-
-    // Priority matches admin history: winning ball > pattern > called > unmarked.
-    if (isFree) {
-      fillColor = AppBranding.bingoFreeGreen;
-      borderColor = Colors.white.withValues(alpha: 0.22);
-      textColor = Colors.white;
-      shadows = [
-        BoxShadow(
-          color: AppBranding.bingoFreeGreen.withValues(alpha: 0.55),
-          blurRadius: 10,
-          spreadRadius: 0.5,
-        ),
-      ];
-    } else if (isWinningBall) {
-      fillColor = AppBranding.gold;
-      borderColor = AppBranding.goldDark;
-      textColor = AppBranding.casinoPurpleDeep;
-      shadows = [
-        BoxShadow(
-          color: AppBranding.gold.withValues(alpha: 0.72),
-          blurRadius: 12,
-          spreadRadius: 0.5,
-        ),
-      ];
-    } else if (isHighlighted) {
-      fillColor = AppBranding.bingoFreeGreen;
-      borderColor = AppBranding.feltGreen;
-      textColor = Colors.white;
-      shadows = [
-        BoxShadow(
-          color: AppBranding.bingoFreeGreen.withValues(alpha: 0.55),
-          blurRadius: 10,
-          spreadRadius: 0.5,
-        ),
-      ];
-    } else if (isCalled) {
-      fillColor = AppBranding.cellBackground(context, marked: true);
-      borderColor = AppBranding.cellBorder(context, marked: true);
-      textColor = AppBranding.cellForeground(context, marked: true);
-      shadows = isDark
-          ? const []
-          : [
-              BoxShadow(
-                color: AppBranding.gold.withValues(alpha: 0.18),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-            ];
-    } else {
-      fillColor = AppBranding.cellBackground(context, marked: false);
-      borderColor = AppBranding.cellBorder(context, marked: false);
-      textColor = AppBranding.cellForeground(context, marked: false);
-      shadows = isDark
-          ? const []
-          : [
-              BoxShadow(
-                color: AppBranding.brandPurple.withValues(alpha: 0.04),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ];
+    for (int col = 0; col < columns.length; col++) {
+      for (int row = 0; row < columns[col].length; row++) {
+        final cellIdx = (row * 5) + col;
+        final rawVal = columns[col][row];
+        final number = int.tryParse(rawVal) ?? 0;
+        if (number > 0) {
+          if (effectiveHighlights.contains(cellIdx)) {
+            winningNumbers.add(number);
+          }
+          if (winningBallCellIndex != null && winningBallCellIndex == cellIdx) {
+            winningBallNum = number;
+          }
+        }
+      }
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(CartelaBoardLayout.cellPadding),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final diameter = constraints.maxWidth < constraints.maxHeight
-              ? constraints.maxWidth
-              : constraints.maxHeight;
+    final allMarked = <int>{...winningNumbers, ...calledNumbers};
 
-          return Center(
-            child: SizedBox(
-              width: diameter,
-              height: diameter,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: fillColor,
-                  border: Border.all(color: borderColor, width: 1),
-                  boxShadow: shadows,
-                ),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      displayValue,
-                      style: TextStyle(
-                        fontSize: CartelaBoardLayout
-                            .maximizedCellNumberFontSize(diameter),
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+    return CartelaBoardWidget(
+      cartela: CartelaModel(
+        id: '',
+        number: 0,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        b: columns.isNotEmpty ? columns[0] : const [],
+        i: columns.length > 1 ? columns[1] : const [],
+        n: columns.length > 2 ? columns[2] : const [],
+        g: columns.length > 3 ? columns[3] : const [],
+        o: columns.length > 4 ? columns[4] : const [],
       ),
+      markedCells: allMarked,
+      winningPatternCells: winningNumbers,
+      winningBallNumber: winningBallNum,
+      patternOverlay: patternOverlay,
+      isWinner: true,
+      showHeader: false,
+      interactive: false,
     );
   }
 }

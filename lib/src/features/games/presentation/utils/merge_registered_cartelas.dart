@@ -115,11 +115,11 @@ List<GameCartelaModel> mergeRegisteredCartelas({
   required String? sessionId,
 }) {
   bool belongsToSession(GameCartelaModel cartela) {
-    if (sessionId == null) {
+    if (sessionId == null || sessionId.isEmpty) {
       return true;
     }
     if (cartela.gameId.isEmpty) {
-      return false;
+      return true;
     }
     return cartela.gameId == sessionId;
   }
@@ -135,5 +135,9 @@ List<GameCartelaModel> mergeRegisteredCartelas({
     );
   }
 
-  return byId.values.toList(growable: false);
+  final list = byId.values.toList(growable: false);
+  list.sort(
+    (left, right) => left.cartela.number.compareTo(right.cartela.number),
+  );
+  return list;
 }

@@ -781,7 +781,7 @@ void main() {
           roundIndex: 1,
           prizeAmount: '3000',
           outcome: ChainRoundOutcome.won,
-          winners: const [
+          winners: [
             ChainRoundWinnerSummary(
               gameCartelaId: 'gc-1',
               cartelaNumber: 12,
@@ -793,7 +793,7 @@ void main() {
           roundIndex: 2,
           prizeAmount: '2000',
           outcome: ChainRoundOutcome.won,
-          winners: const [
+          winners: [
             ChainRoundWinnerSummary(
               gameCartelaId: 'gc-2',
               cartelaNumber: 24,

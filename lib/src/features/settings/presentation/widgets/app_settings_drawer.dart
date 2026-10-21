@@ -896,40 +896,6 @@ class _DrawerSectionHeader extends StatelessWidget {
   }
 }
 
-class _DrawerInfoRow extends StatelessWidget {
-  const _DrawerInfoRow({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        HGap.sm,
-        Expanded(
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _DrawerDivider extends StatelessWidget {
   const _DrawerDivider({required this.theme});
 

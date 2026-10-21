@@ -19,23 +19,23 @@ class GamePlayerStatusChip extends StatelessWidget {
   }) {
     if (registrationClosed) {
       return GamePlayerStatusChip(
-        status: _GamePlayerStatusChipKind.registrationClosed,
+        status: GamePlayerStatusChipKind.registrationClosed,
         compact: compact,
       );
     }
     if (waitingToPlay) {
       return GamePlayerStatusChip(
-        status: _GamePlayerStatusChipKind.waiting,
+        status: GamePlayerStatusChipKind.waiting,
         compact: compact,
       );
     }
     return GamePlayerStatusChip(
-      status: _GamePlayerStatusChipKind.fromPlayerStatus(game.playerStatus),
+      status: GamePlayerStatusChipKind.fromPlayerStatus(game.playerStatus),
       compact: compact,
     );
   }
 
-  final _GamePlayerStatusChipKind status;
+  final GamePlayerStatusChipKind status;
   final bool compact;
 
   @override
@@ -44,16 +44,16 @@ class GamePlayerStatusChip extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = _paletteFor(status, theme);
     final label = switch (status) {
-      _GamePlayerStatusChipKind.registrationOpen =>
+      GamePlayerStatusChipKind.registrationOpen =>
         l10n.gameStatusRegistrationOpen,
-      _GamePlayerStatusChipKind.preparing => l10n.gameStatusPreparing,
-      _GamePlayerStatusChipKind.playing => l10n.gameStatusPlaying,
-      _GamePlayerStatusChipKind.winnerWindow => l10n.gameStatusWinnerWindow,
-      _GamePlayerStatusChipKind.finished => l10n.gameStatusFinished,
-      _GamePlayerStatusChipKind.cancelled => l10n.gameStatusCancelled,
-      _GamePlayerStatusChipKind.checking => l10n.gameStatusChecking,
-      _GamePlayerStatusChipKind.waiting => l10n.gameStatusWaiting,
-      _GamePlayerStatusChipKind.registrationClosed =>
+      GamePlayerStatusChipKind.preparing => l10n.gameStatusPreparing,
+      GamePlayerStatusChipKind.playing => l10n.gameStatusPlaying,
+      GamePlayerStatusChipKind.winnerWindow => l10n.gameStatusWinnerWindow,
+      GamePlayerStatusChipKind.finished => l10n.gameStatusFinished,
+      GamePlayerStatusChipKind.cancelled => l10n.gameStatusCancelled,
+      GamePlayerStatusChipKind.checking => l10n.gameStatusChecking,
+      GamePlayerStatusChipKind.waiting => l10n.gameStatusWaiting,
+      GamePlayerStatusChipKind.registrationClosed =>
         l10n.gameStatusRegistrationClosed,
     };
 
@@ -81,60 +81,60 @@ class GamePlayerStatusChip extends StatelessWidget {
   }
 
   _StatusPalette _paletteFor(
-    _GamePlayerStatusChipKind status,
+    GamePlayerStatusChipKind status,
     ThemeData theme,
   ) {
     final isDark = theme.brightness == Brightness.dark;
     return switch (status) {
-      _GamePlayerStatusChipKind.registrationOpen => _StatusPalette(
+      GamePlayerStatusChipKind.registrationOpen => _StatusPalette(
         background: const Color(
           0xFF2563EB,
         ).withValues(alpha: isDark ? 0.25 : 0.12),
         border: const Color(0xFF2563EB).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       ),
-      _GamePlayerStatusChipKind.preparing ||
-      _GamePlayerStatusChipKind.waiting => _StatusPalette(
+      GamePlayerStatusChipKind.preparing ||
+      GamePlayerStatusChipKind.waiting => _StatusPalette(
         background: const Color(
           0xFFF59E0B,
         ).withValues(alpha: isDark ? 0.22 : 0.14),
         border: const Color(0xFFF59E0B).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
       ),
-      _GamePlayerStatusChipKind.playing => _StatusPalette(
+      GamePlayerStatusChipKind.playing => _StatusPalette(
         background: const Color(
           0xFF16A34A,
         ).withValues(alpha: isDark ? 0.22 : 0.12),
         border: const Color(0xFF16A34A).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
       ),
-      _GamePlayerStatusChipKind.winnerWindow => _StatusPalette(
+      GamePlayerStatusChipKind.winnerWindow => _StatusPalette(
         background: const Color(
           0xFF7C3AED,
         ).withValues(alpha: isDark ? 0.25 : 0.12),
         border: const Color(0xFF7C3AED).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9),
       ),
-      _GamePlayerStatusChipKind.checking => _StatusPalette(
+      GamePlayerStatusChipKind.checking => _StatusPalette(
         background: const Color(
           0xFFEA580C,
         ).withValues(alpha: isDark ? 0.22 : 0.12),
         border: const Color(0xFFEA580C).withValues(alpha: 0.45),
         foreground: isDark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C),
       ),
-      _GamePlayerStatusChipKind.finished => _StatusPalette(
+      GamePlayerStatusChipKind.finished => _StatusPalette(
         background: theme.colorScheme.surfaceContainerHighest,
         border: theme.colorScheme.outlineVariant,
         foreground: theme.colorScheme.onSurfaceVariant,
       ),
-      _GamePlayerStatusChipKind.cancelled => _StatusPalette(
+      GamePlayerStatusChipKind.cancelled => _StatusPalette(
         background: const Color(
           0xFFDC2626,
         ).withValues(alpha: isDark ? 0.22 : 0.1),
         border: const Color(0xFFDC2626).withValues(alpha: 0.4),
         foreground: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
       ),
-      _GamePlayerStatusChipKind.registrationClosed => _StatusPalette(
+      GamePlayerStatusChipKind.registrationClosed => _StatusPalette(
         background: theme.colorScheme.surfaceContainerHighest,
         border: theme.colorScheme.outlineVariant,
         foreground: theme.colorScheme.onSurfaceVariant,
@@ -143,7 +143,7 @@ class GamePlayerStatusChip extends StatelessWidget {
   }
 }
 
-enum _GamePlayerStatusChipKind {
+enum GamePlayerStatusChipKind {
   registrationOpen,
   preparing,
   playing,
@@ -154,15 +154,15 @@ enum _GamePlayerStatusChipKind {
   waiting,
   registrationClosed;
 
-  static _GamePlayerStatusChipKind fromPlayerStatus(PlayerGameStatus status) {
+  static GamePlayerStatusChipKind fromPlayerStatus(PlayerGameStatus status) {
     return switch (status) {
       PlayerGameStatus.registrationOpen =>
-        _GamePlayerStatusChipKind.registrationOpen,
-      PlayerGameStatus.playing => _GamePlayerStatusChipKind.playing,
-      PlayerGameStatus.winnerWindow => _GamePlayerStatusChipKind.winnerWindow,
-      PlayerGameStatus.checking => _GamePlayerStatusChipKind.checking,
-      PlayerGameStatus.finished => _GamePlayerStatusChipKind.finished,
-      PlayerGameStatus.cancelled => _GamePlayerStatusChipKind.cancelled,
+        GamePlayerStatusChipKind.registrationOpen,
+      PlayerGameStatus.playing => GamePlayerStatusChipKind.playing,
+      PlayerGameStatus.winnerWindow => GamePlayerStatusChipKind.winnerWindow,
+      PlayerGameStatus.checking => GamePlayerStatusChipKind.checking,
+      PlayerGameStatus.finished => GamePlayerStatusChipKind.finished,
+      PlayerGameStatus.cancelled => GamePlayerStatusChipKind.cancelled,
     };
   }
 }

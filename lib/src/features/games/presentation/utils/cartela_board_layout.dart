@@ -18,8 +18,8 @@ abstract final class CartelaBoardLayout {
   /// Fraction of cell diameter used for number text (maximizes readability).
   static const double cellNumberDiameterFactor = 0.58;
 
-  /// Header row + gap + square board area for review dialogs.
-  static const double reviewBoardAspectRatio = 1.08;
+  /// Header row + gap + square board area for review dialogs (width / height).
+  static const double reviewBoardAspectRatio = 0.86;
 
   /// Largest number font that still fits inside a circular cell.
   static double maximizedCellNumberFontSize(double diameter) {
