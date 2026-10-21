@@ -48,18 +48,32 @@ npm test -- src/bingo-claims/bingo-claims.service.spec.ts
 ```
 Expected: FAIL or verifies execution time expectation.
 
-- [ ] **Step 3: Refactor `claimBingo` to fast-path transaction and asynchronous decoupling**
+- [ ] **Step 3: Refactor `claimBingo` to fast-path transaction, relational integrity, and asynchronous decoupling**
 
 In `bingo-claims.service.ts`:
-1. Keep the validation, rule evaluation, and status update inside the database transaction:
-   - For valid winner: update `GameCartela` to `WINNER`, set `GameSession.status = WINNER_WINDOW` and `winnerCartelaId`.
-   - For invalid claim: update `GameCartela` to `BLOCKED`, write `BingoClaim` with `reasonCode` and `reason`.
-2. Extract the side effect invocation into a non-blocking background queue/event:
+1. **Relational Integrity Check:**
+   Verify that `gameCartelaId` matches both the active session and calling user:
    ```typescript
-   // Fast-path return
+   const gameCartela = await tx.gameCartela.findUnique({
+     where: { id: gameCartelaId },
+     select: { id: true, gameSessionId: true, userId: true, status: true, isWinner: true, cartela: true }
+   });
+   if (!gameCartela || gameCartela.gameSessionId !== sessionId || gameCartela.userId !== userId) {
+     throw new ForbiddenException('Cartela does not belong to this user or session');
+   }
+   ```
+2. **Multi-Winner Preservation:**
+   - If game is in `PLAYING` and claim is valid:
+     - Mark `GameCartela.status = WINNER`, `isWinner = true`.
+     - Transition `GameSession.status = WINNER_WINDOW` and set `winnerWindowEndsAt = new Date(Date.now() + winnerWindowDurationMs)`.
+     - Halts auto-calling numbers, but **leaves the winner window open** for other players.
+   - If game is ALREADY in `WINNER_WINDOW` and claim is valid on the winning ball:
+     - Mark this subsequent `GameCartela.status = WINNER`, `isWinner = true` as an additional co-winner.
+     - Keep `winnerWindowEndsAt` intact (never prematurely close the window).
+3. **Decouple side effects to background:**
+   ```typescript
    const responsePayload = serializePlayerBingoClaim(result.claim, result.gameCartela, result.winnerBall, result.prizeAmount);
-   
-   // Decouple side effects to background
+
    setImmediate(async () => {
      try {
        await this.emitClaimSideEffects(result.sideEffectParams);

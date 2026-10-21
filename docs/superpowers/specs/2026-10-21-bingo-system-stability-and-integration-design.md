@@ -22,32 +22,35 @@ This specification defines the architectural enhancements and bug remediation ac
 * In mobile, `_checkingCartelaMinimumDisplay` enforced an artificial `800ms` delay on non-winner claims, degrading perceived latency.
 
 #### Architecture Specification
-1. **Fast-Path Synchronous Evaluation (`FriendsBingo-backend`):**
-   * Target transaction execution window: $< 150\text{ ms}$.
-   * In `BingoClaimsService.claimBingo()`:
-     1. Read `GameSession` and `GameCartela` with minimal select fields (`id`, `status`, `isWinner`, `cartelaId`).
-     2. In-memory evaluation via `GameRuleEvaluationService.evaluate()`.
-     3. Commit the state change:
-        * If `VALID`: Mark `GameCartela.status = WINNER`, set `GameSession.winnerCartelaId`, transition `GameSession.status = WINNER_WINDOW`.
-        * If `INVALID`: Mark `GameCartela.status = BLOCKED`, save `BingoClaim` with reason code (`INVALID_PATTERN` or `INVALID_LATE_CLAIM`).
-     4. Return the HTTP `200 OK` response payload immediately to the client:
-        ```json
-        {
-          "claimId": "uuid",
-          "status": "VALID" | "INVALID",
-          "reasonCode": "INVALID_PATTERN" | "INVALID_LATE_CLAIM" | null,
-          "reasonMessage": "Detailed user-facing explanation",
-          "winningBall": { "letter": "B", "number": 12 },
-          "prizeAmount": "250.00",
-          "gameCartelaStatus": "WINNER" | "BLOCKED"
-        }
-        ```
+1. **Multi-Winner Window Preservation & Fast-Path Synchronous Evaluation (`FriendsBingo-backend`):**
+   * **Multi-Winner Rule:** A game can have multiple valid winners. When the first valid claim arrives:
+     * Set `GameSession.status = WINNER_WINDOW` and calculate `winnerWindowEndsAt = now + winnerWindowDuration`.
+     * Number calling halts immediately to freeze the ball state.
+     * **CRITICAL:** The winner window **MUST REMAIN OPEN** for its entire duration. It is NEVER prematurely closed upon the first winner.
+     * Any other player who completed their pattern on that winning ball can submit their claim during the open `WINNER_WINDOW`.
+     * Subsequent valid claims during the open window are also marked as `GameCartela.status = WINNER` (`isWinner = true`).
+     * When `winnerWindowEndsAt` expires, the prize pool is divided equally among all co-winners.
+   * **Bingo Claim Relational Integrity:**
+     * To prevent inconsistent relationships, the service layer strictly enforces that `gameCartelaId` matches both `gameSessionId` and `userId` within the database transaction:
+       ```typescript
+       const gameCartela = await tx.gameCartela.findUnique({
+         where: { id: gameCartelaId },
+         select: { id: true, gameSessionId: true, userId: true, status: true, isWinner: true, cartela: true }
+       });
+       if (!gameCartela || gameCartela.gameSessionId !== sessionId || gameCartela.userId !== userId) {
+         throw new ForbiddenException('Cartela does not belong to this user or session');
+       }
+       ```
+     * `GameCartela.status === WINNER` is established as the sole canonical multi-winner source of truth. The legacy `GameSession.winnerCartelaId` is populated with the primary winner only for backward compatibility, while all payouts and winner displays iterate over all `GameCartela` records where `status === WINNER`.
+   * **Fast-Path Performance (Target: $< 150\text{ ms}$):**
+     * Rule evaluation and winner/blocked state writes execute in a single lean transaction.
+     * Returns HTTP `200 OK` verdict payload directly to the player without waiting for downstream side effects.
 2. **Decoupled Asynchronous Side Effects (`FriendsBingo-backend`):**
    * Wrap `emitClaimSideEffects()`, operations cache invalidation, and push notifications inside `setImmediate()` or an event emitter so they execute out-of-band without delaying the calling player's HTTP response.
 3. **Mobile Client Immediate Feedback (`friends-bingo-mobile`):**
    * Remove artificial `_checkingCartelaMinimumDisplay` delays.
    * On claim response:
-     * If `VALID`: Trigger winner dialog, haptics, and gold celebration overlay.
+     * If `VALID`: Trigger winner dialog, haptics, and gold celebration overlay. The dialog displays "Winner Window Open" allowing other simultaneous winners to be celebrated upon window closure.
      * If `INVALID` / `BLOCKED`: Immediately display an explanatory warning banner/toast:
        * For `INVALID_LATE_CLAIM`: *"Late Claim: Ball #X completed the pattern, but Ball #Y was already called."*
        * For `INVALID_PATTERN`: *"Incomplete Pattern: Number(s) missing from active rule."*
