@@ -298,7 +298,22 @@ class GamesRepository {
         )
         .toList(growable: false);
 
-    return BulkRegisterResult(successes: successes, failures: failures);
+    final myCartelaItems = rawData['myCartelas'];
+    List<GameCartelaModel>? myCartelas;
+    if (myCartelaItems is List) {
+      myCartelas = <GameCartelaModel>[];
+      for (final item in myCartelaItems.whereType<Map<String, dynamic>>()) {
+        try {
+          myCartelas.add(GameCartelaModel.fromJson(item));
+        } catch (_) {}
+      }
+    }
+
+    return BulkRegisterResult(
+      successes: successes,
+      failures: failures,
+      myCartelas: myCartelas,
+    );
   }
 
   Future<BulkRegisterResult> _recoverBulkRegistrationAfterConnectivityFailure({

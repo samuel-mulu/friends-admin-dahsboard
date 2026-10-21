@@ -16,10 +16,12 @@ class BulkRegisterResult {
   const BulkRegisterResult({
     required this.successes,
     required this.failures,
+    this.myCartelas,
   });
 
   final List<GameCartelaModel> successes;
   final List<BulkRegisterFailure> failures;
+  final List<GameCartelaModel>? myCartelas;
 
   bool get hasSuccesses => successes.isNotEmpty;
   bool get hasFailures => failures.isNotEmpty;
