@@ -570,31 +570,6 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
         transactionRef = rawTransactionInput.toUpperCase();
       }
 
-      final checkResult = await walletRepository.checkDepositReference(
-        provider: _provider,
-        transactionRef: transactionRef,
-      );
-
-      if (!checkResult.isAvailable) {
-        if (!mounted) {
-          return;
-        }
-
-        final message =
-            _mapDepositCodeToMessage(checkResult.code) ?? checkResult.message;
-        setState(() {
-          _transactionRefServerError = message;
-          _confirmation = DepositConfirmationState(
-            kind: DepositConfirmationKind.rejected,
-            message: message,
-            provider: _provider,
-            amount: submittedAmount,
-            transactionRef: transactionRef,
-          );
-        });
-        return;
-      }
-
       final deposit = await walletRepository.createDeposit(
         provider: _provider,
         amount: submittedAmount,

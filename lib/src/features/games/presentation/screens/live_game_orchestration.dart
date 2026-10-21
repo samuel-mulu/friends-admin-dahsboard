@@ -542,10 +542,23 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final endsAt = _game?.winnerWindowEndsAt;
+    final Duration autoDismissDuration;
+    if (endsAt != null && endsAt.isAfter(DateTime.now())) {
+      final remaining = endsAt.difference(DateTime.now());
+      autoDismissDuration = remaining + const Duration(seconds: 4);
+    } else {
+      autoDismissDuration = const Duration(seconds: 8);
+    }
+
     _review.winnerCartelaDialogVisible = true;
     setState(() {});
     unawaited(
-      showWinnerCartelaDialog(context: context, results: results).whenComplete(
+      showWinnerCartelaDialog(
+        context: context,
+        results: results,
+        autoDismissDuration: autoDismissDuration,
+      ).whenComplete(
         () {
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);

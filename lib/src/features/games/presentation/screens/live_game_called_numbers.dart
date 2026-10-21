@@ -181,8 +181,12 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         return;
       }
 
-      outcomeSnackbarMessage =
-          result.claim.reason ?? context.l10n.gameCheckingMessage;
+      final reasonMsg = result.claim.reason?.isNotEmpty == true
+          ? result.claim.reason!
+          : (result.reasonCode == 'INVALID_LATE_CLAIM'
+              ? 'Late claim: Pattern was completed on an earlier ball.'
+              : 'Pattern is not completed.');
+      outcomeSnackbarMessage = reasonMsg;
     } catch (error) {
       if (!mounted) {
         return;
@@ -213,6 +217,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           claimResult?.isWinner == true &&
           claimResult?.gameStatus == GameStatus.winnerWindow;
 
+      // Always clear claim lock and strip hold immediately to prevent stuck button
+      _cn.claimStripHoldActive = false;
+      _cn.claimingCartelaIds.remove(gameCartela.id);
+      _cn.preClaimNextAutoCallAt = null;
+
       if (mounted && !claimStateAppliedEarly) {
         setState(() {
           if (claimFailed) {
@@ -228,9 +237,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
             );
           }
 
-          _cn.claimStripHoldActive = false;
-          _cn.claimingCartelaIds.remove(gameCartela.id);
-          _cn.preClaimNextAutoCallAt = null;
           _clearSessionCheckingCartelaNumber(gameCartela.cartela.number);
 
           if (_cn.claimingCartelaIds.isEmpty) {
