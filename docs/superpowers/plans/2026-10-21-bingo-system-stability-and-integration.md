@@ -1,6 +1,6 @@
 # Bingo System Stability, End-to-End Integration & Robust Concurrency Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Eliminate all bingo claim latency/freezes, deposit race conditions, multi-registration card losses, winner-window transition blocks, and game rule discrepancies across FriendsBingo-backend and friends-bingo-mobile.
 
@@ -26,7 +26,7 @@
 - Consumes: `GameRuleEvaluationService.evaluate`, `PrismaService.$transaction`
 - Produces: `claimBingo(sessionId: string, userId: string, gameCartelaId: string)` returning within $<150\text{ ms}$ with serialized `PlayerClaimPayload` before dispatching background events via `setImmediate`.
 
-- [ ] **Step 1: Write the failing unit test for decoupled claim side effects**
+- [x] **Step 1: Write the failing unit test for decoupled claim side effects**
 
 Add a test in `bingo-claims.service.spec.ts` confirming that `emitClaimSideEffects` is decoupled from the synchronous HTTP claim response:
 
@@ -39,7 +39,7 @@ it('returns claim verdict immediately without awaiting global side effects', asy
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -48,7 +48,7 @@ npm test -- src/bingo-claims/bingo-claims.service.spec.ts
 ```
 Expected: FAIL or verifies execution time expectation.
 
-- [ ] **Step 3: Refactor `claimBingo` to fast-path transaction, relational integrity, and asynchronous decoupling**
+- [x] **Step 3: Refactor `claimBingo` to fast-path transaction, relational integrity, and asynchronous decoupling**
 
 In `bingo-claims.service.ts`:
 1. **Relational Integrity Check:**
@@ -85,7 +85,7 @@ In `bingo-claims.service.ts`:
    return responsePayload;
    ```
 
-- [ ] **Step 4: Run backend unit tests to verify they pass**
+- [x] **Step 4: Run backend unit tests to verify they pass**
 
 Run:
 ```powershell
@@ -94,7 +94,7 @@ npm test -- src/bingo-claims/bingo-claims.service.spec.ts
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/bingo-claims/bingo-claims.service.ts src/bingo-claims/bingo-claims.service.spec.ts
@@ -114,7 +114,7 @@ git commit -m "perf(claims): decouple claim broadcast side-effects for sub-secon
 - Consumes: `GamesRepository.claimBingo`, `GameCartelaModel`
 - Produces: Instant user feedback when claim is blocked or invalid; eliminates UI freezes.
 
-- [ ] **Step 1: Write widget test for blocked claim explanation snackbar**
+- [x] **Step 1: Write widget test for blocked claim explanation snackbar**
 
 Create `test/features/games/live_game_claim_feedback_test.dart`:
 ```dart
@@ -124,7 +124,7 @@ testWidgets('displays explicit reason message when claim is blocked or invalid',
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -133,7 +133,7 @@ flutter test test/features/games/live_game_claim_feedback_test.dart
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Fix `live_game_called_numbers.dart` and remove artificial delay**
+- [x] **Step 3: Fix `live_game_called_numbers.dart` and remove artificial delay**
 
 In `live_game_called_numbers.dart`:
 1. In `onClaimBingo(GameCartelaModel cartela)`:
@@ -150,7 +150,7 @@ In `live_game_called_numbers.dart`:
      ```
    - Ensure `_claimingCartelaIds.remove(cartela.id)` and `_pendingClaimCartelaIds.remove(cartela.id)` are called in `finally` blocks so button is NEVER stuck.
 
-- [ ] **Step 4: Run flutter test to verify passing**
+- [x] **Step 4: Run flutter test to verify passing**
 
 Run:
 ```powershell
@@ -158,7 +158,7 @@ flutter test test/features/games/live_game_claim_feedback_test.dart
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/screens/live_game_called_numbers.dart test/features/games/live_game_claim_feedback_test.dart
@@ -177,7 +177,7 @@ git commit -m "fix(claims): display instant explanation on blocked claim and eli
 - Consumes: `PrismaService.gameSession`, `PostGameRegistrationOpenerService`
 - Produces: `finalizeWinnerWindow()` ensuring session status reaches `FINISHED` even if next-session auto-opening fails.
 
-- [ ] **Step 1: Write test for isolated session finish on registration opener failure**
+- [x] **Step 1: Write test for isolated session finish on registration opener failure**
 
 Add unit test in `winner-window-finalizer.service.spec.ts`:
 ```typescript
@@ -189,7 +189,7 @@ it('unconditionally sets session status to FINISHED even if openNextAutoQueueReg
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -198,14 +198,14 @@ npm test -- src/games/winner-window-finalizer.service.spec.ts
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Implement fail-safe finish transaction**
+- [x] **Step 3: Implement fail-safe finish transaction**
 
 In `winner-window-finalizer.service.ts`:
 1. First transaction: finalize prize and update `status = GameStatus.FINISHED`, `finishedAt = new Date()`.
 2. Second step: open next auto-queue registration inside a try-catch block.
 3. If next auto-queue registration fails, log warning and let `AutoReadyCountdownRepairService` heal the slot queue.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 ```powershell
@@ -214,7 +214,7 @@ npm test -- src/games/winner-window-finalizer.service.spec.ts
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/games/winner-window-finalizer.service.ts src/games/winner-window-finalizer.service.spec.ts
@@ -234,7 +234,7 @@ git commit -m "fix(lifecycle): enforce fail-safe transition to FINISHED on winne
 - Consumes: Winner window countdown duration
 - Produces: Automatic dismissal and transition to upcoming game session on countdown expiry.
 
-- [ ] **Step 1: Write test for auto-dismiss callback on countdown zero**
+- [x] **Step 1: Write test for auto-dismiss callback on countdown zero**
 
 In `test/features/games/winner_window_auto_dismiss_test.dart`:
 ```dart
@@ -243,7 +243,7 @@ testWidgets('WinnerCartelaDialog invokes onDismiss when countdown reaches 0', (t
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 ```powershell
@@ -252,12 +252,12 @@ flutter test test/features/games/winner_window_auto_dismiss_test.dart
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Implement auto-dismiss and transition in dialog and screen**
+- [x] **Step 3: Implement auto-dismiss and transition in dialog and screen**
 
 1. In `WinnerCartelaDialog`: when countdown reaches 0, trigger `Navigator.of(context, rootNavigator: true).pop()`.
 2. In `live_game_screen.dart`: on winner window close or socket `game:status_changed` to `FINISHED`, re-evaluate slot status and smoothly transition the screen to the new active session (`READY` or `NEXT`).
 
-- [ ] **Step 4: Run test to verify passing**
+- [x] **Step 4: Run test to verify passing**
 
 Run:
 ```powershell
@@ -265,7 +265,7 @@ flutter test test/features/games/winner_window_auto_dismiss_test.dart
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/widgets/winner_cartela_dialog.dart lib/src/features/games/presentation/screens/live_game_screen.dart test/features/games/winner_window_auto_dismiss_test.dart
@@ -284,7 +284,7 @@ git commit -m "feat(gameplay): auto-dismiss winner window on countdown expiry an
 - Consumes: `CreateDepositDto`, `verifyEtService`
 - Produces: `createDeposit` that safely handles retries of the same `(provider, transactionRef)` by returning the existing approved/pending deposit without throwing `ALREADY_USED`.
 
-- [ ] **Step 1: Write failing test for idempotent retry by the same user**
+- [x] **Step 1: Write failing test for idempotent retry by the same user**
 
 In `deposits.service.spec.ts`:
 ```typescript
@@ -294,7 +294,7 @@ it('returns existing approved deposit on duplicate submission by same user', asy
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -303,7 +303,7 @@ npm test -- src/deposits/deposits.service.spec.ts
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Update `createDeposit` and `ensureReferenceAvailable` in `deposits.service.ts`**
+- [x] **Step 3: Update `createDeposit` and `ensureReferenceAvailable` in `deposits.service.ts`**
 
 1. In `ensureReferenceAvailable(provider, transactionRef, userId)`:
    - Check if an existing deposit exists:
@@ -314,7 +314,7 @@ Expected: FAIL.
        - Throw ConflictException(`ALREADY_USED`).
 2. Wrap external `verifyEtService.verifyDeposit` call with a 20-second timeout guard.
 
-- [ ] **Step 4: Run test to verify passing**
+- [x] **Step 4: Run test to verify passing**
 
 Run:
 ```powershell
@@ -323,7 +323,7 @@ npm test -- src/deposits/deposits.service.spec.ts
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/deposits/deposits.service.ts src/deposits/deposits.service.spec.ts
@@ -343,7 +343,7 @@ git commit -m "fix(deposits): implement atomic idempotent retry handling to prev
 - Consumes: `WalletRepository.createDeposit`
 - Produces: Single-pass deposit submission without pre-flight `checkDepositReference` call.
 
-- [ ] **Step 1: Write test for single-pass deposit submission**
+- [x] **Step 1: Write test for single-pass deposit submission**
 
 In `test/features/wallet/deposit_screen_idempotent_test.dart`:
 ```dart
@@ -352,7 +352,7 @@ testWidgets('DepositScreen directly submits deposit without checkDepositReferenc
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 ```powershell
@@ -361,7 +361,7 @@ flutter test test/features/wallet/deposit_screen_idempotent_test.dart
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Remove duplicate pre-check in `deposit_screen.dart`**
+- [x] **Step 3: Remove duplicate pre-check in `deposit_screen.dart`**
 
 In `_submit()` in `deposit_screen.dart`:
 1. Remove `walletRepository.checkDepositReference(...)` call.
@@ -369,7 +369,7 @@ In `_submit()` in `deposit_screen.dart`:
 3. If an `APPROVED` deposit is returned (even from a retry), show success banner and refresh balance.
 4. If network times out, show: *"Verification taking longer than usual. Please check your deposit history."* and provide a quick link to `DepositHistoryScreen`.
 
-- [ ] **Step 4: Run test to verify passing**
+- [x] **Step 4: Run test to verify passing**
 
 Run:
 ```powershell
@@ -377,7 +377,7 @@ flutter test test/features/wallet/deposit_screen_idempotent_test.dart
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/wallet/presentation/screens/deposit_screen.dart test/features/wallet/deposit_screen_idempotent_test.dart
@@ -397,7 +397,7 @@ git commit -m "refactor(wallet): simplify deposit submission to single-pass idem
 - Consumes: `registerCartela`, `registerCartelasForSlotBulk`
 - Produces: Response containing `myCartelas` with all registered cartelas for the user in the session.
 
-- [ ] **Step 1: Write failing test for cumulative `myCartelas` return on registration**
+- [x] **Step 1: Write failing test for cumulative `myCartelas` return on registration**
 
 In `games.service.spec.ts`:
 ```typescript
@@ -408,7 +408,7 @@ it('returns all cumulative registered cartelas in myCartelas field', async () =>
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -417,7 +417,7 @@ npm test -- src/games/games.service.spec.ts
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Add `myCartelas` snapshot query to registration endpoints**
+- [x] **Step 3: Add `myCartelas` snapshot query to registration endpoints**
 
 In `games.service.ts`:
 1. Before returning from `registerCartela` and `registerCartelasBulkInternal`:
@@ -430,7 +430,7 @@ In `games.service.ts`:
    ```
 2. Include `myCartelas: allMyCartelas.map(serializeGameCartela)` in the return object.
 
-- [ ] **Step 4: Run test to verify passing**
+- [x] **Step 4: Run test to verify passing**
 
 Run:
 ```powershell
@@ -439,7 +439,7 @@ npm test -- src/games/games.service.spec.ts
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/games/games.service.ts src/games/games.service.spec.ts
@@ -459,7 +459,7 @@ git commit -m "feat(registration): include cumulative myCartelas snapshot in reg
 - Consumes: Registration response `myCartelas`
 - Produces: Complete retention of registered cards across multiple registrations; disables auto-open modals during gameplay.
 
-- [ ] **Step 1: Write test for cumulative card retention on successive registrations**
+- [x] **Step 1: Write test for cumulative card retention on successive registrations**
 
 In `test/features/games/multi_registration_card_retention_test.dart`:
 ```dart
@@ -468,7 +468,7 @@ testWidgets('preserves all previously registered cartelas when registering a sec
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 ```powershell
@@ -477,7 +477,7 @@ flutter test test/features/games/multi_registration_card_retention_test.dart
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Update `live_game_registration.dart` and `live_registration_controller.dart`**
+- [x] **Step 3: Update `live_game_registration.dart` and `live_registration_controller.dart`**
 
 1. In `_scheduleAutoOpenIfNeeded`:
    Check `widget.gameStatus`: if `widget.gameStatus == GameStatus.playing || widget.gameStatus == GameStatus.checking`, return immediately (never auto-open modal during gameplay).
@@ -486,7 +486,7 @@ Expected: FAIL.
 3. In `refreshMyCartelasSilently`:
    Reconcile without wiping out locally registered cartelas that are still valid for the active session.
 
-- [ ] **Step 4: Run test to verify passing**
+- [x] **Step 4: Run test to verify passing**
 
 Run:
 ```powershell
@@ -494,7 +494,7 @@ flutter test test/features/games/multi_registration_card_retention_test.dart
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/screens/live_game_registration.dart lib/src/features/games/presentation/controllers/live_registration_controller.dart test/features/games/multi_registration_card_retention_test.dart
@@ -516,11 +516,11 @@ git commit -m "fix(registration): retain all cartelas on successive registration
 - Consumes: 5x5 board matrix, called numbers
 - Produces: 100% identical pattern evaluation with center space (index 12 / N3) automatically stamped on both platforms.
 
-- [ ] **Step 1: Write parity tests for center cell free stamping**
+- [x] **Step 1: Write parity tests for center cell free stamping**
 
 In both backend and mobile test suites, add tests for line, diagonal, and corner rules verifying that center cell (index 12) is always treated as stamped.
 
-- [ ] **Step 2: Run tests to verify any failures**
+- [x] **Step 2: Run tests to verify any failures**
 
 Run:
 ```powershell
@@ -530,13 +530,13 @@ cd d:\FILES\SELF\BINGO\friends-bingo-mobile
 flutter test test/features/games/cartela_pattern_evaluator_test.dart
 ```
 
-- [ ] **Step 3: Align center free cell handling and late-claim diagnostics**
+- [x] **Step 3: Align center free cell handling and late-claim diagnostics**
 
 1. In backend `game-rule.patterns.ts` and `pattern-rule.evaluator.ts`: ensure index 12 (N3) is always true in `isCellMarked`.
 2. In mobile `cartela_pattern_evaluator.dart`: ensure index 12 (center cell) is always true in `_isMarked`.
 3. In `GameRuleEvaluationService`: return `missingCellCount` and `completedPattern` metadata for detailed diagnostics.
 
-- [ ] **Step 4: Run tests to verify passing**
+- [x] **Step 4: Run tests to verify passing**
 
 Run:
 ```powershell
@@ -547,7 +547,7 @@ flutter test test/features/games/cartela_pattern_evaluator_test.dart
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/game-rules/ lib/src/features/games/domain/evaluators/
@@ -567,12 +567,12 @@ git commit -m "fix(rules): align client and server pattern evaluators with unive
 - Consumes: `LiveCartelaCard`, `CartelaBoardWidget`
 - Produces: Stable 2-column grid without text clipping, card jumping, or aspect ratio overflow.
 
-- [ ] **Step 1: Write widget test for cartela card layout bounds on small screen**
+- [x] **Step 1: Write widget test for cartela card layout bounds on small screen**
 
 In `test/features/games/cartela_card_layout_test.dart`:
 Verify that `LiveCartelaCard` renders without `RenderFlex overflowed` when constrained to a 160px width.
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 ```powershell
@@ -580,7 +580,7 @@ cd d:\FILES\SELF\BINGO\friends-bingo-mobile
 flutter test test/features/games/cartela_card_layout_test.dart
 ```
 
-- [ ] **Step 3: Polish layout and remove conflicting drag feedback**
+- [x] **Step 3: Polish layout and remove conflicting drag feedback**
 
 1. In `_InlineRegisteredCartelaList`:
    - Disable `LongPressDraggable` during active gameplay to eliminate accidental card displacement while tapping numbers.
@@ -589,7 +589,7 @@ flutter test test/features/games/cartela_card_layout_test.dart
    - Tighten header padding and badge sizes.
    - Ensure `CartelaBoardWidget` uses flexible cell sizing within its fixed 5x5 aspect ratio.
 
-- [ ] **Step 4: Run tests to verify passing**
+- [x] **Step 4: Run tests to verify passing**
 
 Run:
 ```powershell
@@ -598,7 +598,7 @@ flutter test
 ```
 Expected: ALL PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/src/features/games/presentation/widgets/live_cartela_card.dart lib/src/features/games/presentation/screens/live_game_screen.dart test/features/games/cartela_card_layout_test.dart
