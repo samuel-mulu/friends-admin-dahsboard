@@ -482,6 +482,9 @@ class DepositController extends Notifier<DepositState> {
       }
     } catch (error) {
       final code = error is ApiException ? error.code : null;
+      final displayMessage = error is ApiException
+          ? error.displayMessage
+          : 'Failed to process deposit. Please check your connection and try again.';
       state = state.copyWith(
         isSubmitting: false,
         clearTrackedId: true,
@@ -489,14 +492,13 @@ class DepositController extends Notifier<DepositState> {
           kind: code == 'UNDER_REVIEW'
               ? DepositConfirmationKind.underReview
               : DepositConfirmationKind.rejected,
-          message: error is ApiException ? error.displayMessage : 'Failed',
+          message: displayMessage,
           provider: provider,
           amount: amount,
           transactionRef: rawTransactionInput.toUpperCase(),
           canRetry: code != 'ALREADY_USED' && code != 'UNDER_REVIEW',
         ),
       );
-      rethrow;
     } finally {
       state = state.copyWith(isSubmitting: false);
     }

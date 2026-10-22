@@ -19,31 +19,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
   LiveWinnerCelebrationCoordinator get _winnerCelebration =>
       controllers.winnerCelebration;
-
-  RoundWinnerHistory? get _allRoundsWinnerHistory =>
-      _winnerCelebration.allRoundsWinnerHistory;
-  set _allRoundsWinnerHistory(RoundWinnerHistory? value) =>
-      _winnerCelebration.allRoundsWinnerHistory = value;
-
-  List<AllRoundsWinnerCardData> get _allRoundsWinnerCards =>
-      _winnerCelebration.allRoundsWinnerCards;
-  set _allRoundsWinnerCards(List<AllRoundsWinnerCardData> value) =>
-      _winnerCelebration.allRoundsWinnerCards = value;
-
-  bool get _allRoundsWinnerHistoryLoading =>
-      _winnerCelebration.allRoundsWinnerHistoryLoading;
-  set _allRoundsWinnerHistoryLoading(bool value) =>
-      _winnerCelebration.allRoundsWinnerHistoryLoading = value;
-
-  String? get _allRoundsWinnerHistoryError =>
-      _winnerCelebration.allRoundsWinnerHistoryError;
-  set _allRoundsWinnerHistoryError(String? value) =>
-      _winnerCelebration.allRoundsWinnerHistoryError = value;
-
   String? get _allRoundsWinnerHistoryKey =>
       _winnerCelebration.allRoundsWinnerHistoryKey;
-  set _allRoundsWinnerHistoryKey(String? value) =>
-      _winnerCelebration.allRoundsWinnerHistoryKey = value;
+  RoundWinnerHistory? get _allRoundsWinnerHistory =>
+      _winnerCelebration.allRoundsWinnerHistory;
+  bool get _allRoundsWinnerHistoryLoading =>
+      _winnerCelebration.allRoundsWinnerHistoryLoading;
+  List<AllRoundsWinnerCardData> get _allRoundsWinnerCards =>
+      _winnerCelebration.allRoundsWinnerCards;
+  String? get _allRoundsWinnerHistoryError =>
+      _winnerCelebration.allRoundsWinnerHistoryError;
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
@@ -505,7 +490,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       ChainGameDebug.log(
         'local_finish blocked chain session=${game.sessionId} '
         'round=${game.displayRoundIndex}/${game.displayRoundCount} '
-        'pause=${_isChainRoundPaused} interRound=${_review.showsChainInterRoundSummary}',
+        'pause=$_isChainRoundPaused interRound=${_review.showsChainInterRoundSummary}',
       );
       return;
     }
@@ -3669,7 +3654,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
+    if (_reconcileActiveClaimSocket(
+      normalizedPayload,
+      terminalStatus: BingoClaimStatus.valid,
+    )) {
+      return;
+    }
 
     final claimId = normalizedPayload['claimId'] as String?;
     if (claimId == null || _cn.processedResolvedClaimIds.contains(claimId)) {
@@ -3748,7 +3738,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
+    if (_reconcileActiveClaimSocket(
+      normalizedPayload,
+      terminalStatus: BingoClaimStatus.invalid,
+    )) {
+      return;
+    }
 
     _applyBingoInvalidPayload(normalizedPayload);
   }
@@ -3788,7 +3783,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     unawaited(_cn.recoverClaimAttempt(attempt));
   }
 
-  bool _reconcileActiveClaimSocket(Map<String, dynamic> payload) {
+  bool _reconcileActiveClaimSocket(
+    Map<String, dynamic> payload, {
+    BingoClaimStatus? terminalStatus,
+  }) {
     final cartelaId = payload['gameCartelaId'] as String?;
     if (cartelaId == null) return false;
     final attempt = _cn.claimAttemptFor(cartelaId);
@@ -3803,9 +3801,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
     final incomingId = payload['claimAttemptId'] as String?;
     if (incomingId == null || incomingId == attempt.claimAttemptId) {
+      if (terminalStatus != null) {
+        _cn.resolveTerminalClaim(
+          attempt: attempt,
+          status: terminalStatus,
+          retryAllowed: false,
+          cartelas: _myCartelas,
+          reportedCartelaStatus: terminalStatus == BingoClaimStatus.valid
+              ? GameCartelaStatus.winner
+              : GameCartelaStatus.blocked,
+          applyCartelas: (next) => _myCartelas = next,
+        );
+      }
       unawaited(_cn.recoverClaimAttempt(attempt));
     }
-    return true;
+    return terminalStatus == null;
   }
 
   void _applyBingoInvalidPayload(Map<String, dynamic> payload, {
@@ -3904,7 +3914,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    if (_reconcileActiveClaimSocket(normalizedPayload)) return;
+    if (_reconcileActiveClaimSocket(
+      normalizedPayload,
+      terminalStatus: BingoClaimStatus.valid,
+    )) {
+      return;
+    }
 
     _applyWinnerWindowEventPayload(normalizedPayload);
   }
@@ -4368,7 +4383,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (status != GameStatus.finished && status != GameStatus.noWinner) {
       ChainGameDebug.log(
         'skip postGameSummary status=${status?.name} '
-        'paused=${_isChainRoundPaused}',
+        'paused=$_isChainRoundPaused',
       );
       return;
     }
@@ -4377,7 +4392,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _review.showsChainInterRoundSummary) {
       ChainGameDebug.log(
         'skip postGameSummary chainInterRound '
-        'pause=${_isChainRoundPaused} '
+        'pause=$_isChainRoundPaused '
         'summary=${_review.showsChainInterRoundSummary} '
         'owner=${_liveRoundBreakOwner.name}',
       );
@@ -4691,7 +4706,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         (!wasShowing || isNewPause)) {
       ChainGameDebug.log(
         'banner=roundBreak pauseKey=$pauseKey '
-        'seconds=${_chainRoundPauseSecondsLeft} '
+        'seconds=$_chainRoundPauseSecondsLeft '
         'round=${_game?.displayRoundIndex}/${_game?.displayRoundCount}',
       );
       setState(() {});
@@ -5048,7 +5063,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   bool get _isTerminalGameStatus =>
       _game?.status == GameStatus.finished ||
       _game?.status == GameStatus.noWinner ||
-      _game?.status == GameStatus.cancelled;
+      _game?.status == GameStatus.cancelled ||
+      (_game?.status == GameStatus.winnerWindow &&
+          (_winnerWindowExpired || _review.winnerWindowClosing));
 
   Future<void> _runFinishedAdvanceSequence({bool force = false}) async {
     final shouldHonorReviewHold =
@@ -5143,9 +5160,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           : PostGameAdvanceOutcome.retryableFailure;
     }
 
-    if (currentGame.status != GameStatus.finished &&
-        currentGame.status != GameStatus.noWinner &&
-        currentGame.status != GameStatus.cancelled) {
+    final isAllowedTerminalOrExpiring =
+        currentGame.status == GameStatus.finished ||
+        currentGame.status == GameStatus.noWinner ||
+        currentGame.status == GameStatus.cancelled ||
+        (currentGame.status == GameStatus.winnerWindow &&
+            (_winnerWindowExpired || _review.winnerWindowClosing || force));
+
+    if (!isAllowedTerminalOrExpiring) {
       return PostGameAdvanceOutcome.finishedWithoutTarget;
     }
 

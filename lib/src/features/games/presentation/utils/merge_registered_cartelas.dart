@@ -40,18 +40,29 @@ List<GameCartelaModel> reconcileCartelaSnapshot({
   required List<GameCartelaModel> incoming,
 }) {
   if (incoming.isEmpty) {
-    return incoming;
+    return current;
   }
   final currentById = <String, GameCartelaModel>{
     for (final cartela in current) cartela.id: cartela,
   };
-  return [
-    for (final cartela in incoming)
-      preferAuthoritativeCartela(
-        current: currentById[cartela.id],
-        incoming: cartela,
-      ),
-  ];
+  final reconciled = <String, GameCartelaModel>{};
+  for (final cartela in incoming) {
+    reconciled[cartela.id] = preferAuthoritativeCartela(
+      current: currentById[cartela.id],
+      incoming: cartela,
+    );
+  }
+  // Retain non-cancelled local cartelas that may belong to a newly submitted batch
+  // that the incoming snapshot hasn't reflected yet.
+  for (final cartela in current) {
+    if (!reconciled.containsKey(cartela.id) &&
+        cartela.status != GameCartelaStatus.cancelled) {
+      reconciled[cartela.id] = cartela;
+    }
+  }
+  final list = reconciled.values.toList(growable: false);
+  list.sort((a, b) => a.cartela.number.compareTo(b.cartela.number));
+  return list;
 }
 
 /// Patch one cartela to a terminal status (BLOCKED / WINNER / CANCELLED).

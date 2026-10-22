@@ -183,7 +183,7 @@ class GamesRepository {
         '/games/sessions/$sessionId/register-cartela',
         data: {
           'cartelaId': cartelaId,
-          if (paymentSource != null) 'paymentSource': paymentSource,
+          'paymentSource': ?paymentSource,
         },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
@@ -217,7 +217,7 @@ class GamesRepository {
         '/games/slots/$slotId/register-cartela',
         data: {
           'cartelaId': cartelaId,
-          if (paymentSource != null) 'paymentSource': paymentSource,
+          'paymentSource': ?paymentSource,
         },
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
@@ -285,7 +285,7 @@ class GamesRepository {
                 'cartelaNumber': cartela.cartelaNumber,
               },
           ],
-          if (paymentSource != null) 'paymentSource': paymentSource,
+          'paymentSource': ?paymentSource,
         },
         receiveTimeout: _bulkOperationTimeout,
         decoder: (rawData) => _decodeBulkRegisterResult(rawData),
@@ -468,6 +468,7 @@ class GamesRepository {
       return BulkRegisterResult(
         successes: successByCartelaId.values.toList(growable: false),
         failures: failuresByCartelaId.values.toList(growable: false),
+        myCartelas: result.myCartelas ?? myCartelas,
       );
     } catch (_) {
       return result;
