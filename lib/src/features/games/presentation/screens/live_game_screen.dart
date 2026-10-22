@@ -66,6 +66,7 @@ import '../controllers/registration_action_result.dart';
 import '../controllers/registration_panel_session.dart';
 import '../controllers/live_realtime_controller.dart';
 import '../controllers/live_transition_controller.dart';
+import '../controllers/live_winner_celebration_coordinator.dart';
 import '../utils/cartela_outcome_public_visibility.dart';
 import '../utils/live_ready_transition_lock.dart';
 import '../utils/live_presentation_phase.dart';

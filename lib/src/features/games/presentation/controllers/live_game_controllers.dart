@@ -6,6 +6,7 @@ import 'live_realtime_controller.dart';
 import 'live_registration_controller.dart';
 import 'live_review_controller.dart';
 import 'live_transition_controller.dart';
+import 'live_winner_celebration_coordinator.dart';
 import 'missed_preview_controller.dart';
 import '../utils/next_ball_stale_guard.dart';
 
@@ -23,6 +24,7 @@ class LiveGameControllers {
         review = LiveReviewController(host),
         registration = LiveRegistrationController(host),
         chain = LiveChainGameCoordinator(),
+        winnerCelebration = LiveWinnerCelebrationCoordinator(),
         calledNumbers = LiveCalledNumbersController(
           host,
           // Same claimAttemptId — Nest idempotent findUnique / P2002 path.
@@ -41,6 +43,7 @@ class LiveGameControllers {
   final LiveReviewController review;
   final LiveRegistrationController registration;
   final LiveChainGameCoordinator chain;
+  final LiveWinnerCelebrationCoordinator winnerCelebration;
   final LiveCalledNumbersController calledNumbers;
   final MissedPreviewController missedPreview;
 
@@ -51,6 +54,7 @@ class LiveGameControllers {
     review.dispose();
     registration.dispose();
     chain.dispose();
+    winnerCelebration.dispose();
     calledNumbers.dispose();
     missedPreview.dispose();
   }

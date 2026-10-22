@@ -16,12 +16,34 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _chain.chainBingoArmedAfterCalledCount = value;
   DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
-  /// Final-round All Rounds Winners history (Big Game + Chain only).
-  RoundWinnerHistory? _allRoundsWinnerHistory;
-  List<AllRoundsWinnerCardData> _allRoundsWinnerCards = const [];
-  bool _allRoundsWinnerHistoryLoading = false;
-  String? _allRoundsWinnerHistoryError;
-  String? _allRoundsWinnerHistoryKey;
+  /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
+  LiveWinnerCelebrationCoordinator get _winnerCelebration =>
+      controllers.winnerCelebration;
+
+  RoundWinnerHistory? get _allRoundsWinnerHistory =>
+      _winnerCelebration.allRoundsWinnerHistory;
+  set _allRoundsWinnerHistory(RoundWinnerHistory? value) =>
+      _winnerCelebration.allRoundsWinnerHistory = value;
+
+  List<AllRoundsWinnerCardData> get _allRoundsWinnerCards =>
+      _winnerCelebration.allRoundsWinnerCards;
+  set _allRoundsWinnerCards(List<AllRoundsWinnerCardData> value) =>
+      _winnerCelebration.allRoundsWinnerCards = value;
+
+  bool get _allRoundsWinnerHistoryLoading =>
+      _winnerCelebration.allRoundsWinnerHistoryLoading;
+  set _allRoundsWinnerHistoryLoading(bool value) =>
+      _winnerCelebration.allRoundsWinnerHistoryLoading = value;
+
+  String? get _allRoundsWinnerHistoryError =>
+      _winnerCelebration.allRoundsWinnerHistoryError;
+  set _allRoundsWinnerHistoryError(String? value) =>
+      _winnerCelebration.allRoundsWinnerHistoryError = value;
+
+  String? get _allRoundsWinnerHistoryKey =>
+      _winnerCelebration.allRoundsWinnerHistoryKey;
+  set _allRoundsWinnerHistoryKey(String? value) =>
+      _winnerCelebration.allRoundsWinnerHistoryKey = value;
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
@@ -806,14 +828,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final endsAt = _game?.winnerWindowEndsAt;
-    final Duration autoDismissDuration;
-    if (endsAt != null && endsAt.isAfter(DateTime.now())) {
-      final remaining = endsAt.difference(DateTime.now());
-      autoDismissDuration = remaining + const Duration(seconds: 4);
-    } else {
-      autoDismissDuration = const Duration(seconds: 8);
-    }
+    final autoDismissDuration =
+        _winnerCelebration.calculateAutoDismissDuration(_game?.winnerWindowEndsAt);
 
     _review.winnerCartelaDialogVisible = true;
     // Embedded Big Game only: do not burn the configured summary hold while
@@ -4389,11 +4405,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _clearAllRoundsWinnerHistory() {
-    _allRoundsWinnerHistory = null;
-    _allRoundsWinnerCards = const [];
-    _allRoundsWinnerHistoryLoading = false;
-    _allRoundsWinnerHistoryError = null;
-    _allRoundsWinnerHistoryKey = null;
+    _winnerCelebration.resetAllRoundsHistory();
   }
 
   bool get _shouldShowAllRoundsWinnersSection =>
@@ -4420,14 +4432,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     if (mounted) {
       setState(() {
-        _allRoundsWinnerHistoryLoading = true;
-        _allRoundsWinnerHistoryError = null;
-        _allRoundsWinnerHistoryKey = cacheKey;
+        _winnerCelebration.startAllRoundsHistoryLoading(cacheKey);
       });
     } else {
-      _allRoundsWinnerHistoryLoading = true;
-      _allRoundsWinnerHistoryError = null;
-      _allRoundsWinnerHistoryKey = cacheKey;
+      _winnerCelebration.startAllRoundsHistoryLoading(cacheKey);
     }
 
     try {
@@ -4452,18 +4460,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         return;
       }
       setState(() {
-        _allRoundsWinnerHistory = history;
-        _allRoundsWinnerCards = adaptRoundWinnerHistoryToCards(history);
-        _allRoundsWinnerHistoryLoading = false;
-        _allRoundsWinnerHistoryError = null;
+        _winnerCelebration.setAllRoundsHistory(
+          history,
+          adaptRoundWinnerHistoryToCards(history),
+          key: cacheKey,
+        );
       });
     } catch (error) {
       if (!mounted || _allRoundsWinnerHistoryKey != cacheKey) {
         return;
       }
       setState(() {
-        _allRoundsWinnerHistoryLoading = false;
-        _allRoundsWinnerHistoryError = error.toString();
+        _winnerCelebration.setAllRoundsHistoryError(
+          error.toString(),
+          key: cacheKey,
+        );
       });
     }
   }
