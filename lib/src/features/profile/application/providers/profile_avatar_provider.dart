@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../settings/presentation/providers/theme_mode_provider.dart';
+import '../../../../core/storage/app_preferences_storage.dart';
 
 final profileAvatarProvider = FutureProvider.family<String?, String>((
   ref,

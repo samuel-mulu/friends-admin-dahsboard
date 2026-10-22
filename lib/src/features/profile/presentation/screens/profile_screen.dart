@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../profile/presentation/providers/profile_avatar_provider.dart';
+import '../../application/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 

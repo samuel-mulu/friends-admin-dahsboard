@@ -5,7 +5,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../domain/registration_draft.dart';
 import '../controllers/auth_controller.dart';
 import '../providers/auth_flow_provider.dart';
-import '../../../profile/presentation/providers/profile_avatar_provider.dart';
+import '../../../profile/application/providers/profile_avatar_provider.dart';
 import 'auth_primary_button.dart';
 import 'auth_validators.dart';
 import 'otp_code_input.dart';

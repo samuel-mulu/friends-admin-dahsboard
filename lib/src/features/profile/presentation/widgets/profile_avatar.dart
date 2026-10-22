@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
-import '../../domain/avatar_preset.dart';
+import '../../domain/entities/avatar_preset.dart';
 
 const kClearAvatarSelection = '__clear_avatar__';
 
