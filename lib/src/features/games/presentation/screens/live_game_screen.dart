@@ -150,6 +150,7 @@ import '../utils/live_resume_provider_policy.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/resolved_cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_source.dart';
+import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_attempt.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_ux_metrics.dart';
 import '../utils/auto_bingo_runtime.dart';
 import '../../application/providers/live_game_state_provider.dart';

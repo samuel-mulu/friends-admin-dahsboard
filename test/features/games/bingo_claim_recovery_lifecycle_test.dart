@@ -34,6 +34,7 @@ import 'package:friends_bingo_app/src/features/games/patterns/data/models/comple
 import 'package:friends_bingo_app/src/core/network/api_exception.dart';
 import 'package:friends_bingo_app/src/features/games/claims/data/storage/bingo_claim_attempt_storage.dart';
 import 'package:friends_bingo_app/src/features/games/claims/data/models/bingo_claim_result.dart';
+import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_attempt.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
