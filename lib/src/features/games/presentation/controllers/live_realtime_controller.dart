@@ -7,7 +7,7 @@ import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
 import '../debug/live_realtime_debug.dart';
 import '../../domain/live_connection_status.dart';
-import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../providers/game_operations_sync_coordinator.dart';
 import '../providers/games_providers.dart';

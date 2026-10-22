@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/utils/cbe_smart_deposit_parser.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/utils/smart_deposit_parse_result.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/domain/parsers/cbe_smart_deposit_parser.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/domain/parsers/smart_deposit_parse_result.dart';
 
 void main() {
   group('parseCbeSmartDepositInput', () {

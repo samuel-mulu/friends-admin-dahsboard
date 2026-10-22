@@ -19,7 +19,7 @@ import '../../../messages/application/providers/broadcasts_provider.dart';
 import '../../../messages/presentation/widgets/admin_messages_modal.dart';
 import '../../../support/presentation/providers/support_unread_provider.dart';
 import '../../../support/presentation/widgets/support_feedback_modals.dart';
-import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/overview/application/providers/wallet_provider.dart';
 
 class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const AppShellAppBar({required this.navigationShell, super.key});

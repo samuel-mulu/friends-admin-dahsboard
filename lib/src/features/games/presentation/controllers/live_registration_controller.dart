@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../../data/models/bulk_reserve_cartelas_result.dart';
 import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';

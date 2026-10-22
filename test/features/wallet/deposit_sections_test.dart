@@ -5,10 +5,10 @@ import 'package:friends_bingo_app/l10n/app_localizations.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/controllers/deposit_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/deposit_manual_section.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/deposit_status_card.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/application/controllers/deposit_controller.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/presentation/widgets/deposit_manual_section.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/presentation/widgets/deposit_status_card.dart';
 
 void main() {
   testWidgets('DepositManualSection renders amount and reference inputs',

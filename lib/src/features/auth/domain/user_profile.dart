@@ -1,4 +1,4 @@
-import '../../wallet/data/models/wallet_model.dart';
+import '../../wallet/overview/data/models/wallet_model.dart';
 
 enum UserRole {
   admin,

@@ -12,7 +12,7 @@ import '../../features/games/presentation/utils/live_game_resume_owner_registry.
 import '../../features/messages/application/providers/broadcasts_provider.dart';
 import '../../features/settings/application/providers/feature_settings_provider.dart';
 import '../../features/support/presentation/providers/support_unread_provider.dart';
-import '../../features/wallet/presentation/providers/wallet_provider.dart';
+import '../../features/wallet/overview/application/providers/wallet_provider.dart';
 import '../../core/realtime/socket_service.dart';
 import '../time/server_clock_provider.dart';
 import 'resume_sync_guard.dart';

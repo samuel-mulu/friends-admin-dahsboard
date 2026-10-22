@@ -5,8 +5,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../games/presentation/screens/house_champions_screen.dart';
-import '../../../wallet/presentation/providers/wallet_provider.dart';
-import '../../../wallet/presentation/widgets/wallet_breakdown_card.dart';
+import '../../../wallet/overview/application/providers/wallet_provider.dart';
+import '../../../wallet/overview/presentation/widgets/wallet_breakdown_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});

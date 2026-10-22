@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/games/presentation/utils/socket_payload_normalizer.dart';
-import '../../features/wallet/presentation/providers/wallet_history_providers.dart';
-import '../../features/wallet/presentation/providers/wallet_provider.dart';
+import '../../features/wallet/deposits/application/providers/deposit_history_provider.dart';
+import '../../features/wallet/overview/application/providers/wallet_provider.dart';
+import '../../features/wallet/transactions/application/providers/wallet_transactions_provider.dart';
+import '../../features/wallet/withdrawals/application/providers/withdrawal_history_provider.dart';
 import 'socket_service.dart';
 import 'wallet_entity_realtime.dart';
 

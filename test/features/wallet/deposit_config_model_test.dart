@@ -1,4 +1,4 @@
-import 'package:friends_bingo_app/src/features/wallet/data/models/deposit_config_model.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/models/deposit_config_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

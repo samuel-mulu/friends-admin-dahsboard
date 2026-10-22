@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/deposit_model.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/models/deposit_model.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
 
 void main() {
   group('Deposit Idempotent Submission Contract', () {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/deposit_provider_chips.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/presentation/widgets/deposit_provider_chips.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:friends_bingo_app/l10n/app_localizations.dart';
 

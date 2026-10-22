@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/deposit_config_model.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/telebirr_client_receipt_payload.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/telebirr_receipt_preview.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/telebirr_receipt_preview_service.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/models/deposit_config_model.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/models/telebirr_client_receipt_payload.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/models/telebirr_receipt_preview.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/data/services/telebirr_receipt_preview_service.dart';
 
 /// Mirrors the live Telebirr receipt layout (Amharic label + English label in a
 /// single cell, invoice details rendered as a column table).

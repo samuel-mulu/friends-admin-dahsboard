@@ -1,0 +1,227 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/network/api_client.dart';
+import '../../../../../core/network/api_exception.dart';
+import '../../../../../core/network/paginated_response.dart';
+import '../../../../../core/network/pagination_meta.dart';
+import '../../../shared/domain/entities/payment_provider.dart';
+import '../models/deposit_config_model.dart';
+import '../models/deposit_model.dart';
+import '../models/deposit_reference_check_result.dart';
+import '../models/pending_deposit_verification.dart';
+import '../models/telebirr_client_receipt_payload.dart';
+import '../../presentation/debug/telebirr_deposit_debug.dart';
+
+class DepositsRepository {
+  DepositsRepository(this._apiClient);
+
+  final ApiClient _apiClient;
+
+  Future<DepositConfigModel> getDepositConfig() {
+    return _apiClient.get<DepositConfigModel>(
+      '/deposits/config',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid deposit config response.');
+        }
+
+        return DepositConfigModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<DepositSubmitResult> createDeposit({
+    required PaymentProvider provider,
+    required String amount,
+    required String transactionRef,
+    TelebirrReceiptParseStatus? receiptParseStatus,
+    TelebirrClientReceiptPayload? clientReceipt,
+  }) async {
+    if (provider == PaymentProvider.telebirr) {
+      TelebirrDepositDebug.createRequest(
+        transactionRef: transactionRef,
+        amount: amount,
+        receiptParseStatus: receiptParseStatus?.apiValue ?? 'none',
+        clientReceipt: clientReceipt?.toJson(),
+      );
+    }
+
+    try {
+      final result = await _apiClient.post<DepositSubmitResult>(
+        '/deposits',
+        data: {
+          'provider': provider.apiValue,
+          'amount': amount,
+          'transactionRef': transactionRef,
+          if (provider == PaymentProvider.telebirr &&
+              receiptParseStatus != null)
+            'receiptParseStatus': receiptParseStatus.apiValue,
+          if (provider == PaymentProvider.telebirr && clientReceipt != null)
+            'clientReceipt': clientReceipt.toJson(),
+        },
+        receiveTimeout: const Duration(seconds: 60),
+        decoder: _decodeDepositSubmitResult,
+      );
+
+      if (provider == PaymentProvider.telebirr) {
+        if (result is DepositSubmitApproved) {
+          TelebirrDepositDebug.createResponse(
+            depositId: result.deposit.id,
+            status: result.deposit.status.name,
+            rejectionReason: result.deposit.rejectionReason,
+          );
+        } else if (result is DepositSubmitPendingVerification) {
+          TelebirrDepositDebug.createResponse(
+            depositId: result.pending.attemptId,
+            status: 'verification_pending',
+            rejectionReason: result.pending.message,
+          );
+        }
+      }
+
+      return result;
+    } on ApiException catch (error) {
+      if (provider == PaymentProvider.telebirr) {
+        TelebirrDepositDebug.error(
+          'create response failed code=${error.code ?? 'none'}',
+          error,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<DepositSubmitResult> checkVerificationAttempt({
+    required String attemptId,
+  }) {
+    return _apiClient.post<DepositSubmitResult>(
+      '/deposits/verification-attempts/$attemptId/check',
+      receiveTimeout: const Duration(seconds: 45),
+      decoder: _decodeDepositSubmitResult,
+    );
+  }
+
+  Future<PendingDepositVerification?> getActiveVerificationAttempt({
+    required PaymentProvider provider,
+    required String transactionRef,
+  }) {
+    return _apiClient.get<PendingDepositVerification?>(
+      '/deposits/verification-attempts/active',
+      queryParameters: {
+        'provider': provider.apiValue,
+        'transactionRef': transactionRef,
+      },
+      decoder: (rawData) {
+        if (rawData == null) {
+          return null;
+        }
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid verification attempt response.');
+        }
+        if (!PendingDepositVerification.isPendingJson(rawData)) {
+          return null;
+        }
+        return PendingDepositVerification.fromJson(rawData);
+      },
+    );
+  }
+
+  DepositSubmitResult _decodeDepositSubmitResult(Object? rawData) {
+    if (rawData is! Map<String, dynamic>) {
+      throw StateError('Invalid deposit response.');
+    }
+    if (PendingDepositVerification.isPendingJson(rawData)) {
+      return DepositSubmitPendingVerification(
+        PendingDepositVerification.fromJson(rawData),
+      );
+    }
+    return DepositSubmitApproved(DepositModel.fromJson(rawData));
+  }
+
+  Future<DepositReferenceCheckResult> checkDepositReference({
+    required PaymentProvider provider,
+    required String transactionRef,
+  }) async {
+    if (provider == PaymentProvider.telebirr) {
+      TelebirrDepositDebug.checkRefRequest(
+        transactionRef: transactionRef,
+        amount: 'duplicate-only',
+        receiptParseStatus: 'none',
+        clientReceipt: null,
+      );
+    }
+
+    try {
+      final result = await _apiClient.post<DepositReferenceCheckResult>(
+        '/deposits/check-ref',
+        data: {'provider': provider.apiValue, 'transactionRef': transactionRef},
+        decoder: (rawData) {
+          if (rawData is! Map<String, dynamic>) {
+            throw StateError('Invalid deposit reference check response.');
+          }
+
+          return DepositReferenceCheckResult.fromJson(rawData);
+        },
+      );
+
+      if (provider == PaymentProvider.telebirr) {
+        TelebirrDepositDebug.checkRefResponse(
+          code: result.code,
+          message: result.message,
+        );
+      }
+
+      return result;
+    } on ApiException catch (error) {
+      if (provider == PaymentProvider.telebirr) {
+        TelebirrDepositDebug.error(
+          'check-ref response failed code=${error.code ?? 'none'}',
+          error,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<PaginatedResponse<DepositModel>> getMyDeposits({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final envelope = await _apiClient.getEnvelope<List<DepositModel>>(
+      '/deposits/me',
+      queryParameters: {'page': page, 'pageSize': pageSize},
+      decoder: (rawData) => _decodeList(rawData, DepositModel.fromJson),
+    );
+
+    return PaginatedResponse(
+      items: envelope.data,
+      pagination: _decodePagination(envelope.meta),
+    );
+  }
+
+  List<T> _decodeList<T>(
+    Object? rawData,
+    T Function(Map<String, dynamic> json) decoder,
+  ) {
+    if (rawData is! List) {
+      throw StateError('Invalid list response.');
+    }
+
+    return rawData
+        .whereType<Map<String, dynamic>>()
+        .map(decoder)
+        .toList(growable: false);
+  }
+
+  PaginationMeta _decodePagination(Map<String, dynamic>? meta) {
+    final pagination = meta?['pagination'];
+    if (pagination is Map<String, dynamic>) {
+      return PaginationMeta.fromJson(pagination);
+    }
+
+    return PaginationMeta(page: 1, pageSize: 20, totalItems: 0, totalPages: 1);
+  }
+}
+
+final depositsRepositoryProvider = Provider<DepositsRepository>((ref) {
+  return DepositsRepository(ref.watch(apiClientProvider));
+});

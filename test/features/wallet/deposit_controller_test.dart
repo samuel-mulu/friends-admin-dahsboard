@@ -4,10 +4,10 @@ import 'package:friends_bingo_app/src/core/realtime/wallet_entity_realtime.dart'
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/controllers/deposit_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/models/deposit_confirmation_state.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/models/deposit_state.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/application/controllers/deposit_controller.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/application/models/deposit_confirmation_state.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/application/models/deposit_state.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 

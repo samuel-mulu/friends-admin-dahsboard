@@ -7,15 +7,15 @@ import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/wallet_model.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/withdrawal_model.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/controllers/withdraw_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/providers/wallet_history_providers.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/providers/wallet_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/screens/withdraw_screen.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/withdraw_balance_strip.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/withdraw_provider_chips.dart';
+import 'package:friends_bingo_app/src/features/wallet/overview/application/providers/wallet_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/overview/data/models/wallet_model.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/application/controllers/withdraw_controller.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/application/providers/withdrawal_history_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/data/models/withdrawal_model.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/presentation/screens/withdraw_screen.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/presentation/widgets/withdraw_balance_strip.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/presentation/widgets/withdraw_provider_chips.dart';
 
 void main() {
   testWidgets('WithdrawScreen renders balance strip, provider chips, and history',

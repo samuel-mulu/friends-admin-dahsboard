@@ -6,7 +6,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../application/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
-import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/overview/application/providers/wallet_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});

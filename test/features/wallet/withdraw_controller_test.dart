@@ -4,9 +4,9 @@ import 'package:friends_bingo_app/src/core/realtime/wallet_entity_realtime.dart'
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/controllers/withdraw_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/models/withdrawal_confirmation_state.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/application/controllers/withdraw_controller.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/application/models/withdrawal_confirmation_state.dart';
 
 void main() {
   ProviderContainer createContainer({String? phoneNumber}) {

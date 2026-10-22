@@ -5,9 +5,9 @@ import 'package:friends_bingo_app/l10n/app_localizations.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/data/models/payment_provider.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/controllers/withdraw_controller.dart';
-import 'package:friends_bingo_app/src/features/wallet/presentation/widgets/withdraw_form_section.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/application/controllers/withdraw_controller.dart';
+import 'package:friends_bingo_app/src/features/wallet/withdrawals/presentation/widgets/withdraw_form_section.dart';
 
 void main() {
   testWidgets('WithdrawFormSection renders amount and receiver inputs for selected provider',
