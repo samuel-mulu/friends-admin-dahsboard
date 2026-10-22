@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/admin_broadcast_model.dart';
-import '../providers/broadcasts_provider.dart';
+import '../../application/providers/broadcasts_provider.dart';
 import 'broadcast_message_ui.dart';
 
 Future<void> showAdminMessagesModal(BuildContext context, WidgetRef ref) {

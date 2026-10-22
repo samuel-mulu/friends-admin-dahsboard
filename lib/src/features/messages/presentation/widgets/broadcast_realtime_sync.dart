@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
 import '../../data/models/admin_broadcast_model.dart';
-import '../providers/broadcast_banner_provider.dart';
-import '../providers/broadcasts_provider.dart';
+import '../../application/providers/broadcast_banner_provider.dart';
+import '../../application/providers/broadcasts_provider.dart';
 import '../../../../core/realtime/socket_service.dart';
 
 /// Keeps admin broadcast socket listeners bound while the shell is mounted.
