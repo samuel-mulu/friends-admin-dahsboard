@@ -184,9 +184,12 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     String? autoBingoAttemptKey,
   }) async {
     final sessionId = _activeSessionId;
-    if (sessionId == null || !_canClaimBingoForCartela(gameCartela)) {
+    if (sessionId == null ||
+        !_canClaimBingoForCartela(gameCartela) ||
+        controllers.claim.isClaimInFlight(gameCartela.id)) {
       return const _BingoClaimSubmitOutcome(skipped: true);
     }
+    controllers.claim.markClaimInFlight(gameCartela.id);
     final isAuto = source == BingoClaimSource.auto;
     final startedAt = DateTime.now();
     final attempt = _cn.beginClaimAttempt(
@@ -483,6 +486,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         ));
       }
     } finally {
+      controllers.claim.clearClaimInFlight(gameCartela.id);
       // Cleanup cannot relock a resolved attempt or clear a newer UUID.
       _cn.finishClaimSubmission(attempt);
       if (isLiveHostActive && _cachedMarksUserId == attempt.userId &&
