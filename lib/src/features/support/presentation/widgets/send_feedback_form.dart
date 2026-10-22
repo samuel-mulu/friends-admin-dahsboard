@@ -6,7 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/support_message_model.dart';
 import '../../data/repositories/support_repository.dart';
-import '../providers/support_messages_provider.dart';
+import '../../application/providers/support_messages_provider.dart';
 
 class SendFeedbackForm extends ConsumerStatefulWidget {
   const SendFeedbackForm({

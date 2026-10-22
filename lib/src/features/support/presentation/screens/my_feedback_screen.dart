@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/support_message_model.dart';
-import '../providers/support_messages_provider.dart';
+import '../../application/providers/support_messages_provider.dart';
 import '../widgets/support_message_tile.dart';
 
 class MyFeedbackScreen extends ConsumerWidget {

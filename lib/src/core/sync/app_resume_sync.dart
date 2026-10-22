@@ -11,7 +11,7 @@ import '../../features/games/application/providers/current_game_operations_provi
 import '../../features/games/presentation/utils/live_game_resume_owner_registry.dart';
 import '../../features/messages/application/providers/broadcasts_provider.dart';
 import '../../features/settings/application/providers/feature_settings_provider.dart';
-import '../../features/support/presentation/providers/support_unread_provider.dart';
+import '../../features/support/application/providers/support_unread_provider.dart';
 import '../../features/wallet/overview/application/providers/wallet_provider.dart';
 import '../../core/realtime/socket_service.dart';
 import '../time/server_clock_provider.dart';

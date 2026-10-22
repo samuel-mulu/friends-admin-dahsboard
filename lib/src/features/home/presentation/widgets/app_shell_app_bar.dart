@@ -17,7 +17,7 @@ import '../../../games/presentation/utils/live_game_resume_owner_registry.dart';
 import '../../../games/presentation/widgets/live_status_chip.dart';
 import '../../../messages/application/providers/broadcasts_provider.dart';
 import '../../../messages/presentation/widgets/admin_messages_modal.dart';
-import '../../../support/presentation/providers/support_unread_provider.dart';
+import '../../../support/application/providers/support_unread_provider.dart';
 import '../../../support/presentation/widgets/support_feedback_modals.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 
