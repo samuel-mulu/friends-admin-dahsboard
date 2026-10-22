@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/domain/user_profile.dart';
 import '../../../auth/session/session_manager.dart';
-import '../../data/feature_settings_repository.dart';
-import '../../domain/feature_settings.dart';
+import '../../data/repositories/feature_settings_repository.dart';
+import '../../domain/entities/feature_settings.dart';
 
 class FeatureSettingsController extends AsyncNotifier<FeatureSettingsUiState> {
   var _boundUserId = '';

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
-import '../../domain/feature_settings.dart';
-import '../providers/feature_settings_provider.dart';
+import '../../domain/entities/feature_settings.dart';
+import '../../application/providers/feature_settings_provider.dart';
 
 /// App-level sync for Auto Mark / Auto Bingo settings (not drawer-scoped).
 class FeatureSettingsRealtimeSync extends ConsumerStatefulWidget {

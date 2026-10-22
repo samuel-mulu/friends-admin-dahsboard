@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
-import '../providers/locale_provider.dart';
-import '../providers/theme_mode_provider.dart';
+import '../../application/providers/locale_provider.dart';
+import '../../application/providers/theme_mode_provider.dart';
 import 'language_picker_sheet.dart';
 
 class DrawerPreferencesCard extends ConsumerWidget {

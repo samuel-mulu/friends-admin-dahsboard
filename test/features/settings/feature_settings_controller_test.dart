@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/settings/domain/feature_settings.dart';
+import 'package:friends_bingo_app/src/features/settings/domain/entities/feature_settings.dart';
 
 void main() {
   group('FeatureSettings visibility', () {

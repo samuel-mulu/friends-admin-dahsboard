@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:friends_bingo_app/src/core/l10n/app_locale.dart';
-import 'theme_mode_provider.dart';
+import '../../../../core/l10n/app_locale.dart';
+import '../../../../core/storage/app_preferences_storage.dart';
 
 class LocaleController extends Notifier<Locale> {
   @override

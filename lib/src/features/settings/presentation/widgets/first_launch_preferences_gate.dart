@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_branding.dart';
-import '../providers/first_launch_preferences_provider.dart';
+import '../../application/providers/first_launch_preferences_provider.dart';
 import '../screens/first_launch_preferences_screen.dart';
 
 /// Shows the first-launch theme/language prompt once preferences are loaded.

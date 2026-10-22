@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../providers/locale_provider.dart';
-import '../providers/theme_mode_provider.dart';
+import '../../application/providers/locale_provider.dart';
+import '../../application/providers/theme_mode_provider.dart';
 
 /// Compact theme + language icon buttons with dropdown menus.
 class DrawerPreferenceIcons extends ConsumerWidget {

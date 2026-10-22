@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../providers/locale_provider.dart';
+import '../../application/providers/locale_provider.dart';
 
 Future<void> showLanguagePickerSheet(BuildContext context) {
   return showModalBottomSheet<void>(

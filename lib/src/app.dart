@@ -22,8 +22,8 @@ import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'features/auth/presentation/providers/telegram_deep_link_provider.dart';
 import 'features/auth/presentation/widgets/account_ban_overlay.dart';
 import 'features/auth/presentation/widgets/account_ban_realtime_sync.dart';
-import 'features/settings/presentation/providers/locale_provider.dart';
-import 'features/settings/presentation/providers/theme_mode_provider.dart';
+import 'features/settings/application/providers/locale_provider.dart';
+import 'features/settings/application/providers/theme_mode_provider.dart';
 import 'features/settings/presentation/widgets/first_launch_preferences_gate.dart';
 import 'features/games/domain/game_rule_localized_name.dart';
 

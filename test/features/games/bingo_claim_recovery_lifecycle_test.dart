@@ -21,8 +21,8 @@ import 'package:friends_bingo_app/src/features/games/data/games_repository.dart'
 import 'package:friends_bingo_app/src/features/games/domain/bingo_claim_source.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_numbers_snapshot.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
-import 'package:friends_bingo_app/src/features/settings/domain/feature_settings.dart';
-import 'package:friends_bingo_app/src/features/settings/presentation/providers/feature_settings_provider.dart';
+import 'package:friends_bingo_app/src/features/settings/domain/entities/feature_settings.dart';
+import 'package:friends_bingo_app/src/features/settings/application/providers/feature_settings_provider.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_timing_config_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/screens/live_game_screen.dart';

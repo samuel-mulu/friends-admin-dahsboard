@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../providers/theme_mode_provider.dart';
+import '../../application/providers/theme_mode_provider.dart';
 
 class ThemeModeMenuButton extends ConsumerWidget {
   const ThemeModeMenuButton({this.iconColor, super.key});

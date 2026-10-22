@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
-import '../domain/feature_settings.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/entities/feature_settings.dart';
 
 class FeatureSettingsRepository {
   FeatureSettingsRepository(this._apiClient);
