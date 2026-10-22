@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/paginated_response.dart';
-import '../../../../core/network/pagination_meta.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../data/games_repository.dart';
-import '../../data/models/game_model.dart';
-import '../../domain/attended_game_history_state.dart';
+import 'package:friends_bingo_app/src/core/network/paginated_response.dart';
+import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
+import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import '../../data/repositories/game_history_repository.dart';
+import '../../domain/entities/attended_game_history_state.dart';
 
 final gameHistoryProvider =
     FutureProvider<PaginatedResponse<GameModel>>((ref) async {
-  return ref.read(gamesRepositoryProvider).getGameHistory();
+  return ref.read(gameHistoryRepositoryProvider).getGameHistory();
 });
 
 final attendedGameHistoryProvider =
@@ -69,7 +69,7 @@ class AttendedGameHistoryNotifier extends AsyncNotifier<AttendedGameHistoryState
 
   Future<AttendedGameHistoryState> _fetchPage({required int page}) async {
     final response = await ref
-        .read(gamesRepositoryProvider)
+        .read(gameHistoryRepositoryProvider)
         .getMyAttendedGameHistory(page: page, pageSize: defaultPageSize);
 
     return AttendedGameHistoryState(

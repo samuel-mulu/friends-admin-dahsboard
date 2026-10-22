@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_branding.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/utils/l10n.dart';
-import '../providers/game_history_provider.dart';
-import '../../domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/utils/formatters.dart';
+import 'package:friends_bingo_app/src/core/utils/l10n.dart';
+import 'package:friends_bingo_app/src/features/games/domain/game_rule_localized_name.dart';
+import '../../application/providers/game_history_provider.dart';
 import '../widgets/game_history_detail_dialog.dart';
 
 class GameHistoryScreen extends ConsumerWidget {

@@ -1,4 +1,4 @@
-import '../../../core/network/pagination_meta.dart';
+import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
 import 'attended_game_history_entry.dart';
 
 /// Paginated attended game history for the signed-in player.

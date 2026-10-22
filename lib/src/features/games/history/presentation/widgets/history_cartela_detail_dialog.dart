@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_branding.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/utils/l10n.dart';
-import '../../data/models/called_number_model.dart';
-import '../../data/models/game_cartela_model.dart';
-import '../../data/models/session_winner_result_model.dart';
-import '../components/bingo_ball_badge.dart';
-import '../utils/cartela_pattern_progress_overlay.dart';
-import '../utils/cartela_board_layout.dart';
-import 'cartela_board_preview.dart';
-import 'winning_pattern_cartela_grid.dart';
+import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/utils/formatters.dart';
+import 'package:friends_bingo_app/src/core/utils/l10n.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/components/bingo_ball_badge.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_board_layout.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/widgets/cartela_board_preview.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/widgets/winning_pattern_cartela_grid.dart';
 
 Future<void> showHistoryCartelaDetailDialog({
   required BuildContext context,
@@ -242,4 +242,3 @@ class _HistoryCalledNumbersScroller extends StatelessWidget {
     );
   }
 }
-

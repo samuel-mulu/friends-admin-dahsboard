@@ -3,21 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_branding.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/utils/l10n.dart';
-import '../../data/games_repository.dart';
-import '../../data/models/called_number_model.dart';
-import '../../data/models/called_numbers_snapshot.dart';
-import '../../data/models/game_cartela_model.dart';
-import '../../data/models/game_model.dart';
-import '../../data/models/session_winner_result_model.dart';
-import '../../domain/attended_game_history_entry.dart';
-import '../../domain/game_category_theme.dart';
-import '../../domain/game_rule_localized_name.dart';
-import 'called_numbers_strip.dart';
+import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/utils/formatters.dart';
+import 'package:friends_bingo_app/src/core/utils/l10n.dart';
+import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/called_numbers_snapshot.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
+import 'package:friends_bingo_app/src/features/games/domain/game_category_theme.dart';
+import 'package:friends_bingo_app/src/features/games/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/widgets/called_numbers_strip.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/widgets/winner_cartela_dialog.dart';
+import '../../domain/entities/attended_game_history_entry.dart';
 import 'history_cartela_detail_dialog.dart';
-import 'winner_cartela_dialog.dart';
 
 Future<void> showGameHistoryDetailDialog({
   required BuildContext context,

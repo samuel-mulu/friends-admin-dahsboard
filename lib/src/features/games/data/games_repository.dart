@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/network/paginated_response.dart';
-import '../../../core/network/pagination_meta.dart';
-import '../domain/attended_game_history_entry.dart';
 import '../domain/bingo_claim_source.dart';
 import '../domain/bulk_register_result.dart';
 import 'models/bingo_claim_result.dart';
@@ -16,7 +13,6 @@ import 'models/called_numbers_snapshot.dart';
 import 'models/game_cartela_model.dart';
 import 'models/game_model.dart';
 import 'models/game_timing_config_model.dart';
-import 'models/house_champions_model.dart';
 import 'models/registration_state_model.dart';
 import 'models/round_winner_history_model.dart';
 import 'models/session_winner_result_model.dart';
@@ -36,26 +32,6 @@ class GamesRepository {
         }
 
         return GameTimingConfigModel.fromJson(rawData);
-      },
-    );
-  }
-
-  Future<HouseChampionsResponse> getCartelaWinsLeaderboard({
-    required String period,
-    int limit = 15,
-  }) {
-    return _apiClient.get<HouseChampionsResponse>(
-      '/games/leaderboard/cartela-wins',
-      queryParameters: {
-        'period': period,
-        'limit': limit,
-      },
-      decoder: (rawData) {
-        if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid house champions response.');
-        }
-
-        return HouseChampionsResponse.fromJson(rawData);
       },
     );
   }
@@ -627,40 +603,6 @@ class GamesRepository {
     );
   }
 
-  Future<PaginatedResponse<GameModel>> getGameHistory({
-    int page = 1,
-    int pageSize = 20,
-  }) async {
-    final envelope = await _apiClient.getEnvelope<List<GameModel>>(
-      '/games/history',
-      queryParameters: {'page': page, 'pageSize': pageSize},
-      decoder: (rawData) => _decodeList(rawData, GameModel.fromSessionJson),
-    );
-
-    return PaginatedResponse(
-      items: envelope.data,
-      pagination: _decodePagination(envelope.meta),
-    );
-  }
-
-  Future<PaginatedResponse<AttendedGameHistoryEntry>> getMyAttendedGameHistory({
-    int page = 1,
-    int pageSize = 50,
-  }) async {
-    final envelope = await _apiClient
-        .getEnvelope<List<AttendedGameHistoryEntry>>(
-          '/games/my-history',
-          queryParameters: {'page': page, 'pageSize': pageSize},
-          decoder: (rawData) =>
-              _decodeList(rawData, AttendedGameHistoryEntry.fromSessionJson),
-        );
-
-    return PaginatedResponse(
-      items: envelope.data,
-      pagination: _decodePagination(envelope.meta),
-    );
-  }
-
   /// Deliberately short POST wait budget (6s) — much shorter than the Nest
   /// worst case (accept txn `{maxWait:10s,timeout:10s}` + validate txn
   /// `{maxWait:20s,timeout:20s}` sequential ≈30s in the same HTTP request).
@@ -719,14 +661,6 @@ class GamesRepository {
         return BingoClaimAttemptStatus.fromJson(rawData);
       },
     );
-  }
-
-  PaginationMeta _decodePagination(Map<String, dynamic>? meta) {
-    final pagination = meta?['pagination'];
-    if (pagination is Map<String, dynamic>) {
-      return PaginationMeta.fromJson(pagination);
-    }
-    return PaginationMeta(page: 1, pageSize: 20, totalItems: 0, totalPages: 0);
   }
 
   Future<List<SessionWinnerResultModel>> getSessionWinnerResults({

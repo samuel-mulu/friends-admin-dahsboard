@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/games_repository.dart';
 import '../../data/models/house_champions_model.dart';
+import '../../data/repositories/leaderboard_repository.dart';
 
 class HouseChampionsPeriodController extends Notifier<HouseChampionsPeriod> {
   @override
@@ -21,6 +21,6 @@ final houseChampionsProvider =
     FutureProvider.autoDispose<HouseChampionsResponse>((ref) async {
       final period = ref.watch(houseChampionsPeriodProvider);
       return ref
-          .read(gamesRepositoryProvider)
+          .read(leaderboardRepositoryProvider)
           .getCartelaWinsLeaderboard(period: period.apiValue);
     });
