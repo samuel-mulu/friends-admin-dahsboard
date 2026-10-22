@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/time/server_clock_service.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import '../../cartelas/data/repositories/cartelas_repository.dart';
 import '../../data/games_repository.dart';
-import '../../data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/game_timing_config_model.dart';
 import '../providers/game_operations_sync_coordinator.dart';
@@ -79,6 +80,8 @@ abstract class LiveGameHost {
   bool get isGuest;
 
   GamesRepository get gamesRepository;
+
+  CartelasRepository get cartelasRepository;
 
   /// Ownership test used by the read-only missed-player preview observer.
   /// True when the player owns cartelas in [sessionId] (never for Player 2's

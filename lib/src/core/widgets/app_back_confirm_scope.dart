@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../utils/l10n.dart';
-import '../../features/games/presentation/providers/has_active_registered_cartelas_provider.dart';
+import 'package:friends_bingo_app/src/features/games/registration/application/providers/has_active_registered_cartelas_provider.dart';
 
 enum ConfirmBackChoice { stay, leave }
 

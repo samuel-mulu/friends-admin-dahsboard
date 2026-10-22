@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../features/games/domain/cartela_mark_color.dart';
-import '../../features/games/presentation/utils/cartela_marked_pattern_evaluator.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_color.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
 
 class AppPreferencesStorage {
   AppPreferencesStorage(this._prefs);

@@ -1,15 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import '../../cartelas/data/repositories/cartelas_repository.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_preview_cache.dart';
 import '../../data/games_repository.dart';
-import '../../data/models/cartela_model.dart';
 import '../../data/models/game_model.dart';
-import '../../data/models/registration_state_model.dart';
-import '../../domain/cartela_board_preview_cache.dart';
+import 'package:friends_bingo_app/src/features/games/registration/data/models/registration_state_model.dart';
 
 final cartelasProvider = FutureProvider<List<CartelaModel>>((ref) async {
   final link = ref.keepAlive();
   ref.onDispose(link.close);
 
-  final cartelas = await ref.watch(gamesRepositoryProvider).getCartelas();
+  final cartelas = await ref.watch(cartelasRepositoryProvider).getCartelas();
   for (final cartela in cartelas) {
     CartelaBoardPreviewCache.put(cartela);
   }

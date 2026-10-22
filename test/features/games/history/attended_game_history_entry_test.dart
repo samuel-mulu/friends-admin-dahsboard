@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/history/domain/entities/attended_game_history_entry.dart';
 import 'package:friends_bingo_app/src/features/games/history/domain/entities/attended_game_history_state.dart';
 

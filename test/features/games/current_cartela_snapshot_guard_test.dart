@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/current_cartela_snapshot_guard.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/current_cartela_snapshot_guard.dart';
 
 void main() {
   group('CurrentCartelaSnapshotGuard', () {

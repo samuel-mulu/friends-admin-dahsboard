@@ -200,8 +200,10 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       autoBingoAttemptKey: autoBingoAttemptKey,
     );
     if (attempt == null) {
+      controllers.claim.clearClaimInFlight(gameCartela.id);
       return const _BingoClaimSubmitOutcome(skipped: true);
     }
+    controllers.claim.markClaimInFlight(gameCartela.id, attempt.claimAttemptId);
     BingoClaimDiagnostics.record(
       event: isAuto ? 'bingo.auto' : 'bingo.tap',
       claimAttemptId: attempt.claimAttemptId,
@@ -223,6 +225,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     } catch (_) {
       if (_cn.isCurrentClaimAttempt(attempt)) {
         _cn.cancelUnsentClaim(attempt);
+        controllers.claim.clearClaimInFlight(gameCartela.id, attempt.claimAttemptId);
         if (mounted && isLiveHostActive) {
           setState(() {
             if (_cn.confirmingOrClaimingCartelaIds.isEmpty) {
@@ -240,6 +243,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     }
     if (!_claimCallbackIsCurrent(attempt)) {
       _cn.cancelUnsentClaim(attempt);
+      controllers.claim.clearClaimInFlight(gameCartela.id, attempt.claimAttemptId);
       return const _BingoClaimSubmitOutcome(skipped: true);
     }
     final requestStartedAt = DateTime.now();
@@ -408,7 +412,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
             isQuietAutoBingoFailureCode(
               result.failureCode ?? result.claim.failureCode,
             );
-        if (!quietAuto) {
+        if (!quietAuto && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(result.claim.reason ??
                 'Bingo could not be checked. You can try again.'),
@@ -486,7 +490,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         ));
       }
     } finally {
-      controllers.claim.clearClaimInFlight(gameCartela.id);
+      controllers.claim.clearClaimInFlight(gameCartela.id, attempt.claimAttemptId);
       // Cleanup cannot relock a resolved attempt or clear a newer UUID.
       _cn.finishClaimSubmission(attempt);
       if (isLiveHostActive && _cachedMarksUserId == attempt.userId &&
@@ -852,6 +856,10 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         applyCartelas: (next) => _myCartelas = next,
       );
       if (!resolved.applied) return;
+      controllers.claim.clearClaimInFlight(
+        attempt.gameCartelaId,
+        attempt.claimAttemptId,
+      );
       _game = _game?.copyWith(nextAutoCallAt: result.nextAutoCallAt);
       _applyRetryableClaimSnapshot(
         gameStatus: result.gameStatus,

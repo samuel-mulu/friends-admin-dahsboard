@@ -9,15 +9,15 @@ import '../../data/models/bingo_claim_result.dart';
 import '../../domain/bingo_claim_source.dart';
 import '../../domain/winning_ball_cell.dart';
 import '../../data/models/called_number_model.dart';
-import '../../data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../debug/bingo_claim_diagnostics.dart';
 import '../utils/bingo_claim_eligibility.dart';
-import '../utils/cartela_mark_helpers.dart';
-import '../utils/cartela_marked_pattern_evaluator.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
 import '../utils/live_called_number_monotonic.dart';
 import '../utils/live_called_number_sync.dart';
-import '../utils/merge_registered_cartelas.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/merge_registered_cartelas.dart';
 import 'live_game_host.dart';
 
 /// Result of applying a terminal (or non-terminal) claim outcome through the

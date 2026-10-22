@@ -13,7 +13,7 @@ import 'big_game_info_strip.dart';
 import 'chain_game_info_strip.dart';
 import 'chain_game_rounds_dialog.dart';
 import 'game_compact_info_bar.dart';
-import 'collapsible_registered_cartela_chips.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/collapsible_registered_cartela_chips.dart';
 import 'live_status_chip.dart';
 
 enum LiveTopSectionVariant { livePlay, registration }

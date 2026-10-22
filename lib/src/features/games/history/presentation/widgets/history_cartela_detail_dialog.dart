@@ -4,12 +4,12 @@ import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
 import 'package:friends_bingo_app/src/core/utils/formatters.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/components/bingo_ball_badge.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_board_layout.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_pattern_progress_overlay.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/widgets/cartela_board_preview.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_board_preview.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/winning_pattern_cartela_grid.dart';
 
 Future<void> showHistoryCartelaDetailDialog({

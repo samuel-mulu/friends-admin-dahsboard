@@ -1111,7 +1111,7 @@ class _CartelaRegistrationPanelState
           .toList(growable: false);
 
       if (missingNumbers.isNotEmpty) {
-        final repository = ref.read(gamesRepositoryProvider);
+        final repository = ref.read(cartelasRepositoryProvider);
         for (final number in missingNumbers) {
           final page = await repository.getCartelasPage(
             search: number.toString(),

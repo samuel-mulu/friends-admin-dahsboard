@@ -15,6 +15,21 @@ void main() {
       expect(coordinator.isClaimInFlight('cartela-1'), isFalse);
     });
 
+    test('stale attempt ID does not clear a newer in-flight claim', () {
+      final coordinator = LiveBingoClaimCoordinator();
+      coordinator.markClaimInFlight('cartela-1', 'attempt-1');
+      expect(coordinator.isClaimInFlight('cartela-1'), isTrue);
+
+      coordinator.markClaimInFlight('cartela-1', 'attempt-2');
+      // Stale attempt-1 completion should not clear attempt-2
+      coordinator.clearClaimInFlight('cartela-1', 'attempt-1');
+      expect(coordinator.isClaimInFlight('cartela-1'), isTrue);
+
+      // Clearing with current attempt-2 clears it
+      coordinator.clearClaimInFlight('cartela-1', 'attempt-2');
+      expect(coordinator.isClaimInFlight('cartela-1'), isFalse);
+    });
+
     test('deduplicates auto bingo evaluation attempt keys', () {
       final coordinator = LiveBingoClaimCoordinator();
       const attemptKey = 'session-1:round-1:called-12';

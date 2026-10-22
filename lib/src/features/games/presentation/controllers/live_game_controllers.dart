@@ -4,7 +4,7 @@ import 'live_chain_game_coordinator.dart';
 import 'live_countdown_controller.dart';
 import 'live_game_host.dart';
 import 'live_realtime_controller.dart';
-import 'live_registration_controller.dart';
+import 'package:friends_bingo_app/src/features/games/registration/application/controllers/live_registration_controller.dart';
 import 'live_resume_sync_coordinator.dart';
 import 'live_review_controller.dart';
 import 'live_transition_controller.dart';

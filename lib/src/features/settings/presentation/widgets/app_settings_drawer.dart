@@ -24,7 +24,7 @@ import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../../games/domain/big_game_phase.dart';
 import '../../../games/presentation/providers/current_big_game_provider.dart';
 import '../../../games/presentation/utils/big_game_countdown.dart';
-import '../../../games/presentation/providers/cartela_sort_mode_provider.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_sort_mode_provider.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../../../wallet/overview/presentation/widgets/wallet_breakdown_card.dart';
 import '../../application/providers/feature_settings_provider.dart';

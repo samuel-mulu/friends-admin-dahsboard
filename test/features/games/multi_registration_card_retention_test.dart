@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/bulk_register_result.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/merge_registered_cartelas.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/registration/domain/bulk_register_result.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/merge_registered_cartelas.dart';
 
 void main() {
   final now = DateTime.now();

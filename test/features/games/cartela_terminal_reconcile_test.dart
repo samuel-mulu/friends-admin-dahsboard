@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/bingo_claim_attempt_storage.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/bingo_claim_result.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_called_numbers_controller.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/bingo_claim_eligibility.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/chain_round_cartela_state.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/merge_registered_cartelas.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/merge_registered_cartelas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeHost implements LiveGameHost {

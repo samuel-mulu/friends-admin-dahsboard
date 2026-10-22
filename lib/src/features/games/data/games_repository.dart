@@ -1,19 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../domain/bingo_claim_source.dart';
-import '../domain/bulk_register_result.dart';
+import 'package:friends_bingo_app/src/features/games/registration/data/models/bulk_reserve_cartelas_result.dart';
+import 'package:friends_bingo_app/src/features/games/registration/data/models/cartela_reservation_model.dart';
+import 'package:friends_bingo_app/src/features/games/registration/data/models/registration_state_model.dart';
+import 'package:friends_bingo_app/src/features/games/registration/domain/bulk_register_result.dart';
 import 'models/bingo_claim_result.dart';
-import 'models/bulk_reserve_cartelas_result.dart';
-import 'models/cartela_catalog_page.dart';
-import 'models/chain_round_plan_model.dart';
-import 'models/cartela_model.dart';
-import 'models/cartela_reservation_model.dart';
 import 'models/called_numbers_snapshot.dart';
-import 'models/game_cartela_model.dart';
+import 'models/chain_round_plan_model.dart';
 import 'models/game_model.dart';
 import 'models/game_timing_config_model.dart';
-import 'models/registration_state_model.dart';
 import 'models/round_winner_history_model.dart';
 import 'models/session_winner_result_model.dart';
 
@@ -97,53 +95,6 @@ class GamesRepository {
           throw StateError('Invalid chain round plan response.');
         }
         return ChainRoundPlan.fromJson(rawData);
-      },
-    );
-  }
-
-  Future<List<CartelaModel>> getCartelas() {
-    return _apiClient.get<List<CartelaModel>>(
-      '/cartelas',
-      decoder: (rawData) => _decodeList(rawData, CartelaModel.fromJson),
-    );
-  }
-
-  Future<CartelaCatalogPage> getCartelasPage({
-    int limit = 100,
-    String? cursor,
-    String? search,
-    bool shuffle = false,
-  }) {
-    return _apiClient.get<CartelaCatalogPage>(
-      '/cartelas',
-      queryParameters: {
-        'limit': limit,
-        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
-        if (search != null && search.isNotEmpty) 'search': search,
-        if (shuffle) 'shuffle': true,
-      },
-      decoder: (rawData) {
-        if (rawData is Map<String, dynamic>) {
-          return CartelaCatalogPage.fromJson(rawData);
-        }
-
-        throw StateError('Invalid cartela catalog page response.');
-      },
-    );
-  }
-
-  Future<CartelaModel> getCartelaBoard({
-    required String cartelaId,
-    required String sessionId,
-  }) {
-    return _apiClient.get<CartelaModel>(
-      '/cartelas/$cartelaId/board',
-      queryParameters: {'sessionId': sessionId},
-      decoder: (rawData) {
-        if (rawData is! Map<String, dynamic>) {
-          throw StateError('Invalid cartela board response.');
-        }
-        return CartelaModel.fromJson(rawData);
       },
     );
   }

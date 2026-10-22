@@ -28,14 +28,14 @@ import 'package:friends_bingo_app/src/features/games/data/models/session_winner_
 import 'package:friends_bingo_app/src/features/games/presentation/screens/live_game_screen.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/screens/big_game_screen.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/providers/current_big_game_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/widgets/live_cartela_card.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/live_cartela_card.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/called_numbers_strip.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
 import 'package:friends_bingo_app/src/core/network/api_exception.dart';
 import 'package:friends_bingo_app/src/features/games/data/bingo_claim_attempt_storage.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/bingo_claim_result.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_called_numbers_controller.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
@@ -160,10 +160,6 @@ class _AutoRepo extends _Repo {
   bool recoveryRetryAllowed = true;
   int recoveryNotFoundResponses = 0;
   @override
-  Future<CartelaModel> getCartelaBoard({required String cartelaId,
-    required String sessionId}) async =>
-      cards.firstWhere((card) => card.cartelaId == cartelaId).cartela;
-  @override
   Future<CalledNumbersSnapshot> getCalledNumbers(String sessionId) async =>
       CalledNumbersSnapshot(totalCount: 5, calledNumbers: [
         for (var index = 0; index < 5; index++) CalledNumberModel(
@@ -266,13 +262,6 @@ class _Repo extends Fake implements GamesRepository {
   @override
   Future<List<GameCartelaModel>> getMyGameCartelas(String sessionId) async =>
       sessionCards[sessionId] ?? cards;
-  @override
-  Future<List<CartelaModel>> getCartelas() async => [_cartela().cartela];
-  @override
-  Future<CartelaModel> getCartelaBoard({
-    required String cartelaId,
-    required String sessionId,
-  }) async => _cartela().cartela;
   @override
   Future<CalledNumbersSnapshot> getCalledNumbers(String sessionId) async =>
       CalledNumbersSnapshot(totalCount: 0, calledNumbers: const []);
@@ -1548,7 +1537,7 @@ void main() {
         'claimAttemptId': original,
         'retryAllowed': true,
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       tester
           .widget<LiveCartelaCard>(find.byType(LiveCartelaCard).first)
           .onClaimBingo();

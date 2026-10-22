@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/called_number_model.dart';
-import '../../data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../../domain/live_game_state.dart';

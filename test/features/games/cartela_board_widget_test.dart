@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/components/cartela_board_widget.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_board_widget.dart';
 
 void main() {
   final sampleCartela = CartelaModel(

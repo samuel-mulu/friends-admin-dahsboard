@@ -510,7 +510,7 @@ class BigGameHeader extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/core/network/api_client.dart';
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_registration_controller.dart';
+import 'package:friends_bingo_app/src/features/games/registration/application/controllers/live_registration_controller.dart';
 
 void main() {
   group('LiveRegistrationController current-session snapshot guard', () {

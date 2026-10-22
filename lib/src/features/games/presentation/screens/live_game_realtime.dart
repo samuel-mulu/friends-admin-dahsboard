@@ -643,26 +643,3 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
   }
 }
 
-({Color background, Color foreground}) _cartelaStatusColors(
-  ThemeData theme,
-  GameCartelaStatus status,
-) {
-  return switch (status) {
-    GameCartelaStatus.registered => (
-      background: theme.colorScheme.surfaceContainerHighest,
-      foreground: theme.colorScheme.onSurface,
-    ),
-    GameCartelaStatus.winner => (
-      background: Colors.amber.shade100,
-      foreground: Colors.amber.shade900,
-    ),
-    GameCartelaStatus.blocked => (
-      background: theme.colorScheme.errorContainer,
-      foreground: theme.colorScheme.onErrorContainer,
-    ),
-    GameCartelaStatus.cancelled => (
-      background: theme.colorScheme.surfaceContainerHighest,
-      foreground: theme.colorScheme.onSurface,
-    ),
-  };
-}

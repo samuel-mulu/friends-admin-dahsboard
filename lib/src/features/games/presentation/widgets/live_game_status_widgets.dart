@@ -4,8 +4,8 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
-import '../../data/models/game_cartela_model.dart';
-import 'live_registered_cartela_list.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/live_registered_cartela_list.dart';
 
 class LiveErrorState extends StatelessWidget {
   const LiveErrorState({

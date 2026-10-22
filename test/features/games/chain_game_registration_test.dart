@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/chain_round_plan_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_selection_cap.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_selection_cap.dart';
 
 void main() {
   group('minCartelaSelectionCap', () {

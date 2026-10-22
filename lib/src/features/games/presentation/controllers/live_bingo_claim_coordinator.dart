@@ -1,18 +1,20 @@
 /// Coordinates bingo claim validation, in-flight debouncing, and
 /// auto-bingo attempt deduplication to prevent double-POSTs.
 class LiveBingoClaimCoordinator {
-  final Set<String> _inFlightCartelaIds = {};
+  final Map<String, String> _inFlightByCartela = {};
   final Set<String> _autoBingoAttemptKeys = {};
 
   bool isClaimInFlight(String cartelaId) =>
-      _inFlightCartelaIds.contains(cartelaId);
+      _inFlightByCartela.containsKey(cartelaId);
 
-  void markClaimInFlight(String cartelaId) {
-    _inFlightCartelaIds.add(cartelaId);
+  void markClaimInFlight(String cartelaId, [String? attemptId]) {
+    _inFlightByCartela[cartelaId] = attemptId ?? '';
   }
 
-  void clearClaimInFlight(String cartelaId) {
-    _inFlightCartelaIds.remove(cartelaId);
+  void clearClaimInFlight(String cartelaId, [String? attemptId]) {
+    if (attemptId == null || _inFlightByCartela[cartelaId] == attemptId) {
+      _inFlightByCartela.remove(cartelaId);
+    }
   }
 
   bool hasAttemptedAutoBingo(String attemptKey) =>
@@ -31,7 +33,7 @@ class LiveBingoClaimCoordinator {
   }
 
   void reset() {
-    _inFlightCartelaIds.clear();
+    _inFlightByCartela.clear();
     _autoBingoAttemptKeys.clear();
   }
 

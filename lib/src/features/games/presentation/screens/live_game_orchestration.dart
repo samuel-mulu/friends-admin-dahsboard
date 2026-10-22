@@ -3812,6 +3812,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
               : GameCartelaStatus.blocked,
           applyCartelas: (next) => _myCartelas = next,
         );
+        controllers.claim.clearClaimInFlight(
+          attempt.gameCartelaId,
+          attempt.claimAttemptId,
+        );
       }
       unawaited(_cn.recoverClaimAttempt(attempt));
     }

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/game_cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/utils/cartela_mark_helpers.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 
 final _now = DateTime.utc(2026, 10, 15);
 

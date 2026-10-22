@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/cartela_model.dart';
-import '../components/cartela_board_widget.dart';
-import '../utils/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_board_widget.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 
 /// Read-only B-I-N-G-O winning pattern board for review sheets and winner modals,
 /// delegating to the unified [CartelaBoardWidget].

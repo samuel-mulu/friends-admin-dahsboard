@@ -6,7 +6,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_rule_localized_name.dart';
 import '../../domain/game_rule_pattern_preview.dart';
-import 'rule_pattern_preview_grid.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/rule_pattern_preview_grid.dart';
 
 Future<void> showGameRuleDetailDialog(
   BuildContext context, {

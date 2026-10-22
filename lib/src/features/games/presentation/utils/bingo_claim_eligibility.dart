@@ -1,4 +1,4 @@
-import '../../data/models/game_cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import 'chain_round_cartela_state.dart';
 import 'live_presentation_phase.dart';

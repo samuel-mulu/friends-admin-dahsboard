@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/domain/game_rule_pattern_preview.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/widgets/cartela_pattern_progress_painter.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_pattern_progress_painter.dart';
 
 void main() {
   group('rule sample red-line overlays', () {
