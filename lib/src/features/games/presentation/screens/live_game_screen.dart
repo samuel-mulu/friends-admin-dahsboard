@@ -55,6 +55,7 @@ import '../widgets/registration_tap_hint.dart';
 import '../widgets/realtime_branding_overlay.dart';
 import '../widgets/big_game_live_prompt_banner.dart';
 import '../controllers/live_called_numbers_controller.dart';
+import '../controllers/live_chain_game_coordinator.dart';
 import '../controllers/live_countdown_controller.dart';
 import '../controllers/live_countdown_tick_context.dart';
 import '../controllers/live_game_controllers.dart';

@@ -1,4 +1,5 @@
 import 'live_called_numbers_controller.dart';
+import 'live_chain_game_coordinator.dart';
 import 'live_countdown_controller.dart';
 import 'live_game_host.dart';
 import 'live_realtime_controller.dart';
@@ -8,7 +9,7 @@ import 'live_transition_controller.dart';
 import 'missed_preview_controller.dart';
 import '../utils/next_ball_stale_guard.dart';
 
-/// Owns the six live-screen controllers with a single dispose entry point.
+/// Owns the live-screen controllers and coordinators with a single dispose entry point.
 class LiveGameControllers {
   LiveGameControllers(
     LiveGameHost host, {
@@ -21,6 +22,7 @@ class LiveGameControllers {
         realtime = LiveRealtimeController(host),
         review = LiveReviewController(host),
         registration = LiveRegistrationController(host),
+        chain = LiveChainGameCoordinator(),
         calledNumbers = LiveCalledNumbersController(
           host,
           // Same claimAttemptId — Nest idempotent findUnique / P2002 path.
@@ -38,6 +40,7 @@ class LiveGameControllers {
   final LiveRealtimeController realtime;
   final LiveReviewController review;
   final LiveRegistrationController registration;
+  final LiveChainGameCoordinator chain;
   final LiveCalledNumbersController calledNumbers;
   final MissedPreviewController missedPreview;
 
@@ -47,6 +50,7 @@ class LiveGameControllers {
     realtime.dispose();
     review.dispose();
     registration.dispose();
+    chain.dispose();
     calledNumbers.dispose();
     missedPreview.dispose();
   }

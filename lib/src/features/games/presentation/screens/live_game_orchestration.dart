@@ -4,18 +4,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   /// Implemented by [_LiveGameCalledNumbers] (R1/R4 Auto Bingo scheduler).
   void _scheduleAutoBingoEvaluation({String reason = 'trigger'});
 
-  // Chain Game inter-round state. All null/inert for the other four categories.
+  // Chain Game inter-round state delegates.
   Timer? _chainPauseTicker;
-  /// Live [GameModel.roundPausedUntil] for the winner dialog (admin delay / +time).
-  final ValueNotifier<DateTime?> _chainPauseEndsAtListenable =
-      ValueNotifier<DateTime?>(null);
-  ChainRoundPlan? _chainRoundPlan;
-  String? _chainRoundPlanKey;
-  bool _chainRoundPlanInFlight = false;
-  /// After round 2+ resumes, Bingo stays off until called count exceeds this.
-  int? _chainBingoArmedAfterCalledCount;
-  DateTime? _latchedChainRoundPausedUntil;
-  String? _latchedChainPauseSessionId;
+  LiveChainGameCoordinator get _chain => controllers.chain;
+  ValueNotifier<DateTime?> get _chainPauseEndsAtListenable =>
+      _chain.pauseEndsAtListenable;
+  ChainRoundPlan? get _chainRoundPlan => _chain.chainRoundPlan;
+  int? get _chainBingoArmedAfterCalledCount =>
+      _chain.chainBingoArmedAfterCalledCount;
+  set _chainBingoArmedAfterCalledCount(int? value) =>
+      _chain.chainBingoArmedAfterCalledCount = value;
+  DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
   /// Final-round All Rounds Winners history (Big Game + Chain only).
   RoundWinnerHistory? _allRoundsWinnerHistory;
@@ -30,33 +29,22 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   void _syncChainPauseLatchFromGame() {
     final game = _game;
-    final pausedUntil = game?.roundPausedUntil;
-    if (game?.isChainGame == true &&
-        pausedUntil != null &&
-        game!.sessionId != null) {
-      _latchedChainRoundPausedUntil = pausedUntil;
-      _latchedChainPauseSessionId = game.sessionId;
-    }
+    _chain.syncPauseLatch(
+      isChainGame: game?.isChainGame == true,
+      sessionId: game?.sessionId,
+      roundPausedUntil: game?.roundPausedUntil,
+    );
   }
 
   void _clearChainPauseLatch() {
-    _latchedChainRoundPausedUntil = null;
-    _latchedChainPauseSessionId = null;
+    _chain.clearPauseLatch();
   }
 
-  bool get _chainPauseRefetchLatchActive {
-    if (!_realtime.canonicalRefetchInFlight) {
-      return false;
-    }
-    final game = _game;
-    final latched = _latchedChainRoundPausedUntil;
-    if (game == null ||
-        latched == null ||
-        game.sessionId != _latchedChainPauseSessionId) {
-      return false;
-    }
-    return _countdownNow().isBefore(latched);
-  }
+  bool get _chainPauseRefetchLatchActive => _chain.isRefetchLatchActive(
+        canonicalRefetchInFlight: _realtime.canonicalRefetchInFlight,
+        currentSessionId: _game?.sessionId,
+        now: _countdownNow(),
+      );
 
   LiveRoundBreakOwner get _liveRoundBreakOwner => resolveLiveRoundBreakOwner(
         game: _game,
@@ -4185,7 +4173,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    _chainRoundPlanKey = null;
+    _chain.invalidatePlanKey();
     final isRoundFinished = normalizedPayload['finishedRoundIndex'] != null;
     ChainGameDebug.log(
       '${isRoundFinished ? 'chain:round_finished' : 'chain:round_started'} '
@@ -4526,10 +4514,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   void _syncChainPauseEndsAtListenable() {
     final endsAt = _isChainRoundPaused ? _game?.roundPausedUntil : null;
-    if (_chainPauseEndsAtListenable.value == endsAt) {
-      return;
-    }
-    _chainPauseEndsAtListenable.value = endsAt;
+    _chain.syncPauseEndsAt(endsAt);
   }
 
   void _syncChainRoundPauseTicker() {
@@ -4590,7 +4575,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _disposeChainPauseEndsAtListenable() {
-    _chainPauseEndsAtListenable.dispose();
+    // Managed by controllers.chain.dispose().
   }
 
   void _onChainRoundResumed() {
@@ -4732,10 +4717,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _syncChainRoundPlan() {
     final game = _game;
     if (game == null || !game.isChainGame) {
-      if (_chainRoundPlan != null) {
+      if (_chain.chainRoundPlan != null) {
         setState(() {
-          _chainRoundPlan = null;
-          _chainRoundPlanKey = null;
+          _chain.clearPlan();
         });
       }
       return;
@@ -4748,12 +4732,11 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final key = '$sessionId:${game.roundResults.length}:'
         '${game.displayRoundIndex}';
-    if (_chainRoundPlanKey == key || _chainRoundPlanInFlight) {
+    if (_chain.chainRoundPlanKey == key || _chain.isPlanInFlight) {
       return;
     }
 
-    _chainRoundPlanKey = key;
-    _chainRoundPlanInFlight = true;
+    _chain.startPlanFetch(key);
     unawaited(
       ref
           .read(gamesRepositoryProvider)
@@ -4762,26 +4745,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             if (!isLiveHostActive) {
               return;
             }
-            setState(() => _chainRoundPlan = plan);
+            setState(() => _chain.setPlan(plan, key: key));
           })
           .catchError((Object _) {
             // Non-fatal: the strip and dialog degrade to session-level data.
-            _chainRoundPlanKey = null;
+            _chain.invalidatePlanKey();
           })
-          .whenComplete(() => _chainRoundPlanInFlight = false),
+          .whenComplete(() => _chain.markPlanInFlight(false)),
     );
   }
 
-  String? _chainCurrentRuleName() {
-    final game = _game;
-    if (game == null) {
-      return null;
-    }
-    final fromPlan = _chainRoundPlan
-        ?.roundAt(game.displayRoundIndex)
-        ?.gameRuleName;
-    return fromPlan ?? game.gameRule?.name;
-  }
+  String? _chainCurrentRuleName() => _chain.resolveCurrentRuleName(_game);
 
   Widget? _buildChainGameInfoStrip() {
     final game = _game;
