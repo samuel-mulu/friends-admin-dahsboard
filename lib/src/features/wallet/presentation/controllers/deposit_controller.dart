@@ -6,7 +6,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/realtime/wallet_entity_realtime.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../settings/presentation/providers/theme_mode_provider.dart';
+import '../../../../core/storage/app_preferences_storage.dart';
 import '../../data/models/deposit_model.dart';
 import '../../data/models/payment_provider.dart';
 import '../../data/models/pending_deposit_verification.dart';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/games/domain/cartela_mark_color.dart';
@@ -185,3 +186,8 @@ class AppPreferencesStorage {
     return '$_pendingDepositAttemptPrefix$userId';
   }
 }
+
+final appPreferencesStorageProvider =
+    FutureProvider<AppPreferencesStorage>((ref) async {
+  return AppPreferencesStorage.create();
+});

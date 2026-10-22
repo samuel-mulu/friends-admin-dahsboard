@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/storage/app_preferences_storage.dart';
-import '../../../settings/presentation/providers/theme_mode_provider.dart';
 import '../utils/cartela_marked_pattern_evaluator.dart';
 
 class CartelaSortModeController extends Notifier<CartelaSortMode> {

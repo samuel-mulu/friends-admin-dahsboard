@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/storage/app_preferences_storage.dart';
-import '../../../settings/presentation/providers/theme_mode_provider.dart';
 
 final gameAnnouncementDismissProvider =
     NotifierProvider<GameAnnouncementDismissNotifier, Set<String>>(
