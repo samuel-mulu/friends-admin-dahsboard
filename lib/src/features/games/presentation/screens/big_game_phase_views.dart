@@ -10,7 +10,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/friends_bingo_loader.dart';
 import '../../data/models/game_model.dart';
-import '../../domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import '../utils/big_game_countdown.dart';
 
 /// Non-live Big Game phase chrome (schedule / waiting / empty / shared cards).

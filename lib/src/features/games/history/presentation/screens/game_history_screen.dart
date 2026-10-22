@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
 import 'package:friends_bingo_app/src/core/utils/formatters.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
-import 'package:friends_bingo_app/src/features/games/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import '../../application/providers/game_history_provider.dart';
 import '../widgets/game_history_detail_dialog.dart';
 

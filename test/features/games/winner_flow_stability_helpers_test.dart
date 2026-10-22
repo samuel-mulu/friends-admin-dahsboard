@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';

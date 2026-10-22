@@ -1,6 +1,6 @@
-import 'package:friends_bingo_app/src/features/games/data/models/completed_pattern_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/big_shape_patterns.dart';
-import 'package:friends_bingo_app/src/features/games/domain/extended_game_patterns.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/big_shape_patterns.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/extended_game_patterns.dart';
 
 class CartelaPatternProgressOverlay {
   const CartelaPatternProgressOverlay({

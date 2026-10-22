@@ -1,6 +1,6 @@
-import '../../data/models/completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
 import '../../data/models/session_winner_result_model.dart';
-import '../../domain/winning_ball_cell.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/winning_ball_cell.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 
 /// Live-session cache for winner pattern overlays and per-cartela winning ball.

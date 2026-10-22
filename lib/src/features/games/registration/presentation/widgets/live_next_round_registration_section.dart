@@ -5,7 +5,7 @@ import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
 import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/collapsible_live_top_section.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/collapsible_registered_cartela_chips.dart';
 

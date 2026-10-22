@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_branding.dart';
-import '../../../../core/utils/l10n.dart';
-import '../../data/models/game_model.dart';
-import '../../domain/game_rule_localized_name.dart';
-import '../../domain/game_rule_pattern_preview.dart';
+import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/utils/l10n.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_pattern_preview.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/rule_pattern_preview_grid.dart';
 
 Future<void> showGameRuleDetailDialog(

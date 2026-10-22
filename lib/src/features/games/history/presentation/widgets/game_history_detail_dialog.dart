@@ -13,7 +13,7 @@ import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_c
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/game_category_theme.dart';
-import 'package:friends_bingo_app/src/features/games/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/called_numbers_strip.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/winner_cartela_dialog.dart';
 import '../../domain/entities/attended_game_history_entry.dart';

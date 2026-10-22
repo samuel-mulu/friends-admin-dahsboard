@@ -25,7 +25,7 @@ import 'features/auth/presentation/widgets/account_ban_realtime_sync.dart';
 import 'features/settings/application/providers/locale_provider.dart';
 import 'features/settings/application/providers/theme_mode_provider.dart';
 import 'features/settings/presentation/widgets/first_launch_preferences_gate.dart';
-import 'features/games/domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 
 class FriendsBingoApp extends ConsumerStatefulWidget {
   const FriendsBingoApp({super.key});

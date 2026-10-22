@@ -7,7 +7,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/chain_round_plan_model.dart';
 import '../../data/models/game_model.dart';
-import '../../domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import 'bonus_game_info_strip.dart';
 import 'big_game_info_strip.dart';
 import 'chain_game_info_strip.dart';

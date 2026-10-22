@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
-import 'package:friends_bingo_app/src/features/games/domain/game_rule_pattern_preview.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_pattern_preview.dart';
 import 'cartela_pattern_progress_painter.dart';
 
 /// Mini 5×5 cartela showing which cells form the winning pattern (sample).

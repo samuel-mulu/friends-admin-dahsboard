@@ -1,7 +1,7 @@
-import 'completed_pattern_model.dart';
-import '../../domain/winning_ball_cell.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/winning_ball_cell.dart';
 
-export '../../domain/winning_ball_cell.dart'
+export 'package:friends_bingo_app/src/features/games/patterns/domain/winning_ball_cell.dart'
     show SessionWinnerLastCalledNumber, cellIndexForCalledNumber, parseSessionWinnerLastCalledNumber;
 
 class SessionWinnerResultModel {

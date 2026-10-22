@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/extended_game_patterns.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/extended_game_patterns.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';

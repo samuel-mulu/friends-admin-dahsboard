@@ -8,7 +8,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
-import 'winning_pattern_cartela_grid.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/presentation/widgets/winning_pattern_cartela_grid.dart';
 import 'winner_cartela_number_strip.dart';
 
 /// [pauseEndsAt] turns the close button into a Chain Game inter-round countdown

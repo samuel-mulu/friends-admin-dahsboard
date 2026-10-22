@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../settings/application/providers/locale_provider.dart';
-import '../data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/settings/application/providers/locale_provider.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 
 const _assetPath = 'assets/i18n/game_rule_names.json';
 

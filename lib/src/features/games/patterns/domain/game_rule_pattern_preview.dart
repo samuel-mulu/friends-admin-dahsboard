@@ -1,5 +1,5 @@
-import 'big_shape_patterns.dart';
-import 'extended_game_patterns.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/big_shape_patterns.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/extended_game_patterns.dart';
 
 /// One player-facing sample board for a game-rule winning pattern.
 class GameRulePatternSample {

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/data/models/bingo_claim_result.dart';
+import 'package:friends_bingo_app/src/features/games/claims/data/models/bingo_claim_result.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/domain/bingo_claim_source.dart';
+import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_source.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/auto_bingo_runtime.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 

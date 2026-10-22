@@ -10,7 +10,7 @@ import 'package:friends_bingo_app/src/features/games/presentation/components/bin
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_board_preview.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/widgets/winning_pattern_cartela_grid.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/presentation/widgets/winning_pattern_cartela_grid.dart';
 
 Future<void> showHistoryCartelaDetailDialog({
   required BuildContext context,

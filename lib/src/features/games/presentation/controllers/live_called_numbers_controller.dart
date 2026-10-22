@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_exception.dart';
-import '../../data/bingo_claim_attempt_storage.dart';
-import '../../data/models/bingo_claim_result.dart';
-import '../../domain/bingo_claim_source.dart';
-import '../../domain/winning_ball_cell.dart';
+import 'package:friends_bingo_app/src/features/games/claims/data/storage/bingo_claim_attempt_storage.dart';
+import 'package:friends_bingo_app/src/features/games/claims/data/models/bingo_claim_result.dart';
+import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_source.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/winning_ball_cell.dart';
 import '../../data/models/called_number_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';

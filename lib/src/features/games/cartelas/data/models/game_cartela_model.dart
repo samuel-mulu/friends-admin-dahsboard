@@ -1,4 +1,4 @@
-import 'package:friends_bingo_app/src/features/games/domain/winning_ball_cell.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/winning_ball_cell.dart';
 import 'cartela_model.dart';
 
 enum GameCartelaStatus {

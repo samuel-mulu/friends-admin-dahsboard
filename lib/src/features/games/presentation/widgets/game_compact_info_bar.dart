@@ -6,12 +6,12 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../data/models/chain_round_plan_model.dart';
 import '../../data/models/game_model.dart';
-import '../../domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import 'bonus_game_info_strip.dart';
 import 'big_game_info_strip.dart';
 import 'chain_game_info_strip.dart';
 import 'chain_game_rounds_dialog.dart';
-import 'game_rule_detail_dialog.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/presentation/widgets/game_rule_detail_dialog.dart';
 
 enum GameCompactInfoBarLayout { live, registrationOpen }
 

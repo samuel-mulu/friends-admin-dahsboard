@@ -7,7 +7,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/game_category_theme.dart';
-import '../../domain/game_rule_localized_name.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import 'game_category_badge.dart';
 import 'game_countdown.dart';
 import 'game_player_status_chip.dart';

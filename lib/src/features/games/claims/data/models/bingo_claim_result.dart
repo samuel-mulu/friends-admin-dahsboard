@@ -1,8 +1,8 @@
-import 'completed_pattern_model.dart';
+import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
-import 'game_model.dart';
-import 'session_winner_result_model.dart';
-import '../../../../core/utils/api_date_time.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
+import 'package:friends_bingo_app/src/core/utils/api_date_time.dart';
 
 enum BingoClaimStatus {
   pending,
