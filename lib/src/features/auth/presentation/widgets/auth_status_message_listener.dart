@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../controllers/auth_controller.dart';
+import '../../application/controllers/auth_controller.dart';
 
 class AuthStatusMessageListener extends ConsumerWidget {
   const AuthStatusMessageListener({required this.child, super.key});

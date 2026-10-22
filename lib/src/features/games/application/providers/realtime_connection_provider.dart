@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/realtime/socket_service.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../domain/live_connection_status.dart';
 
 final realtimeConnectionProvider =

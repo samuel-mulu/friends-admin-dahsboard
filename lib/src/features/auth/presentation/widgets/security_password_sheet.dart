@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../controllers/auth_controller.dart';
+import '../../application/controllers/auth_controller.dart';
 import 'auth_form_field.dart';
 import 'auth_primary_button.dart';
 import 'auth_validators.dart';

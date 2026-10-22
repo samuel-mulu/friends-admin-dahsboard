@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/realtime/wallet_entity_realtime.dart';
-import '../../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../../auth/application/controllers/auth_controller.dart';
 import '../../../../../core/storage/app_preferences_storage.dart';
 import '../../../overview/application/providers/wallet_provider.dart';
 import '../../../shared/domain/entities/payment_provider.dart';

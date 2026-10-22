@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/version/version_check_controller.dart';
 import '../../core/version/version_check_state.dart';
 import '../../core/widgets/app_back_confirm_scope.dart';
-import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/application/controllers/auth_controller.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';

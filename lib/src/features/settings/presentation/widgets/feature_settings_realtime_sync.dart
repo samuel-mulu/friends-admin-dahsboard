@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/realtime/socket_service.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
 import '../../domain/entities/feature_settings.dart';
 import '../../application/providers/feature_settings_provider.dart';

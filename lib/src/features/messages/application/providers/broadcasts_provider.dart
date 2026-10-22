@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../data/models/admin_broadcast_model.dart';
 import '../../data/repositories/broadcasts_repository.dart';
 

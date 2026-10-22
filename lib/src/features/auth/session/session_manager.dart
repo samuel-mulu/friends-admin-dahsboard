@@ -7,7 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../data/session_repository.dart';
 import '../domain/auth_session.dart';
-import '../presentation/providers/account_ban_provider.dart';
+import '../application/providers/account_ban_provider.dart';
 
 @immutable
 class SessionState {

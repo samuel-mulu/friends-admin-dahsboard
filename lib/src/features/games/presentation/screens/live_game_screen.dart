@@ -113,7 +113,7 @@ import '../debug/chain_game_debug.dart';
 import '../debug/bingo_claim_diagnostics.dart';
 import 'package:friends_bingo_app/src/features/games/registration/presentation/widgets/registration_open_pulse.dart';
 import '../widgets/winner_window_countdown.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/guest_auth_prompt_sheet.dart';
 import '../../../wallet/overview/data/models/wallet_model.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';

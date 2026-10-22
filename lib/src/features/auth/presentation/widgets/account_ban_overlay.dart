@@ -8,7 +8,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/external_links.dart';
 import '../../../../core/utils/l10n.dart';
-import '../providers/account_ban_provider.dart';
+import '../../application/providers/account_ban_provider.dart';
 
 /// Blocks the app when the account is banned until the player acknowledges.
 class AccountBanOverlay extends ConsumerWidget {

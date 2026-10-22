@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/l10n.dart';
 import '../../domain/registration_draft.dart';
-import '../controllers/auth_controller.dart';
-import '../providers/auth_flow_provider.dart';
+import '../../application/controllers/auth_controller.dart';
+import '../../application/providers/auth_flow_provider.dart';
 import '../../../profile/application/providers/profile_avatar_provider.dart';
 import 'auth_primary_button.dart';
 import 'auth_validators.dart';

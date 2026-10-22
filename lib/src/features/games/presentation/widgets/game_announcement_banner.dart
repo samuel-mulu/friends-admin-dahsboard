@@ -8,7 +8,7 @@ import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';

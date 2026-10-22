@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/application/controllers/auth_controller.dart';
 import '../../features/games/presentation/utils/socket_payload_normalizer.dart';
 import '../../features/wallet/deposits/application/providers/deposit_history_provider.dart';
 import '../../features/wallet/overview/application/providers/wallet_provider.dart';

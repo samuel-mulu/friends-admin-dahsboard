@@ -6,7 +6,7 @@ import 'package:friends_bingo_app/src/core/network/paginated_response.dart';
 import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/wallet/overview/application/providers/wallet_provider.dart';
 import 'package:friends_bingo_app/src/features/wallet/overview/data/models/wallet_model.dart';
 import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';

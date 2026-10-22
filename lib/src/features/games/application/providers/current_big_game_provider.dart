@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';

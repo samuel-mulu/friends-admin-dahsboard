@@ -8,7 +8,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/app_back_confirm_scope.dart';
 import '../../../../core/widgets/friends_bingo_wordmark.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../games/domain/live_connection_status.dart';
 import '../../../games/application/providers/current_game_operations_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/has_active_registered_cartelas_provider.dart';

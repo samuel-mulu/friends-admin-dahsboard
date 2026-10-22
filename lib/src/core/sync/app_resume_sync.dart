@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/application/controllers/auth_controller.dart';
 import '../../features/games/data/games_repository.dart';
 import '../../features/games/presentation/debug/live_realtime_debug.dart';
 import '../../features/games/application/providers/current_big_game_provider.dart';

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../application/providers/broadcast_banner_provider.dart';
 import 'admin_messages_modal.dart';
 import 'broadcast_message_ui.dart';

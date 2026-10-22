@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../providers/auth_flow_provider.dart';
+import '../../application/providers/auth_flow_provider.dart';
 import '../widgets/auth_error_listener.dart';
 import '../widgets/auth_form_field.dart';
 import '../widgets/auth_primary_button.dart';

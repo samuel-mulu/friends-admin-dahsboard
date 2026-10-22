@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/core/network/api_client.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/live_connection_status.dart';

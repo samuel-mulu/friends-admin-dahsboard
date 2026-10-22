@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../controllers/auth_controller.dart';
+import '../../application/controllers/auth_controller.dart';
 
 class AuthErrorListener extends ConsumerWidget {
   const AuthErrorListener({required this.child, super.key});

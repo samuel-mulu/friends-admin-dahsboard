@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
 import '../../session/session_manager.dart';
-import '../controllers/auth_controller.dart';
-import '../providers/account_ban_provider.dart';
+import '../../application/controllers/auth_controller.dart';
+import '../../application/providers/account_ban_provider.dart';
 
 /// Listens for per-user ban / unban socket events while authenticated.
 class AccountBanRealtimeSync extends ConsumerStatefulWidget {

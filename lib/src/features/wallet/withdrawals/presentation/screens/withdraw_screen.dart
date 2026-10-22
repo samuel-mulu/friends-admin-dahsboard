@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/realtime/wallet_entity_realtime.dart';
 import '../../../../../core/utils/l10n.dart';
 import '../../../../../core/widgets/friends_bingo_loader.dart';
-import '../../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../../auth/application/controllers/auth_controller.dart';
 import '../../../overview/application/providers/wallet_provider.dart';
 import '../../data/models/withdrawal_model.dart';
 import '../../application/controllers/withdraw_controller.dart';

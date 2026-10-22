@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:friends_bingo_app/src/core/network/api_exception.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_preview_cache.dart';

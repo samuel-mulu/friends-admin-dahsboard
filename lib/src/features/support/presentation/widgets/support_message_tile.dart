@@ -6,7 +6,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../profile/application/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../data/models/support_message_model.dart';

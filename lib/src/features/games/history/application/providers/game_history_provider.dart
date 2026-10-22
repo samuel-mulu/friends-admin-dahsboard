@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/network/paginated_response.dart';
 import 'package:friends_bingo_app/src/core/network/pagination_meta.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import '../../data/repositories/game_history_repository.dart';
 import '../../domain/entities/attended_game_history_state.dart';

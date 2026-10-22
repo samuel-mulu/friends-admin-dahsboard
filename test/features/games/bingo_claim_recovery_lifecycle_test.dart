@@ -16,7 +16,7 @@ import 'package:friends_bingo_app/src/core/sound/game_sound_service.dart';
 import 'package:friends_bingo_app/src/core/sound/sound_event.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
 import 'package:friends_bingo_app/src/features/games/claims/domain/bingo_claim_source.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_numbers_snapshot.dart';

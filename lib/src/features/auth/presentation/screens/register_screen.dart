@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/l10n.dart';
 import '../../domain/registration_draft.dart';
-import '../controllers/auth_controller.dart';
-import '../providers/auth_flow_provider.dart';
+import '../../application/controllers/auth_controller.dart';
+import '../../application/providers/auth_flow_provider.dart';
 import '../widgets/auth_error_listener.dart';
 import '../widgets/auth_form_field.dart';
 import '../widgets/auth_home_back_button.dart';

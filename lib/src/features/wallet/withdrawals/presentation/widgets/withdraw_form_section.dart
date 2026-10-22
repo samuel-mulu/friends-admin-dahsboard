@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/network/api_exception.dart';
 import '../../../../../core/theme/app_branding.dart';
 import '../../../../../core/utils/l10n.dart';
-import '../../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../../auth/application/controllers/auth_controller.dart';
 import '../../../../auth/presentation/widgets/security_password_sheet.dart';
 import '../../../shared/domain/entities/payment_provider.dart';
 import '../../../shared/domain/entities/wallet_amount_limits.dart';

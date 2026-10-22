@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/utils/l10n.dart';
-import '../controllers/auth_controller.dart';
+import '../../application/controllers/auth_controller.dart';
 import '../widgets/auth_error_listener.dart';
 import '../widgets/auth_form_field.dart';
 import '../widgets/auth_primary_button.dart';

@@ -8,7 +8,7 @@ import '../../../../core/config/app_support.dart';
 import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../data/models/support_message_model.dart';
 import '../providers/support_messages_provider.dart';
 import '../providers/support_unread_provider.dart';

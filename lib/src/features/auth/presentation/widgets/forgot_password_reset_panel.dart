@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/l10n.dart';
-import '../controllers/auth_controller.dart';
-import '../providers/auth_flow_provider.dart';
+import '../../application/controllers/auth_controller.dart';
+import '../../application/providers/auth_flow_provider.dart';
 import 'auth_form_field.dart';
 import 'auth_primary_button.dart';
 import 'auth_validators.dart';

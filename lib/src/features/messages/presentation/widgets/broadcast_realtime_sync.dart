@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
 import '../../data/models/admin_broadcast_model.dart';
 import '../../application/providers/broadcast_banner_provider.dart';

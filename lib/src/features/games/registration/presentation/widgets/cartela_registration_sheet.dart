@@ -9,7 +9,7 @@ import 'package:friends_bingo_app/src/core/time/server_clock_provider.dart';
 import 'package:friends_bingo_app/src/core/utils/formatters.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
 import 'package:friends_bingo_app/src/core/widgets/friends_bingo_loader.dart';
-import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:friends_bingo_app/src/features/auth/application/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/repositories/cartelas_repository.dart';

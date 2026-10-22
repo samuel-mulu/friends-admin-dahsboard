@@ -8,7 +8,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../data/auth_repository.dart';
 import '../controllers/auth_controller.dart';
-import '../screens/telegram_phone_link_screen.dart';
+import '../../presentation/screens/telegram_phone_link_screen.dart';
 
 final telegramDeepLinkListenerProvider = Provider<void>((ref) {
   if (kIsWeb) {

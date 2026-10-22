@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/application/controllers/auth_controller.dart';
 import '../version/version_check_controller.dart';
 
 /// Notifies [GoRouter] when auth changes without recreating the router.

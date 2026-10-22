@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/realtime/socket_service.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../games/presentation/utils/socket_payload_normalizer.dart';
 import '../providers/support_messages_provider.dart';
 import '../providers/support_unread_provider.dart';

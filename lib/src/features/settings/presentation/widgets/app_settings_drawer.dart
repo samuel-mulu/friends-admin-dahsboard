@@ -15,7 +15,7 @@ import '../../../../core/time/server_clock_provider.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/domain/user_profile.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/telegram_phone_link_screen.dart';
 import '../../../auth/presentation/widgets/active_sessions_sheet.dart';
 import '../../../auth/presentation/widgets/security_password_sheet.dart';

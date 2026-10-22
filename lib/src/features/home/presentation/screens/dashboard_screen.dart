@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/application/controllers/auth_controller.dart';
 import '../../../games/leaderboard/presentation/screens/house_champions_screen.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../../../wallet/overview/presentation/widgets/wallet_breakdown_card.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../../auth/application/controllers/auth_controller.dart';
 import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallet_overview_repository.dart';
 
