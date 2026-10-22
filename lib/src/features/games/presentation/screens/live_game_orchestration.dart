@@ -48,6 +48,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
   LiveRealtimeController get _realtime => controllers.realtime;
+  LiveResumeSyncCoordinator get _resumeSync => controllers.resumeSync;
 
   void _syncChainPauseLatchFromGame() {
     final game = _game;
@@ -93,16 +94,23 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   Future<void> runResumeSync({
     bool allowCachedOperations = true,
     OperationsSyncReason operationsSyncReason = OperationsSyncReason.appResume,
-  }) {
-    return _loadInitialState(
-      showLoading: false,
-      includeCalledNumbers: true,
-      includeMyCartelas: !isGuest,
-      allowTerminalTransition: true,
-      resumeSync: true,
-      allowCachedOperations: allowCachedOperations,
-      operationsSyncReason: operationsSyncReason,
-    );
+  }) async {
+    if (!_resumeSync.tryAcquireSyncLock()) {
+      return;
+    }
+    try {
+      await _loadInitialState(
+        showLoading: false,
+        includeCalledNumbers: true,
+        includeMyCartelas: !isGuest,
+        allowTerminalTransition: true,
+        resumeSync: true,
+        allowCachedOperations: allowCachedOperations,
+        operationsSyncReason: operationsSyncReason,
+      );
+    } finally {
+      _resumeSync.releaseSyncLock();
+    }
   }
 
   @override
