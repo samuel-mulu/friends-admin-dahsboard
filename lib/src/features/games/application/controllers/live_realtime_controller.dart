@@ -5,17 +5,17 @@ import 'package:flutter/material.dart';
 import '../../../../core/realtime/socket_service.dart';
 import '../../../../core/time/server_clock_service.dart';
 import '../../../../core/sync/resume_sync_guard.dart';
-import '../debug/live_realtime_debug.dart';
+import '../../presentation/debug/live_realtime_debug.dart';
 import '../../domain/live_connection_status.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../providers/current_game_operations_provider.dart';
 import '../providers/game_operations_sync_coordinator.dart';
 import '../providers/games_providers.dart';
-import '../utils/live_resume_provider_policy.dart';
-import '../utils/live_resume_terminal_gate.dart';
-import '../utils/live_sync_trigger_action.dart';
-import '../utils/live_socket_session_membership.dart';
-import '../utils/chain_round_cartela_state.dart';
+import '../../presentation/utils/live_resume_provider_policy.dart';
+import '../../presentation/utils/live_resume_terminal_gate.dart';
+import '../../presentation/utils/live_sync_trigger_action.dart';
+import '../../presentation/utils/live_socket_session_membership.dart';
+import '../../presentation/utils/chain_round_cartela_state.dart';
 import 'live_game_host.dart';
 
 /// Socket membership, canonical refetch scheduling, and event session guards.

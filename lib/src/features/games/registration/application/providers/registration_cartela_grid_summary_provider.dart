@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/games_providers.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'registration_state_patch_provider.dart';
 

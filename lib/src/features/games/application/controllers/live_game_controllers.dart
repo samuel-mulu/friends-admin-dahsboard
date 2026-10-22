@@ -10,7 +10,7 @@ import 'live_review_controller.dart';
 import 'live_transition_controller.dart';
 import 'live_winner_celebration_coordinator.dart';
 import 'missed_preview_controller.dart';
-import '../utils/next_ball_stale_guard.dart';
+import '../../presentation/utils/next_ball_stale_guard.dart';
 
 /// Owns the live-screen controllers and coordinators with a single dispose entry point.
 class LiveGameControllers {

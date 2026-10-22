@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_resume_sync_coordinator.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_resume_sync_coordinator.dart';
 
 void main() {
   group('LiveResumeSyncCoordinator Tests', () {

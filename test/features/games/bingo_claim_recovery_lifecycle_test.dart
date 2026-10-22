@@ -27,7 +27,7 @@ import 'package:friends_bingo_app/src/features/games/data/models/game_timing_con
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/screens/live_game_screen.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/screens/big_game_screen.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_big_game_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_big_game_provider.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/live_cartela_card.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/widgets/called_numbers_strip.dart';
 import 'package:friends_bingo_app/src/features/games/patterns/data/models/completed_pattern_model.dart';
@@ -37,8 +37,8 @@ import 'package:friends_bingo_app/src/features/games/claims/data/models/bingo_cl
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_called_numbers_controller.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_called_numbers_controller.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_game_host.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/debug/bingo_claim_diagnostics.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_socket_session_membership.dart';
 

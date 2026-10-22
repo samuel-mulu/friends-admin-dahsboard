@@ -12,9 +12,9 @@ import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';
-import '../providers/current_big_game_provider.dart';
-import '../providers/current_game_operations_provider.dart';
-import '../providers/game_announcement_dismiss_provider.dart';
+import '../../application/providers/current_big_game_provider.dart';
+import '../../application/providers/current_game_operations_provider.dart';
+import '../../application/providers/game_announcement_dismiss_provider.dart';
 import '../utils/big_game_navigation.dart';
 import '../widgets/game_countdown.dart';
 

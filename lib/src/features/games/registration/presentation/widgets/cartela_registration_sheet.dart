@@ -21,8 +21,8 @@ import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widge
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/game_category_theme.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_game_operations_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/games_providers.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_game_operations_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_error_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_ux_metrics.dart';

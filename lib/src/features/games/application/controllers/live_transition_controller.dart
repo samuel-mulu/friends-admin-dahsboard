@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import '../../data/models/game_model.dart';
-import '../utils/live_presentation_phase.dart';
-import '../utils/live_preparing_poll_sync_gate.dart';
-import '../utils/live_ready_transition_lock.dart' as transition_lock;
-import '../utils/live_session_ownership.dart';
+import '../../presentation/utils/live_presentation_phase.dart';
+import '../../presentation/utils/live_preparing_poll_sync_gate.dart';
+import '../../presentation/utils/live_ready_transition_lock.dart' as transition_lock;
+import '../../presentation/utils/live_session_ownership.dart';
 import 'live_game_host.dart';
 
 /// READY close handoff, transition lock, and primary selection during gaps.

@@ -7,9 +7,9 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';
-import '../providers/big_game_prompt_dismiss_provider.dart';
-import '../providers/current_big_game_provider.dart';
-import '../providers/current_game_operations_provider.dart';
+import '../../application/providers/big_game_prompt_dismiss_provider.dart';
+import '../../application/providers/current_big_game_provider.dart';
+import '../../application/providers/current_game_operations_provider.dart';
 import '../utils/big_game_navigation.dart';
 
 /// Persistent strip on the normal games tab when Big Game is actionable.

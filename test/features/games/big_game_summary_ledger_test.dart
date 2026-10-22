@@ -5,7 +5,7 @@ import 'package:friends_bingo_app/src/features/auth/domain/auth_session.dart';
 import 'package:friends_bingo_app/src/features/auth/domain/user_profile.dart';
 import 'package:friends_bingo_app/src/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:friends_bingo_app/src/features/games/data/big_game_summary_ledger_storage.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/big_game_summary_ledger_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/big_game_summary_ledger_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

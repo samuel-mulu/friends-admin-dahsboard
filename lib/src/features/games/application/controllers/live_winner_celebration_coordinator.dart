@@ -1,6 +1,6 @@
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/round_winner_history_model.dart';
-import '../utils/round_winner_history_adapters.dart';
+import '../../presentation/utils/round_winner_history_adapters.dart';
 
 /// Coordinates winner cartela tracking, dialog auto-dismiss scheduling,
 /// and All-Rounds Winner history caching for Big Game and Chain Game.

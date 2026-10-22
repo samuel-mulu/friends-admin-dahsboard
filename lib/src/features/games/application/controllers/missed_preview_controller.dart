@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
-import '../debug/missed_preview_debug.dart';
+import '../../presentation/debug/missed_preview_debug.dart';
 import '../providers/game_operations_sync_coordinator.dart';
-import '../utils/missed_live_preview_numbers.dart';
-import '../utils/missed_live_preview_resolver.dart';
-import '../utils/missed_live_preview_sync.dart';
-import '../utils/missed_overlap_lifecycle.dart';
+import '../../presentation/utils/missed_live_preview_numbers.dart';
+import '../../presentation/utils/missed_live_preview_resolver.dart';
+import '../../presentation/utils/missed_live_preview_sync.dart';
+import '../../presentation/utils/missed_overlap_lifecycle.dart';
 import 'live_game_host.dart';
 
 /// Read-only observer of an unowned live round (Player 2 watching Game A while

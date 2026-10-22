@@ -4,7 +4,7 @@ import 'package:friends_bingo_app/src/features/games/data/models/called_number_m
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/session_winner_result_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/live_game_state.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/live_game_state_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/live_game_state_provider.dart';
 
 void main() {
   group('LiveGameStateNotifier Tests', () {

@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_called_numbers_controller.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_called_numbers_controller.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_game_host.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/bingo_claim_eligibility.dart';
 
 class _FakeHost implements LiveGameHost {

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/network/api_exception.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_game_operations_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_game_operations_provider.dart';
 
 bool isRegistrationClosedError(ApiException error) {
   return error.code == 'REGISTRATION_CLOSED' ||

@@ -22,7 +22,7 @@ import '../../../auth/presentation/widgets/security_password_sheet.dart';
 import '../../../profile/application/providers/profile_avatar_provider.dart';
 import '../../../profile/presentation/widgets/profile_avatar.dart';
 import '../../../games/domain/big_game_phase.dart';
-import '../../../games/presentation/providers/current_big_game_provider.dart';
+import '../../../games/application/providers/current_big_game_provider.dart';
 import '../../../games/presentation/utils/big_game_countdown.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_sort_mode_provider.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';

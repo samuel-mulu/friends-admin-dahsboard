@@ -2,12 +2,12 @@ import 'dart:async';
 
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
-import '../utils/live_api_failure_log.dart';
-import '../utils/live_game_finish_transition.dart' as finish_transition;
-import '../utils/live_presentation_phase.dart' as presentation_phase;
-import '../utils/session_winner_results_for_display.dart' as winner_display;
-import '../utils/winner_cartela_live_display.dart';
-import '../utils/winner_pattern_clear_policy.dart';
+import '../../presentation/utils/live_api_failure_log.dart';
+import '../../presentation/utils/live_game_finish_transition.dart' as finish_transition;
+import '../../presentation/utils/live_presentation_phase.dart' as presentation_phase;
+import '../../presentation/utils/session_winner_results_for_display.dart' as winner_display;
+import '../../presentation/utils/winner_cartela_live_display.dart';
+import '../../presentation/utils/winner_pattern_clear_policy.dart';
 import 'live_game_host.dart';
 
 /// Post-game review state and winner-result coordination.

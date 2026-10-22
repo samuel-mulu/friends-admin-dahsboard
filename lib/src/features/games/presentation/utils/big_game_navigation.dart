@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/current_big_game_provider.dart';
-import '../providers/current_game_operations_provider.dart';
+import '../../application/providers/current_big_game_provider.dart';
+import '../../application/providers/current_game_operations_provider.dart';
 
 abstract final class BigGameNavigation {
   static void goToBigGame(BuildContext context, WidgetRef ref) {

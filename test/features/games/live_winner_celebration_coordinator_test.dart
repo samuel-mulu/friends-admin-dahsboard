@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_winner_celebration_coordinator.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_winner_celebration_coordinator.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/round_winner_history_adapters.dart';
 
 void main() {

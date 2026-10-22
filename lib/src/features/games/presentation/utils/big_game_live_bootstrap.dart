@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';
-import '../providers/current_big_game_provider.dart';
+import '../../application/providers/current_big_game_provider.dart';
 
 /// Big-Game-only pre-mount refresh so embedded [LiveGameScreen] starts from
 /// fresh session truth without changing Normal/Bonus/BIG_GOTD bootstrap.

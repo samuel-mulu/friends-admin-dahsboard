@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/called_number_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/called_balls_notifier.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/called_balls_notifier.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/player_cartelas_notifier.dart';
 
 void main() {

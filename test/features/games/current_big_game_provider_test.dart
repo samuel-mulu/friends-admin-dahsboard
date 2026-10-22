@@ -11,9 +11,9 @@ import 'package:friends_bingo_app/src/features/auth/presentation/controllers/aut
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/live_connection_status.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/big_game_summary_ledger_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_big_game_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/realtime_connection_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/big_game_summary_ledger_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_big_game_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/realtime_connection_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

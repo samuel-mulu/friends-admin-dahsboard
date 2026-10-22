@@ -1,6 +1,6 @@
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
-import '../utils/live_presentation_phase.dart';
+import '../../presentation/utils/live_presentation_phase.dart';
 
 /// Snapshot of live-screen inputs needed to tick next-ball / winner-window UI.
 class LiveCountdownTickContext {

@@ -11,12 +11,12 @@ import 'package:friends_bingo_app/src/features/games/patterns/domain/winning_bal
 import '../../data/models/called_number_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
-import '../debug/bingo_claim_diagnostics.dart';
-import '../utils/bingo_claim_eligibility.dart';
+import '../../presentation/debug/bingo_claim_diagnostics.dart';
+import '../../presentation/utils/bingo_claim_eligibility.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
-import '../utils/live_called_number_monotonic.dart';
-import '../utils/live_called_number_sync.dart';
+import '../../presentation/utils/live_called_number_monotonic.dart';
+import '../../presentation/utils/live_called_number_sync.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/merge_registered_cartelas.dart';
 import 'live_game_host.dart';
 

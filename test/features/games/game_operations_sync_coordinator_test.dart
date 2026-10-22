@@ -7,9 +7,9 @@ import 'package:friends_bingo_app/src/core/network/api_client.dart';
 import 'package:friends_bingo_app/src/features/games/data/games_repository.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/domain/live_connection_status.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_game_operations_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/game_operations_sync_coordinator.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/realtime_connection_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_game_operations_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/game_operations_sync_coordinator.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/realtime_connection_provider.dart';
 
 void main() {
   group('GameOperationsSyncCoordinator', () {

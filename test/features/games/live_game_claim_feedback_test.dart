@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_called_numbers_controller.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_called_numbers_controller.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_game_host.dart';
 
 class _FakeLiveGameHost extends Fake implements LiveGameHost {}
 

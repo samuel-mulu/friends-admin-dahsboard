@@ -12,9 +12,9 @@ import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_dis
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/current_cartela_snapshot_guard.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/merge_registered_cartelas.dart';
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/controllers/live_game_host.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/current_game_operations_provider.dart';
-import 'package:friends_bingo_app/src/features/games/presentation/providers/games_providers.dart';
+import 'package:friends_bingo_app/src/features/games/application/controllers/live_game_host.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/current_game_operations_provider.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/wallet/overview/application/providers/wallet_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/data/models/bulk_reserve_cartelas_result.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_action_result.dart';

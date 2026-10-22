@@ -11,8 +11,8 @@ import '../../data/games_repository.dart';
 import '../../domain/big_game_phase.dart';
 import '../utils/big_game_live_presentation.dart';
 import '../debug/big_game_debug.dart';
-import '../providers/big_game_summary_ledger_provider.dart';
-import '../providers/current_big_game_provider.dart';
+import '../../application/providers/big_game_summary_ledger_provider.dart';
+import '../../application/providers/current_big_game_provider.dart';
 import 'big_game_live_host.dart';
 import 'big_game_phase_views.dart';
 

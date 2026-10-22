@@ -7,8 +7,8 @@ import '../../../../core/realtime/socket_service.dart';
 import '../../data/games_repository.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
-import '../debug/big_game_debug.dart';
-import '../utils/big_game_live_presentation.dart';
+import '../../presentation/debug/big_game_debug.dart';
+import '../../presentation/utils/big_game_live_presentation.dart';
 import 'big_game_summary_ledger_provider.dart';
 import 'realtime_connection_provider.dart';
 

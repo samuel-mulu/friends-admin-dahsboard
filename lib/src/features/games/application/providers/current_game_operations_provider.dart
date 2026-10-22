@@ -6,9 +6,9 @@ import '../../../../core/sync/resume_sync_guard.dart';
 import '../../../../core/time/server_clock_provider.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/live_connection_status.dart';
-import '../debug/live_realtime_debug.dart';
-import '../utils/game_operations_resume_cache.dart';
-import '../utils/live_game_resume_owner_registry.dart';
+import '../../presentation/debug/live_realtime_debug.dart';
+import '../../presentation/utils/game_operations_resume_cache.dart';
+import '../../presentation/utils/live_game_resume_owner_registry.dart';
 import 'game_operations_sync_coordinator.dart';
 import 'realtime_connection_provider.dart';
 
