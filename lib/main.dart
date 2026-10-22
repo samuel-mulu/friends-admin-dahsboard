@@ -9,7 +9,11 @@ import 'src/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('[AppConfig] Notice: .env file not loaded ($e). Falling back to --dart-define.');
+  }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

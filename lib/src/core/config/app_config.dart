@@ -85,15 +85,16 @@ class AppConfig {
         const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG') ||
         _envBool('TELEBIRR_DEPOSIT_DEBUG');
 
-    final apiBaseUrl = _normalize(
-      apiBaseUrlOverride.isNotEmpty
-          ? apiBaseUrlOverride
-          : _defaultApiBaseUrlForPlatform(),
-    );
-    _validateReleaseApiBaseUrl(
-      apiBaseUrl: apiBaseUrl,
-      hasOverride: apiBaseUrlOverride.isNotEmpty,
-    );
+    if (apiBaseUrlOverride.isEmpty) {
+      throw StateError(
+        'Missing required environment variable: API_BASE_URL.\n'
+        'Please define API_BASE_URL in your .env file (see .env.example) '
+        'or pass it via --dart-define=API_BASE_URL=...',
+      );
+    }
+
+    final apiBaseUrl = _normalize(apiBaseUrlOverride);
+    _validateReleaseApiBaseUrl(apiBaseUrl: apiBaseUrl);
     final socketBaseUrl = _normalize(
       socketUrlOverride.isNotEmpty
           ? socketUrlOverride
@@ -132,34 +133,15 @@ class AppConfig {
     return value == 'true' || value == '1';
   }
 
-  static String _defaultApiBaseUrlForPlatform() {
-    if (kIsWeb) {
-      return 'http://localhost:3002';
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3002';
-    }
-    return 'http://localhost:3002';
-  }
-
   static String _normalize(String url) {
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
   static void _validateReleaseApiBaseUrl({
     required String apiBaseUrl,
-    required bool hasOverride,
   }) {
     if (!kReleaseMode) {
       return;
-    }
-
-    if (!hasOverride) {
-      throw StateError(
-        'API_BASE_URL is required for release builds. '
-        'Add production URLs to .env before building, e.g. '
-        'Copy-Item .env.production.example .env',
-      );
     }
 
     _validateReleaseUrl(name: 'API_BASE_URL', url: apiBaseUrl);
