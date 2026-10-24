@@ -1,0 +1,207 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "API Base URL"
+        required: true
+        default: "https://friendsbingo.onrender.com"
+      socket_url:
+        description: "Socket URL"
+        required: true
+        default: "https://friendsbingo.onrender.com"
+      debug:
+        description: "DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      realtime_debug:
+        description: "REALTIME_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      chain_debug:
+        description: "CHAIN_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      big_game_debug:
+        description: "BIG_GAME_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      telebirr_deposit_debug:
+        description: "TELEBIRR_DEPOSIT_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      create_github_release:
+        description: "Create a GitHub Release with this build (true/false)"
+        type: boolean
+        required: false
+        default: false
+
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build iOS Release Package (.ipa)
+    runs-on: macos-14
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Ensure .env Asset File Exists
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.production.example ]; then
+              echo "Creating .env from .env.production.example"
+              cp .env.production.example .env
+            else
+              echo "Creating minimal fallback .env file"
+              touch .env
+            fi
+          fi
+
+      - name: Extract App Version from pubspec.yaml
+        id: app_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | head -n1 | sed 's/version: //g' | tr -d '\r\n')
+          CLEAN_VERSION=$(echo "$VERSION" | tr '+' '_')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "Detected App Version: $VERSION"
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Setup Apple Signing Keychain (If Secrets Provided)
+        id: signing_check
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 || secrets.IOS_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD || secrets.IOS_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 || secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'github-actions-temp-pass' }}
+        run: |
+          if [ -n "$BUILD_CERTIFICATE_BASE64" ] && [ -n "$BUILD_PROVISION_PROFILE_BASE64" ]; then
+            echo "has_signing=true" >> $GITHUB_OUTPUT
+            echo "Apple Developer signing secrets detected. Setting up temporary macOS keychain..."
+
+            CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+            PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+            echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+            echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_PATH"
+
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+            security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+            security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+            echo "Keychain and Provisioning Profile configured successfully."
+          else
+            echo "has_signing=false" >> $GITHUB_OUTPUT
+            echo "No Apple Developer certificate secrets found. Will build release bundle and package into an installable .ipa via sideload/AltStore packaging."
+          fi
+
+      - name: Build iOS Application
+        run: |
+          if [ "${{ steps.signing_check.outputs.has_signing }}" = "true" ]; then
+            echo "Building signed iOS IPA..."
+            flutter build ipa --release \
+              --dart-define=API_BASE_URL="${{ github.event.inputs.api_base_url || 'https://friendsbingo.onrender.com' }}" \
+              --dart-define=SOCKET_URL="${{ github.event.inputs.socket_url || 'https://friendsbingo.onrender.com' }}" \
+              --dart-define=DEBUG="${{ github.event.inputs.debug || 'false' }}" \
+              --dart-define=REALTIME_DEBUG="${{ github.event.inputs.realtime_debug || 'false' }}" \
+              --dart-define=CHAIN_DEBUG="${{ github.event.inputs.chain_debug || 'false' }}" \
+              --dart-define=BIG_GAME_DEBUG="${{ github.event.inputs.big_game_debug || 'false' }}" \
+              --dart-define=TELEBIRR_DEPOSIT_DEBUG="${{ github.event.inputs.telebirr_deposit_debug || 'false' }}"
+          else
+            echo "Building release iOS app without codesign..."
+            flutter build ios --release --no-codesign \
+              --dart-define=API_BASE_URL="${{ github.event.inputs.api_base_url || 'https://friendsbingo.onrender.com' }}" \
+              --dart-define=SOCKET_URL="${{ github.event.inputs.socket_url || 'https://friendsbingo.onrender.com' }}" \
+              --dart-define=DEBUG="${{ github.event.inputs.debug || 'false' }}" \
+              --dart-define=REALTIME_DEBUG="${{ github.event.inputs.realtime_debug || 'false' }}" \
+              --dart-define=CHAIN_DEBUG="${{ github.event.inputs.chain_debug || 'false' }}" \
+              --dart-define=BIG_GAME_DEBUG="${{ github.event.inputs.big_game_debug || 'false' }}" \
+              --dart-define=TELEBIRR_DEPOSIT_DEBUG="${{ github.event.inputs.telebirr_deposit_debug || 'false' }}"
+          fi
+
+      - name: Package Installable .ipa Archive
+        run: |
+          mkdir -p build/ios/ipa
+          CLEAN_VERSION="${{ steps.app_version.outputs.clean_version }}"
+          TARGET_IPA="build/ios/ipa/friends-bingo-${CLEAN_VERSION}-release.ipa"
+
+          # Check if flutter build ipa produced an ipa
+          PRODUCED_IPA=$(find build/ios -name "*.ipa" | head -n1)
+          if [ -n "$PRODUCED_IPA" ] && [ -f "$PRODUCED_IPA" ]; then
+            echo "Using produced IPA from: $PRODUCED_IPA"
+            cp "$PRODUCED_IPA" "$TARGET_IPA"
+          else
+            echo "Packaging Runner.app into installable .ipa container (Payload)..."
+            APP_PATH=$(find build/ios -name "Runner.app" | head -n1)
+            if [ -z "$APP_PATH" ]; then
+              echo "ERROR: Runner.app not found in build/ios directory!"
+              exit 1
+            fi
+            echo "Found Runner.app at: $APP_PATH"
+            TMP_PAYLOAD_DIR="$RUNNER_TEMP/Payload"
+            rm -rf "$TMP_PAYLOAD_DIR"
+            mkdir -p "$TMP_PAYLOAD_DIR"
+            cp -R "$APP_PATH" "$TMP_PAYLOAD_DIR/"
+            
+            cd "$RUNNER_TEMP"
+            zip -r -q "$GITHUB_WORKSPACE/$TARGET_IPA" Payload
+            cd "$GITHUB_WORKSPACE"
+            echo "Created installable IPA: $TARGET_IPA"
+          fi
+
+      - name: Clean Up Keychain
+        if: always() && steps.signing_check.outputs.has_signing == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: friends-bingo-ios-v${{ steps.app_version.outputs.clean_version }}
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_github_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.app_version.outputs.version) }}
+          name: Release ${{ steps.app_version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            build/ios/ipa/*.ipa
+          body: |
+            ### Friends Bingo iOS Release
+            - **Version**: `${{ steps.app_version.outputs.version }}`
+            - **Commit**: `${{ github.sha }}`
+            - **API Base URL**: `${{ github.event.inputs.api_base_url || 'https://friendsbingo.onrender.com' }}`
+            - **Socket URL**: `${{ github.event.inputs.socket_url || 'https://friendsbingo.onrender.com' }}`
+
+            Download the `.ipa` package below. It can be installed directly onto iOS devices via AltStore, Sideloadly, TrollStore, or your Ad-Hoc/MDM distribution tool.

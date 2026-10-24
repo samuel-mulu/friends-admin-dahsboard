@@ -108,10 +108,7 @@ class GamesRepository {
     try {
       return await _apiClient.post<GameCartelaModel>(
         '/games/sessions/$sessionId/register-cartela',
-        data: {
-          'cartelaId': cartelaId,
-          'paymentSource': ?paymentSource,
-        },
+        data: {'cartelaId': cartelaId, 'paymentSource': ?paymentSource},
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
             throw StateError('Invalid cartela registration response.');
@@ -142,10 +139,7 @@ class GamesRepository {
     try {
       return await _apiClient.post<GameCartelaModel>(
         '/games/slots/$slotId/register-cartela',
-        data: {
-          'cartelaId': cartelaId,
-          'paymentSource': ?paymentSource,
-        },
+        data: {'cartelaId': cartelaId, 'paymentSource': ?paymentSource},
         decoder: (rawData) {
           if (rawData is! Map<String, dynamic>) {
             throw StateError('Invalid cartela registration response.');
@@ -173,7 +167,8 @@ class GamesRepository {
   }) async {
     try {
       final effectiveSessionId =
-          sessionId ?? (slotId == null ? null : (await getSlotDetail(slotId)).sessionId);
+          sessionId ??
+          (slotId == null ? null : (await getSlotDetail(slotId)).sessionId);
       if (effectiveSessionId == null || effectiveSessionId.isEmpty) {
         return null;
       }
@@ -240,11 +235,12 @@ class GamesRepository {
       }
 
       if (error is ApiException && error.isConnectivityFailure) {
-        final recovered = await _recoverBulkRegistrationAfterConnectivityFailure(
-          slotId: slotId,
-          providedSessionId: sessionId,
-          requestedCartelas: cartelas,
-        );
+        final recovered =
+            await _recoverBulkRegistrationAfterConnectivityFailure(
+              slotId: slotId,
+              providedSessionId: sessionId,
+              requestedCartelas: cartelas,
+            );
         if (recovered.hasSuccesses) {
           return recovered;
         }
@@ -322,7 +318,8 @@ class GamesRepository {
     required List<({String cartelaId, int cartelaNumber})> requestedCartelas,
   }) async {
     try {
-      final effectiveSessionId = providedSessionId ?? (await getSlotDetail(slotId)).sessionId;
+      final effectiveSessionId =
+          providedSessionId ?? (await getSlotDetail(slotId)).sessionId;
       if (effectiveSessionId == null || effectiveSessionId.isEmpty) {
         return const BulkRegisterResult(successes: [], failures: []);
       }
@@ -362,7 +359,8 @@ class GamesRepository {
     required BulkRegisterResult result,
   }) async {
     try {
-      final effectiveSessionId = providedSessionId ?? (await getSlotDetail(slotId)).sessionId;
+      final effectiveSessionId =
+          providedSessionId ?? (await getSlotDetail(slotId)).sessionId;
       if (effectiveSessionId == null || effectiveSessionId.isEmpty) {
         return result;
       }
@@ -582,7 +580,8 @@ class GamesRepository {
       data: {
         'gameCartelaId': gameCartelaId,
         'claimAttemptId': claimAttemptId,
-        if (clientTapAt != null) 'clientTapAt': clientTapAt.toUtc().toIso8601String(),
+        if (clientTapAt != null)
+          'clientTapAt': clientTapAt.toUtc().toIso8601String(),
         // Omit MANUAL so older Nest builds that ignore unknown fields stay happy;
         // AUTO must be sent for A6.1 grant gating.
         if (claimSource != BingoClaimSource.manual)

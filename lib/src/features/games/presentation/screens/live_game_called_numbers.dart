@@ -265,6 +265,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         clientTapAt: startedAt,
         claimSource: source,
       );
+
       BingoClaimDiagnostics.record(
         event: 'bingo.post.response',
         claimAttemptId: attempt.claimAttemptId,
@@ -493,6 +494,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       controllers.claim.clearClaimInFlight(gameCartela.id, attempt.claimAttemptId);
       // Cleanup cannot relock a resolved attempt or clear a newer UUID.
       _cn.finishClaimSubmission(attempt);
+      if (mounted) {
+        setState(() {});
+      }
       if (isLiveHostActive && _cachedMarksUserId == attempt.userId &&
           _activeSessionId == attempt.sessionId) {
         _flushPendingClaimSocketEvents();

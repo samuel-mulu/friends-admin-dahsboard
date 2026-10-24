@@ -151,6 +151,42 @@ class BingoClaimResult {
     );
   }
 
+  factory BingoClaimResult.fromAttemptStatus(
+    BingoClaimAttemptStatus status, {
+    required String sessionId,
+    required String gameCartelaId,
+    required String userId,
+    String? serverClaimId,
+  }) {
+    final now = DateTime.now();
+    return BingoClaimResult(
+      claim: BingoClaimModel(
+        id: serverClaimId ?? status.claimAttemptId,
+        claimAttemptId: status.claimAttemptId,
+        gameId: sessionId,
+        userId: userId,
+        gameCartelaId: gameCartelaId,
+        status: status.status,
+        checkedPattern: null,
+        reason: null,
+        reasonCode: status.reasonCode,
+        failureCode: status.failureCode,
+        createdAt: now,
+        checkedAt: now,
+      ),
+      progress: null,
+      isWinner: status.isWinner,
+      gameStatus: status.gameStatus,
+      gameCartelaStatus: status.gameCartelaStatus,
+      reasonCode: status.reasonCode,
+      failureCode: status.failureCode,
+      retryAllowed: status.retryAllowed,
+      winnerWindowEndsAt: status.winnerWindowEndsAt,
+      hasNextAutoCallAt: status.nextAutoCallAt != null,
+      nextAutoCallAt: status.nextAutoCallAt,
+    );
+  }
+
   static DateTime? _parseDate(Object? value) => parseApiDateTime(value);
 }
 

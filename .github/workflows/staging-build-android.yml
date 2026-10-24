@@ -1,0 +1,148 @@
+name: Staging Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "API Base URL"
+        required: true
+        default: "https://apitesting.friendscheweta.com"
+      socket_url:
+        description: "Socket URL"
+        required: true
+        default: "https://apitesting.friendscheweta.com"
+      debug:
+        description: "DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      realtime_debug:
+        description: "REALTIME_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      chain_debug:
+        description: "CHAIN_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      big_game_debug:
+        description: "BIG_GAME_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      telebirr_deposit_debug:
+        description: "TELEBIRR_DEPOSIT_DEBUG flag (true/false)"
+        required: true
+        default: "false"
+      create_github_release:
+        description: "Create a GitHub Release with this build (true/false)"
+        type: boolean
+        required: false
+        default: false
+
+  push:
+    branches:
+      - staging
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Ensure .env Asset File Exists
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.production.example ]; then
+              echo "Creating .env from .env.production.example"
+              cp .env.production.example .env
+            else
+              echo "Creating minimal fallback .env file"
+              touch .env
+            fi
+          fi
+
+      - name: Extract App Version from pubspec.yaml
+        id: app_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | head -n1 | sed 's/version: //g' | tr -d '\r\n')
+          CLEAN_VERSION=$(echo "$VERSION" | tr '+' '_')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "Detected App Version: $VERSION"
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL="${{ github.event.inputs.api_base_url || 'https://apitesting.friendscheweta.com' }}" \
+            --dart-define=SOCKET_URL="${{ github.event.inputs.socket_url || 'https://apitesting.friendscheweta.com' }}" \
+            --dart-define=DEBUG="${{ github.event.inputs.debug || 'false' }}" \
+            --dart-define=REALTIME_DEBUG="${{ github.event.inputs.realtime_debug || 'false' }}" \
+            --dart-define=CHAIN_DEBUG="${{ github.event.inputs.chain_debug || 'false' }}" \
+            --dart-define=BIG_GAME_DEBUG="${{ github.event.inputs.big_game_debug || 'false' }}" \
+            --dart-define=TELEBIRR_DEPOSIT_DEBUG="${{ github.event.inputs.telebirr_deposit_debug || 'false' }}"
+
+      - name: Prepare APK with Friendly Name
+        run: |
+          OUTPUT_DIR="build/app/outputs/flutter-apk"
+          SOURCE_APK="$OUTPUT_DIR/app-release.apk"
+          NAMED_APK="$OUTPUT_DIR/friends-bingo-${{ steps.app_version.outputs.clean_version }}-release.apk"
+
+          if [ -f "$SOURCE_APK" ]; then
+            cp "$SOURCE_APK" "$NAMED_APK"
+            echo "Successfully prepared: $NAMED_APK"
+          else
+            echo "ERROR: $SOURCE_APK not found!"
+            exit 1
+          fi
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: friends-bingo-android-v${{ steps.app_version.outputs.clean_version }}
+          path: |
+            build/app/outputs/flutter-apk/friends-bingo-*-release.apk
+            build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_github_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.app_version.outputs.version) }}
+          name: Release ${{ steps.app_version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            build/app/outputs/flutter-apk/friends-bingo-*-release.apk
+          body: |
+            ### Friends Bingo Android Release
+            - **Version**: `${{ steps.app_version.outputs.version }}`
+            - **Commit**: `${{ github.sha }}`
+            - **API Base URL**: `${{ github.event.inputs.api_base_url || 'https://apitesting.friendscheweta.com' }}`
+            - **Socket URL**: `${{ github.event.inputs.socket_url || 'https://apitesting.friendscheweta.com' }}`
+
+            Download the `.apk` file below and install it directly on your Android phone.

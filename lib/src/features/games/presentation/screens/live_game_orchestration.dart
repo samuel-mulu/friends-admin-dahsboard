@@ -3757,6 +3757,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         !_eventAffectsCurrentGameFromPayload(normalizedPayload)) {
       return;
     }
+    if (normalizedPayload.containsKey('nextAutoCallAt') &&
+        normalizedPayload['nextAutoCallAt'] == null) {
+      _scheduleCanonicalRefetch(includeMyCartelas: false);
+    }
     final cartelaId = normalizedPayload['gameCartelaId'] as String?;
     if (cartelaId == null) return;
     final eventRound = (normalizedPayload['roundIndex'] as num?)?.toInt();

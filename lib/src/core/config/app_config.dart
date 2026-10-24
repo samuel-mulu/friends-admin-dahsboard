@@ -53,37 +53,44 @@ class AppConfig {
       debug || telebirrDepositDebug || realtimeDebug;
 
   factory AppConfig.fromEnvironment() {
-    const apiBaseUrlDefine = String.fromEnvironment('API_BASE_URL');
-    const socketUrlDefine = String.fromEnvironment('SOCKET_URL');
-    const legacySocketBaseUrlDefine = String.fromEnvironment('SOCKET_BASE_URL');
+    final apiBaseUrlOverride = _resolveString(
+      key: 'API_BASE_URL',
+      compileTimeValue: const String.fromEnvironment('API_BASE_URL'),
+    );
+    final socketUrlOverride = _resolveString(
+      key: 'SOCKET_URL',
+      compileTimeValue: const String.fromEnvironment('SOCKET_URL'),
+    );
+    final legacySocketBaseUrlOverride = _resolveString(
+      key: 'SOCKET_BASE_URL',
+      compileTimeValue: const String.fromEnvironment('SOCKET_BASE_URL'),
+    );
 
-    final apiBaseUrlOverride = _firstNonEmpty([
-      apiBaseUrlDefine,
-      _envString('API_BASE_URL'),
-    ]);
-    final socketUrlOverride = _firstNonEmpty([
-      socketUrlDefine,
-      _envString('SOCKET_URL'),
-    ]);
-    final legacySocketBaseUrlOverride = _firstNonEmpty([
-      legacySocketBaseUrlDefine,
-      _envString('SOCKET_BASE_URL'),
-    ]);
-
-    final realtimeDebug =
-        const bool.fromEnvironment('REALTIME_DEBUG') ||
-        _envBool('REALTIME_DEBUG');
-    final chainDebug =
-        const bool.fromEnvironment('CHAIN_DEBUG') ||
-        _envBool('CHAIN_DEBUG');
-    final bigGameDebug =
-        const bool.fromEnvironment('BIG_GAME_DEBUG') ||
-        _envBool('BIG_GAME_DEBUG');
-    final debug =
-        const bool.fromEnvironment('DEBUG') || _envBool('DEBUG');
-    final telebirrDepositDebug =
-        const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG') ||
-        _envBool('TELEBIRR_DEPOSIT_DEBUG');
+    final realtimeDebug = _resolveBool(
+      key: 'REALTIME_DEBUG',
+      hasCompileTimeDefine: const bool.hasEnvironment('REALTIME_DEBUG'),
+      compileTimeValue: const bool.fromEnvironment('REALTIME_DEBUG'),
+    );
+    final chainDebug = _resolveBool(
+      key: 'CHAIN_DEBUG',
+      hasCompileTimeDefine: const bool.hasEnvironment('CHAIN_DEBUG'),
+      compileTimeValue: const bool.fromEnvironment('CHAIN_DEBUG'),
+    );
+    final bigGameDebug = _resolveBool(
+      key: 'BIG_GAME_DEBUG',
+      hasCompileTimeDefine: const bool.hasEnvironment('BIG_GAME_DEBUG'),
+      compileTimeValue: const bool.fromEnvironment('BIG_GAME_DEBUG'),
+    );
+    final debug = _resolveBool(
+      key: 'DEBUG',
+      hasCompileTimeDefine: const bool.hasEnvironment('DEBUG'),
+      compileTimeValue: const bool.fromEnvironment('DEBUG'),
+    );
+    final telebirrDepositDebug = _resolveBool(
+      key: 'TELEBIRR_DEPOSIT_DEBUG',
+      hasCompileTimeDefine: const bool.hasEnvironment('TELEBIRR_DEPOSIT_DEBUG'),
+      compileTimeValue: const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG'),
+    );
 
     if (apiBaseUrlOverride.isEmpty) {
       throw StateError(
@@ -115,22 +122,43 @@ class AppConfig {
     );
   }
 
-  static String _envString(String key) {
-    return dotenv.maybeGet(key)?.trim() ?? '';
+  static String _resolveString({
+    required String key,
+    required String compileTimeValue,
+  }) {
+    if (compileTimeValue.isNotEmpty) {
+      return compileTimeValue;
+    }
+    return _envString(key);
   }
 
-  static String _firstNonEmpty(List<String> values) {
-    for (final value in values) {
-      if (value.isNotEmpty) {
-        return value;
+  static bool _resolveBool({
+    required String key,
+    required bool hasCompileTimeDefine,
+    required bool compileTimeValue,
+    bool defaultValue = false,
+  }) {
+    // 1. Compile-time `--dart-define` always takes top priority
+    if (hasCompileTimeDefine) {
+      return compileTimeValue;
+    }
+    // 2. Bundled .env asset (runtime via flutter_dotenv)
+    if (dotenv.isInitialized) {
+      final envVal = dotenv.maybeGet(key)?.trim();
+      if (envVal != null && envVal.isNotEmpty) {
+        final lower = envVal.toLowerCase();
+        return lower == 'true' || lower == '1';
       }
     }
-    return '';
+    // 3. Fallback default
+    return defaultValue;
   }
 
-  static bool _envBool(String key) {
-    final value = _envString(key).toLowerCase();
-    return value == 'true' || value == '1';
+  static String _envString(String key) {
+    if (!dotenv.isInitialized) {
+      return '';
+    }
+    return dotenv.maybeGet(key)?.trim() ?? '';
   }
 
   static String _normalize(String url) {

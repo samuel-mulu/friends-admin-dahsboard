@@ -12,7 +12,11 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: '.env');
   } catch (e) {
-    debugPrint('[AppConfig] Notice: .env file not loaded ($e). Falling back to --dart-define.');
+    try {
+      await dotenv.load(fileName: 'assets/.env');
+    } catch (_) {
+      debugPrint('[AppConfig] Notice: .env file not loaded ($e). Falling back to --dart-define.');
+    }
   }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await Firebase.initializeApp();

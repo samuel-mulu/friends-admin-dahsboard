@@ -431,10 +431,20 @@ class LiveCalledNumbersController {
   }) {
     if (!isCurrentClaimAttempt(attempt)) return false;
     if (!status.isTerminal) {
+      final now = _claimNow();
+      if (now.difference(attempt.createdAt) >= const Duration(seconds: 15)) {
+        return applyAuthoritativeClaimStatus(
+          attempt,
+          BingoClaimStatus.failed,
+          retryAllowed: true,
+        );
+      }
       pendingClaimCartelaIds.add(attempt.gameCartelaId);
       attempt.recoveryErrors = 0;
-      attempt.nextRecoveryAt = _claimNow().add(
-        Duration(seconds: status == BingoClaimStatus.pending ? 15 : 2),
+      attempt.nextRecoveryAt = now.add(
+        status == BingoClaimStatus.pending
+            ? const Duration(seconds: 15)
+            : const Duration(milliseconds: 700),
       );
     } else {
       final retryDenied =

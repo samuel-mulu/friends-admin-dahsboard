@@ -27,8 +27,10 @@ class BingoClaimAttempt {
     required this.roundIndex,
     this.claimSource = BingoClaimSource.manual,
     this.autoBingoAttemptKey,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
+  final DateTime createdAt;
   final String userId;
   final String sessionId;
   final String gameCartelaId;
