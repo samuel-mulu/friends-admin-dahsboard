@@ -947,12 +947,26 @@ class LiveCalledNumbersController {
       return false;
     }
 
-    if (processedCalledDrawKeys.contains(calledDrawDedupKeyFor(calledNumber))) {
-      return true;
+    final incomingKey = calledDrawDedupKeyFor(calledNumber);
+    for (final existing in calledNumbers) {
+      if (existing.id == calledNumber.id) {
+        return true;
+      }
+      if (calledDrawDedupKeyFor(existing) == incomingKey) {
+        return true;
+      }
+      if (existing.order == calledNumber.order) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    return processedCalledNumberIds.contains(calledNumber.id) ||
-        processedCalledNumberOrders.contains(calledNumber.order);
+  int get committedMaxCalledOrder {
+    if (calledNumbers.isEmpty) {
+      return 0;
+    }
+    return calledNumbers.last.order;
   }
 
   bool canClaimBingoForCartela({
@@ -1375,7 +1389,24 @@ class LiveCalledNumbersController {
     }
   }
 
-  Future<bool> refetchCalledNumbersOnly() async {
+  Future<bool>? _calledNumbersRefetchInFlight;
+
+  Future<bool> refetchCalledNumbersOnly() {
+    final inFlight = _calledNumbersRefetchInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _refetchCalledNumbersOnlyImpl();
+    _calledNumbersRefetchInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_calledNumbersRefetchInFlight, future)) {
+        _calledNumbersRefetchInFlight = null;
+      }
+    });
+  }
+
+  Future<bool> _refetchCalledNumbersOnlyImpl() async {
     final sessionId = host.game?.sessionId;
     if (sessionId == null) {
       return false;

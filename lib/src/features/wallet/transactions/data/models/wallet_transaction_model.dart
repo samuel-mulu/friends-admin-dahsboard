@@ -6,7 +6,8 @@ enum WalletTransactionType {
   gameEntry,
   prizeWin,
   refund,
-  adminAdjustment;
+  adminAdjustment,
+  registrationCashback;
 
   factory WalletTransactionType.fromApi(String value) {
     switch (value.toUpperCase()) {
@@ -26,6 +27,8 @@ enum WalletTransactionType {
         return WalletTransactionType.refund;
       case 'ADMIN_ADJUSTMENT':
         return WalletTransactionType.adminAdjustment;
+      case 'REGISTRATION_CASHBACK':
+        return WalletTransactionType.registrationCashback;
       default:
         throw ArgumentError.value(
           value,
@@ -53,6 +56,8 @@ enum WalletTransactionType {
         return 'Refund';
       case WalletTransactionType.adminAdjustment:
         return 'Admin adjustment';
+      case WalletTransactionType.registrationCashback:
+        return 'Cartela cashback';
     }
   }
 }

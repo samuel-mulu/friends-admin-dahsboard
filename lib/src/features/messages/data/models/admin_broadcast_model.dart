@@ -28,8 +28,6 @@ extension AdminBroadcastCategoryX on AdminBroadcastCategory {
     }
   }
 
-  bool get canDismiss => this == AdminBroadcastCategory.dismissible;
-
   bool get isForced => this == AdminBroadcastCategory.forced;
 }
 
@@ -40,6 +38,7 @@ class AdminBroadcastModel {
     required this.body,
     required this.createdAt,
     this.category = AdminBroadcastCategory.dismissible,
+    this.playerCanDismiss = false,
   });
 
   final String id;
@@ -47,8 +46,9 @@ class AdminBroadcastModel {
   final String body;
   final DateTime createdAt;
   final AdminBroadcastCategory category;
+  final bool playerCanDismiss;
 
-  bool get canDismiss => category.canDismiss;
+  bool get canDismiss => category == AdminBroadcastCategory.dismissible;
 
   bool get isForced => category.isForced;
 
@@ -59,6 +59,7 @@ class AdminBroadcastModel {
       body: json['body'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       category: AdminBroadcastCategoryX.fromApi(json['category'] as String?),
+      playerCanDismiss: json['playerCanDismiss'] == true,
     );
   }
 
@@ -69,6 +70,7 @@ class AdminBroadcastModel {
       'body': body,
       'createdAt': createdAt.toIso8601String(),
       'category': category.apiValue,
+      'playerCanDismiss': playerCanDismiss,
     };
   }
 }

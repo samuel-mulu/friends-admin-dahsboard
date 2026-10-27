@@ -6,6 +6,7 @@ abstract final class CartelaBoardLayout {
   static const double headerToGridGap = 2.0;
 
   static const double liveHeaderFontSize = 10.0;
+  static const double liveBingoLetterRowHeight = 18.0;
   static const double reviewHeaderFontSize = 13.0;
   static const double compactReviewHeaderFontSize = 9.0;
 
@@ -18,6 +19,9 @@ abstract final class CartelaBoardLayout {
   /// Fraction of cell diameter used for number text (maximizes readability).
   static const double cellNumberDiameterFactor = 0.58;
 
+  /// Live 2-up grid: slightly smaller type so cells feel balanced, not oversized.
+  static const double liveExpandedCellNumberFactor = 0.52;
+
   /// Header row + gap + square board area for review dialogs (width / height).
   static const double reviewBoardAspectRatio = 0.86;
 
@@ -27,5 +31,30 @@ abstract final class CartelaBoardLayout {
       return liveCellNumberFontSize;
     }
     return diameter * cellNumberDiameterFactor;
+  }
+
+  static double liveExpandedCellNumberFontSize(double cellSide) {
+    if (cellSide <= 0) {
+      return liveCellNumberFontSize;
+    }
+    return cellSide * liveExpandedCellNumberFactor;
+  }
+
+  /// Grid tile width/height for live 2-up layout (matches [LiveCartelaCard] + square board).
+  static double liveTwoUpTileAspectRatio(double tileWidth) {
+    if (tileWidth <= 0) {
+      return 0.76;
+    }
+    const outerCartelaHeader = 40.0;
+    const outerBodyPadding = 5.0;
+    const cardHorizontalInset = 4.0;
+    final boardBodyWidth =
+        tileWidth - outerBodyPadding - cardHorizontalInset;
+    final innerBoardHeight = liveBingoLetterRowHeight +
+        boardBodyWidth +
+        (boardPadding * 2);
+    final tileHeight =
+        outerCartelaHeader + outerBodyPadding + innerBoardHeight;
+    return tileWidth / tileHeight;
   }
 }

@@ -99,6 +99,7 @@ import '../utils/live_terminal_enter_policy.dart';
 import '../utils/winner_pattern_clear_policy.dart';
 import '../utils/live_socket_session_membership.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_index.dart';
+import '../utils/called_numbers_strip_heal.dart';
 import '../utils/next_ball_countdown.dart';
 import '../utils/next_ball_stale_guard.dart';
 import '../utils/number_called_schedule_patch.dart';

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/realtime/wallet_realtime_sync.dart';
+import '../../../wallet/overview/presentation/widgets/registration_cashback_celebration_overlay.dart';
 import '../../../auth/presentation/widgets/auth_status_message_listener.dart';
 import '../../../games/presentation/widgets/game_announcement_banner.dart';
 import '../../../messages/presentation/widgets/broadcast_realtime_sync.dart';
@@ -34,7 +35,11 @@ class HomeShellScreen extends ConsumerWidget {
                       children: [
                         const BroadcastTopBanner(),
                         Expanded(
-                          child: WalletRealtimeSync(child: navigationShell),
+                          child: WalletRealtimeSync(
+                            child: RegistrationCashbackCelebrationHost(
+                              child: navigationShell,
+                            ),
+                          ),
                         ),
                       ],
                     ),

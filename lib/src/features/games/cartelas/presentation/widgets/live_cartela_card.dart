@@ -104,17 +104,23 @@ class LiveCartelaCard extends StatelessWidget {
         !isBlocked &&
         !readOnlyOutcome;
 
+    final showOneAwayHighlight =
+        isOneAwayFromWin &&
+        !hasLocalPatternComplete &&
+        !isLateClaim &&
+        canClaimBingo &&
+        !isClaiming &&
+        !isBlocked &&
+        !isWinner &&
+        !readOnlyOutcome &&
+        !showClaimReadyHighlight;
+
     return RepaintBoundary(
       child: _GreenClaimPulseWrapper(
       active: showClaimReadyHighlight || (isWinner && !isBlocked),
       motionAllowedListenable: decorativeMotionAllowedListenable,
       child: _OneAwayPulseWrapper(
-        active:
-            isOneAwayFromWin &&
-            !canClaimBingo &&
-            !isBlocked &&
-            !isWinner &&
-            !readOnlyOutcome,
+        active: showOneAwayHighlight,
         motionAllowedListenable: decorativeMotionAllowedListenable,
         child: Card(
         clipBehavior: Clip.antiAlias,
@@ -273,6 +279,9 @@ class LiveCartelaCard extends StatelessWidget {
                           manualMarkedNumbers: manualMarkedNumbers,
                           lastManualMarkedKey: lastManualMarkedKey,
                           oneAwayCellIndexes: oneAwayCellIndexes,
+                          pulseOneAwayCells: showOneAwayHighlight,
+                          decorativeMotionAllowedListenable:
+                              decorativeMotionAllowedListenable,
                           winningPatternOverlay: trackingOverlay,
                           winningHighlightCells: winningHighlightCells,
                           winningBallCellIndex:
@@ -371,6 +380,8 @@ class _MarkedCartelaGrid extends ConsumerWidget {
     required this.manualMarkedNumbers,
     this.lastManualMarkedKey,
     required this.oneAwayCellIndexes,
+    this.pulseOneAwayCells = false,
+    this.decorativeMotionAllowedListenable,
     required this.winningPatternOverlay,
     this.winningHighlightCells = const {},
     this.winningBallCellIndex,
@@ -383,6 +394,8 @@ class _MarkedCartelaGrid extends ConsumerWidget {
   final Set<String> manualMarkedNumbers;
   final String? lastManualMarkedKey;
   final Set<int> oneAwayCellIndexes;
+  final bool pulseOneAwayCells;
+  final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final CartelaPatternProgressOverlay winningPatternOverlay;
   final Set<int> winningHighlightCells;
   final int? winningBallCellIndex;
@@ -440,6 +453,9 @@ class _MarkedCartelaGrid extends ConsumerWidget {
       markColor: markColor,
       interactive: !interactionDisabled,
       showHeader: false,
+      expandToFill: true,
+      pulseOneAwayCells: pulseOneAwayCells,
+      decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
       onCellTapped: interactionDisabled
           ? null
           : (number) {
@@ -641,12 +657,12 @@ class _OneAwayPulseWrapperState extends State<_OneAwayPulseWrapper>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.redAccent.withValues(alpha: 0.35 + (t * 0.65)),
+              color: AppBranding.oneAwayRedBorder(t),
               width: 1.2 + (t * 2.2),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.redAccent.withValues(alpha: 0.12 + (t * 0.38)),
+                color: AppBranding.oneAwayRedShadow(t),
                 blurRadius: 6 + (t * 10),
                 spreadRadius: 0.5 + (t * 1.6),
               ),
