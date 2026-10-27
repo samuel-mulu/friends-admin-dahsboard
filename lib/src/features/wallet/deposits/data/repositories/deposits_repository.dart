@@ -29,6 +29,28 @@ class DepositsRepository {
     );
   }
 
+  Future<void> reportLookupFailure({
+    String? transactionRef,
+    String? reason,
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (transactionRef != null) {
+        payload['transactionRef'] = transactionRef;
+      }
+      if (reason != null) {
+        payload['reason'] = reason;
+      }
+      await _apiClient.post<void>(
+        '/deposits/telebirr-lookup-failure',
+        data: payload,
+        decoder: (_) {},
+      );
+    } catch (_) {
+      // Best-effort reporting; never block player UI
+    }
+  }
+
   Future<DepositSubmitResult> createDeposit({
     required PaymentProvider provider,
     required String amount,

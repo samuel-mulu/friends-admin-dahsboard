@@ -483,6 +483,10 @@ class DepositController extends Notifier<DepositState> {
       }
     } catch (error) {
       final code = error is ApiException ? error.code : null;
+      final isUnavailable = code == 'VERIFICATION_UNAVAILABLE';
+      if (isUnavailable) {
+        ref.invalidate(depositConfigProvider);
+      }
       final displayMessage = error is ApiException
           ? error.displayMessage
           : 'Failed to process deposit. Please check your connection and try again.';
@@ -493,11 +497,14 @@ class DepositController extends Notifier<DepositState> {
           kind: code == 'UNDER_REVIEW'
               ? DepositConfirmationKind.underReview
               : DepositConfirmationKind.rejected,
-          message: displayMessage,
+          message: isUnavailable
+              ? 'Telebirr is temporarily busy. Please tap Try Again in a moment.'
+              : displayMessage,
           provider: provider,
           amount: amount,
           transactionRef: rawTransactionInput.toUpperCase(),
           canRetry: code != 'ALREADY_USED' && code != 'UNDER_REVIEW',
+          retryLabel: isUnavailable ? 'Try Again' : null,
         ),
       );
     } finally {

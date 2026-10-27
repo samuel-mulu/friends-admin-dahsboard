@@ -20,6 +20,7 @@ class DepositConfirmationState {
     this.depositId,
     this.attemptId,
     this.canRetry = false,
+    this.retryLabel,
     this.canCheckAgain = false,
     this.checkAgainAvailableAt,
   });
@@ -34,6 +35,7 @@ class DepositConfirmationState {
       depositId = null,
       attemptId = null,
       canRetry = false,
+      retryLabel = null,
       canCheckAgain = false,
       checkAgainAvailableAt = null;
 
@@ -46,8 +48,9 @@ class DepositConfirmationState {
   final String? depositId;
   final String? attemptId;
 
-  /// When true, rejected card shows "Fix and submit again".
+  /// When true, rejected card shows "Fix and submit again" (or custom retryLabel).
   final bool canRetry;
+  final String? retryLabel;
 
   /// When true, verification-in-progress card can poll again.
   final bool canCheckAgain;

@@ -12,6 +12,9 @@ class DepositProviderConfig {
     required this.receiverName,
     this.enabled = true,
     this.approvalMode = 'automatic',
+    this.configuredApprovalMode,
+    this.isFallbackActive = false,
+    this.fallbackUntil,
     this.receiptBaseUrl = '',
     this.guideVideoUrl = '',
   });
@@ -25,8 +28,14 @@ class DepositProviderConfig {
   final String receiverName;
   final bool enabled;
   final String approvalMode;
+  final String? configuredApprovalMode;
+  final bool isFallbackActive;
+  final String? fallbackUntil;
   final String receiptBaseUrl;
   final String guideVideoUrl;
+
+  bool get isLocalOrFallback =>
+      approvalMode == 'local' || approvalMode == 'local_with_fallback';
 
   factory DepositProviderConfig.fromJson(Map<String, dynamic> json) {
     return DepositProviderConfig(
@@ -39,6 +48,9 @@ class DepositProviderConfig {
       receiverName: json['receiverName'] as String? ?? '',
       enabled: json['enabled'] as bool? ?? true,
       approvalMode: json['approvalMode'] as String? ?? 'automatic',
+      configuredApprovalMode: json['configuredApprovalMode'] as String?,
+      isFallbackActive: json['isFallbackActive'] as bool? ?? false,
+      fallbackUntil: json['fallbackUntil'] as String?,
       receiptBaseUrl: json['receiptBaseUrl'] as String? ?? '',
       guideVideoUrl: json['guideVideoUrl'] as String? ?? '',
     );

@@ -198,8 +198,12 @@ class _DepositConfirmationBannerState extends State<DepositConfirmationBanner>
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: widget.onRetry,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: Text(l10n.depositFixAndResubmit),
+                    icon: Icon(widget.state.retryLabel != null
+                        ? Icons.refresh_rounded
+                        : Icons.edit_outlined),
+                    label: Text(
+                      widget.state.retryLabel ?? l10n.depositFixAndResubmit,
+                    ),
                   ),
                 ],
                 if (widget.state.kind ==

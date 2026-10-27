@@ -5,11 +5,18 @@ import 'package:html/parser.dart' as html_parser;
 import '../../presentation/debug/telebirr_deposit_debug.dart';
 import '../models/deposit_config_model.dart';
 import '../models/telebirr_receipt_preview.dart';
+import '../repositories/deposits_repository.dart';
+
+typedef TelebirrLookupFailureCallback = Future<void> Function({
+  String? transactionRef,
+  String? reason,
+});
 
 class TelebirrReceiptPreviewService {
-  TelebirrReceiptPreviewService(this._dio);
+  TelebirrReceiptPreviewService(this._dio, {this.onFailure});
 
   final Dio _dio;
+  final TelebirrLookupFailureCallback? onFailure;
 
   Future<TelebirrReceiptPreview> preview({
     required String transactionRef,
@@ -61,6 +68,21 @@ class TelebirrReceiptPreviewService {
       );
       return preview;
     } catch (error) {
+      if (error is DioException) {
+        final statusCode = error.response?.statusCode;
+        if (statusCode == 429 ||
+            (statusCode != null && statusCode >= 500) ||
+            error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout) {
+          TelebirrDepositDebug.log(
+            'upstream rate-limit or timeout detected: ${error.type.name} (code: $statusCode)',
+          );
+          onFailure?.call(
+            transactionRef: transactionRef,
+            reason: 'HTTP $statusCode / ${error.type.name}',
+          );
+        }
+      }
       final message = error is DioException
           ? (error.message ?? error.type.name)
           : error.toString();
@@ -696,5 +718,11 @@ final telebirrReceiptPreviewServiceProvider =
             sendTimeout: const Duration(seconds: 8),
           ),
         ),
+        onFailure: ({String? transactionRef, String? reason}) {
+          return ref.read(depositsRepositoryProvider).reportLookupFailure(
+                transactionRef: transactionRef,
+                reason: reason,
+              );
+        },
       );
     });

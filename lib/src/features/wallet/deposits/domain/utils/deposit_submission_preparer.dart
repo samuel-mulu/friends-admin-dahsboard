@@ -39,10 +39,9 @@ abstract final class DepositSubmissionPreparer {
     if (provider == PaymentProvider.telebirr) {
       transactionRef = normalizeDepositReceiptCode(rawTransactionInput);
       final depositConfig = await ref.read(depositConfigProvider.future);
-      final approvalMode = depositConfig
-          .providerForKey(PaymentProvider.telebirr.apiValue)
-          ?.approvalMode;
-      if (approvalMode == 'local') {
+      final telebirrProvider = depositConfig
+          .providerForKey(PaymentProvider.telebirr.apiValue);
+      if (telebirrProvider?.isLocalOrFallback ?? false) {
         final preview = await ref
             .read(telebirrReceiptPreviewServiceProvider)
             .preview(
