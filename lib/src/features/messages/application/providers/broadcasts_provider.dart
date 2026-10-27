@@ -112,7 +112,9 @@ class BroadcastsNotifier extends AsyncNotifier<PlayerBroadcastsState> {
         inboxBroadcasts: previous.inboxBroadcasts
             .where((broadcast) => broadcast.id != id)
             .toList(),
-        forcedBroadcast: previous.forcedBroadcast,
+        forcedBroadcast: previous.forcedBroadcast?.id == id
+            ? null
+            : previous.forcedBroadcast,
       ),
     );
 
@@ -143,6 +145,24 @@ class BroadcastsNotifier extends AsyncNotifier<PlayerBroadcastsState> {
     }
 
     final inboxBroadcasts = [message, ...current.inboxBroadcasts];
+    state = AsyncData(
+      PlayerBroadcastsState.normalize(
+        inboxBroadcasts: inboxBroadcasts,
+        forcedBroadcast: current.forcedBroadcast,
+      ),
+    );
+  }
+
+  void applyRemindFromSocket(AdminBroadcastModel message) {
+    if (message.isForced) {
+      return;
+    }
+
+    final current = state.value ?? const PlayerBroadcastsState();
+    final inboxBroadcasts = [
+      message,
+      ...current.inboxBroadcasts.where((broadcast) => broadcast.id != message.id),
+    ];
     state = AsyncData(
       PlayerBroadcastsState.normalize(
         inboxBroadcasts: inboxBroadcasts,

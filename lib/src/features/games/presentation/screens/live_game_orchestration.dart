@@ -1016,6 +1016,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _game?.status == GameStatus.winnerWindow &&
           _effectiveWinnerWindowEndsAt != null,
       highestKnownCalledOrder: _highestKnownCalledOrder,
+      committedMaxCalledOrder: _cn.committedMaxCalledOrder,
     );
   }
 
@@ -2741,6 +2742,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           game: mergedGame,
           nextAutoCallAt: mergedGame.nextAutoCallAt,
           scheduleChanged: scheduleChanged,
+          committedMaxOrder: _cn.committedMaxCalledOrder,
         );
       }
       if (_allBallsDrawnForCurrentGame && mergedGame.nextAutoCallAt == null) {
@@ -3387,9 +3389,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
     if (_cn.isDuplicateCalledNumber(calledNumber)) {
-      LiveRealtimeDebug.log(
-        'number_called_duplicate order=${calledNumber.order} refresh=false',
-      );
+      if (calledNumber.order > _cn.committedMaxCalledOrder) {
+        LiveRealtimeDebug.log(
+          'number_called_duplicate_strip_behind order=${calledNumber.order} '
+          'committedMax=${_cn.committedMaxCalledOrder} recovery=called_numbers',
+        );
+        unawaited(_recoverCalledNumbersAfterSocketGap());
+      } else {
+        LiveRealtimeDebug.log(
+          'number_called_duplicate order=${calledNumber.order} refresh=false',
+        );
+      }
       return;
     }
 
@@ -3470,6 +3480,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           game: updatedGame,
           nextAutoCallAt: updatedGame.nextAutoCallAt,
           scheduleChanged: true,
+          committedMaxOrder: _cn.committedMaxCalledOrder,
         );
         _syncNextBallCountdownTicker();
       }
@@ -5407,6 +5418,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final healSnapshot = (
+      wasInCallingPhase: wasInCallingPlayPhase(_countdown.nextBallPlayPhase),
+      callingBaselineOrder: _countdown.callingPhaseBaselineOrder,
+      committedMax: _cn.committedMaxCalledOrder,
+      gameCalledNumbersCount: game.calledNumbersCount,
+    );
+
     final hasNextAutoCallAt = payload.containsKey('nextAutoCallAt');
     final nextAutoCallAt = hasNextAutoCallAt
         ? _parseNextAutoCallAtValue(payload['nextAutoCallAt'])
@@ -5421,8 +5439,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         !dateTimesEqualForSchedule(nextAutoCallAt, game.nextAutoCallAt);
     final intervalChanged =
         intervalRaw is num && autoCallIntervalMs != game.autoCallIntervalMs;
+    final payloadCalledCount = parseCalledNumbersCountFromSchedulePayload(
+      payload,
+    );
 
-    if (!scheduleChanged && autoCallEnabled == null && !intervalChanged) {
+    if (!scheduleChanged &&
+        autoCallEnabled == null &&
+        intervalChanged == false &&
+        payloadCalledCount == null) {
       return;
     }
 
@@ -5430,11 +5454,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (autoCallEnabled != null) {
         _cn.socketAutoCallEnabled = autoCallEnabled;
       }
+      var nextCalledCount = game.calledNumbersCount;
+      if (payloadCalledCount != null &&
+          payloadCalledCount > nextCalledCount) {
+        nextCalledCount = payloadCalledCount;
+      }
       _game = game.copyWith(
         nextAutoCallAt: hasNextAutoCallAt
             ? nextAutoCallAt
             : game.nextAutoCallAt,
         autoCallIntervalMs: autoCallIntervalMs,
+        calledNumbersCount: nextCalledCount,
       );
     });
     markCanonicalSocketStateApplied();
@@ -5445,6 +5475,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         game: updatedGame,
         nextAutoCallAt: updatedGame.nextAutoCallAt,
         scheduleChanged: scheduleChanged,
+        committedMaxOrder: healSnapshot.committedMax,
       );
       if (scheduleChanged) {
         _syncNextBallCountdownTicker();
@@ -5454,6 +5485,27 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: _highestKnownCalledOrder,
       );
+    }
+
+    final shouldHeal = shouldHealAfterAutoCallSchedulePatch(
+      gameStatus: updatedGame.status,
+      autoCallActive: _isAutoCallActiveForSession,
+      scheduleChanged: scheduleChanged,
+      committedMax: healSnapshot.committedMax,
+      gameCalledNumbersCount: updatedGame.calledNumbersCount,
+      payloadCalledNumbersCount: payloadCalledCount,
+      wasInCallingPhase: healSnapshot.wasInCallingPhase,
+      callingBaselineOrder: healSnapshot.callingBaselineOrder,
+    );
+    if (shouldHeal) {
+      LiveRealtimeDebug.log(
+        'auto_call_schedule_strip_heal committedMax=${healSnapshot.committedMax} '
+        'authoritative=${authoritativeCalledNumbersCount(
+          gameCalledNumbersCount: updatedGame.calledNumbersCount,
+          payloadCalledNumbersCount: payloadCalledCount,
+        )}',
+      );
+      unawaited(_recoverCalledNumbersAfterSocketGap());
     }
 
     LiveRealtimeDebug.log('auto_call_schedule_applied refresh=false');

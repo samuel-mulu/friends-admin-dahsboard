@@ -356,6 +356,7 @@ class LiveCountdownController {
     required GameModel game,
     required DateTime? nextAutoCallAt,
     required bool scheduleChanged,
+    int committedMaxOrder = 0,
   }) {
     final scopeKey = game.sessionId ?? game.id;
     if (!scheduleChanged &&
@@ -401,6 +402,8 @@ class LiveCountdownController {
       target: nextAutoCallAt,
       sessionId: scopeKey,
       rawRemaining: rawSeconds,
+      committedMaxOrder: committedMaxOrder,
+      authoritativeCalledCount: game.calledNumbersCount,
     );
   }
 
@@ -584,6 +587,8 @@ class LiveCountdownController {
       target: target,
       sessionId: game.sessionId ?? game.id,
       rawRemaining: rawSeconds,
+      committedMaxOrder: context.committedMaxCalledOrder,
+      authoritativeCalledCount: game.calledNumbersCount,
     );
     final staleEvaluation = nextBallStaleGuard.evaluate(
       game: game,

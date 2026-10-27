@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/application/controllers/auth_controller.dart';
 import '../../features/games/presentation/utils/socket_payload_normalizer.dart';
 import '../../features/wallet/deposits/application/providers/deposit_history_provider.dart';
+import '../../features/wallet/overview/application/providers/registration_cashback_celebration_provider.dart';
 import '../../features/wallet/overview/application/providers/wallet_provider.dart';
 import '../../features/wallet/transactions/application/providers/wallet_transactions_provider.dart';
 import '../../features/wallet/withdrawals/application/providers/withdrawal_history_provider.dart';
@@ -39,6 +40,10 @@ class _WalletRealtimeSyncState extends ConsumerState<WalletRealtimeSync> {
     }
 
     _socketService.on('wallet:updated', _onWalletUpdated);
+    _socketService.on(
+      'wallet:registration_cashback',
+      _onRegistrationCashback,
+    );
     _socketService.on('withdrawal:updated', _onWithdrawalUpdated);
     _socketService.on('deposit:updated', _onDepositUpdated);
     _socketService.on('connect', _onSocketConnect);
@@ -52,6 +57,10 @@ class _WalletRealtimeSyncState extends ConsumerState<WalletRealtimeSync> {
 
   void _unbind() {
     _socketService.off('wallet:updated', _onWalletUpdated);
+    _socketService.off(
+      'wallet:registration_cashback',
+      _onRegistrationCashback,
+    );
     _socketService.off('withdrawal:updated', _onWithdrawalUpdated);
     _socketService.off('deposit:updated', _onDepositUpdated);
     _socketService.off('connect', _onSocketConnect);
@@ -74,6 +83,37 @@ class _WalletRealtimeSyncState extends ConsumerState<WalletRealtimeSync> {
       return;
     }
     ref.invalidate(myWalletProvider);
+    ref.invalidate(walletTransactionsProvider);
+  }
+
+  void _onRegistrationCashback(dynamic rawPayload) {
+    if (!mounted) {
+      return;
+    }
+
+    final payload = normalizeSocketPayload(rawPayload);
+    if (payload == null) {
+      return;
+    }
+
+    final amount = payload['amount']?.toString();
+    final countRaw = payload['sessionQualifyingCount'];
+    final sessionQualifyingCount = countRaw is int
+        ? countRaw
+        : int.tryParse(countRaw?.toString() ?? '');
+
+    if (amount == null || amount.isEmpty || sessionQualifyingCount == null) {
+      return;
+    }
+
+    ref
+        .read(registrationCashbackCelebrationProvider.notifier)
+        .showFromSocket(
+          amount: amount,
+          sessionQualifyingCount: sessionQualifyingCount,
+        );
+    ref.invalidate(myWalletProvider);
+    ref.invalidate(walletTransactionsProvider);
   }
 
   void _onWithdrawalUpdated(dynamic rawPayload) {

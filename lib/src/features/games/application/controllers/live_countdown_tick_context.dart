@@ -17,6 +17,7 @@ class LiveCountdownTickContext {
     required this.effectiveWinnerWindowEndsAt,
     required this.shouldRunWinnerWindowTicker,
     this.highestKnownCalledOrder = 0,
+    this.committedMaxCalledOrder = 0,
   });
 
   final GameModel? game;
@@ -31,4 +32,5 @@ class LiveCountdownTickContext {
   final DateTime? effectiveWinnerWindowEndsAt;
   final bool shouldRunWinnerWindowTicker;
   final int highestKnownCalledOrder;
+  final int committedMaxCalledOrder;
 }

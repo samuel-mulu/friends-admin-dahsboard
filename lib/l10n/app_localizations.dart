@@ -4708,6 +4708,36 @@ abstract class AppLocalizations {
   /// **'The app will reopen when the admin removes this notice.'**
   String get adminMessagesForcedHint;
 
+  /// No description provided for @adminMessagesForcedClosableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can close this notice and continue using the app.'**
+  String get adminMessagesForcedClosableHint;
+
+  /// No description provided for @adminMessagesForcedClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close and continue'**
+  String get adminMessagesForcedClose;
+
+  /// No description provided for @registrationCashbackCelebrationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cartela cashback received!'**
+  String get registrationCashbackCelebrationTitle;
+
+  /// No description provided for @registrationCashbackCelebrationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You received {amount} for registering {count} wallet-paid cartelas in this game.'**
+  String registrationCashbackCelebrationBody(String amount, int count);
+
+  /// No description provided for @registrationCashbackCelebrationClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Great!'**
+  String get registrationCashbackCelebrationClose;
+
   /// Title on the forced overlay when an admin bans the player
   ///
   /// In en, this message translates to:

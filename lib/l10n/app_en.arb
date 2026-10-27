@@ -2682,6 +2682,26 @@
   "adminMessagesForcedHint": "The app will reopen when the admin removes this notice.",
   "@adminMessagesForcedHint": {},
 
+  "adminMessagesForcedClosableHint": "You can close this notice and continue using the app.",
+  "@adminMessagesForcedClosableHint": {},
+
+  "adminMessagesForcedClose": "Close and continue",
+  "@adminMessagesForcedClose": {},
+
+  "registrationCashbackCelebrationTitle": "Cartela cashback received!",
+  "@registrationCashbackCelebrationTitle": {},
+
+  "registrationCashbackCelebrationBody": "You received {amount} for registering {count} wallet-paid cartelas in this game.",
+  "@registrationCashbackCelebrationBody": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+
+  "registrationCashbackCelebrationClose": "Great!",
+  "@registrationCashbackCelebrationClose": {},
+
   "accountBannedTitle": "Account banned",
   "@accountBannedTitle": {
     "description": "Title on the forced overlay when an admin bans the player"
