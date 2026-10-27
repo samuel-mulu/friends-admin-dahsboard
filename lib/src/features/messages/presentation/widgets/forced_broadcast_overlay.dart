@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,8 +8,7 @@ import '../../data/models/admin_broadcast_model.dart';
 import '../../application/providers/broadcasts_provider.dart';
 import 'broadcast_message_ui.dart';
 
-/// Blocks the entire app until admin removes a forced broadcast, or the player
-/// closes it when [AdminBroadcastModel.playerCanDismiss] is enabled.
+/// Blocks the entire app until admin turns off or deletes the live forced broadcast.
 class ForcedBroadcastOverlay extends ConsumerWidget {
   const ForcedBroadcastOverlay({required this.child, super.key});
 
@@ -26,7 +23,7 @@ class ForcedBroadcastOverlay extends ConsumerWidget {
     }
 
     return PopScope(
-      canPop: forcedBroadcast.canDismiss,
+      canPop: false,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -38,13 +35,13 @@ class ForcedBroadcastOverlay extends ConsumerWidget {
   }
 }
 
-class _ForcedBroadcastScreen extends ConsumerWidget {
+class _ForcedBroadcastScreen extends StatelessWidget {
   const _ForcedBroadcastScreen({required this.broadcast});
 
   final AdminBroadcastModel broadcast;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final isDark = theme.brightness == Brightness.dark;
@@ -52,7 +49,6 @@ class _ForcedBroadcastScreen extends ConsumerWidget {
       AdminBroadcastCategory.forced,
       theme.colorScheme,
     );
-    final canClose = broadcast.canDismiss;
 
     return Material(
       color: isDark ? AppBranding.liveSurfaceDark : AppBranding.lightScaffold,
@@ -61,26 +57,7 @@ class _ForcedBroadcastScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.jumbo),
           child: Column(
             children: [
-              if (canClose)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                    tooltip: l10n.adminMessagesDismiss,
-                    onPressed: () {
-                      unawaited(
-                        ref.read(broadcastsProvider.notifier).dismiss(
-                              broadcast.id,
-                            ),
-                      );
-                    },
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              else
-                const SizedBox(height: 48),
+              const SizedBox(height: 48),
               const Spacer(),
               Container(
                 width: double.infinity,
@@ -144,9 +121,7 @@ class _ForcedBroadcastScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
-                        canClose
-                            ? l10n.adminMessagesForcedClosableHint
-                            : l10n.adminMessagesForcedHint,
+                        l10n.adminMessagesForcedHint,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -154,19 +129,6 @@ class _ForcedBroadcastScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    if (canClose) ...[
-                      const SizedBox(height: AppSpacing.xl),
-                      FilledButton(
-                        onPressed: () {
-                          unawaited(
-                            ref.read(broadcastsProvider.notifier).dismiss(
-                                  broadcast.id,
-                                ),
-                          );
-                        },
-                        child: Text(l10n.adminMessagesForcedClose),
-                      ),
-                    ],
                   ],
                 ),
               ),

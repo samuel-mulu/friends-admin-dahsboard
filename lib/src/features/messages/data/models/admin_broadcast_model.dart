@@ -48,9 +48,7 @@ class AdminBroadcastModel {
   final AdminBroadcastCategory category;
   final bool playerCanDismiss;
 
-  bool get canDismiss =>
-      category == AdminBroadcastCategory.dismissible ||
-      (isForced && playerCanDismiss);
+  bool get canDismiss => category == AdminBroadcastCategory.dismissible;
 
   bool get isForced => category.isForced;
 
