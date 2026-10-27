@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_color.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 import 'cartela_pattern_progress_painter.dart';
@@ -28,6 +32,9 @@ class CartelaBoardWidget extends StatelessWidget {
     this.onCellTapped,
     this.boardSize = CartelaBoardSize.standard,
     this.cardHeaderTrailing,
+    this.expandToFill = false,
+    this.pulseOneAwayCells = false,
+    this.decorativeMotionAllowedListenable,
   });
 
   final CartelaModel cartela;
@@ -46,9 +53,17 @@ class CartelaBoardWidget extends StatelessWidget {
   final CartelaBoardSize boardSize;
   final Widget? cardHeaderTrailing;
 
+  /// When true, stretches the inner board to the parent's height (live play cards).
+  final bool expandToFill;
+
+  /// Pulses one-away cell fill/border (live play); requires [oneAwayCellIndexes].
+  final bool pulseOneAwayCells;
+
+  /// When false (e.g. list scrolling), one-away cell pulse pauses.
+  final ValueListenable<bool>? decorativeMotionAllowedListenable;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final columns = [
       cartela.b,
       cartela.i,
@@ -57,128 +72,324 @@ class CartelaBoardWidget extends StatelessWidget {
       cartela.o,
     ];
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          elevation: isWinner ? 6 : 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: isWinner
-                  ? AppBranding.gold
-                  : isBlocked
-                      ? theme.colorScheme.error
-                      : theme.dividerColor.withValues(alpha: 0.2),
-              width: isWinner ? 2.5 : 1.0,
+    final cellPulseActive = pulseOneAwayCells &&
+        (oneAwayCellIndexes?.isNotEmpty ?? false);
+
+    return _OneAwayCellPulseHost(
+      active: cellPulseActive,
+      motionAllowedListenable: decorativeMotionAllowedListenable,
+      builder: (oneAwayPulseT) {
+        if (expandToFill) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: _buildBoardCard(
+                  context: context,
+                  columns: columns,
+                  expanded: true,
+                  oneAwayPulseT: oneAwayPulseT,
+                ),
+              );
+            },
+          );
+        }
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: _buildBoardCard(
+              context: context,
+              columns: columns,
+              expanded: false,
+              oneAwayPulseT: oneAwayPulseT,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header: Cartela # and status
-              if (showHeader)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.style_outlined, size: 18),
-                          const SizedBox(width: 6),
-                          Text(
-                            '#${cartela.number}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+        );
+      },
+    );
+  }
+
+  Widget _buildBoardCard({
+    required BuildContext context,
+    required List<List<String>> columns,
+    required bool expanded,
+    required double oneAwayPulseT,
+  }) {
+    final theme = Theme.of(context);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: isWinner ? 6 : 2,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isWinner
+              ? AppBranding.gold
+              : isBlocked
+                  ? theme.colorScheme.error
+                  : theme.dividerColor.withValues(alpha: 0.2),
+          width: isWinner ? 2.5 : 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          if (showHeader) _buildCartelaHeader(context),
+          if (expanded)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(CartelaBoardLayout.boardPadding),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final boardWidth = constraints.maxWidth;
+                    final designHeight =
+                        CartelaBoardLayout.liveBingoLetterRowHeight +
+                        boardWidth;
+
+                    return FittedBox(
+                      fit: BoxFit.contain,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: boardWidth,
+                        height: designHeight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height:
+                                  CartelaBoardLayout.liveBingoLetterRowHeight,
+                              child: _buildBingoLetterBar(
+                                context,
+                                expanded: true,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      ?cardHeaderTrailing,
-                    ],
-                  ),
-                ),
-              // B-I-N-G-O Title Bar
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                child: Row(
-                  children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
-                    return Expanded(
-                      child: Center(
-                        child: Text(
-                          letter,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: AppBranding.bingoColumnColor(letter),
-                          ),
+                            SizedBox(
+                              width: boardWidth,
+                              height: boardWidth,
+                              child: _buildSquareLiveGrid(
+                                context,
+                                columns,
+                                cellSide: boardWidth / 5,
+                                oneAwayPulseT: oneAwayPulseT,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
-              // 5x5 Matrix with optional pattern overlay
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Row(
-                      children: List.generate(5, (colIdx) {
-                        final colData = columns[colIdx];
-                        return Expanded(
-                          child: Column(
-                            children: List.generate(5, (rowIdx) {
-                              final cellIndex = (rowIdx * 5) + colIdx;
-                              final isFreeSpace = colIdx == 2 && rowIdx == 2;
-                              final rawVal = (colData.length > rowIdx) ? colData[rowIdx] : '';
-                              final number = isFreeSpace ? 0 : (int.tryParse(rawVal) ?? 0);
-                              final isMarked = isFreeSpace || (number > 0 && markedCells.contains(number));
-                              final isLastMarked = number > 0 && lastMarkedNumber != null && lastMarkedNumber == number;
-                              final isWinningCell = number > 0 && (winningPatternCells?.contains(number) ?? false);
-                              final isWinningBall = number > 0 && winningBallNumber != null && winningBallNumber == number;
-                              final isOneAway = oneAwayCellIndexes?.contains(cellIndex) ?? false;
+            )
+          else ...[
+            _buildBingoLetterBar(context, expanded: false),
+            Padding(
+              padding: const EdgeInsets.all(6),
+              child: _buildGrid(
+                context,
+                columns,
+                oneAwayPulseT: oneAwayPulseT,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
-                              return _buildCell(
-                                context: context,
-                                number: number,
-                                displayLabel: isFreeSpace ? 'FREE' : (number > 0 ? number.toString() : rawVal),
-                                cellIndex: cellIndex,
-                                isFreeSpace: isFreeSpace,
-                                isMarked: isMarked,
-                                isLastMarked: isLastMarked,
-                                isWinningCell: isWinningCell,
-                                isWinningBall: isWinningBall,
-                                isOneAway: isOneAway,
-                              );
-                            }),
-                          ),
-                        );
-                      }),
-                    ),
-                    if (!patternOverlay.isEmpty)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: CartelaPatternProgressPainter(
-                              overlay: patternOverlay,
-                              cellInset: 2.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+  Widget _buildCartelaHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.style_outlined, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                '#${cartela.number}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-        ),
+          ?cardHeaderTrailing,
+        ],
       ),
+    );
+  }
+
+  Widget _buildBingoLetterBar(BuildContext context, {required bool expanded}) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
+      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final letterFontSize = expanded
+              ? math.max(
+                  CartelaBoardLayout.liveHeaderFontSize,
+                  constraints.maxWidth / 5 * 0.32,
+                )
+              : 14.0;
+
+          return Row(
+            children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    letter,
+                    style: TextStyle(
+                      fontSize: letterFontSize,
+                      fontWeight: FontWeight.w900,
+                      color: AppBranding.bingoColumnColor(letter),
+                      height: 1,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSquareLiveGrid(
+    BuildContext context,
+    List<List<String>> columns, {
+    required double cellSide,
+    required double oneAwayPulseT,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (rowIdx) {
+            return SizedBox(
+              height: cellSide,
+              child: Row(
+                children: List.generate(5, (colIdx) {
+                  return SizedBox(
+                    width: cellSide,
+                    height: cellSide,
+                    child: _buildGridCell(
+                      context: context,
+                      columns: columns,
+                      rowIdx: rowIdx,
+                      colIdx: colIdx,
+                      cellExtent: cellSide,
+                      liveExpanded: true,
+                      oneAwayPulseT: oneAwayPulseT,
+                    ),
+                  );
+                }),
+              ),
+            );
+          }),
+        ),
+        if (!patternOverlay.isEmpty)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: CartelaPatternProgressPainter(
+                  overlay: patternOverlay,
+                  cellInset: CartelaBoardLayout.cellPadding,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGrid(
+    BuildContext context,
+    List<List<String>> columns, {
+    required double oneAwayPulseT,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Row(
+          children: List.generate(5, (colIdx) {
+            return Expanded(
+              child: Column(
+                children: List.generate(5, (rowIdx) {
+                  return _buildGridCell(
+                    context: context,
+                    columns: columns,
+                    rowIdx: rowIdx,
+                    colIdx: colIdx,
+                    oneAwayPulseT: oneAwayPulseT,
+                  );
+                }),
+              ),
+            );
+          }),
+        ),
+        if (!patternOverlay.isEmpty)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: CartelaPatternProgressPainter(
+                  overlay: patternOverlay,
+                  cellInset: 2.0,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGridCell({
+    required BuildContext context,
+    required List<List<String>> columns,
+    required int rowIdx,
+    required int colIdx,
+    double? cellExtent,
+    bool liveExpanded = false,
+    double oneAwayPulseT = 0,
+  }) {
+    final colData = columns[colIdx];
+    final cellIndex = (rowIdx * 5) + colIdx;
+    final isFreeSpace = colIdx == 2 && rowIdx == 2;
+    final rawVal = (colData.length > rowIdx) ? colData[rowIdx] : '';
+    final number = isFreeSpace ? 0 : (int.tryParse(rawVal) ?? 0);
+    final isMarked =
+        isFreeSpace || (number > 0 && markedCells.contains(number));
+    final isLastMarked =
+        number > 0 && lastMarkedNumber != null && lastMarkedNumber == number;
+    final isWinningCell =
+        number > 0 && (winningPatternCells?.contains(number) ?? false);
+    final isWinningBall =
+        number > 0 && winningBallNumber != null && winningBallNumber == number;
+    final isOneAway = oneAwayCellIndexes?.contains(cellIndex) ?? false;
+
+    return _buildCell(
+      context: context,
+      number: number,
+      displayLabel:
+          isFreeSpace ? 'FREE' : (number > 0 ? number.toString() : rawVal),
+      isFreeSpace: isFreeSpace,
+      isMarked: isMarked,
+      isLastMarked: isLastMarked,
+      isWinningCell: isWinningCell,
+      isWinningBall: isWinningBall,
+      isOneAway: isOneAway,
+      cellExtent: cellExtent,
+      liveExpanded: liveExpanded,
+      oneAwayPulseT: oneAwayPulseT,
     );
   }
 
@@ -186,13 +397,15 @@ class CartelaBoardWidget extends StatelessWidget {
     required BuildContext context,
     required int number,
     required String displayLabel,
-    required int cellIndex,
     required bool isFreeSpace,
     required bool isMarked,
     required bool isLastMarked,
     required bool isWinningCell,
     required bool isWinningBall,
     required bool isOneAway,
+    double? cellExtent,
+    bool liveExpanded = false,
+    double oneAwayPulseT = 0,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -235,13 +448,15 @@ class CartelaBoardWidget extends StatelessWidget {
         ),
       ];
     } else if (isOneAway) {
-      fillColor = theme.colorScheme.error.withValues(alpha: 0.2);
-      borderColor = theme.colorScheme.error;
-      textColor = theme.colorScheme.error;
+      final t = pulseOneAwayCells ? oneAwayPulseT : 0.0;
+      fillColor = AppBranding.oneAwayRedFill(t);
+      borderColor = AppBranding.oneAwayRedBorder(t);
+      textColor = AppBranding.oneAwayRed;
       shadows = [
         BoxShadow(
-          color: theme.colorScheme.error.withValues(alpha: 0.4),
-          blurRadius: 8,
+          color: AppBranding.oneAwayRedShadow(t),
+          blurRadius: 6 + t * 8,
+          spreadRadius: 0.5 + t * 1.4,
         ),
       ];
     } else if (isLastMarked) {
@@ -282,44 +497,60 @@ class CartelaBoardWidget extends StatelessWidget {
             ];
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(2),
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: (interactive && !isFreeSpace && onCellTapped != null && number > 0)
-                ? () => onCellTapped!(number)
-                : null,
-            borderRadius: BorderRadius.circular(8),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: fillColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: borderColor,
-                  width: isWinningBall || isLastMarked ? 2.0 : 1.0,
-                ),
-                boxShadow: shadows,
-              ),
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: Text(
-                      displayLabel,
-                      style: TextStyle(
-                        fontSize: isFreeSpace ? 11 : 16,
-                        fontWeight: (isMarked || isWinningCell || isWinningBall || isFreeSpace)
-                            ? FontWeight.w900
-                            : FontWeight.w700,
-                        color: textColor,
-                        height: 1,
-                      ),
-                    ),
+    final padding = cellExtent != null
+        ? CartelaBoardLayout.cellPadding
+        : 2.0;
+    final borderRadius = cellExtent != null
+        ? math.max(4.0, cellExtent * 0.14)
+        : 8.0;
+    final numberFontSize = cellExtent != null
+        ? (liveExpanded
+            ? CartelaBoardLayout.liveExpandedCellNumberFontSize(cellExtent)
+            : CartelaBoardLayout.maximizedCellNumberFontSize(cellExtent))
+        : (isFreeSpace ? 11.0 : 16.0);
+    final freeFontSize = cellExtent != null
+        ? math.max(8.0, cellExtent * (liveExpanded ? 0.24 : 0.28))
+        : 11.0;
+
+    final cellBody = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: (interactive && !isFreeSpace && onCellTapped != null && number > 0)
+            ? () => onCellTapped!(number)
+            : null,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: AnimatedContainer(
+          duration: Duration(
+            milliseconds: isOneAway && pulseOneAwayCells ? 0 : 200,
+          ),
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: borderColor,
+              width: isOneAway && pulseOneAwayCells
+                  ? 1.0 + oneAwayPulseT * 1.4
+                  : (isWinningBall || isLastMarked ? 2.0 : 1.0),
+            ),
+            boxShadow: shadows,
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Text(
+                  displayLabel,
+                  style: TextStyle(
+                    fontSize: isFreeSpace ? freeFontSize : numberFontSize,
+                    fontWeight: (isMarked ||
+                            isWinningCell ||
+                            isWinningBall ||
+                            isFreeSpace)
+                        ? FontWeight.w900
+                        : FontWeight.w700,
+                    color: textColor,
+                    height: 1,
                   ),
                 ),
               ),
@@ -327,6 +558,106 @@ class CartelaBoardWidget extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (cellExtent != null) {
+      return Padding(
+        padding: EdgeInsets.all(padding),
+        child: cellBody,
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.all(padding),
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: cellBody,
+      ),
+    );
+  }
+}
+
+class _OneAwayCellPulseHost extends StatefulWidget {
+  const _OneAwayCellPulseHost({
+    required this.active,
+    required this.builder,
+    this.motionAllowedListenable,
+  });
+
+  final bool active;
+  final Widget Function(double pulseT) builder;
+  final ValueListenable<bool>? motionAllowedListenable;
+
+  @override
+  State<_OneAwayCellPulseHost> createState() => _OneAwayCellPulseHostState();
+}
+
+class _OneAwayCellPulseHostState extends State<_OneAwayCellPulseHost>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
+    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    widget.motionAllowedListenable?.addListener(_syncAnimation);
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OneAwayCellPulseHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
+      oldWidget.motionAllowedListenable?.removeListener(_syncAnimation);
+      widget.motionAllowedListenable?.addListener(_syncAnimation);
+    }
+    if (oldWidget.active != widget.active ||
+        oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
+      _syncAnimation();
+    }
+  }
+
+  bool get _motionAllowed => widget.motionAllowedListenable?.value ?? true;
+
+  void _syncAnimation() {
+    if (!mounted) {
+      return;
+    }
+    final shouldPulse = widget.active && _motionAllowed;
+    if (shouldPulse) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+      setState(() {});
+      return;
+    }
+    _controller
+      ..stop()
+      ..value = 0;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.motionAllowedListenable?.removeListener(_syncAnimation);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.active || !_motionAllowed) {
+      return widget.builder(0);
+    }
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) => widget.builder(_pulse.value),
     );
   }
 }

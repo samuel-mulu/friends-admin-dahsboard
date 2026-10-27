@@ -6,6 +6,8 @@ import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_c
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
+
 import 'live_cartela_card.dart';
 
 class RegisteredCartelaList extends StatelessWidget {
@@ -228,24 +230,27 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   static const _crossAxisSpacing = 6.0;
   static const _mainAxisSpacing = 6.0;
 
-  static double _resolveChildAspectRatio(BuildContext context) {
+  static double _resolveChildAspectRatio(
+    BuildContext context,
+    double tileWidth,
+  ) {
+    var ratio = CartelaBoardLayout.liveTwoUpTileAspectRatio(tileWidth);
     final scale = MediaQuery.textScalerOf(context).scale(1.0);
     if (scale > 1.25) {
-      return 0.54;
+      ratio *= 0.96;
+    } else if (scale > 1.05) {
+      ratio *= 0.98;
     }
-    if (scale > 1.05) {
-      return 0.58;
-    }
-    return 0.63;
+    return ratio.clamp(0.70, 0.86);
   }
 
   /// Real scrolling 2-col grid for sticky live play ([CustomScrollView]).
   Widget asSliver({required double crossAxisExtent}) {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final ratio = _resolveChildAspectRatio(context);
         final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
         final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
+        final ratio = _resolveChildAspectRatio(context, cellWidth);
         final cellHeight = cellWidth / ratio;
 
         return SliverGrid(
@@ -272,10 +277,10 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Nested inside a parent [ListView] (non-sticky layouts only).
-    final ratio = _resolveChildAspectRatio(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellWidth = (constraints.maxWidth - _crossAxisSpacing) / 2;
+        final ratio = _resolveChildAspectRatio(context, cellWidth);
         final cellHeight = cellWidth / ratio;
 
         return GridView.builder(

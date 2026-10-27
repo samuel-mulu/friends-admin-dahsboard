@@ -40,6 +40,21 @@ abstract final class AppBranding {
   static const latestCallBorder = Color(0xFFEF4444);
   static const latestCallGlow = Color(0xFFF5C542);
 
+  /// One-away-from-win alert (cartela border + cell highlight), pulsed via [pulseT] 0..1.
+  static const oneAwayRed = Color(0xFFE53935);
+
+  static Color oneAwayRedFill(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.15 + pulseT.clamp(0.0, 1.0) * 0.28);
+  }
+
+  static Color oneAwayRedBorder(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.55 + pulseT.clamp(0.0, 1.0) * 0.45);
+  }
+
+  static Color oneAwayRedShadow(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.2 + pulseT.clamp(0.0, 1.0) * 0.42);
+  }
+
   static bool _isDark(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark;
   }
