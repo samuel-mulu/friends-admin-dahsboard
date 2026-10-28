@@ -53,6 +53,12 @@ class DepositController extends Notifier<DepositState> {
 
   void switchTab(DepositEntryTab tab) {
     if (state.entryTab == tab) return;
+    final provider = state.provider;
+    if (tab == DepositEntryTab.smart &&
+        provider != null &&
+        !provider.supportsSmartDepositEntry) {
+      return;
+    }
     state = state.copyWith(entryTab: tab);
   }
 
@@ -61,7 +67,9 @@ class DepositController extends Notifier<DepositState> {
     state = state.copyWith(
       provider: provider,
       isChoosingProvider: false,
-      entryTab: DepositEntryTab.smart,
+      entryTab: provider.supportsSmartDepositEntry
+          ? DepositEntryTab.smart
+          : DepositEntryTab.regular,
       clearSmartParseResult: true,
       clearConfirmation: true,
       clearTrackedId: true,

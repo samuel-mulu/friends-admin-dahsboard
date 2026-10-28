@@ -12,6 +12,7 @@ import '../../../auth/application/controllers/auth_controller.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';
+import '../../application/providers/app_display_config_provider.dart';
 import '../../application/providers/current_big_game_provider.dart';
 import '../../application/providers/current_game_operations_provider.dart';
 import '../../application/providers/game_announcement_dismiss_provider.dart';
@@ -167,6 +168,16 @@ class _GameAnnouncementBannerState
 
   @override
   Widget build(BuildContext context) {
+    final displayConfig = ref.watch(appDisplayConfigProvider);
+    final promoCardEnabled = displayConfig.maybeWhen(
+      data: (config) => config.bigGamePromotionCardEnabled,
+      orElse: () => false,
+    );
+    if (!promoCardEnabled) {
+      _scheduleAutoDismiss(null);
+      return const SizedBox.shrink();
+    }
+
     final isGuest = ref.watch(authControllerProvider).session == null;
     if (isGuest || _isOnBigGameRoute(context)) {
       _scheduleAutoDismiss(null);

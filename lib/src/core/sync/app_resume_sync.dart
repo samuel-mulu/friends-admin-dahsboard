@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/application/controllers/auth_controller.dart';
 import '../../features/games/data/games_repository.dart';
 import '../../features/games/presentation/debug/live_realtime_debug.dart';
+import '../../features/games/application/providers/app_display_config_provider.dart';
 import '../../features/games/application/providers/current_big_game_provider.dart';
 import '../../features/games/application/providers/current_game_operations_provider.dart';
 import '../../features/games/presentation/utils/live_game_resume_owner_registry.dart';
@@ -45,6 +46,8 @@ Future<void> syncAppAfterResume(WidgetRef ref) async {
       ref.read(serverClockProvider).sync(serverNow, snap: true);
     }
   } catch (_) {}
+
+  unawaited(ref.read(appDisplayConfigProvider.notifier).refresh());
 
   await ref
       .read(currentGameOperationsProvider.notifier)

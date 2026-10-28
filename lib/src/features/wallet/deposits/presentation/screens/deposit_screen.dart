@@ -102,9 +102,12 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                     accounts: settlementAccounts,
                   ),
                 VGap.lg,
-                _buildTabSelector(context, state, controller, l10n),
-                VGap.md,
-                if (state.entryTab == DepositEntryTab.smart)
+                if (selectedProvider.supportsSmartDepositEntry) ...[
+                  _buildTabSelector(context, state, controller, l10n),
+                  VGap.md,
+                ],
+                if (selectedProvider.supportsSmartDepositEntry &&
+                    state.entryTab == DepositEntryTab.smart)
                   DepositSmartSection(
                     provider: selectedProvider,
                     messageController: _smartMessageController,

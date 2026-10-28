@@ -426,6 +426,18 @@ class CartelaBoardWidget extends StatelessWidget {
           spreadRadius: 0.5,
         ),
       ];
+    } else if (isWinningBall && isWinner) {
+      final palette = CartelaMarkColorPalette.forColor(CartelaMarkColor.yellow);
+      fillColor = palette.fill;
+      borderColor = palette.border;
+      textColor = palette.text;
+      shadows = [
+        BoxShadow(
+          color: palette.shadow.withValues(alpha: 0.65),
+          blurRadius: 10,
+          spreadRadius: 0.5,
+        ),
+      ];
     } else if (isWinningBall) {
       fillColor = AppBranding.gold;
       borderColor = AppBranding.goldDark;
@@ -437,7 +449,7 @@ class CartelaBoardWidget extends StatelessWidget {
           spreadRadius: 0.5,
         ),
       ];
-    } else if (isWinningCell) {
+    } else if (isWinningCell && !isWinner) {
       fillColor = AppBranding.gold.withValues(alpha: 0.35);
       borderColor = AppBranding.gold;
       textColor = isDark ? Colors.amberAccent : AppBranding.brandPurple;
