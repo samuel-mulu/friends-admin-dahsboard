@@ -292,18 +292,34 @@ class _CollapsedCallHeader extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : SizedBox(
                         height: _recentBallSize,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: recentCalls.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            return _CalledBall(
-                              calledNumber: recentCalls[index],
-                              size: _recentBallSize,
-                            );
+                        child: ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.black,
+                                Colors.black,
+                                Colors.black,
+                                Colors.transparent,
+                              ],
+                              stops: [0.0, 0.75, 0.92, 1.0],
+                            ).createShader(bounds);
                           },
+                          blendMode: BlendMode.dstIn,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: recentCalls.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              return _CalledBall(
+                                calledNumber: recentCalls[index],
+                                size: _recentBallSize,
+                              );
+                            },
+                          ),
                         ),
                       ),
               ),

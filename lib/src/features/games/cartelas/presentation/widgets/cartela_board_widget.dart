@@ -551,6 +551,8 @@ class CartelaBoardWidget extends StatelessWidget {
                         : FontWeight.w700,
                     color: textColor,
                     height: 1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),

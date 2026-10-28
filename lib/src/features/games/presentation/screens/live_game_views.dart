@@ -668,21 +668,21 @@ mixin _LiveGameViews on
               ? null
               : _queueUpcomingGameForDisplay,
         ),
-        if (_buildLiveStatusBanner() case final banner?) ...[VGap.sm, banner],
+        if (_buildLiveStatusBanner() case final banner?) ...[VGap.xs, banner],
         if (_buildChainGameInfoStrip() case final chainStrip?) ...[
-          VGap.sm,
+          VGap.xs,
           chainStrip,
         ],
         if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
-          VGap.sm,
+          VGap.xs,
           chainSummary,
         ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
-          VGap.sm,
+          VGap.xs,
           summaryBanner,
         ],
         if (_buildChainRoundWinnersBar() case final chainWinners?) ...[
-          VGap.sm,
+          VGap.xs,
           chainWinners,
         ],
         VGap.sm,
@@ -695,14 +695,14 @@ mixin _LiveGameViews on
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_buildLiveStatusBanner() case final banner?) ...[banner, VGap.sm],
+        if (_buildLiveStatusBanner() case final banner?) ...[banner, VGap.xs],
         if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
           chainSummary,
-          VGap.sm,
+          VGap.xs,
         ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
           summaryBanner,
-          VGap.sm,
+          VGap.xs,
         ],
         _buildCalledNumbersPanel(),
       ],

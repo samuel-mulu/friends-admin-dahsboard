@@ -20,7 +20,7 @@ abstract final class CartelaBoardLayout {
   static const double cellNumberDiameterFactor = 0.58;
 
   /// Live 2-up grid: slightly smaller type so cells feel balanced, not oversized.
-  static const double liveExpandedCellNumberFactor = 0.52;
+  static const double liveExpandedCellNumberFactor = 0.54;
 
   /// Header row + gap + square board area for review dialogs (width / height).
   static const double reviewBoardAspectRatio = 0.86;

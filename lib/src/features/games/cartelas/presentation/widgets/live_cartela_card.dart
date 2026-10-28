@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/core/utils/formatters.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
@@ -140,7 +141,10 @@ class LiveCartelaCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
               decoration: isBlocked
                   ? BoxDecoration(
                       gradient: LinearGradient(

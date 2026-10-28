@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_branding.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/app_back_confirm_scope.dart';
 import '../../../../core/widgets/friends_bingo_wordmark.dart';
@@ -120,15 +121,17 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         _MasterRefreshButton(headerForeground: headerForeground),
         Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: ConnectionStatusDot(
-            status: switch (ref.watch(realtimeConnectionProvider)) {
-              LiveConnectionStatus.live => LiveConnectionState.online,
-              LiveConnectionStatus.reconnecting =>
-                LiveConnectionState.reconnecting,
-              LiveConnectionStatus.offline => LiveConnectionState.offline,
-            },
-            theme: theme,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Center(
+            child: ConnectionStatusDot(
+              status: switch (ref.watch(realtimeConnectionProvider)) {
+                LiveConnectionStatus.live => LiveConnectionState.online,
+                LiveConnectionStatus.reconnecting =>
+                  LiveConnectionState.reconnecting,
+                LiveConnectionStatus.offline => LiveConnectionState.offline,
+              },
+              theme: theme,
+            ),
           ),
         ),
         if (!isGuest && !ref.watch(hasActiveForcedBroadcastProvider))
@@ -141,6 +144,7 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
             onPressed: () => showFeedbackHubModal(context, ref),
             icon: Icon(Icons.comment_outlined, color: headerForeground),
           ),
+        const SizedBox(width: AppSpacing.xs),
         if (isGuest) ...[
           TextButton(
             onPressed: () => context.go(loginPathWithRedirect('/games')),
