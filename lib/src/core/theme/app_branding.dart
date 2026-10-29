@@ -212,13 +212,9 @@ abstract final class AppBranding {
     }
 
     return BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [lightSurfaceRaised, lightSurface],
-      ),
+      color: Colors.white,
       border: Border(
-        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.5)),
+        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.35)),
       ),
     );
   }
@@ -250,7 +246,7 @@ abstract final class AppBranding {
     }
     return _isDark(context)
         ? const Color(0xFF2A2340)
-        : const Color(0xFFFAF6F0);
+        : Colors.white;
   }
 
   static Color cellBorder(BuildContext context, {required bool marked}) {

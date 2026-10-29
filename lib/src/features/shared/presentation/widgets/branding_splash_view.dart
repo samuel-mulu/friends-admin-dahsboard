@@ -360,27 +360,30 @@ class _FloatingBingoBalls extends StatelessWidget {
       builder: (context, child) {
         return SizedBox(
           height: 108,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_letters.length, (index) {
-              final phase = (animation.value + (index * 0.18)) % 1.0;
-              final bob = math.sin(phase * math.pi * 2) * 10;
-              final scale = 0.94 + (math.sin(phase * math.pi * 2) * 0.06);
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_letters.length, (index) {
+                final phase = (animation.value + (index * 0.18)) % 1.0;
+                final bob = math.sin(phase * math.pi * 2) * 10;
+                final scale = 0.94 + (math.sin(phase * math.pi * 2) * 0.06);
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                child: Transform.translate(
-                  offset: Offset(0, bob),
-                  child: Transform.scale(
-                    scale: scale,
-                    child: _BingoBall(
-                      letter: _letters[index],
-                      color: _colors[index],
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: Transform.translate(
+                    offset: Offset(0, bob),
+                    child: Transform.scale(
+                      scale: scale,
+                      child: _BingoBall(
+                        letter: _letters[index],
+                        color: _colors[index],
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         );
       },

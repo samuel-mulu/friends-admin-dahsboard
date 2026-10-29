@@ -102,9 +102,8 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
         borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
+          height: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: isEnabled
@@ -115,14 +114,14 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
             color: isEnabled
                 ? null
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.05)),
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.05)),
             border: Border.all(
               color: isEnabled
                   ? Colors.white.withValues(alpha: 0.5)
                   : (isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.08)),
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.black.withValues(alpha: 0.08)),
               width: 1.0,
             ),
             boxShadow: isEnabled
@@ -135,13 +134,23 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
                   ]
                 : null,
           ),
-          child: buttonContent,
+          child: Center(
+            widthFactor: 1.0,
+            heightFactor: 1.0,
+            child: buttonContent,
+          ),
         ),
       ),
     );
 
+    final snugButton = Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [button],
+    );
+
     if (!widget.showReadyPulse || widget.isClaiming) {
-      return button;
+      return snugButton;
     }
 
     return AnimatedBuilder(
@@ -155,7 +164,9 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: AppBranding.feltGreen.withValues(alpha: 0.2 + (t * 0.5)),
+                  color: AppBranding.feltGreen.withValues(
+                    alpha: 0.2 + (t * 0.5),
+                  ),
                   blurRadius: 4 + (t * 8),
                   spreadRadius: t * 0.8,
                 ),
@@ -165,7 +176,7 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
           ),
         );
       },
-      child: button,
+      child: snugButton,
     );
   }
 }

@@ -128,7 +128,7 @@ class LiveCartelaCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         color: theme.brightness == Brightness.dark
             ? null
-            : AppBranding.panelBackground(context),
+            : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(

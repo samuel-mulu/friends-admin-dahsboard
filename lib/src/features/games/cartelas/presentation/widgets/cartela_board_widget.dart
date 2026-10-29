@@ -64,16 +64,10 @@ class CartelaBoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = [
-      cartela.b,
-      cartela.i,
-      cartela.n,
-      cartela.g,
-      cartela.o,
-    ];
+    final columns = [cartela.b, cartela.i, cartela.n, cartela.g, cartela.o];
 
-    final cellPulseActive = pulseOneAwayCells &&
-        (oneAwayCellIndexes?.isNotEmpty ?? false);
+    final cellPulseActive =
+        pulseOneAwayCells && (oneAwayCellIndexes?.isNotEmpty ?? false);
 
     return _OneAwayCellPulseHost(
       active: cellPulseActive,
@@ -121,16 +115,19 @@ class CartelaBoardWidget extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: isWinner ? 6 : 2,
+      elevation: isWinner ? 6 : 0,
       margin: EdgeInsets.zero,
+      color: theme.brightness == Brightness.dark ? null : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isWinner
               ? AppBranding.gold
               : isBlocked
-                  ? theme.colorScheme.error
-                  : theme.dividerColor.withValues(alpha: 0.2),
+              ? theme.colorScheme.error
+              : (theme.brightness == Brightness.dark
+                    ? theme.dividerColor.withValues(alpha: 0.2)
+                    : Colors.transparent),
           width: isWinner ? 2.5 : 1.0,
         ),
       ),
@@ -194,11 +191,7 @@ class CartelaBoardWidget extends StatelessWidget {
             _buildBingoLetterBar(context, expanded: false),
             Padding(
               padding: const EdgeInsets.all(6),
-              child: _buildGrid(
-                context,
-                columns,
-                oneAwayPulseT: oneAwayPulseT,
-              ),
+              child: _buildGrid(context, columns, oneAwayPulseT: oneAwayPulseT),
             ),
           ],
         ],
@@ -219,7 +212,7 @@ class CartelaBoardWidget extends StatelessWidget {
               const Icon(Icons.style_outlined, size: 18),
               const SizedBox(width: 6),
               Text(
-                '#${cartela.number}',
+                '${cartela.number}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -236,7 +229,9 @@ class CartelaBoardWidget extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
-      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+      color: theme.brightness == Brightness.dark
+          ? theme.colorScheme.primary.withValues(alpha: 0.08)
+          : Colors.white,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final letterFontSize = expanded
@@ -290,7 +285,7 @@ class CartelaBoardWidget extends StatelessWidget {
     final cellSize = CartelaBoardLayout.liveGridCellSlotSize(boardWidth);
     final gridBackground = theme.brightness == Brightness.dark
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.65)
-        : AppBranding.lightSurfaceMuted.withValues(alpha: 0.85);
+        : const Color(0xFFF7F5F0);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -298,8 +293,9 @@ class CartelaBoardWidget extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
             color: gridBackground,
-            borderRadius:
-                BorderRadius.circular(CartelaBoardLayout.boardBorderRadius),
+            borderRadius: BorderRadius.circular(
+              CartelaBoardLayout.boardBorderRadius,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(1),
@@ -423,8 +419,9 @@ class CartelaBoardWidget extends StatelessWidget {
     return _buildCell(
       context: context,
       number: number,
-      displayLabel:
-          isFreeSpace ? 'FREE' : (number > 0 ? number.toString() : rawVal),
+      displayLabel: isFreeSpace
+          ? 'FREE'
+          : (number > 0 ? number.toString() : rawVal),
       isFreeSpace: isFreeSpace,
       isMarked: isMarked,
       isLastMarked: isLastMarked,
@@ -553,19 +550,14 @@ class CartelaBoardWidget extends StatelessWidget {
             ];
     }
 
-    final padding = cellExtent != null
-        ? CartelaBoardLayout.cellPadding
-        : 2.0;
-    final useLiveCircle = liveExpanded && cellExtent != null;
+    final padding = cellExtent != null ? CartelaBoardLayout.cellPadding : 2.0;
     final borderRadius = cellExtent != null
-        ? (useLiveCircle
-            ? (cellExtent - (padding * 2)) / 2
-            : math.max(4.0, cellExtent * 0.14))
-        : 8.0;
+        ? math.max(4.0, cellExtent * 0.16)
+        : 6.0;
     final numberFontSize = cellExtent != null
         ? (liveExpanded
-            ? CartelaBoardLayout.liveExpandedCellNumberFontSize(cellExtent)
-            : CartelaBoardLayout.maximizedCellNumberFontSize(cellExtent))
+              ? CartelaBoardLayout.liveExpandedCellNumberFontSize(cellExtent)
+              : CartelaBoardLayout.maximizedCellNumberFontSize(cellExtent))
         : (isFreeSpace ? 11.0 : 16.0);
     final freeFontSize = cellExtent != null
         ? math.max(8.0, cellExtent * (liveExpanded ? 0.24 : 0.28))
@@ -574,7 +566,8 @@ class CartelaBoardWidget extends StatelessWidget {
     final cellBody = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: (interactive && !isFreeSpace && onCellTapped != null && number > 0)
+        onTap:
+            (interactive && !isFreeSpace && onCellTapped != null && number > 0)
             ? () => onCellTapped!(number)
             : null,
         borderRadius: BorderRadius.circular(borderRadius),
@@ -584,9 +577,8 @@ class CartelaBoardWidget extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: fillColor,
-            shape: useLiveCircle ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius:
-                useLiveCircle ? null : BorderRadius.circular(borderRadius),
+            shape: BoxShape.rectangle,
+            borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: borderColor,
               width: isOneAway && pulseOneAwayCells
@@ -604,7 +596,8 @@ class CartelaBoardWidget extends StatelessWidget {
                   displayLabel,
                   style: TextStyle(
                     fontSize: isFreeSpace ? freeFontSize : numberFontSize,
-                    fontWeight: (isMarked ||
+                    fontWeight:
+                        (isMarked ||
                             isWinningCell ||
                             isWinningBall ||
                             isFreeSpace)
@@ -624,18 +617,12 @@ class CartelaBoardWidget extends StatelessWidget {
     );
 
     if (cellExtent != null) {
-      return Padding(
-        padding: EdgeInsets.all(padding),
-        child: cellBody,
-      );
+      return Padding(padding: EdgeInsets.all(padding), child: cellBody);
     }
 
     return Padding(
       padding: EdgeInsets.all(padding),
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: cellBody,
-      ),
+      child: AspectRatio(aspectRatio: 1.0, child: cellBody),
     );
   }
 }
