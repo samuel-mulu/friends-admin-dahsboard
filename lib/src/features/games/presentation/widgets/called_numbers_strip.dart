@@ -715,19 +715,28 @@ class _ClaimCartelaRow extends StatelessWidget {
     final isChecking = variant == _ClaimCartelaChipVariant.checking;
     final isWinner = variant == _ClaimCartelaChipVariant.winner;
 
+    final icon = switch (variant) {
+      _ClaimCartelaChipVariant.checking => Icons.sync_rounded,
+      _ClaimCartelaChipVariant.winner => Icons.emoji_events_rounded,
+      _ClaimCartelaChipVariant.blocked => Icons.block_rounded,
+    };
+    final tintColor = isChecking
+        ? AppBranding.gold
+        : isWinner
+        ? AppBranding.bingoFreeGreen
+        : theme.colorScheme.error;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Icon(icon, size: 12, color: tintColor),
+        const SizedBox(width: 4),
         Text(
-          '$label=',
+          '$label:',
           style: theme.textTheme.labelSmall?.copyWith(
-            color: isChecking
-                ? AppBranding.gold
-                : isWinner
-                ? AppBranding.bingoFreeGreen
-                : theme.colorScheme.onSurfaceVariant,
+            color: tintColor,
             fontWeight: FontWeight.w700,
-            fontSize: 9,
+            fontSize: 9.5,
           ),
         ),
         const SizedBox(width: 6),
@@ -833,11 +842,11 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
 
     Widget chip = Container(
       width: _claimCartelaChipWidth(widget.number),
-      height: 22,
+      height: 20,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: borderColor, width: 1),
       ),
       child: FittedBox(

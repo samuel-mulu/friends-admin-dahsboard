@@ -759,8 +759,13 @@ class _CartelaRegistrationSheetState
     }
     return '${_secondsRemaining}s';
   }
+  bool get _isHoldUrgent =>
+      !widget.alreadyOwned &&
+      _holdReady &&
+      _secondsRemaining <= 3 &&
+      _secondsRemaining > 0;
 
-  String get _holdStatusLabel {
+  String? get _headerStatusLabel {
     if (widget.alreadyOwned) {
       return widget.carriedForward
           ? context.l10n.bigGameCartelaCarried
@@ -778,7 +783,15 @@ class _CartelaRegistrationSheetState
     if (_isHoldExpired) {
       return 'Hold expired';
     }
-    return 'Hold time: $_countdownLabel';
+    return null;
+  }
+
+  String _categoryTitle(AppLocalizations l10n) {
+    if (_isBonus) return l10n.gameCategoryBonus;
+    if (_isBigGotd) return l10n.gameCategoryNormal;
+    if (_isBigGame) return l10n.gameCategoryBigGame;
+    if (_isChainGame) return l10n.gameCategoryChainGame;
+    return 'Preview';
   }
 
   @override
@@ -803,381 +816,510 @@ class _CartelaRegistrationSheetState
         clipBehavior: Clip.antiAlias,
         child: SafeArea(
           top: false,
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        color: AppBranding.gold,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(4),
-                        ),
-                      ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.90,
+            ),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: 12 + MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppBranding.casinoPurpleDeep,
-                            AppBranding.casinoPurple,
-                          ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          height: 3,
+                          decoration: const BoxDecoration(
+                            color: AppBranding.gold,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(3),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          CartelaNumberCircleBadge(number: widget.cartela.number),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Cartela #${widget.cartela.number}',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _isBonus
-                                      ? l10n.gameCategoryBonus
-                                      : _isBigGotd
-                                      ? l10n.gameCategoryNormal
-                                      : _isBigGame
-                                      ? l10n.gameCategoryBigGame
-                                      : _isChainGame
-                                      ? l10n.gameCategoryChainGame
-                                      : 'Preview',
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                if (_hasFreeEntry) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Free entry',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: AppBranding.goldAccent,
-                                      fontWeight: FontWeight.w800,
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppBranding.casinoPurpleDeep,
+                                AppBranding.casinoPurple,
+                              ],
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CartelaNumberCircleBadge(
+                                number: widget.cartela.number,
+                                size: 44,
+                                baseFontSize: 22,
+                                borderWidth: 1.8,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Cartela #${widget.cartela.number}',
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 7,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.16,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.22,
+                                              ),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _categoryTitle(l10n),
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.95),
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 10,
+                                                  letterSpacing: 0.4,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                                if ((_isBonusLike ||
-                                        _isBigGame ||
-                                        _isChainGame) &&
-                                    widget.fixedPrizeAmount != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    l10n.gameBonusFixedPrize(
-                                      formatMoney(widget.fixedPrizeAmount!),
-                                    ),
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: AppBranding.goldAccent,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(
-                                  _holdStatusLabel,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: _prepareError != null
-                                        ? theme.colorScheme.error
-                                        : Colors.white.withValues(alpha: 0.75),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (_isBoardLoading) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Loading board...',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.65,
+                                    const SizedBox(height: 2),
+                                    if (_hasFreeEntry)
+                                      Text(
+                                        'Free entry',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: AppBranding.goldAccent,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11,
+                                            ),
+                                      )
+                                    else if ((_isBonusLike ||
+                                            _isBigGame ||
+                                            _isChainGame ||
+                                            _isBigGotd) &&
+                                        widget.fixedPrizeAmount != null)
+                                      Text(
+                                        l10n.gameBonusFixedPrize(
+                                          formatMoney(widget.fixedPrizeAmount!),
+                                        ),
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: AppBranding.goldAccent,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      fontStyle: FontStyle.italic,
+                                    if (_headerStatusLabel != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          _headerStatusLabel!,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: _prepareError != null ||
+                                                        _isHoldExpired
+                                                    ? theme.colorScheme.error
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.85,
+                                                      ),
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 11,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      )
+                                    else if (_isBoardLoading)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          'Loading board...',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: Colors.white
+                                                    .withValues(alpha: 0.7),
+                                                fontStyle: FontStyle.italic,
+                                                fontSize: 11,
+                                              ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (widget.alreadyOwned)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    _countdownLabel,
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: _isHoldUrgent
+                                          ? theme.colorScheme.error
+                                          : AppBranding.gold.withValues(
+                                              alpha: 0.7,
+                                            ),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.timer_outlined,
+                                        size: 13,
+                                        color: _isHoldUrgent
+                                            ? theme.colorScheme.error
+                                            : AppBranding.goldAccent,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _countdownLabel,
+                                        style: theme.textTheme.labelMedium
+                                            ?.copyWith(
+                                              color: _isHoldUrgent
+                                                  ? theme.colorScheme.error
+                                                  : AppBranding.goldAccent,
+                                              fontWeight: FontWeight.w800,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: 300,
+                                maxHeight: 300,
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: SizedBox(
+                                  width: 310,
+                                  child: CartelaBoardPreview(
+                                    columns: _displayColumns,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!widget.alreadyOwned && _canChooseBigTicketPayment)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            child: SegmentedButton<String>(
+                              segments: [
+                                ButtonSegment<String>(
+                                  value: CartelaPaymentSource.bigGameTicket,
+                                  label: Text(l10n.registrationUseBigTicket),
+                                  icon: const Icon(
+                                    Icons.confirmation_number_outlined,
+                                    size: 16,
+                                  ),
+                                ),
+                                ButtonSegment<String>(
+                                  value: CartelaPaymentSource.moneyWallet,
+                                  label: Text(l10n.registrationPayEtb),
+                                  icon: const Icon(
+                                    Icons.payments_outlined,
+                                    size: 16,
+                                  ),
+                                ),
+                              ],
+                              selected: {_paymentSource},
+                              onSelectionChanged: (selection) {
+                                if (_isSubmitting ||
+                                    _registered ||
+                                    selection.isEmpty) {
+                                  return;
+                                }
+                                setState(() {
+                                  _paymentSource = selection.first;
+                                });
+                              },
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _hasFreeEntry
+                                      ? Icons.redeem_rounded
+                                      : _isBigGotd
+                                      ? Icons.star_rounded
+                                      : _isBigGame
+                                      ? Icons.emoji_events_rounded
+                                      : Icons.payments_outlined,
+                                  size: 18,
+                                  color: (_isBigGame || _isBigGotd)
+                                      ? GameCategoryTheme.accentColor(
+                                          widget.category,
+                                          isDark:
+                                              theme.brightness ==
+                                              Brightness.dark,
+                                        )
+                                      : theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _entryPaymentLabel,
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      if (_isBonusLike) ...[
+                                        if (widget.fixedPrizeAmount != null)
+                                          Text(
+                                            l10n.gameBonusFixedPrize(
+                                              formatMoney(
+                                                widget.fixedPrizeAmount!,
+                                              ),
+                                            ),
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        Text(
+                                          'Max ${widget.maxCartelasPerPlayer ?? 5} cartelas',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ],
+                                      if ((_isChainGame ||
+                                              widget.category ==
+                                                  GameCategory.normal) &&
+                                          widget.maxCartelasPerPlayer != null)
+                                        Text(
+                                          l10n.gameBonusMaxCartelas(
+                                            widget.maxCartelasPerPlayer!,
+                                          ),
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (!_hasFreeEntry &&
+                                    widget.walletBalance != null) ...[
+                                  Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 18,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    formatMoney(widget.walletBalance!),
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ],
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: AppBranding.gold.withValues(alpha: 0.6),
-                              ),
-                            ),
+                        ),
+                        if (!_hasFreeEntry &&
+                            !_hasEnoughBalance &&
+                            _holdReady &&
+                            !widget.alreadyOwned)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                             child: Text(
-                              _countdownLabel,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: AppBranding.goldAccent,
-                                fontWeight: FontWeight.w800,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                              'Insufficient balance',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.error,
                               ),
+                              textAlign: TextAlign.end,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                      child: CartelaBoardPreview(columns: _displayColumns),
-                    ),
-                    if (!widget.alreadyOwned && _canChooseBigTicketPayment)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                        child: SegmentedButton<String>(
-                          segments: [
-                            ButtonSegment<String>(
-                              value: CartelaPaymentSource.bigGameTicket,
-                              label: Text(l10n.registrationUseBigTicket),
-                              icon: const Icon(
-                                Icons.confirmation_number_outlined,
-                                size: 16,
-                              ),
-                            ),
-                            ButtonSegment<String>(
-                              value: CartelaPaymentSource.moneyWallet,
-                              label: Text(l10n.registrationPayEtb),
-                              icon: const Icon(
-                                Icons.payments_outlined,
-                                size: 16,
-                              ),
-                            ),
-                          ],
-                          selected: {_paymentSource},
-                          onSelectionChanged: (selection) {
-                            if (_isSubmitting ||
-                                _registered ||
-                                selection.isEmpty) {
-                              return;
-                            }
-                            setState(() {
-                              _paymentSource = selection.first;
-                            });
-                          },
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _hasFreeEntry
-                                  ? Icons.redeem_rounded
-                                  : _isBigGotd
-                                  ? Icons.star_rounded
-                                  : _isBigGame
-                                  ? Icons.emoji_events_rounded
-                                  : Icons.payments_outlined,
-                              size: 18,
-                              color: (_isBigGame || _isBigGotd)
-                                  ? GameCategoryTheme.accentColor(
-                                      widget.category,
-                                      isDark:
-                                          theme.brightness == Brightness.dark,
-                                    )
-                                  : theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _entryPaymentLabel,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _isSubmitting
+                                      ? null
+                                      : () => _closeSheet(),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  if (_isBonusLike) ...[
-                                    if (widget.fixedPrizeAmount != null)
-                                      Text(
-                                        l10n.gameBonusFixedPrize(
-                                      formatMoney(widget.fixedPrizeAmount!),
-                                    ),
-                                        style: theme.textTheme.labelSmall
-                                            ?.copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                    Text(
-                                      'Max ${widget.maxCartelasPerPlayer ?? 5} cartelas',
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                  ],
-                                  if ((_isChainGame ||
-                                          widget.category ==
-                                              GameCategory.normal) &&
-                                      widget.maxCartelasPerPlayer != null)
-                                    Text(
-                                      l10n.gameBonusMaxCartelas(
-                                        widget.maxCartelasPerPlayer!,
-                                      ),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (!_hasFreeEntry &&
-                                widget.walletBalance != null) ...[
-                              Icon(
-                                Icons.account_balance_wallet_outlined,
-                                size: 18,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                formatMoney(widget.walletBalance!),
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                  child: const Text('Close'),
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (!_hasFreeEntry &&
-                        !_hasEnoughBalance &&
-                        _holdReady &&
-                        !widget.alreadyOwned)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-                        child: Text(
-                          'Insufficient balance',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.error,
-                          ),
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () => _closeSheet(),
-                              child: const Text('Close'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: _primaryAction,
-                              child: _isPreparingHold || _isSubmitting
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: theme.colorScheme.onPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _primaryActionLabel ?? '',
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: _primaryAction,
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: _isPreparingHold || _isSubmitting
+                                      ? Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onPrimary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _primaryActionLabel ?? '',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Text(
+                                          _primaryActionLabel ?? 'Register',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w800,
                                           ),
                                         ),
-                                      ],
-                                    )
-                                  : Text(
-                                      _primaryActionLabel ?? 'Register',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_isSubmitting)
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const FriendsBingoLoader.inline(compact: true),
-                        const SizedBox(height: 12),
-                        Text(
-                          _hasFreeEntry
-                              ? 'Registering free cartela...'
-                              : 'Registering cartela...',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-            ],
+                  if (_isSubmitting)
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const FriendsBingoLoader.inline(compact: true),
+                            const SizedBox(height: 12),
+                            Text(
+                              _hasFreeEntry
+                                  ? 'Registering free cartela...'
+                                  : 'Registering cartela...',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

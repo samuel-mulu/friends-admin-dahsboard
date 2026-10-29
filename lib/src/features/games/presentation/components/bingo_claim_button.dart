@@ -66,37 +66,77 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final button = SizedBox(
-      height: 22,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppBranding.goldAccent,
-          foregroundColor: AppBranding.brandPurple,
-          disabledBackgroundColor: isDark
-              ? Colors.white24
-              : AppBranding.lightOnDisabled.withValues(alpha: 0.25),
-          disabledForegroundColor: isDark
-              ? Colors.white54
-              : AppBranding.lightOnDisabled,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    final isEnabled = widget.canClaim && !widget.isClaiming;
+
+    final Widget buttonContent;
+    if (widget.isClaiming) {
+      buttonContent = SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            isEnabled ? AppBranding.casinoPurpleDeep : AppBranding.gold,
+          ),
         ),
-        onPressed: widget.canClaim && !widget.isClaiming ? widget.onPressed : null,
-        child: widget.isClaiming
-            ? const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text(
-                'BINGO',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                ),
-              ),
+      );
+    } else {
+      buttonContent = Text(
+        'BINGO',
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 11.5,
+          letterSpacing: 0.8,
+          height: 1,
+          color: isEnabled
+              ? AppBranding.casinoPurpleDeep
+              : (isDark ? Colors.white38 : AppBranding.lightOnDisabled),
+        ),
+      );
+    }
+
+    final button = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isEnabled ? widget.onPressed : null,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: isEnabled
+                ? const LinearGradient(
+                    colors: [AppBranding.goldAccent, AppBranding.gold],
+                  )
+                : null,
+            color: isEnabled
+                ? null
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05)),
+            border: Border.all(
+              color: isEnabled
+                  ? Colors.white.withValues(alpha: 0.5)
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08)),
+              width: 1.0,
+            ),
+            boxShadow: isEnabled
+                ? [
+                    BoxShadow(
+                      color: AppBranding.gold.withValues(alpha: 0.35),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: buttonContent,
+        ),
       ),
     );
 

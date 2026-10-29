@@ -56,18 +56,14 @@ abstract final class CartelaBoardLayout {
   /// Grid tile width/height for live 2-up layout (matches [LiveCartelaCard] + square board).
   static double liveTwoUpTileAspectRatio(double tileWidth) {
     if (tileWidth <= 0) {
-      return 0.76;
+      return 0.80;
     }
-    const outerCartelaHeader = 40.0;
-    const outerBodyPadding = 5.0;
+    const outerCartelaHeader = 34.0;
     const cardHorizontalInset = 4.0;
-    final boardBodyWidth =
-        tileWidth - outerBodyPadding - cardHorizontalInset;
-    final innerBoardHeight = liveBingoLetterRowHeight +
-        boardBodyWidth +
-        (boardPadding * 2);
-    final tileHeight =
-        outerCartelaHeader + outerBodyPadding + innerBoardHeight;
+    final boardBodyWidth = tileWidth - cardHorizontalInset;
+    final innerBoardHeight =
+        liveBingoLetterRowHeight + boardBodyWidth + boardPadding;
+    final tileHeight = outerCartelaHeader + innerBoardHeight;
     return tileWidth / tileHeight;
   }
 }

@@ -100,6 +100,53 @@ class CartelaNumberCompactCircleBadge extends StatelessWidget {
   }
 }
 
+/// Refined stadium pill badge for live card headers (fits 3-5 digits with high legibility).
+class CartelaNumberCompactBadge extends StatelessWidget {
+  const CartelaNumberCompactBadge({
+    required this.number,
+    this.isBlocked = false,
+    super.key,
+  });
+
+  final int number;
+  final bool isBlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isBlocked
+        ? const Color(0xFFEF4444).withValues(alpha: 0.6)
+        : AppBranding.gold.withValues(alpha: 0.75);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: AppBranding.casinoPurpleDeep,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        '$number',
+        maxLines: 1,
+        style: const TextStyle(
+          color: AppBranding.gold,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          height: 1,
+          letterSpacing: 0.2,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
 /// Cartela number in live card headers — scales for 4–5 digit IDs.
 class CartelaNumberHeaderLabel extends StatelessWidget {
   const CartelaNumberHeaderLabel({
@@ -123,9 +170,7 @@ class CartelaNumberHeaderLabel extends StatelessWidget {
         child: Text(
           '$prefix$number',
           maxLines: 1,
-          style: style.copyWith(
-            fontSize: cartelaNumberHeaderFontSize(number),
-          ),
+          style: style.copyWith(fontSize: cartelaNumberHeaderFontSize(number)),
         ),
       ),
     );

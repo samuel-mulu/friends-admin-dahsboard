@@ -212,9 +212,13 @@ abstract final class AppBranding {
     }
 
     return BoxDecoration(
-      color: lightSurfaceRaised,
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [lightSurfaceRaised, lightSurface],
+      ),
       border: Border(
-        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.95)),
+        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.5)),
       ),
     );
   }

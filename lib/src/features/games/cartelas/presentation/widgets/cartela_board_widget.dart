@@ -142,7 +142,12 @@ class CartelaBoardWidget extends StatelessWidget {
           if (expanded)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(CartelaBoardLayout.boardPadding),
+                padding: const EdgeInsets.fromLTRB(
+                  CartelaBoardLayout.boardPadding,
+                  CartelaBoardLayout.boardPadding,
+                  CartelaBoardLayout.boardPadding,
+                  0,
+                ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final boardWidth = constraints.maxWidth;
@@ -243,15 +248,26 @@ class CartelaBoardWidget extends StatelessWidget {
 
           return Row(
             children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
+              final colColor = AppBranding.bingoColumnColor(letter);
               return Expanded(
                 child: Center(
-                  child: Text(
-                    letter,
-                    style: TextStyle(
-                      fontSize: letterFontSize,
-                      fontWeight: FontWeight.w900,
-                      color: AppBranding.bingoColumnColor(letter),
-                      height: 1,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: colColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      letter,
+                      style: TextStyle(
+                        fontSize: letterFontSize,
+                        fontWeight: FontWeight.w900,
+                        color: colColor,
+                        height: 1.1,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
@@ -449,9 +465,9 @@ class CartelaBoardWidget extends StatelessWidget {
       textColor = Colors.white;
       shadows = [
         BoxShadow(
-          color: AppBranding.bingoFreeGreen.withValues(alpha: 0.55),
-          blurRadius: 8,
-          spreadRadius: 0.5,
+          color: AppBranding.bingoFreeGreen.withValues(alpha: 0.38),
+          blurRadius: 3.5,
+          offset: const Offset(0, 1.5),
         ),
       ];
     } else if (isWinningBall && isWinner) {
@@ -517,9 +533,9 @@ class CartelaBoardWidget extends StatelessWidget {
       textColor = palette.text;
       shadows = [
         BoxShadow(
-          color: palette.shadow.withValues(alpha: 0.55),
-          blurRadius: 8,
-          spreadRadius: 0.5,
+          color: palette.shadow.withValues(alpha: 0.38),
+          blurRadius: 3.5,
+          offset: const Offset(0, 1.5),
         ),
       ];
     } else {
