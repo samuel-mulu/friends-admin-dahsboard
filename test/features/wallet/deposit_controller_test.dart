@@ -56,6 +56,24 @@ void main() {
     final state = container.read(depositControllerProvider);
     expect(state.isChoosingProvider, isFalse);
     expect(state.provider, equals(PaymentProvider.cbe));
+    expect(state.entryTab, equals(DepositEntryTab.regular));
+  });
+
+  test('selectProvider opens Smart tab for Telebirr only', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+
+    controller.selectProvider(PaymentProvider.telebirr);
+    expect(
+      container.read(depositControllerProvider).entryTab,
+      equals(DepositEntryTab.smart),
+    );
+
+    controller.selectProvider(PaymentProvider.awash);
+    expect(
+      container.read(depositControllerProvider).entryTab,
+      equals(DepositEntryTab.regular),
+    );
   });
 
   test('changeProvider returns to choosing provider mode', () {

@@ -1,6 +1,10 @@
 /// Shared 5×5 cartela board layout values for live play and winner review.
 abstract final class CartelaBoardLayout {
-  static const double cellPadding = 0.5;
+  /// Inset inside each grid slot; matches [CartelaPatternProgressPainter] cell inset.
+  static const double cellPadding = 2.0;
+
+  /// Gap between live-play cell slots (aligned with pattern progress geometry).
+  static const double liveCellGap = 3.0;
   static const double boardPadding = 2.0;
   static const double boardBorderRadius = 6.0;
   static const double headerToGridGap = 2.0;
@@ -37,7 +41,16 @@ abstract final class CartelaBoardLayout {
     if (cellSide <= 0) {
       return liveCellNumberFontSize;
     }
-    return cellSide * liveExpandedCellNumberFactor;
+    final circleDiameter = cellSide - (cellPadding * 2);
+    final basis = circleDiameter > 0 ? circleDiameter : cellSide;
+    return basis * liveExpandedCellNumberFactor;
+  }
+
+  static double liveGridCellSlotSize(double boardWidth) {
+    if (boardWidth <= 0) {
+      return 0;
+    }
+    return (boardWidth - (liveCellGap * 4)) / 5;
   }
 
   /// Grid tile width/height for live 2-up layout (matches [LiveCartelaCard] + square board).

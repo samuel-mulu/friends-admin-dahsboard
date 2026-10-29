@@ -173,7 +173,7 @@ class CartelaBoardWidget extends StatelessWidget {
                               child: _buildSquareLiveGrid(
                                 context,
                                 columns,
-                                cellSide: boardWidth / 5,
+                                boardWidth: boardWidth,
                                 oneAwayPulseT: oneAwayPulseT,
                               ),
                             ),
@@ -266,36 +266,63 @@ class CartelaBoardWidget extends StatelessWidget {
   Widget _buildSquareLiveGrid(
     BuildContext context,
     List<List<String>> columns, {
-    required double cellSide,
+    required double boardWidth,
     required double oneAwayPulseT,
   }) {
+    final theme = Theme.of(context);
+    final gap = CartelaBoardLayout.liveCellGap;
+    final cellSize = CartelaBoardLayout.liveGridCellSlotSize(boardWidth);
+    final gridBackground = theme.brightness == Brightness.dark
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.65)
+        : AppBranding.lightSurfaceMuted.withValues(alpha: 0.85);
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(5, (rowIdx) {
-            return SizedBox(
-              height: cellSide,
-              child: Row(
-                children: List.generate(5, (colIdx) {
-                  return SizedBox(
-                    width: cellSide,
-                    height: cellSide,
-                    child: _buildGridCell(
-                      context: context,
-                      columns: columns,
-                      rowIdx: rowIdx,
-                      colIdx: colIdx,
-                      cellExtent: cellSide,
-                      liveExpanded: true,
-                      oneAwayPulseT: oneAwayPulseT,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: gridBackground,
+            borderRadius:
+                BorderRadius.circular(CartelaBoardLayout.boardBorderRadius),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: Column(
+              children: List.generate(5, (rowIdx) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: rowIdx == 4 ? 0 : gap),
+                    child: Row(
+                      children: List.generate(5, (colIdx) {
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: colIdx == 4 ? 0 : gap,
+                            ),
+                            child: Center(
+                              child: SizedBox(
+                                width: cellSize,
+                                height: cellSize,
+                                child: _buildGridCell(
+                                  context: context,
+                                  columns: columns,
+                                  rowIdx: rowIdx,
+                                  colIdx: colIdx,
+                                  cellExtent: cellSize,
+                                  liveExpanded: true,
+                                  oneAwayPulseT: oneAwayPulseT,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
-                  );
-                }),
-              ),
-            );
-          }),
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
         if (!patternOverlay.isEmpty)
           Positioned.fill(
@@ -303,6 +330,7 @@ class CartelaBoardWidget extends StatelessWidget {
               child: CustomPaint(
                 painter: CartelaPatternProgressPainter(
                   overlay: patternOverlay,
+                  gap: gap,
                   cellInset: CartelaBoardLayout.cellPadding,
                 ),
               ),
@@ -426,6 +454,18 @@ class CartelaBoardWidget extends StatelessWidget {
           spreadRadius: 0.5,
         ),
       ];
+    } else if (isWinningBall && isWinner) {
+      final palette = CartelaMarkColorPalette.forColor(CartelaMarkColor.yellow);
+      fillColor = palette.fill;
+      borderColor = palette.border;
+      textColor = palette.text;
+      shadows = [
+        BoxShadow(
+          color: palette.shadow.withValues(alpha: 0.65),
+          blurRadius: 10,
+          spreadRadius: 0.5,
+        ),
+      ];
     } else if (isWinningBall) {
       fillColor = AppBranding.gold;
       borderColor = AppBranding.goldDark;
@@ -437,7 +477,7 @@ class CartelaBoardWidget extends StatelessWidget {
           spreadRadius: 0.5,
         ),
       ];
-    } else if (isWinningCell) {
+    } else if (isWinningCell && !isWinner) {
       fillColor = AppBranding.gold.withValues(alpha: 0.35);
       borderColor = AppBranding.gold;
       textColor = isDark ? Colors.amberAccent : AppBranding.brandPurple;
@@ -500,8 +540,11 @@ class CartelaBoardWidget extends StatelessWidget {
     final padding = cellExtent != null
         ? CartelaBoardLayout.cellPadding
         : 2.0;
+    final useLiveCircle = liveExpanded && cellExtent != null;
     final borderRadius = cellExtent != null
-        ? math.max(4.0, cellExtent * 0.14)
+        ? (useLiveCircle
+            ? (cellExtent - (padding * 2)) / 2
+            : math.max(4.0, cellExtent * 0.14))
         : 8.0;
     final numberFontSize = cellExtent != null
         ? (liveExpanded
@@ -525,7 +568,9 @@ class CartelaBoardWidget extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: fillColor,
-            borderRadius: BorderRadius.circular(borderRadius),
+            shape: useLiveCircle ? BoxShape.circle : BoxShape.rectangle,
+            borderRadius:
+                useLiveCircle ? null : BorderRadius.circular(borderRadius),
             border: Border.all(
               color: borderColor,
               width: isOneAway && pulseOneAwayCells
