@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/time/countdown_target_tracker.dart';
 import '../../data/models/game_model.dart';
+import '../../presentation/debug/live_cartela_scroll_debug.dart';
 import '../../presentation/debug/live_realtime_debug.dart';
 import '../../presentation/utils/live_presentation_phase.dart';
 import '../../presentation/utils/next_ball_countdown.dart' as next_ball_countdown;
@@ -79,6 +80,10 @@ class LiveCountdownController {
     }
     final wasLocked = bingoClaimLocked.value;
     bingoClaimLocked.value = value;
+    LiveCartelaScrollDebug.log(
+      'bingo_claim_locked ${wasLocked ? 'true' : 'false'}'
+      '→${value ? 'true' : 'false'}',
+    );
     if (wasLocked && !value) {
       onBingoClaimUnlocked?.call();
     }

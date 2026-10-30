@@ -16,6 +16,20 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
   }
 
   List<int> get _winnerCartelaNumbers {
+    if (_ownsChainInterRoundBreak) {
+      final game = _game;
+      if (game != null && game.isChainGame) {
+        final finishedRound = chainRevealedRoundIndex(game, now: _countdownNow());
+        final fromRound = winnerCartelaNumbersFromChainRoundResults(
+          roundResults: game.roundResults,
+          roundIndex: finishedRound,
+        );
+        return mergeSortedCartelaNumbers([
+          ...fromRound,
+          ..._review.sessionWinnerCartelaNumbers,
+        ]);
+      }
+    }
     return winnerCartelaNumbersForStrip(
       useSessionWideOutcomeChips: _usesSessionWideOutcomeChips,
       sessionWinnerCartelaNumbers: _review.sessionWinnerCartelaNumbers,
@@ -47,7 +61,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         final blockedCartelaNumbers = showWinnerOnly
             ? const <int>[]
             : _blockedCartelaNumbers;
-        final winnerCartelaNumbers = showWinnerOnly
+        final winnerCartelaNumbers =
+            showWinnerOnly && !_ownsChainInterRoundBreak
             ? winnerCartelaNumbersForStrip(
                 useSessionWideOutcomeChips: true,
                 sessionWinnerCartelaNumbers:
@@ -55,11 +70,17 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
                 myCartelas: _myCartelas,
               )
             : _winnerCartelaNumbers;
-        final canOpenWinnerDialog =
+        final canOpenInterRoundWinner =
+            _ownsChainInterRoundBreak &&
+            _winnerReviewEligibleViewer &&
+            winnerCartelaNumbers.isNotEmpty;
+        final canOpenPostGameWinner =
             winnerCartelaNumbers.isNotEmpty &&
             _winnerReviewEligibleViewer &&
             _showsPostGameSummary &&
             (_stripShowsWinnerOnly || _usesSessionWideOutcomeChips);
+        final canOpenWinnerDialog =
+            canOpenInterRoundWinner || canOpenPostGameWinner;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -550,6 +571,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     }
 
     final completingOrder = completingCalledOrderOf(_cn.calledNumbers);
+    final calledCount = _cn.calledNumbers.length;
+    final chainArmed = _chainBingoArmedAfterCalledCount;
     final eligible = selectAutoBingoPatternCompleteCartelas(
       cartelas: _myCartelas,
       calledNumbers: _cn.calledNumbers,
@@ -559,6 +582,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       sessionId: sessionId,
       roundIndex: roundIndex,
       completingCalledOrder: completingOrder,
+      chainGateGame: game,
+      calledNumbersCount: calledCount,
+      chainBingoArmedAfterCalledCount: chainArmed,
     );
     if (eligible.isNotEmpty) {
       _cn.autoBingoQueue = enqueueAutoBingoCartelas(
@@ -630,6 +656,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           autoSubmitInFlight: _cn.autoBingoSubmitInFlight,
           terminalSuppressed:
               _cn.autoBingoTerminalSuppressKeys.contains(suppressKey),
+          chainGateGame: game,
+          calledNumbersCount: _cn.calledNumbers.length,
+          chainBingoArmedAfterCalledCount: _chainBingoArmedAfterCalledCount,
         );
 
         if (block == AutoBingoBlockKind.temporary) {
@@ -1039,7 +1068,7 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       bingoLockListenable: _countdown.bingoClaimLocked,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
       cartelaLiveStore: _cartelaLiveStore,
-      cartelaLiveListenable: _cn.calledNumbersPanelRevision,
+      cartelaLiveListenable: _cartelaTileLiveListenable,
       liveSortResultFor: (cartela) => _cn.cartelaSortResults[cartela.id],
     );
   }

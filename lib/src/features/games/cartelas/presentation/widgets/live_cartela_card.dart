@@ -42,6 +42,8 @@ class LiveCartelaCard extends StatelessWidget {
     this.blockedReasonCode,
     this.blockedServerReason,
     this.bingoLockListenable,
+    this.resolveCanClaimBingo,
+    this.resolveShowReadyPulse,
     this.decorativeMotionAllowedListenable,
     super.key,
   });
@@ -63,8 +65,13 @@ class LiveCartelaCard extends StatelessWidget {
   final bool showMarkColorPicker;
   final String? blockedReasonCode;
   final String? blockedServerReason;
-  /// When set, BINGO button toggles from this notifier without rebuilding the card body.
+  /// When set, BINGO lock/enabled state updates from this notifier without rebuilding
+  /// the card body. Pair with [resolveCanClaimBingo] so eligibility is re-read on unlock.
   final ValueListenable<bool>? bingoLockListenable;
+  /// Re-evaluated when [bingoLockListenable] changes (live claim eligibility).
+  final bool Function()? resolveCanClaimBingo;
+  /// Re-evaluated when [bingoLockListenable] changes (ready pulse on BINGO button).
+  final bool Function()? resolveShowReadyPulse;
   /// When false (e.g. while scrolling), claim/one-away pulses pause so scroll stays calm.
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final Set<String> manualMarkedNumbers;
@@ -418,12 +425,18 @@ class LiveCartelaCard extends StatelessWidget {
       );
     }
 
+    final resolveCanClaim = resolveCanClaimBingo;
+    final resolvePulse = resolveShowReadyPulse;
+
     return ValueListenableBuilder<bool>(
       valueListenable: lockListenable,
       builder: (context, locked, _) {
+        final canClaim = (resolveCanClaim?.call() ?? canClaimBase) && !locked;
+        final pulse =
+            (resolvePulse?.call() ?? showReadyPulse) && !locked;
         return BingoClaimButton(
-          canClaim: canClaimBase && !locked,
-          showReadyPulse: showReadyPulse && !locked,
+          canClaim: canClaim,
+          showReadyPulse: pulse,
           isClaiming: isClaiming,
           onPressed: onClaimBingo,
         );

@@ -77,6 +77,41 @@ List<CalledNumberModel> _topRowCompleteCalls() {
   ];
 }
 
+GameModel _chainGame({
+  int roundIndex = 2,
+  DateTime? roundPausedUntil,
+  int calledNumbersCount = 12,
+}) {
+  return GameModel(
+    id: 'slot-chain',
+    sessionId: 'session-chain',
+    staticCode: 'CH-1',
+    playCode: 'PLAY-CH',
+    name: 'Chain',
+    gameRule: GameRuleModel(id: 'rule-1', key: 'ONE_LINE', name: 'One Line'),
+    gameType: 'ONE_LINE',
+    entryFee: '10',
+    prizePerCartela: '0',
+    companyFeePerCartela: '10',
+    prizeAmount: '100',
+    companyRevenue: '0',
+    status: GameStatus.playing,
+    playOrder: 1,
+    startedAt: _now,
+    finishedAt: null,
+    createdAt: _now,
+    updatedAt: _now,
+    registeredCartelasCount: 1,
+    calledNumbersCount: calledNumbersCount,
+    registrationOpen: false,
+    canRegister: false,
+    category: GameCategory.chainGame,
+    roundCount: 2,
+    roundIndex: roundIndex,
+    roundPausedUntil: roundPausedUntil,
+  );
+}
+
 GameModel _game({
   GameStatus status = GameStatus.playing,
   String ruleKey = 'ONE_LINE',
@@ -603,6 +638,116 @@ void main() {
         ).map((c) => c.id),
         ['a'],
       );
+    });
+  });
+
+  group('Chain Auto BINGO parity', () {
+    test('round 1 with null arm stays allowed', () {
+      final game = _chainGame(roundIndex: 1);
+      expect(
+        isChainAutoBingoClaimAllowed(
+          game: game,
+          calledNumbersCount: 5,
+          chainBingoArmedAfterCalledCount: null,
+        ),
+        isTrue,
+      );
+    });
+
+    test('round 2 armed null is blocked until arm snapshot', () {
+      final game = _chainGame(roundIndex: 2);
+      expect(
+        isChainAutoBingoClaimAllowed(
+          game: game,
+          calledNumbersCount: 12,
+          chainBingoArmedAfterCalledCount: null,
+        ),
+        isFalse,
+      );
+    });
+
+    test('round 2 same completing order as arm is not fresh', () {
+      expect(
+        isChainAutoBingoCompletingBallFresh(
+          completingCalledOrder: 12,
+          chainBingoArmedAfterCalledCount: 12,
+        ),
+        isFalse,
+      );
+      expect(
+        isChainAutoBingoCompletingBallFresh(
+          completingCalledOrder: 13,
+          chainBingoArmedAfterCalledCount: 12,
+        ),
+        isTrue,
+      );
+    });
+
+    test('pattern complete on round 2 strip does not enqueue before new ball', () {
+      final game = _chainGame(roundIndex: 2);
+      final calls = _topRowCompleteCalls();
+      final eligible = selectAutoBingoPatternCompleteCartelas(
+        cartelas: [_cartela(id: 'a', number: 400)],
+        calledNumbers: calls,
+        ruleKey: 'ONE_LINE',
+        terminalSuppressKeys: const {},
+        attemptDedupeKeys: const {},
+        sessionId: 'session-chain',
+        roundIndex: 2,
+        completingCalledOrder: 5,
+        chainGateGame: game,
+        calledNumbersCount: calls.length,
+        chainBingoArmedAfterCalledCount: 5,
+      );
+      expect(eligible, isEmpty);
+    });
+
+    test('inter-round pause blocks classify temporarily', () {
+      final pausedUntil = _now.add(const Duration(seconds: 20));
+      final game = _chainGame(roundIndex: 2, roundPausedUntil: pausedUntil);
+      expect(
+        classifyAutoBingoQueueHead(
+          effectiveAutoBingo: true,
+          gameAllowsClaims: true,
+          winnerWindowExpired: false,
+          cartela: _cartela(id: 'a', number: 400),
+          sessionRoundMatches: true,
+          isConfirmingOrClaimingAny: false,
+          claimStripHoldActive: false,
+          hasUnresolvedAttemptForCartela: false,
+          bingoClaimLocked: false,
+          claimScopeLoading: false,
+          autoSubmitInFlight: false,
+          terminalSuppressed: false,
+          chainGateGame: game,
+          calledNumbersCount: 12,
+          chainBingoArmedAfterCalledCount: 12,
+          chainGateNow: _now,
+        ),
+        AutoBingoBlockKind.temporary,
+      );
+    });
+
+    test('round 2 after new ball can select when pattern complete', () {
+      final game = _chainGame(roundIndex: 2);
+      final calls = [
+        ..._topRowCompleteCalls(),
+        _call(letter: 'B', number: 12, order: 6),
+      ];
+      final eligible = selectAutoBingoPatternCompleteCartelas(
+        cartelas: [_cartela(id: 'a', number: 400)],
+        calledNumbers: calls,
+        ruleKey: 'ONE_LINE',
+        terminalSuppressKeys: const {},
+        attemptDedupeKeys: const {},
+        sessionId: 'session-chain',
+        roundIndex: 2,
+        completingCalledOrder: 6,
+        chainGateGame: game,
+        calledNumbersCount: calls.length,
+        chainBingoArmedAfterCalledCount: 5,
+      );
+      expect(eligible.map((c) => c.id), ['a']);
     });
   });
 }

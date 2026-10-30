@@ -108,11 +108,15 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required Set<int> storedWinnerHighlights,
     required Set<int> winningHighlightCells,
   }) {
+    final isBlocked = gameCartela.status == GameCartelaStatus.blocked;
+    final isClaiming = claimingCartelaIds.contains(gameCartela.id);
+    final lockListenable = bingoLockListenable;
+
     final card = LiveCartelaCard(
       key: ValueKey(gameCartela.id),
       gameCartela: gameCartela,
       canClaimBingo: canClaimBingoFor(gameCartela),
-      isClaiming: claimingCartelaIds.contains(gameCartela.id),
+      isClaiming: isClaiming,
       pendingReview:
           showPendingClaimState &&
           (pendingClaimCartelaIds.contains(gameCartela.id) ||
@@ -143,7 +147,21 @@ class InlineRegisteredCartelaList extends StatelessWidget {
       onClaimBingo: () => onClaimBingo(gameCartela),
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
-      bingoLockListenable: bingoLockListenable,
+      bingoLockListenable: lockListenable,
+      resolveCanClaimBingo: lockListenable == null
+          ? null
+          : () => canClaimBingoFor(gameCartela),
+      resolveShowReadyPulse: lockListenable == null
+          ? null
+          : () {
+              final liveSort = _resolveSortResult(gameCartela);
+              return (liveSort?.hasLocalPatternComplete ?? false) &&
+                  !(liveSort?.isLateClaim ?? false) &&
+                  canClaimBingoFor(gameCartela) &&
+                  !isClaiming &&
+                  !isBlocked &&
+                  !showFinishedOutcome;
+            },
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
     );
 

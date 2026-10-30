@@ -19,6 +19,9 @@ class LiveChainGameCoordinator {
   /// After round 2+ resumes, Bingo stays off until called count exceeds this.
   int? chainBingoArmedAfterCalledCount;
 
+  /// Bumps when chain claim gating changes without a new called number (arm/pause).
+  final ValueNotifier<int> claimEligibilityRevision = ValueNotifier<int>(0);
+
   DateTime? get latchedPausedUntil => _latchedChainRoundPausedUntil;
   String? get latchedSessionId => _latchedChainPauseSessionId;
 
@@ -115,14 +118,20 @@ class LiveChainGameCoordinator {
     return fromPlan ?? game.gameRule?.name;
   }
 
+  void bumpClaimEligibilityPresentation() {
+    claimEligibilityRevision.value++;
+  }
+
   void reset() {
     clearPauseLatch();
     clearPlan();
     clearPause();
     chainBingoArmedAfterCalledCount = null;
+    bumpClaimEligibilityPresentation();
   }
 
   void dispose() {
     pauseEndsAtListenable.dispose();
+    claimEligibilityRevision.dispose();
   }
 }

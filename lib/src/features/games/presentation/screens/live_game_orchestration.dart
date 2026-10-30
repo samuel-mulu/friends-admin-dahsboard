@@ -14,6 +14,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _chain.chainBingoArmedAfterCalledCount;
   set _chainBingoArmedAfterCalledCount(int? value) =>
       _chain.chainBingoArmedAfterCalledCount = value;
+  Listenable get _cartelaTileLiveListenable => Listenable.merge([
+        _cn.calledNumbersPanelRevision,
+        _chain.claimEligibilityRevision,
+      ]);
   DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
   /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
@@ -824,6 +828,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     final autoDismissDuration =
         _winnerCelebration.calculateAutoDismissDuration(_game?.winnerWindowEndsAt);
 
+    final chainInterRoundDialog = pauseEndsAt != null || _ownsChainInterRoundBreak;
+    ChainGameDebug.log(
+      'winner_dialog_open interRound=$chainInterRoundDialog '
+      'results=${results.length} round=${roundIndex ?? '-'}',
+    );
+
     _review.winnerCartelaDialogVisible = true;
     // Embedded Big Game only: do not burn the configured summary hold while
     // the winner cartela dialog is on top of the PIN summary.
@@ -853,13 +863,21 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoDismissDuration: autoDismissDuration,
       ).whenComplete(
         () {
+          final interRoundClose =
+              chainInterRoundDialog || _isChainRoundPaused;
           if (_isChainRoundPaused) {
             _review.winnerCartelaDialogAutoShownForPauseKey = null;
           }
+          ChainGameDebug.log(
+            'winner_dialog_closed interRound=$interRoundClose '
+            'postSummary=${_review.postGameSummaryReviewActive}',
+          );
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
-            _beginPostGameSummaryAdvance();
-            unawaited(_runFinishedAdvanceSequence(force: true));
+            if (!interRoundClose) {
+              _beginPostGameSummaryAdvance();
+              unawaited(_runFinishedAdvanceSequence(force: true));
+            }
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
@@ -1221,6 +1239,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _syncChainPauseEndsAtListenable();
+    ChainGameDebug.log(
+      'winner_dialog_reopen_manual round=$finishedRound '
+      'results=${dialogResults.length}',
+    );
     _showWinnerCartelaDialogForReview(
       dialogResults,
       pauseEndsAt: game.roundPausedUntil,
@@ -1289,6 +1311,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Future<void> _onWinnerCartelaChipTapped(int cartelaNumber) async {
     if (_review.winnerCartelaDialogVisible || !_winnerReviewEligibleViewer) {
+      return;
+    }
+
+    if (_ownsChainInterRoundBreak) {
+      final game = _game;
+      if (game != null && game.isChainGame) {
+        final finishedRound = chainRevealedRoundIndex(game, now: _countdownNow());
+        ChainGameDebug.log(
+          'winner_strip_tap cartela=$cartelaNumber round=$finishedRound',
+        );
+        await _openChainInterRoundWinnerDialog(finishedRound: finishedRound);
+      }
       return;
     }
 
@@ -2636,6 +2670,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     required bool shouldClearFinished,
     bool resumeSync = false,
   }) {
+    final previousRoundIndex = _game?.displayRoundIndex;
+    final previousSessionId = _game?.sessionId;
     final previousMarksSessionId = _cn.marksSessionId;
     final marksSessionChanged = previousMarksSessionId != game.sessionId;
 
@@ -2857,6 +2893,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         sharedCalledNumbers: calledNumbers,
       );
     });
+    if (!sessionChanged &&
+        _game != null &&
+        _game!.isChainGame &&
+        _game!.sessionId == previousSessionId &&
+        _game!.displayRoundIndex > (previousRoundIndex ?? _game!.displayRoundIndex)) {
+      _armChainBingoAfterCurrentBalls();
+    }
     _syncActiveCartelasToProvider();
     _syncLiveGameStateToProvider();
     if (!resumeSync || !includeCalledNumbers) {
@@ -3491,6 +3534,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: highestKnownOrder,
       );
+    }
+
+    if (!pauseStripForClaim &&
+        applyResult.applied &&
+        !applyResult.requiresCanonicalSync) {
+      _markCalledNumbersPanelDirty();
     }
 
     if (applyResult.requiresCanonicalSync) {
@@ -4335,6 +4384,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _countdown.winnerWindowEndsAt = null;
       _cn.socketAutoCallEnabled = false;
     });
+    _chain.bumpClaimEligibilityPresentation();
     // Mid-round owns the UI now — kill any WW-expiry closing poll/refetch loop.
     _review.resetWinnerWindowClosingState();
     if (_review.postGameSummaryReviewActive) {
@@ -4666,6 +4716,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         ? _cn.calledNumbers.length
         : game.calledNumbersCount;
     _chainBingoArmedAfterCalledCount = count;
+    _chain.bumpClaimEligibilityPresentation();
     ChainGameDebug.log(
       'bingo armed after calledCount>$count '
       'round=${game.displayRoundIndex}',
