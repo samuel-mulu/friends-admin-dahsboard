@@ -478,53 +478,20 @@ mixin _LiveGameViews on
       cartelaSortMode: cartelaSortMode,
       cartelaSortMaxRemains: cartelaSortMaxRemains,
       decorativeMotionAllowedListenable: _liveCartelaScrollIdle,
+      debugSource: 'sticky_sliver',
     );
 
     final showRegistrationFooter =
         _shouldShowInlineRegistrationPanel && !_blocksRegistrationPromotion;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.depth != 0) {
-              return false;
-            }
-            // Pause decorative pulses only for the whole gesture — keep scroll continuous.
-            if (notification is ScrollStartNotification) {
-              if (_liveCartelaScrollIdle.value) {
-                _liveCartelaScrollIdle.value = false;
-              }
-            } else if (notification is ScrollEndNotification) {
-              if (!_liveCartelaScrollIdle.value) {
-                _liveCartelaScrollIdle.value = true;
-              }
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            // Whole cartela pane scrolls continuously (not row/column snap).
-            // ignore: deprecated_member_use
-            cacheExtent: 900,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: padding,
-                sliver: cartelaList.asSliver(
-                  crossAxisExtent: constraints.maxWidth - padding.horizontal,
-                ),
-              ),
-              if (showRegistrationFooter)
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.md),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildRegistrationTargetSection(),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+    return LiveCartelaViewport(
+      scrollIdleListenable: _liveCartelaScrollIdle,
+      onScrollStart: freezePlayCartelaDisplayOrderForScroll,
+      onScrollEnd: applyPendingCartelaSortDisplayOrder,
+      padding: padding,
+      buildCartelaSliver: (crossAxisExtent) =>
+          cartelaList.asSliver(crossAxisExtent: crossAxisExtent),
+      footer: showRegistrationFooter ? _buildRegistrationTargetSection() : null,
     );
   }
 
@@ -821,6 +788,7 @@ mixin _LiveGameViews on
               return _buildPlayCartelaList(
                 cartelaSortMode: cartelaSortMode,
                 cartelaSortMaxRemains: cartelaSortMaxRemains,
+                debugSource: 'inline_list',
               );
             },
           ),

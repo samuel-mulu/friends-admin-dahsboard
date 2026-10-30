@@ -989,22 +989,24 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     return game.copyWith(nextAutoCallAt: result.nextAutoCallAt);
   }
 
-  /// Builds the play cartela grid. When Auto Mark is on, refreshes pattern
-  /// sort from derived visual marks before paint.
+  /// Builds the play cartela grid. Sort evaluation runs on mark/ball events
+  /// via [refreshCartelaSortAfterCalledNumbers], not during build.
   _InlineRegisteredCartelaList _buildPlayCartelaList({
     required CartelaSortMode cartelaSortMode,
     required int cartelaSortMaxRemains,
     ValueListenable<bool>? decorativeMotionAllowedListenable,
+    String debugSource = 'unknown',
   }) {
-    if (_cn.effectiveAutoMark) {
-      _sortMyCartelas();
-    }
-
+    final ordered = _cartelasForPlayList(
+      cartelaSortMode,
+      cartelaSortMaxRemains,
+    );
+    LiveCartelaScrollDebug.playListBuild(
+      cartelaCount: ordered.length,
+      source: debugSource,
+    );
     return _InlineRegisteredCartelaList(
-      cartelas: _orderedMyCartelas(
-        cartelaSortMode,
-        cartelaSortMaxRemains,
-      ),
+      cartelas: ordered,
       sortResultsByCartelaId: _cn.cartelaSortResults,
       canClaimBingoFor: _canClaimBingoForCartela,
       claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
@@ -1036,6 +1038,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           : null,
       bingoLockListenable: _countdown.bingoClaimLocked,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+      cartelaLiveStore: _cartelaLiveStore,
+      cartelaLiveListenable: _cn.calledNumbersPanelRevision,
+      liveSortResultFor: (cartela) => _cn.cartelaSortResults[cartela.id],
     );
   }
 
@@ -1070,7 +1075,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         toggledKey: toggledKey,
       );
       _cn.notifyManualMarksChanged();
-      _sortMyCartelas();
+      refreshCartelaSortAfterCalledNumbers();
+      refreshCartelaLiveAfterManualMark(cartela.id);
     });
     unawaited(_persistManualMarks());
   }

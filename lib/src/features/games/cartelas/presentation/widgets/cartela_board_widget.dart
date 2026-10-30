@@ -12,6 +12,9 @@ import 'cartela_pattern_progress_painter.dart';
 
 enum CartelaBoardSize { compact, standard, large }
 
+/// Live-play rendering fidelity (lighter while the cartela list scrolls).
+enum CartelaVisualTier { idle, scrolling }
+
 /// Standalone, reusable 5×5 B-I-N-G-O Cartela Board with complete styling,
 /// animations, custom dauber color palette support, and winning pattern overlays.
 class CartelaBoardWidget extends StatelessWidget {
@@ -35,6 +38,7 @@ class CartelaBoardWidget extends StatelessWidget {
     this.expandToFill = false,
     this.pulseOneAwayCells = false,
     this.decorativeMotionAllowedListenable,
+    this.visualTier = CartelaVisualTier.idle,
   });
 
   final CartelaModel cartela;
@@ -61,6 +65,8 @@ class CartelaBoardWidget extends StatelessWidget {
 
   /// When false (e.g. list scrolling), one-away cell pulse pauses.
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
+
+  final CartelaVisualTier visualTier;
 
   @override
   Widget build(BuildContext context) {
@@ -450,10 +456,11 @@ class CartelaBoardWidget extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final liteScroll = visualTier == CartelaVisualTier.scrolling;
 
     final Color fillColor;
     final Color borderColor;
-    final List<BoxShadow> shadows;
+    List<BoxShadow> shadows;
     final Color textColor;
 
     if (isFreeSpace) {
@@ -550,6 +557,10 @@ class CartelaBoardWidget extends StatelessWidget {
             ];
     }
 
+    if (liteScroll) {
+      shadows = const [];
+    }
+
     final padding = cellExtent != null ? CartelaBoardLayout.cellPadding : 2.0;
     final borderRadius = cellExtent != null
         ? math.max(4.0, cellExtent * 0.16)
@@ -573,7 +584,9 @@ class CartelaBoardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         child: AnimatedContainer(
           duration: Duration(
-            milliseconds: isOneAway && pulseOneAwayCells ? 0 : 200,
+            milliseconds: liteScroll || (isOneAway && pulseOneAwayCells)
+                ? 0
+                : 200,
           ),
           decoration: BoxDecoration(
             color: fillColor,

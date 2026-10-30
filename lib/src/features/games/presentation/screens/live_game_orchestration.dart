@@ -1585,7 +1585,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _syncWinnerWindowTicker();
     _syncNextBallCountdownTicker();
-    _sortMyCartelas();
+    refreshCartelaSortAfterCalledNumbers();
     _syncCalledNumbersForFinishedReview();
 
     if (game.status == GameStatus.finished ||
@@ -2824,7 +2824,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         // Cartela snapshots are presentation truth, not attempt resolution.
         // The recovery GET must resolve the retained UUID.
       }
-      _sortMyCartelas();
+      refreshCartelaSortAfterCalledNumbers();
+      refreshCartelaLivePresentation(fullGrid: true);
       _syncChainPlayableCartelas();
       _isLoading = false;
       // Canonical truth is now on screen; feed the reconnect throttle so a
@@ -2993,7 +2994,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           return;
         }
         setState(() {
-          _sortMyCartelas();
+          refreshCartelaSortAfterCalledNumbers();
         });
         _syncActiveCartelasToProvider();
         _markCalledNumbersPanelDirty();
@@ -5732,8 +5733,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final signature = _buildCartelaSortSignature();
     if (_cn.cartelaSortSignature == signature) {
+      LiveCartelaScrollDebug.sortEval(
+        signatureChanged: false,
+        cartelaCount: _myCartelas.length,
+      );
       return;
     }
+    LiveCartelaScrollDebug.sortEval(
+      signatureChanged: true,
+      cartelaCount: _myCartelas.length,
+    );
 
     _ensureBlockedCartelaSnapshots();
 
@@ -5755,6 +5764,103 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             _cn.blockedCartelaFrozenSortResults[entry.key] ?? entry.value,
     };
     _cn.cartelaSortSignature = signature;
+  }
+
+  @override
+  void refreshCartelaSortAfterCalledNumbers() {
+    if (!isLiveHostActive || _myCartelas.isEmpty) {
+      return;
+    }
+
+    _sortMyCartelas();
+    _refreshCartelaSortDisplayOrder(applyDisplayOrder: null);
+  }
+
+  void _refreshCartelaSortDisplayOrder({bool? applyDisplayOrder}) {
+    final sortMode = ref.read(cartelaSortModeProvider);
+    if (sortMode.allowsManualReorder) {
+      _pendingCartelaSortDisplayApply = false;
+      return;
+    }
+
+    final shouldApply =
+        applyDisplayOrder ?? _liveCartelaScrollIdle.value;
+    if (shouldApply) {
+      _pendingCartelaSortDisplayApply = false;
+      _frozenPlayCartelaOrder = null;
+      return;
+    }
+
+    _pendingCartelaSortDisplayApply = true;
+    LiveCartelaScrollDebug.sortDisplayDeferred();
+  }
+
+  @override
+  void freezePlayCartelaDisplayOrderForScroll() {
+    final sortMode = ref.read(cartelaSortModeProvider);
+    if (sortMode.allowsManualReorder) {
+      return;
+    }
+
+    final maxRemains = ref.read(cartelaSortMaxRemainsProvider);
+    _frozenPlayCartelaOrder = _orderedMyCartelas(sortMode, maxRemains);
+  }
+
+  @override
+  void applyPendingCartelaSortDisplayOrder() {
+    if (!_pendingCartelaSortDisplayApply) {
+      return;
+    }
+    _pendingCartelaSortDisplayApply = false;
+    _frozenPlayCartelaOrder = null;
+    LiveCartelaScrollDebug.deferredSortApplied();
+    if (isLiveHostActive) {
+      markNeedsBuild();
+    }
+  }
+
+  List<GameCartelaModel> _cartelasForPlayList(
+    CartelaSortMode sortMode,
+    int cartelaSortMaxRemains,
+  ) {
+    if (sortMode.allowsManualReorder) {
+      return _orderedMyCartelas(sortMode, cartelaSortMaxRemains);
+    }
+
+    if (_pendingCartelaSortDisplayApply &&
+        !_liveCartelaScrollIdle.value &&
+        _frozenPlayCartelaOrder != null) {
+      return _frozenPlayCartelaOrder!;
+    }
+
+    final ordered = _orderedMyCartelas(sortMode, cartelaSortMaxRemains);
+    if (_liveCartelaScrollIdle.value) {
+      _frozenPlayCartelaOrder = ordered;
+    }
+    return ordered;
+  }
+
+  @override
+  void refreshCartelaLivePresentation({
+    int? committedBallNumber,
+    bool fullGrid = false,
+  }) {
+    if (!isLiveHostActive) {
+      return;
+    }
+    _cartelaLiveStore.afterCalledNumbersUpdated(
+      cartelas: _myCartelas,
+      committedBallNumber: committedBallNumber,
+      fullGrid: fullGrid,
+    );
+  }
+
+  @override
+  void refreshCartelaLiveAfterManualMark(String gameCartelaId) {
+    if (!isLiveHostActive) {
+      return;
+    }
+    _cartelaLiveStore.afterManualMarkOnCartela(gameCartelaId);
   }
 
   @override
@@ -5868,7 +5974,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.marksOwnerUserId = userId;
         _cn.restoredMarksSessionId = sessionId;
         _cn.notifyManualMarksChanged();
-        _sortMyCartelas();
+        refreshCartelaSortAfterCalledNumbers();
       });
 
       LiveRealtimeDebug.log(

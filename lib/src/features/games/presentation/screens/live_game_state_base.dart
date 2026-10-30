@@ -60,6 +60,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       if (!isLiveHostActive) {
         return;
       }
+      LiveCartelaScrollDebug.fullScreenRebuild();
       if (fn != null) {
         setState(fn);
       } else {
@@ -166,6 +167,18 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
   final ValueNotifier<bool> _liveCartelaScrollIdle = ValueNotifier<bool>(true);
+
+  /// Smart/Lines grid order updates deferred until scroll idle.
+  bool _pendingCartelaSortDisplayApply = false;
+
+  List<GameCartelaModel>? _frozenPlayCartelaOrder;
+
+  int? _lastCalledNumbersDirtyCount;
+  int? _lastCalledNumbersDirtyOrder;
+
+  late final LiveCartelaLiveStore _cartelaLiveStore = LiveCartelaLiveStore();
+
+  LiveCartelaLiveStore get cartelaLiveStore => _cartelaLiveStore;
   Timer? _invalidSocketPayloadRefetchTimer;
   String? _lastInvalidSocketPayloadLogKey;
   DateTime? _lastInvalidSocketPayloadLogAt;
@@ -717,8 +730,56 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   }
 
   void _markCalledNumbersPanelDirty() {
+    final count = _cn.calledNumbers.length;
+    final lastOrder =
+        count == 0 ? null : _cn.calledNumbers.last.order;
+    if (_lastCalledNumbersDirtyCount == count &&
+        _lastCalledNumbersDirtyOrder == lastOrder) {
+      LiveCartelaScrollDebug.log(
+        'called_numbers_dirty_skipped_duplicate count=$count order=${lastOrder ?? '-'}',
+      );
+      return;
+    }
+    _lastCalledNumbersDirtyCount = count;
+    _lastCalledNumbersDirtyOrder = lastOrder;
+
     _cn.markCalledNumbersPanelDirty();
+    refreshCartelaSortAfterCalledNumbers();
+    if (_myCartelas.isEmpty) {
+      return;
+    }
+    final latest =
+        _cn.calledNumbers.isEmpty ? null : _cn.calledNumbers.last.number;
+    final fullGrid = latest == null || !_cn.effectiveAutoMark;
+    LiveCartelaScrollDebug.calledNumbersDirty(
+      calledCount: _cn.calledNumbers.length,
+      latestBall: latest,
+      autoMark: _cn.effectiveAutoMark,
+      fullGrid: fullGrid,
+    );
+    refreshCartelaLivePresentation(
+      committedBallNumber: latest,
+      fullGrid: fullGrid,
+    );
   }
+
+  @override
+  void refreshCartelaSortAfterCalledNumbers();
+
+  @override
+  void applyPendingCartelaSortDisplayOrder();
+
+  @override
+  void freezePlayCartelaDisplayOrderForScroll();
+
+  @override
+  void refreshCartelaLivePresentation({
+    int? committedBallNumber,
+    bool fullGrid = false,
+  });
+
+  @override
+  void refreshCartelaLiveAfterManualMark(String gameCartelaId);
 
   void markCanonicalSocketStateApplied() {
     _lastSocketAppliedAt = DateTime.now();

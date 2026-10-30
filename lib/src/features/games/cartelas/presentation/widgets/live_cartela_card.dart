@@ -465,6 +465,7 @@ class _MarkedCartelaGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final markColor = ref.watch(cartelaMarkColorProvider);
+    final motionListenable = decorativeMotionAllowedListenable;
 
     final markedNumbers = <int>{};
     for (int col = 0; col < columns.length; col++) {
@@ -502,25 +503,42 @@ class _MarkedCartelaGrid extends ConsumerWidget {
       }
     }
 
-    return CartelaBoardWidget(
-      cartela: gameCartela.cartela,
-      markedCells: markedNumbers,
-      lastMarkedNumber: lastMarkedNum,
-      winningBallNumber: winningBallNum,
-      oneAwayCellIndexes: oneAwayCellIndexes,
-      patternOverlay: winningPatternOverlay,
-      markColor: markColor,
-      interactive: !interactionDisabled,
-      showHeader: false,
-      expandToFill: true,
-      pulseOneAwayCells: pulseOneAwayCells,
-      decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
-      onCellTapped: interactionDisabled
-          ? null
-          : (number) {
-              final header = BingoBallBadge.getLetter(number);
-              onMarkedNumberToggled(gameCartela, header, number.toString());
-            },
+    Widget buildBoard(CartelaVisualTier visualTier) {
+      return CartelaBoardWidget(
+        cartela: gameCartela.cartela,
+        markedCells: markedNumbers,
+        lastMarkedNumber: lastMarkedNum,
+        winningBallNumber: winningBallNum,
+        oneAwayCellIndexes: oneAwayCellIndexes,
+        patternOverlay: winningPatternOverlay,
+        markColor: markColor,
+        interactive: !interactionDisabled,
+        showHeader: false,
+        expandToFill: true,
+        pulseOneAwayCells: pulseOneAwayCells,
+        decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+        visualTier: visualTier,
+        onCellTapped: interactionDisabled
+            ? null
+            : (number) {
+                final header = BingoBallBadge.getLetter(number);
+                onMarkedNumberToggled(gameCartela, header, number.toString());
+              },
+      );
+    }
+
+    if (motionListenable == null) {
+      return buildBoard(CartelaVisualTier.idle);
+    }
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: motionListenable,
+      builder: (context, scrollIdle, _) {
+        final visualTier = scrollIdle
+            ? CartelaVisualTier.idle
+            : CartelaVisualTier.scrolling;
+        return buildBoard(visualTier);
+      },
     );
   }
 }

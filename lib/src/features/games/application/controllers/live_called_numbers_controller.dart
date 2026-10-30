@@ -1024,10 +1024,7 @@ class LiveCalledNumbersController {
 
   void markCalledNumbersPanelDirty() {
     calledNumbersPanelRevision.value++;
-    // Auto Mark paints from the called strip; rebuild cartelas when it changes.
-    if (effectiveAutoMark) {
-      host.markNeedsBuild();
-    }
+    // Cartela grid refresh scope is handled by the host ([_markCalledNumbersPanelDirty]).
   }
 
   void rebuildCalledNumberTracking() {

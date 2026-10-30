@@ -25,6 +25,7 @@ class AppConfig {
     required this.apiBaseUrl,
     required this.socketBaseUrl,
     this.realtimeDebug = false,
+    this.cartelaScrollDebug = false,
     this.chainDebug = false,
     this.bigGameDebug = false,
     this.debug = false,
@@ -36,6 +37,9 @@ class AppConfig {
 
   /// Verbose live-game / auto-call socket tracing (debug builds only).
   final bool realtimeDebug;
+
+  /// Live cartela list scroll / rebuild tracing (debug builds only).
+  final bool cartelaScrollDebug;
 
   /// Chain Game round-boundary tracing (debug builds only).
   final bool chainDebug;
@@ -73,6 +77,9 @@ class AppConfig {
     final realtimeDebug =
         const bool.fromEnvironment('REALTIME_DEBUG') ||
         _envBool('REALTIME_DEBUG');
+    final cartelaScrollDebug =
+        const bool.fromEnvironment('CARTELA_SCROLL_DEBUG') ||
+        _envBool('CARTELA_SCROLL_DEBUG');
     final chainDebug =
         const bool.fromEnvironment('CHAIN_DEBUG') ||
         _envBool('CHAIN_DEBUG');
@@ -108,6 +115,7 @@ class AppConfig {
       apiBaseUrl: apiBaseUrl,
       socketBaseUrl: socketBaseUrl,
       realtimeDebug: realtimeDebug,
+      cartelaScrollDebug: cartelaScrollDebug,
       chainDebug: chainDebug,
       bigGameDebug: bigGameDebug,
       debug: debug,
@@ -116,7 +124,11 @@ class AppConfig {
   }
 
   static String _envString(String key) {
-    return dotenv.maybeGet(key)?.trim() ?? '';
+    try {
+      return dotenv.maybeGet(key)?.trim() ?? '';
+    } catch (_) {
+      return '';
+    }
   }
 
   static String _firstNonEmpty(List<String> values) {

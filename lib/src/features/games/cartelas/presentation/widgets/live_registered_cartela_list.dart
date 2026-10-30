@@ -8,7 +8,10 @@ import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mar
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
 
+import 'package:friends_bingo_app/src/features/games/cartelas/application/live_cartela_live_store.dart';
+
 import 'live_cartela_card.dart';
+import 'live_cartela_tile.dart';
 
 class RegisteredCartelaList extends StatelessWidget {
   const RegisteredCartelaList({required this.cartelas, super.key});
@@ -55,6 +58,9 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     this.onReorder,
     this.bingoLockListenable,
     this.decorativeMotionAllowedListenable,
+    this.cartelaLiveStore,
+    this.cartelaLiveListenable,
+    this.liveSortResultFor,
     super.key,
   });
 
@@ -83,6 +89,16 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   final void Function(int fromIndex, int toIndex)? onReorder;
   final ValueListenable<bool>? bingoLockListenable;
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
+  final LiveCartelaLiveStore? cartelaLiveStore;
+  final Listenable? cartelaLiveListenable;
+  final CartelaPatternUiResult? Function(GameCartelaModel)?
+      liveSortResultFor;
+
+  CartelaPatternUiResult? _resolveSortResult(GameCartelaModel gameCartela) {
+    return sortResultFor(gameCartela) ??
+        liveSortResultFor?.call(gameCartela) ??
+        sortResultsByCartelaId[gameCartela.id];
+  }
 
   Widget _buildCartelaCard({
     required GameCartelaModel gameCartela,
@@ -92,7 +108,7 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required Set<int> storedWinnerHighlights,
     required Set<int> winningHighlightCells,
   }) {
-    return LiveCartelaCard(
+    final card = LiveCartelaCard(
       key: ValueKey(gameCartela.id),
       gameCartela: gameCartela,
       canClaimBingo: canClaimBingoFor(gameCartela),
@@ -129,6 +145,29 @@ class InlineRegisteredCartelaList extends StatelessWidget {
       blockedServerReason: blockedServerReasonFor(gameCartela),
       bingoLockListenable: bingoLockListenable,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+    );
+
+    return card;
+  }
+
+  Widget _buildCartelaCardForGrid({
+    required GameCartelaModel gameCartela,
+    required CartelaPatternProgressOverlay storedWinnerOverlay,
+    required bool useStoredWinnerOverlay,
+    required Set<int> storedWinnerHighlights,
+  }) {
+    final sortResult = _resolveSortResult(gameCartela);
+    final winningHighlightCells = {
+      ...?sortResult?.completedPatternCells,
+      ...storedWinnerHighlights,
+    };
+    return _buildCartelaCard(
+      gameCartela: gameCartela,
+      sortResult: sortResult,
+      storedWinnerOverlay: storedWinnerOverlay,
+      useStoredWinnerOverlay: useStoredWinnerOverlay,
+      storedWinnerHighlights: storedWinnerHighlights,
+      winningHighlightCells: winningHighlightCells,
     );
   }
 
@@ -193,8 +232,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required double cellHeight,
   }) {
     final gameCartela = cartelas[index];
-    final sortResult =
-        sortResultFor(gameCartela) ?? sortResultsByCartelaId[gameCartela.id];
     final rawStoredWinnerOverlay =
         winningPatternOverlayByGameCartelaId[gameCartela.id];
     final storedWinnerOverlay =
@@ -204,19 +241,32 @@ class InlineRegisteredCartelaList extends StatelessWidget {
             ? rawStoredWinnerOverlay.allOverlayCellIndexes
             : winningPatternCellsByGameCartelaId[gameCartela.id] ??
                 const <int>{};
-    final winningHighlightCells = {
-      ...?sortResult?.completedPatternCells,
-      ...storedWinnerHighlights,
-    };
-    final card = _buildCartelaCard(
-      gameCartela: gameCartela,
-      sortResult: sortResult,
-      storedWinnerOverlay: storedWinnerOverlay,
-      useStoredWinnerOverlay:
-          rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
-      storedWinnerHighlights: storedWinnerHighlights,
-      winningHighlightCells: winningHighlightCells,
-    );
+    final store = cartelaLiveStore;
+    final liveListenable = cartelaLiveListenable;
+    final Widget card;
+    if (store != null && liveListenable != null) {
+      card = LiveCartelaTile(
+        key: ValueKey('tile_${gameCartela.id}'),
+        gameCartelaId: gameCartela.id,
+        store: store,
+        liveListenable: liveListenable,
+        builder: (_) => _buildCartelaCardForGrid(
+          gameCartela: gameCartela,
+          storedWinnerOverlay: storedWinnerOverlay,
+          useStoredWinnerOverlay:
+              rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
+          storedWinnerHighlights: storedWinnerHighlights,
+        ),
+      );
+    } else {
+      card = _buildCartelaCardForGrid(
+        gameCartela: gameCartela,
+        storedWinnerOverlay: storedWinnerOverlay,
+        useStoredWinnerOverlay:
+            rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
+        storedWinnerHighlights: storedWinnerHighlights,
+      );
+    }
 
     return _wrapReorderableCell(
       context: context,

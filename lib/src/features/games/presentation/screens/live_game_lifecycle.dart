@@ -28,7 +28,10 @@ mixin _LiveGameLifecycle on _LiveGameOrchestration, _LiveGameRealtime {
     setState(() {
       if (autoMarkChanged) {
         _cn.setEffectiveAutoMark(nextAutoMark);
-        _sortMyCartelas();
+        refreshCartelaSortAfterCalledNumbers();
+        if (nextAutoMark) {
+          refreshCartelaLivePresentation(fullGrid: true);
+        }
       }
       if (autoBingoChanged) {
         _cn.setEffectiveAutoBingo(nextAutoBingo);

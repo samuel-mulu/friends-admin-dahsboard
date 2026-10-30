@@ -1,11 +1,12 @@
 import 'dart:math';
 
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_catalog_limits.dart';
 
 class CartelaCatalogShuffle {
   const CartelaCatalogShuffle._();
 
-  static const displayBatchSize = 3000;
+  static const displayBatchSize = CartelaCatalogLimits.visibleBatchSize;
 
   static List<CartelaModel> visibleBatchFromPool(
     List<CartelaModel> pool, {
