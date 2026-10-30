@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/utils/l10n.dart';
 import '../../../shared/domain/entities/payment_provider.dart';
 import '../../application/controllers/deposit_controller.dart';
+import '../../application/models/deposit_confirmation_state.dart';
 import '../../application/models/deposit_state.dart';
 import '../../application/providers/deposit_config_provider.dart';
 import '../../data/models/deposit_config_model.dart';
@@ -59,6 +60,17 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       ref.read(depositControllerProvider.notifier).handleRealtimeUpdate(update);
     });
 
+    ref.listen<DepositState>(depositControllerProvider, (previous, next) {
+      final wasApproved =
+          previous?.confirmation?.kind == DepositConfirmationKind.approved;
+      final isApproved =
+          next.confirmation?.kind == DepositConfirmationKind.approved;
+      if (isApproved && !wasApproved) {
+        _smartMessageController.clear();
+        _smartAmountController.clear();
+      }
+    });
+
     final l10n = context.l10n;
     final state = ref.watch(depositControllerProvider);
     final controller = ref.read(depositControllerProvider.notifier);
@@ -77,87 +89,103 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
             providerConfig,
           );
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.depositScreenTitle)),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DepositProviderChips(
-                value: selectedProvider,
-                availableProviders: availableProviders,
-                depositConfig: depositConfig,
-                comingSoonProviders: const {},
-                isChoosing: state.isChoosingProvider || selectedProvider == null,
-                onChangePressed: controller.changeProvider,
-                onChanged: controller.selectProvider,
-              ),
-              if (showDetails) ...[
-                VGap.lg,
-                if (settlementAccounts.isNotEmpty)
-                  DepositSettlementAccountCard(
-                    providerName: selectedProvider.label,
-                    accounts: settlementAccounts,
-                  ),
-                VGap.lg,
-                if (selectedProvider.supportsSmartDepositEntry) ...[
-                  _buildTabSelector(context, state, controller, l10n),
-                  VGap.md,
-                ],
-                if (selectedProvider.supportsSmartDepositEntry &&
-                    state.entryTab == DepositEntryTab.smart)
-                  DepositSmartSection(
-                    provider: selectedProvider,
-                    messageController: _smartMessageController,
-                    amountController: _smartAmountController,
-                    parseResult: state.smartParseResult,
-                    onMessageChanged: (v) => controller.parseSmartInput(v),
-                    onAmountChanged: (v) => setState(() {}),
-                    onSubmit: () {
-                      final parsed = state.smartParseResult;
-                      if (parsed == null || !parsed.isSuccess) return;
-                      final amount =
-                          (parsed.amount != null && parsed.amount!.isNotEmpty)
-                              ? parsed.amount!
-                              : _smartAmountController.text.trim();
-                      controller.submitDeposit(
-                        amount: amount,
-                        rawTransactionInput: parsed.transactionRef!,
-                      );
-                    },
-                    onSwitchToRegular: () =>
-                        controller.switchTab(DepositEntryTab.regular),
-                    isSubmitting: state.isSubmitting,
-                    canSubmit: state.smartParseResult?.isSuccess == true,
-                  )
-                else
-                  const DepositManualSection(),
-                const DepositStatusCard(),
-                VGap.xxl,
-                const Divider(),
-                VGap.xl,
+    final theme = Theme.of(context);
+
+    return PopScope(
+      canPop: !showDetails,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || !showDetails) return;
+        controller.changeProvider();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
-                  l10n.depositStepInstructions,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  l10n.depositScreenTitle,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 VGap.md,
-                KeyedSubtree(
-                  key: _guideKey,
-                  child: DepositGuideSteps(
-                    provider: selectedProvider,
-                    youtubeUrl: resolveDepositGuideYoutubeUrl(
-                      provider: selectedProvider,
-                      remoteUrl: providerConfig?.guideVideoUrl,
-                    ),
-                    requestedTabIndex: _guideTabIndex,
-                  ),
+                DepositProviderChips(
+                  value: selectedProvider,
+                  availableProviders: availableProviders,
+                  depositConfig: depositConfig,
+                  comingSoonProviders: const {},
+                  isChoosing:
+                      state.isChoosingProvider || selectedProvider == null,
+                  onChangePressed: controller.changeProvider,
+                  onChanged: controller.selectProvider,
                 ),
+                if (showDetails) ...[
+                  VGap.lg,
+                  if (settlementAccounts.isNotEmpty)
+                    DepositSettlementAccountCard(
+                      providerName: selectedProvider.label,
+                      accounts: settlementAccounts,
+                    ),
+                  VGap.lg,
+                  if (selectedProvider.supportsSmartDepositEntry) ...[
+                    _buildTabSelector(context, state, controller, l10n),
+                    VGap.md,
+                  ],
+                  if (selectedProvider.supportsSmartDepositEntry &&
+                      state.entryTab == DepositEntryTab.smart)
+                    DepositSmartSection(
+                      provider: selectedProvider,
+                      messageController: _smartMessageController,
+                      amountController: _smartAmountController,
+                      parseResult: state.smartParseResult,
+                      onMessageChanged: (v) => controller.parseSmartInput(v),
+                      onAmountChanged: (v) => setState(() {}),
+                      onSubmit: () {
+                        final parsed = state.smartParseResult;
+                        if (parsed == null || !parsed.isSuccess) return;
+                        final amount =
+                            (parsed.amount != null && parsed.amount!.isNotEmpty)
+                            ? parsed.amount!
+                            : _smartAmountController.text.trim();
+                        controller.submitDeposit(
+                          amount: amount,
+                          rawTransactionInput: parsed.transactionRef!,
+                        );
+                      },
+                      onSwitchToRegular: () =>
+                          controller.switchTab(DepositEntryTab.regular),
+                      isSubmitting: state.isSubmitting,
+                      canSubmit: state.smartParseResult?.isSuccess == true,
+                    )
+                  else
+                    const DepositManualSection(),
+                  const DepositStatusCard(),
+                  VGap.xxl,
+                  const Divider(),
+                  VGap.xl,
+                  Text(
+                    l10n.depositStepInstructions,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  VGap.md,
+                  KeyedSubtree(
+                    key: _guideKey,
+                    child: DepositGuideSteps(
+                      provider: selectedProvider,
+                      youtubeUrl: resolveDepositGuideYoutubeUrl(
+                        provider: selectedProvider,
+                        remoteUrl: providerConfig?.guideVideoUrl,
+                      ),
+                      requestedTabIndex: _guideTabIndex,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -105,6 +105,37 @@ void main() {
     expect(container.read(depositControllerProvider).trackedDepositId, isNull);
   });
 
+  test('applyDepositTerminalStatus clears smart parse result on approval', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+    controller.selectProvider(PaymentProvider.telebirr);
+    controller.parseSmartInput(
+      'Dear Customer, You have transferred ETB 100.00 to Friends Bingo. '
+      'Your transaction number is DJ1A2B3C4D.',
+    );
+    expect(
+      container.read(depositControllerProvider).smartParseResult?.isSuccess,
+      isTrue,
+    );
+
+    controller.applyDepositTerminalStatus(
+      kind: DepositConfirmationKind.approved,
+      depositId: 'dep-1',
+      provider: PaymentProvider.telebirr,
+      amount: '50.00',
+      transactionRef: 'ABC123',
+    );
+
+    expect(
+      container.read(depositControllerProvider).smartParseResult,
+      isNull,
+    );
+    expect(
+      container.read(depositControllerProvider).confirmation?.kind,
+      DepositConfirmationKind.approved,
+    );
+  });
+
   test('handleRealtimeUpdate processes approved terminal event', () {
     final container = createContainer();
     final controller = container.read(depositControllerProvider.notifier);

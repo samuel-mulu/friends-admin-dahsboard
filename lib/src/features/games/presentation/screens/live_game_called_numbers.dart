@@ -1013,7 +1013,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       showFinishedOutcome: _showFinishedCartelaOutcome,
       freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
       manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-      lastManualMarkedKey: _cn.lastManualMarkedKey,
+      lastManualMarkedKey: lastActiveMarkKeyForDisplay(
+        effectiveAutoMark: _cn.effectiveAutoMark,
+        lastManualMarkedKey: _cn.lastManualMarkedKey,
+        calledNumbers: _cn.calledNumbers,
+      ),
       markedNumbersFor: _markedNumbersForCartela,
       sortResultFor: _sortResultForCartela,
       winningPatternCellsByGameCartelaId:

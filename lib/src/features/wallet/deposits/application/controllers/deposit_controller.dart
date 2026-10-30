@@ -116,6 +116,10 @@ class DepositController extends Notifier<DepositState> {
     );
   }
 
+  void resetSmartDepositEntry() {
+    state = state.copyWith(clearSmartParseResult: true);
+  }
+
   SmartDepositParseResult parseSmartInput(String value) {
     final provider = state.provider;
     if (provider == null) {
@@ -276,6 +280,7 @@ class DepositController extends Notifier<DepositState> {
     );
 
     if (kind == DepositConfirmationKind.approved) {
+      resetSmartDepositEntry();
       _autoDismissTimer?.cancel();
       _autoDismissTimer = Timer(_approvedDismissDelay, clearConfirmation);
       _clearStoredPendingAttempt();

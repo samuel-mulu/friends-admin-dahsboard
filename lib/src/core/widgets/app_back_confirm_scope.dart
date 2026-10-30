@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/has_active_registered_cartelas_provider.dart';
+import 'package:friends_bingo_app/src/features/wallet/deposits/presentation/deposit_in_flow_back.dart';
 
 enum ConfirmBackChoice { stay, leave }
 
@@ -104,6 +105,13 @@ Future<void> handleAppBackPop({
 
   final router = GoRouter.maybeOf(context);
 
+  if (router != null && router.state.matchedLocation == '/wallet/deposit') {
+    final container = ProviderScope.containerOf(context);
+    if (tryDepositInFlowBack(container)) {
+      return;
+    }
+  }
+
   // Priority 2: Pop nested go_router route
   if (router != null && router.canPop()) {
     router.pop();
@@ -143,7 +151,9 @@ Future<void> handleAppBackPop({
 
   // If on other root tab (/wallet, /home, /profile), go to Live (/games)
   final rootTabs = ['/wallet', '/home', '/profile'];
-  final isRootTab = rootTabs.any((tab) => location == tab || location.startsWith('$tab/'));
+  final isRootTab = rootTabs.any(
+    (tab) => location == tab || location.startsWith('$tab/'),
+  );
 
   if (isRootTab) {
     router.go('/games');
@@ -164,9 +174,7 @@ class AppBackConfirmScope extends StatelessWidget {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        unawaited(
-          handleAppBackPop(context: context, didPop: didPop),
-        );
+        unawaited(handleAppBackPop(context: context, didPop: didPop));
       },
       child: child,
     );

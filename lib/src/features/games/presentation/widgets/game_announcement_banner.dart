@@ -22,8 +22,9 @@ import '../widgets/game_countdown.dart';
 /// Centered helper card for Big Game on other shell routes.
 ///
 /// Hidden on `/games/big-game`. On `/games` during an active standard live
-/// round, hidden too — [BigGameLivePromptBanner] already covers that case
-/// without blocking cartelas. Auto-dismisses after 30s (or via close).
+/// round, hidden too — [BigGameLivePromptBanner] covers that case without
+/// blocking cartelas (when Big Game promotion is enabled in admin). Auto-
+/// dismisses after 30s (or via close).
 class GameAnnouncementBanner extends ConsumerStatefulWidget {
   const GameAnnouncementBanner({super.key});
 
