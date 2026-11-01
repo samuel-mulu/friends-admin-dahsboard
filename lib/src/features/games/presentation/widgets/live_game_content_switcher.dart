@@ -17,7 +17,7 @@ class LiveGameContentSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: hasCompletedInitialPaint
-          ? const Duration(milliseconds: 450)
+          ? const Duration(milliseconds: 240)
           : Duration.zero,
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
@@ -27,13 +27,7 @@ class LiveGameContentSwitcher extends StatelessWidget {
         }
         return FadeTransition(
           opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.03),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
+          child: child,
         );
       },
       child: KeyedSubtree(
