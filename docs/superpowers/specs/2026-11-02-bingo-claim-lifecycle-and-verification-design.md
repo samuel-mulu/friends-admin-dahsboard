@@ -155,3 +155,4 @@ Both contracts parse ISO dates safely through `parseApiDateTime()`, preventing f
 - **Stream 2**: Game State Machine & Screen Transitions (`NEXT` → `PLAYING` → `CHECKING` → `WINNER_WINDOW` → `FINISHED`, inter-round pauses, and resume synchronization).
 - **Stream 3**: Widget Interactions & Screen Performance (Registration grid responsiveness, action dock, cartela review sheet, buttons, tactile/haptic feedback, sound triggers, and safe-area transitions).
 - **Stream 4**: Realtime Socket & REST Payload Contract Alignment (Comprehensive audit of all socket events and REST response contracts).
+
