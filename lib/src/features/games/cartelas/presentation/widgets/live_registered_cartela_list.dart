@@ -237,7 +237,7 @@ class InlineRegisteredCartelaList extends StatelessWidget {
             ),
           );
 
-    return KeyedSubtree(
+    return RepaintBoundary(
       key: ValueKey('cartela_cell_${cartelas[index].id}'),
       child: wrapped,
     );

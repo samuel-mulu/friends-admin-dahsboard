@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
@@ -579,7 +580,10 @@ class CartelaBoardWidget extends StatelessWidget {
       child: InkWell(
         onTap:
             (interactive && !isFreeSpace && onCellTapped != null && number > 0)
-            ? () => onCellTapped!(number)
+            ? () {
+                HapticFeedback.selectionClick();
+                onCellTapped!(number);
+              }
             : null,
         borderRadius: BorderRadius.circular(borderRadius),
         child: AnimatedContainer(
