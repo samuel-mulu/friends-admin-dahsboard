@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart';
+import 'package:friends_bingo_app/src/features/games/registration/data/models/registration_state_model.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 
 // Temporary debug logging for ghost reserved bug investigation
@@ -75,10 +76,7 @@ class RegistrationStatePatchNotifier
       );
 
       nextRemoved.remove(change.cartelaId);
-      final existing = nextPatches[change.cartelaId];
-      nextPatches[change.cartelaId] = existing == null
-          ? summary
-          : _preferHigherPrioritySummary(existing, summary);
+      nextPatches[change.cartelaId] = summary;
     }
 
     state = {
@@ -90,25 +88,45 @@ class RegistrationStatePatchNotifier
     };
   }
 
-  RegisteredCartelaSummary _preferHigherPrioritySummary(
-    RegisteredCartelaSummary existing,
-    RegisteredCartelaSummary incoming,
-  ) {
-    final existingRank = _ownerPriority(existing.owner);
-    final incomingRank = _ownerPriority(incoming.owner);
-    return incomingRank >= existingRank ? incoming : existing;
-  }
+  void onSnapshotLoaded(
+    String sessionId, {
+    RegistrationStateResponse? snapshot,
+  }) {
+    if (snapshot == null) {
+      clear(sessionId);
+      return;
+    }
 
-  int _ownerPriority(String owner) {
-    return switch (owner) {
-      'ME' || 'OTHER' => 3,
-      'RESERVED_ME' || 'RESERVED_OTHER' => 2,
-      _ => 0,
+    final current = state[sessionId];
+    if (current == null) {
+      return;
+    }
+
+    final nextPatches = Map<String, RegisteredCartelaSummary>.from(
+      current.patches,
+    );
+    final nextRemoved = Set<String>.from(current.removedCartelaIds);
+    reconcileRegistrationPatches(
+      patches: nextPatches,
+      removedCartelaIds: nextRemoved,
+      confirmed: <RegisteredCartelaSummary>[
+        ...snapshot.registeredCartelasSummary,
+        ...snapshot.reservedCartelasSummary,
+      ],
+    );
+
+    if (nextPatches.isEmpty && nextRemoved.isEmpty) {
+      clear(sessionId);
+      return;
+    }
+
+    state = {
+      ...state,
+      sessionId: RegistrationStatePatchState(
+        patches: nextPatches,
+        removedCartelaIds: nextRemoved,
+      ),
     };
-  }
-
-  void onSnapshotLoaded(String sessionId) {
-    clear(sessionId);
   }
 
   void clear(String sessionId) {

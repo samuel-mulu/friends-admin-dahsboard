@@ -37,7 +37,7 @@ class RegistrationGridScope extends InheritedWidget {
   final int cartelaHoldSeconds;
   final bool isGuest;
   final int? maxAffordable;
-  final ValueListenable<int> selectModeEnabledListenable;
+  final Listenable selectModeEnabledListenable;
 
   static RegistrationGridScope of(BuildContext context) {
     final scope = context
@@ -56,7 +56,7 @@ class RegistrationGridScope extends InheritedWidget {
   bool updateShouldNotify(RegistrationGridScope oldWidget) {
     return session != oldWidget.session ||
         sessionId != oldWidget.sessionId ||
-        lockedCartelaIds != oldWidget.lockedCartelaIds ||
+        !setEquals(lockedCartelaIds, oldWidget.lockedCartelaIds) ||
         cartelaHoldSeconds != oldWidget.cartelaHoldSeconds ||
         isGuest != oldWidget.isGuest ||
         maxAffordable != oldWidget.maxAffordable ||
@@ -115,6 +115,8 @@ class _RegistrationCartelaGridState
 
   late ScrollController _scrollController;
   var _ownsScrollController = false;
+  var _loadMoreScheduled = false;
+  late Listenable _cellVisualListenable;
   final RegistrationCartelaGridIndex _gridIndex =
       RegistrationCartelaGridIndex();
   Timer? _selectionReservationTimer;
@@ -125,21 +127,25 @@ class _RegistrationCartelaGridState
     _ownsScrollController = widget.scrollController == null;
     _scrollController = widget.scrollController ?? ScrollController();
     _scrollController.addListener(_onScroll);
+    _cellVisualListenable = Listenable.merge([
+      widget.selectModeRevision,
+      widget.gridVisualRevision,
+    ]);
     _syncSelectionReservationTimer();
     widget.gridVisualRevision.addListener(_handleGridVisualRevision);
-    widget.selectModeRevision.addListener(_handleSelectModeRevision);
   }
 
   @override
   void didUpdateWidget(covariant RegistrationCartelaGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.gridVisualRevision != widget.gridVisualRevision) {
+    if (oldWidget.gridVisualRevision != widget.gridVisualRevision ||
+        oldWidget.selectModeRevision != widget.selectModeRevision) {
       oldWidget.gridVisualRevision.removeListener(_handleGridVisualRevision);
       widget.gridVisualRevision.addListener(_handleGridVisualRevision);
-    }
-    if (oldWidget.selectModeRevision != widget.selectModeRevision) {
-      oldWidget.selectModeRevision.removeListener(_handleSelectModeRevision);
-      widget.selectModeRevision.addListener(_handleSelectModeRevision);
+      _cellVisualListenable = Listenable.merge([
+        widget.selectModeRevision,
+        widget.gridVisualRevision,
+      ]);
     }
     if (oldWidget.scrollController != widget.scrollController) {
       _scrollController.removeListener(_onScroll);
@@ -156,7 +162,6 @@ class _RegistrationCartelaGridState
   @override
   void dispose() {
     widget.gridVisualRevision.removeListener(_handleGridVisualRevision);
-    widget.selectModeRevision.removeListener(_handleSelectModeRevision);
     _selectionReservationTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     if (_ownsScrollController) {
@@ -167,14 +172,7 @@ class _RegistrationCartelaGridState
 
   void _handleGridVisualRevision() {
     if (mounted) {
-      setState(() {});
       _syncSelectionReservationTimer();
-    }
-  }
-
-  void _handleSelectModeRevision() {
-    if (mounted) {
-      setState(() {});
     }
   }
 
@@ -186,7 +184,7 @@ class _RegistrationCartelaGridState
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
+    if (!_scrollController.hasClients || _loadMoreScheduled) {
       return;
     }
 
@@ -212,7 +210,14 @@ class _RegistrationCartelaGridState
       return;
     }
 
-    ref.read(cartelaCatalogProvider.notifier).loadMore();
+    _loadMoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMoreScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      unawaited(ref.read(cartelaCatalogProvider.notifier).loadMore());
+    });
   }
 
   void _syncSelectionReservationTimer() {
@@ -251,7 +256,7 @@ class _RegistrationCartelaGridState
   Widget build(BuildContext context) {
     ref.listen(cartelaCatalogProvider, (previous, next) {
       final catalogState = next.asData?.value;
-      if (catalogState == null || catalogState.isShuffled) {
+      if (catalogState == null) {
         return;
       }
 
@@ -304,15 +309,19 @@ class _RegistrationCartelaGridState
       cartelaHoldSeconds: widget.cartelaHoldSeconds,
       isGuest: widget.isGuest,
       maxAffordable: widget.maxAffordable,
-      selectModeEnabledListenable: widget.selectModeRevision,
+      selectModeEnabledListenable: _cellVisualListenable,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final visibleCount = _gridIndex.length;
+          final canScrollForMore = catalogState.isShuffled
+              ? catalogState.hasMoreShufflePool
+              : catalogState.hasMore;
           // Search is a plain filter — never use shuffle fit-to-height layout
           // (that stretches a few matches into tall thin strips).
           final fitsWithoutScrolling =
               !isSearching &&
               isShuffled &&
+              !canScrollForMore &&
               RegistrationCartelaGridLayout.fitsWithoutScrolling(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
@@ -328,13 +337,15 @@ class _RegistrationCartelaGridState
 
           return GridView.builder(
             scrollCacheExtent: ScrollCacheExtent.pixels(
-              fitsWithoutScrolling ? 0 : 1200,
+              fitsWithoutScrolling ? 0 : 250,
             ),
             controller: _scrollController,
             primary: false,
             physics: fitsWithoutScrolling
                 ? const NeverScrollableScrollPhysics()
-                : const ClampingScrollPhysics(),
+                : const AlwaysScrollableScrollPhysics(
+                    parent: ClampingScrollPhysics(),
+                  ),
             padding: const EdgeInsets.only(bottom: 8),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: RegistrationCartelaGridLayout.crossAxisCount,
@@ -471,9 +482,9 @@ class _RegistrationCartelaGridCellState
           );
     final clock = ref.watch(serverClockProvider);
 
-    return ValueListenableBuilder<int>(
-      valueListenable: scope.selectModeEnabledListenable,
-      builder: (context, _, child) {
+    return ListenableBuilder(
+      listenable: scope.selectModeEnabledListenable,
+      builder: (context, child) {
         final selectModeEnabled = scope.session.selectModeEnabled;
         final resolved = _resolveAvailability(
           scope: scope,

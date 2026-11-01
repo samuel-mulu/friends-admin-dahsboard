@@ -58,4 +58,30 @@ class RegistrationPanelSession {
     selectModeEnabled = false;
     clearSelection();
   }
+
+  /// Updates [resolvedSessionId] and resets session-scoped state if the panel
+  /// moved from one non-empty session to a different non-empty session.
+  /// Returns `true` if a cross-session reset occurred.
+  bool syncSessionId(String? nextSessionId) {
+    if (nextSessionId == null || nextSessionId.isEmpty) {
+      return false;
+    }
+
+    final current = resolvedSessionId;
+    if (current == null || current.isEmpty) {
+      resolvedSessionId = nextSessionId;
+      return false;
+    }
+
+    if (current == nextSessionId) {
+      return false;
+    }
+
+    dispose();
+    selectModeEnabled = false;
+    reviewSheetOpen = false;
+    trackedRegisteredCartelas = const [];
+    resolvedSessionId = nextSessionId;
+    return true;
+  }
 }

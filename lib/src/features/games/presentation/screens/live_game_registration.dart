@@ -147,6 +147,7 @@ class _CartelaRegistrationPanelState
   String? _summaryCacheKey;
   Map<String, CartelaModel> _catalogById = const {};
   String _catalogByIdVersion = '';
+  String _shuffledCatalogVersion = '';
 
   RegistrationPanelSession get _session =>
       widget.registration.panelSessionFor(widget.slotId);
@@ -357,7 +358,16 @@ class _CartelaRegistrationPanelState
     return remaining < 0 ? 0 : remaining;
   }
 
-  void _syncTrackedRegisteredCartelasFromWidget() {
+  void _syncTrackedRegisteredCartelasFromWidget({bool forceReplace = false}) {
+    if (forceReplace) {
+      _session.trackedRegisteredCartelas =
+          List<GameCartelaModel>.from(widget.registeredCartelas)..sort(
+            (left, right) =>
+                left.cartela.number.compareTo(right.cartela.number),
+          );
+      return;
+    }
+
     if (widget.registeredCartelas.isEmpty) {
       return;
     }
@@ -467,12 +477,15 @@ class _CartelaRegistrationPanelState
   @override
   void didUpdateWidget(covariant _CartelaRegistrationPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.sessionId != null &&
-        widget.sessionId!.isNotEmpty &&
-        widget.sessionId != _session.resolvedSessionId) {
-      _session.resolvedSessionId = widget.sessionId;
+    final slotChanged = oldWidget.slotId != widget.slotId;
+    final sessionReset = _session.syncSessionId(widget.sessionId);
+    _syncTrackedRegisteredCartelasFromWidget(
+      forceReplace: slotChanged || sessionReset,
+    );
+    if (slotChanged || sessionReset) {
+      _bumpGridVisual();
+      _bumpSelectModeVisual();
     }
-    _syncTrackedRegisteredCartelasFromWidget();
     if (oldWidget.autoOpenCartelaNumbers != widget.autoOpenCartelaNumbers) {
       _autoOpenConsumed = false;
       _autoOpenScheduled = false;
@@ -499,11 +512,19 @@ class _CartelaRegistrationPanelState
 
   void _applyCatalogShuffleOrder(CartelaCatalogState catalogState) {
     if (catalogState.isShuffled) {
+      final version = RegistrationCartelaGridIndex.versionForCatalog(
+        catalogState.items,
+      );
+      if (version == _shuffledCatalogVersion && _shuffledCartelaIds != null) {
+        return;
+      }
+      _shuffledCatalogVersion = version;
       _shuffledCartelaIds =
           catalogState.items.map((cartela) => cartela.id).toList();
       return;
     }
 
+    _shuffledCatalogVersion = '';
     _shuffledCartelaIds = null;
   }
 
@@ -873,6 +894,7 @@ class _CartelaRegistrationPanelState
           fixedPrizeAmount: widget.fixedPrizeAmount,
           maxCartelasPerPlayer: widget.maxCartelasPerPlayer,
           bonusCartelaBalance: _usableBonusCartelaBalance,
+          bigGameTicketBalance: _usingBigGameTicket ? _bigGameTicketBalance : 0,
           onCartelaRemoved: (cartela) {
             unawaited(
               _unselectReservedCartela(
@@ -1373,7 +1395,7 @@ class _CartelaRegistrationPanelState
           if (state.sessionId == snapshotSessionId) {
             ref
                 .read(registrationStatePatchProvider.notifier)
-                .onSnapshotLoaded(snapshotSessionId);
+                .onSnapshotLoaded(snapshotSessionId, snapshot: state);
           }
         });
       });

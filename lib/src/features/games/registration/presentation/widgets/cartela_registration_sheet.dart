@@ -596,6 +596,7 @@ class _CartelaRegistrationSheetState
     try {
       final GameCartelaModel registeredCartela;
       if (_isBigGame) {
+        await _releaseReservation(applyAvailablePatch: false);
         final sessionId = _resolvedSessionId ?? widget.sessionId;
         if (sessionId != null && sessionId.isNotEmpty) {
           registeredCartela = await ref

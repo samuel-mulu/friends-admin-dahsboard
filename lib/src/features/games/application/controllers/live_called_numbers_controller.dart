@@ -1272,7 +1272,9 @@ class LiveCalledNumbersController {
         reconcileResult.requiresCanonicalSync ||
         reconcileResult.requiresCalledNumbersSync ||
         deferredCalledNumbers.isNotEmpty;
-    markCalledNumbersPanelDirty();
+    if (pauseStripForClaim) {
+      markCalledNumbersPanelDirty();
+    }
 
     return NumberCalledSocketApplyResult(
       applied: true,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/live_cartela_live_store.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/live_cartela_live_store_sync.dart';
@@ -69,4 +71,44 @@ void main() {
     expect(listenableA.value, 1);
     expect(listenableB.value, 0);
   });
+
+  test(
+    'afterCalledNumbersUpdated does not bump gridRevision when cartelas are unchanged and ball touches no cartelas (BUG-03)',
+    () {
+      final store = LiveCartelaLiveStore();
+      addTearDown(store.dispose);
+
+      final a = _cartela('a', 1, 7);
+      final b = _cartela('b', 2, 12);
+      store.syncCartelas([a, b]);
+      final initialGridRevision = store.gridRevision.value;
+
+      store.afterCalledNumbersUpdated(
+        cartelas: [a, b],
+        committedBallNumber: 74,
+      );
+
+      expect(store.gridRevision.value, initialGridRevision);
+      expect(store.listenableFor('a').value, 0);
+      expect(store.listenableFor('b').value, 0);
+    },
+  );
+
+  test(
+    '_cartelaTileLiveListenable does not subscribe every tile to calledNumbersPanelRevision (BUG-03)',
+    () {
+      final orchestrationSource = File(
+        'lib/src/features/games/presentation/screens/live_game_orchestration.dart',
+      ).readAsStringSync();
+
+      expect(
+        RegExp(
+          r'_cartelaTileLiveListenable\s*=[\s\S]*?_cn\.calledNumbersPanelRevision',
+        ).hasMatch(orchestrationSource),
+        isFalse,
+        reason:
+            'Merging calledNumbersPanelRevision into _cartelaTileLiveListenable forces every tile to rebuild on every ball call',
+      );
+    },
+  );
 }

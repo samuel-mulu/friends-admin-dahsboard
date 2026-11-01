@@ -46,14 +46,12 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
 
     state = AsyncData(previous.copyWith(isReshuffling: true));
 
-    final visibleItems = CartelaCatalogShuffle.visibleBatchFromPool(
-      previous.shuffledPool,
-      reshuffle: true,
-    );
+    final reshuffled = reshuffleCatalogPool(previous.shuffledPool);
 
     state = AsyncData(
       previous.copyWith(
-        items: visibleItems,
+        items: reshuffled.visibleBatch,
+        shuffledPool: reshuffled.pool,
         isReshuffling: false,
       ),
     );
@@ -66,8 +64,6 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
         current.isLoadingMore) {
       return;
     }
-
-    state = AsyncData(current.copyWith(isLoadingMore: true));
 
     final nextVisibleCount = CartelaCatalogShuffle.nextVisibleCount(
       currentVisibleCount: current.items.length,
