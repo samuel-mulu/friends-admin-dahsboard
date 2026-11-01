@@ -113,3 +113,4 @@ In [`lib/src/features/games/application/controllers/live_realtime_controller.dar
    - Run `flutter test test/features/games/live_resume_sync_coordinator_test.dart`.
    - Run entire Flutter test suite: `flutter test`.
    - Run NestJS backend test suite: `npm test` in `Friends-bingo-backend`.
+

@@ -202,3 +202,4 @@ cd D:\PROJECTS\bingo\Friends-bingo-backend
 npm test
 ```
 Confirm all 73 suites pass with 0 failures.
+
