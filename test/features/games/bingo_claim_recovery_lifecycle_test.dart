@@ -41,6 +41,7 @@ import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart
 import 'package:friends_bingo_app/src/features/games/application/controllers/live_called_numbers_controller.dart';
 import 'package:friends_bingo_app/src/features/games/application/controllers/live_game_host.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/debug/bingo_claim_diagnostics.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/components/bingo_claim_button.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_socket_session_membership.dart';
 
 class _Host implements LiveGameHost {
@@ -518,7 +519,7 @@ BingoClaimResult _httpResult(
 );
 
 void _expectBingoAvailable(WidgetTester tester, bool enabled) {
-  final buttons = find.widgetWithText(FilledButton, 'BINGO');
+  final buttons = find.byType(BingoClaimButton);
   if (buttons.evaluate().isEmpty) {
     expect(
       enabled,
@@ -526,10 +527,18 @@ void _expectBingoAvailable(WidgetTester tester, bool enabled) {
       reason: 'BINGO is unavailable in terminal presentation',
     );
   } else {
-    expect(
-      tester.widget<FilledButton>(buttons.first).onPressed,
-      enabled ? isNotNull : isNull,
+    final buttonWidget = tester.widget<BingoClaimButton>(buttons.first);
+    final inkWellFinder = find.descendant(
+      of: buttons.first,
+      matching: find.byType(InkWell),
     );
+    final inkWell = tester.widget<InkWell>(inkWellFinder);
+    if (enabled) {
+      expect(buttonWidget.canClaim, isTrue);
+      expect(inkWell.onTap, isNotNull);
+    } else {
+      expect(inkWell.onTap, isNull);
+    }
   }
 }
 
@@ -953,7 +962,7 @@ void main() {
           final host =
               tester.state(find.byType(LiveGameScreen)) as LiveGameHost;
           _expectBingoAvailable(tester, true);
-          await tester.tap(find.widgetWithText(FilledButton, 'BINGO').first);
+          await tester.tap(find.byType(BingoClaimButton).first);
           await tester.pump();
           final deadline = host.countdownNow().add(
             Duration(seconds: expired ? -10 : 300),
@@ -1780,8 +1789,12 @@ void main() {
         ),
         isTrue,
       );
-      final bingoButton = find.widgetWithText(FilledButton, 'BINGO').first;
-      expect(tester.widget<FilledButton>(bingoButton).onPressed, isNotNull);
+      final bingoButton = find.byType(BingoClaimButton).first;
+      final inkWellFinder = find.descendant(
+        of: bingoButton,
+        matching: find.byType(InkWell),
+      );
+      expect(tester.widget<InkWell>(inkWellFinder).onTap, isNotNull);
       await tester.ensureVisible(bingoButton);
       await tester.tap(bingoButton);
       await tester.pump();
@@ -1796,15 +1809,17 @@ void main() {
       await tester.pump();
       // CONFIRMING shows checking label — not a silent gray BINGO.
       expect(find.text('Checking bingo claim'), findsWidgets);
-      expect(find.widgetWithText(FilledButton, 'BINGO'), findsNothing);
+      expect(find.byType(BingoClaimButton), findsNothing);
       await tester.pump(const Duration(seconds: 1));
       expect(repo.recoveryGets, 2);
       await tester.pump();
-      expect(find.widgetWithText(FilledButton, 'BINGO'), findsWidgets);
+      expect(find.byType(BingoClaimButton), findsWidgets);
+      final restoredInkWellFinder = find.descendant(
+        of: find.byType(BingoClaimButton).first,
+        matching: find.byType(InkWell),
+      );
       expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'BINGO').first)
-            .onPressed,
+        tester.widget<InkWell>(restoredInkWellFinder).onTap,
         isNotNull,
       );
       expect(controller.claimRecoveryFailedCartelaIds, isEmpty);
@@ -2770,7 +2785,7 @@ void main() {
       // not resolve and do not fire a same-UUID retry POST (that path is
       // 404-only).
       expect(repo.claimCards.length, 1, reason: 'no retry POST was sent');
-      expect(find.widgetWithText(FilledButton, 'BINGO'), findsNothing);
+      expect(find.byType(BingoClaimButton), findsNothing);
 
       // Fixed 2s re-check interval for a non-terminal (CHECKING) status.
       await tester.pump(const Duration(seconds: 2));
