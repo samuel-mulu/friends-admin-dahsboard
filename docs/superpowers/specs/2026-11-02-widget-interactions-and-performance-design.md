@@ -98,3 +98,4 @@ During our in-depth performance audit, three primary areas for optimization were
 4. **Full Regression Testing:**
    - Run `flutter test` (all 642+ tests).
    - Run `npm test` in `Friends-bingo-backend` (all 73 suites).
+

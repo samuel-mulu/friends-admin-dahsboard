@@ -316,7 +316,7 @@ class _CollapsedCallHeader extends StatelessWidget {
                             itemBuilder: (context, index) {
                               final item = recentCalls[index];
                               return RepaintBoundary(
-                                key: ValueKey('called_ball_${item.number}_${item.calledOrder}'),
+                                key: ValueKey('called_ball_${item.number}_${item.order}'),
                                 child: _CalledBall(
                                   calledNumber: item,
                                   size: _recentBallSize,
