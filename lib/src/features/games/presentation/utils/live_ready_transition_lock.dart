@@ -157,10 +157,13 @@ bool shouldClearReadyTransitionLock({
     return true;
   }
 
-  if (pinnedGame != null &&
-      pinnedGame.sessionId == lockSessionId &&
-      isTransitionLockTerminalStatus(pinnedGame.status)) {
-    return true;
+  if (pinnedGame != null && pinnedGame.sessionId == lockSessionId) {
+    if (isTransitionLockTerminalStatus(pinnedGame.status) ||
+        pinnedGame.status == GameStatus.playing ||
+        pinnedGame.status == GameStatus.checking ||
+        pinnedGame.status == GameStatus.winnerWindow) {
+      return true;
+    }
   }
 
   if (isPreparingTransitionLockCanonicallyObsolete(
