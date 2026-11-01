@@ -12,10 +12,13 @@ import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/resolved_cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_panel_session.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_catalog_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_cartela_grid_summary_provider.dart';
+import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_state_patch_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_index.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_layout.dart';
+import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_number_chip.dart';
 
 class RegistrationGridScope extends InheritedWidget {
@@ -276,8 +279,8 @@ class _RegistrationCartelaGridState
     }
 
     // Client-side search filters the full shuffled pool so every number is findable.
-    final catalogForGrid = widget.searchQuery.isNotEmpty &&
-            catalogState.shuffledPool.isNotEmpty
+    final catalogForGrid =
+        widget.searchQuery.isNotEmpty && catalogState.shuffledPool.isNotEmpty
         ? catalogState.shuffledPool
         : catalogState.items;
 
@@ -290,15 +293,14 @@ class _RegistrationCartelaGridState
 
     if (_gridIndex.isEmpty) {
       if (widget.searchQuery.isNotEmpty) {
-        return const Center(
-          child: Text('No matches. Try another number.'),
-        );
+        return const Center(child: Text('No matches. Try another number.'));
       }
       return const SizedBox.shrink();
     }
 
-    final extraTiles =
-        widget.searchQuery.isEmpty && catalogState.isLoadingMore ? 8 : 0;
+    final extraTiles = widget.searchQuery.isEmpty && catalogState.isLoadingMore
+        ? 8
+        : 0;
     final isShuffled = catalogState.isShuffled;
     final isSearching = widget.searchQuery.isNotEmpty;
 
@@ -346,7 +348,13 @@ class _RegistrationCartelaGridState
                 : const AlwaysScrollableScrollPhysics(
                     parent: ClampingScrollPhysics(),
                   ),
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(
+              bottom:
+                  8 +
+                  (widget.session.selectModeEnabled
+                      ? 0
+                      : MediaQuery.paddingOf(context).bottom),
+            ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: RegistrationCartelaGridLayout.crossAxisCount,
               mainAxisSpacing: RegistrationCartelaGridLayout.mainAxisSpacing,
@@ -472,13 +480,32 @@ class _RegistrationCartelaGridCellState
   Widget build(BuildContext context) {
     final scope = RegistrationGridScope.of(context);
     final sessionId = scope.sessionId;
-    final summary = sessionId == null
+    final snapshotSummary = sessionId == null
         ? null
         : ref.watch(
-            registrationCartelaGridSummaryProvider((
+            registrationTakenSummaryMapProvider(
               sessionId,
-              widget.cartela.id,
-            )),
+            ).select((map) => map[widget.cartela.id]),
+          );
+    final (patchSummary, isRemoved) = sessionId == null
+        ? (null, false)
+        : ref.watch(
+            registrationStatePatchProvider.select((all) {
+              final sessionPatch = all[sessionId];
+              if (sessionPatch == null) {
+                return (null, false);
+              }
+              return (
+                sessionPatch.patches[widget.cartela.id],
+                sessionPatch.removedCartelaIds.contains(widget.cartela.id),
+              );
+            }),
+          );
+    final summary = isRemoved
+        ? null
+        : mergeCartelaSummaryWithPatch(
+            base: snapshotSummary,
+            patch: patchSummary,
           );
     final clock = ref.watch(serverClockProvider);
 
