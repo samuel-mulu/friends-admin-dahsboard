@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/time/server_clock_provider.dart';
@@ -539,8 +540,14 @@ class _RegistrationCartelaGridCellState
             isRegistering: resolved.isRegistering,
             selectBlocked: selectBlocked,
             reservationSecondsRemaining: resolved.reservationSecondsRemaining,
-            onTap: () => widget.onTap(widget.cartela, resolved),
-            onLongPress: () => widget.onLongPress(widget.cartela, resolved),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              widget.onTap(widget.cartela, resolved);
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              widget.onLongPress(widget.cartela, resolved);
+            },
           ),
         );
       },
