@@ -825,23 +825,29 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final autoDismissDuration =
-        _winnerCelebration.calculateAutoDismissDuration(_game?.winnerWindowEndsAt);
-
     final chainInterRoundDialog = pauseEndsAt != null || _ownsChainInterRoundBreak;
+    final autoDismissDuration = chainInterRoundDialog
+        ? _winnerCelebration.calculateAutoDismissDuration(
+            _game?.winnerWindowEndsAt,
+          )
+        : _effectiveTimingConfig.winningPatternDisplayHold;
+
     ChainGameDebug.log(
       'winner_dialog_open interRound=$chainInterRoundDialog '
       'results=${results.length} round=${roundIndex ?? '-'}',
     );
 
     _review.winnerCartelaDialogVisible = true;
-    // Embedded Big Game only: do not burn the configured summary hold while
-    // the winner cartela dialog is on top of the PIN summary.
-    final pauseEmbeddedBigGameHold = _embeddedBigGame &&
-        _review.postGameSummaryReviewActive &&
-        !_review.postGameSummaryHoldBypassed &&
-        !_review.postGameSummaryAdvancing;
-    if (pauseEmbeddedBigGameHold) {
+    // Do not burn the configured summary hold while the winner cartela dialog
+    // is on top of the terminal PIN summary (all game types; not inter-round).
+    final pausePostGameSummaryHold =
+        shouldPausePostGameSummaryHoldForWinnerDialog(
+      postGameSummaryReviewActive: _review.postGameSummaryReviewActive,
+      holdBypassed: _review.postGameSummaryHoldBypassed,
+      advancing: _review.postGameSummaryAdvancing,
+      chainInterRoundDialog: chainInterRoundDialog,
+    );
+    if (pausePostGameSummaryHold) {
       _review.finishTransitionTimer?.cancel();
       _review.finishTransitionTimer = null;
       if (_embeddedBigGame) {
@@ -874,28 +880,28 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           );
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
-            if (!interRoundClose) {
-              _beginPostGameSummaryAdvance();
-              unawaited(_runFinishedAdvanceSequence(force: true));
-            }
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
           // Restart the full configured hold after the dialog closes so the
           // PIN summary remains visible for finishedResultDisplaySeconds.
-          if (pauseEmbeddedBigGameHold &&
-              mounted &&
-              _embeddedBigGame &&
-              _review.postGameSummaryReviewActive &&
-              !_review.postGameSummaryHoldBypassed &&
-              !_review.postGameSummaryAdvancing) {
+          if (shouldRestartPostGameSummaryHoldAfterWinnerDialog(
+                pauseWasActive: pausePostGameSummaryHold,
+                postGameSummaryReviewActive:
+                    _review.postGameSummaryReviewActive,
+                holdBypassed: _review.postGameSummaryHoldBypassed,
+                advancing: _review.postGameSummaryAdvancing,
+              ) &&
+              mounted) {
             _review.postGameSummaryShownAt = _countdownNow();
             _review.syncPostGameSummaryCountdownTicker();
             _scheduleAdvanceToNextGame();
-            BigGameDebug.log(
-              'summary_hold_restarted reason=winner_dialog_closed '
-              'session=${_game?.sessionId ?? '-'}',
-            );
+            if (_embeddedBigGame) {
+              BigGameDebug.log(
+                'summary_hold_restarted reason=winner_dialog_closed '
+                'session=${_game?.sessionId ?? '-'}',
+              );
+            }
           }
         },
       ),
