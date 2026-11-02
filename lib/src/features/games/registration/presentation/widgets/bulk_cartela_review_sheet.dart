@@ -29,6 +29,7 @@ class BulkCartelaReviewSheet extends StatefulWidget {
     this.fixedPrizeAmount,
     this.maxCartelasPerPlayer,
     this.bonusCartelaBalance = 0,
+    this.bigGameTicketBalance = 0,
     this.onCartelaRemoved,
     super.key,
   });
@@ -45,6 +46,7 @@ class BulkCartelaReviewSheet extends StatefulWidget {
   final String? fixedPrizeAmount;
   final int? maxCartelasPerPlayer;
   final int bonusCartelaBalance;
+  final int bigGameTicketBalance;
   final ValueChanged<CartelaModel>? onCartelaRemoved;
 
   @override
@@ -95,6 +97,13 @@ class _BulkCartelaReviewSheetState extends State<BulkCartelaReviewSheet> {
   int _walletCartelasCharged(int count) {
     if (widget.isBonus || count <= 0) {
       return 0;
+    }
+
+    if (widget.isBigGame && widget.bigGameTicketBalance > 0) {
+      final ticketsUsed = count > widget.bigGameTicketBalance
+          ? widget.bigGameTicketBalance
+          : count;
+      return count - ticketsUsed;
     }
 
     return count - _bonusCartelasUsed(count);

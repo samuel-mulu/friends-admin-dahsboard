@@ -5,7 +5,7 @@ import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/debug/live_cartela_scroll_debug.dart';
 
 /// Sticky live-play cartela scroller (2-col sliver grid + optional footer).
-class LiveCartelaViewport extends StatelessWidget {
+class LiveCartelaViewport extends StatefulWidget {
   const LiveCartelaViewport({
     required this.scrollIdleListenable,
     required this.onScrollStart,
@@ -26,6 +26,28 @@ class LiveCartelaViewport extends StatelessWidget {
   static double get defaultCacheExtent => kIsWeb ? 320 : 480;
 
   @override
+  State<LiveCartelaViewport> createState() => _LiveCartelaViewportState();
+}
+
+class _LiveCartelaViewportState extends State<LiveCartelaViewport> {
+  @override
+  void didUpdateWidget(covariant LiveCartelaViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scrollIdleListenable != widget.scrollIdleListenable &&
+        !oldWidget.scrollIdleListenable.value) {
+      oldWidget.scrollIdleListenable.value = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!widget.scrollIdleListenable.value) {
+      widget.scrollIdleListenable.value = true;
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -35,10 +57,10 @@ class LiveCartelaViewport extends StatelessWidget {
               return false;
             }
             if (notification is ScrollStartNotification) {
-              if (scrollIdleListenable.value) {
+              if (widget.scrollIdleListenable.value) {
                 LiveCartelaScrollDebug.scrollStart();
-                onScrollStart();
-                scrollIdleListenable.value = false;
+                widget.onScrollStart();
+                widget.scrollIdleListenable.value = false;
               }
             } else if (notification is ScrollUpdateNotification) {
               LiveCartelaScrollDebug.scrollUpdate(
@@ -46,28 +68,28 @@ class LiveCartelaViewport extends StatelessWidget {
                 maxExtent: notification.metrics.maxScrollExtent,
               );
             } else if (notification is ScrollEndNotification) {
-              if (!scrollIdleListenable.value) {
-                scrollIdleListenable.value = true;
-                onScrollEnd();
+              if (!widget.scrollIdleListenable.value) {
+                widget.scrollIdleListenable.value = true;
+                widget.onScrollEnd();
                 LiveCartelaScrollDebug.scrollEnd();
               }
             }
             return false;
           },
           child: CustomScrollView(
-            cacheExtent: defaultCacheExtent,
+            cacheExtent: LiveCartelaViewport.defaultCacheExtent,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: padding,
-                sliver: buildCartelaSliver(
-                  constraints.maxWidth - padding.horizontal,
+                padding: widget.padding,
+                sliver: widget.buildCartelaSliver(
+                  constraints.maxWidth - widget.padding.horizontal,
                 ),
               ),
-              if (footer != null)
+              if (widget.footer != null)
                 SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.md),
-                  sliver: SliverToBoxAdapter(child: footer),
+                  padding: widget.padding.copyWith(top: AppSpacing.md),
+                  sliver: SliverToBoxAdapter(child: widget.footer),
                 ),
             ],
           ),

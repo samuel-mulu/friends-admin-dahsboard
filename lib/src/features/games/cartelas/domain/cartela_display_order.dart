@@ -48,3 +48,23 @@ List<String> reorderCartelaDisplayOrderIds({
   ids.insert(toIndex, id);
   return ids;
 }
+
+/// Returns true when the sequence of cartela ids in [nextOrder] differs from
+/// [previousOrder].
+bool hasCartelaDisplayOrderChanged({
+  required List<GameCartelaModel>? previousOrder,
+  required List<GameCartelaModel> nextOrder,
+}) {
+  if (previousOrder == null) {
+    return nextOrder.isNotEmpty;
+  }
+  if (previousOrder.length != nextOrder.length) {
+    return true;
+  }
+  for (var index = 0; index < nextOrder.length; index++) {
+    if (previousOrder[index].id != nextOrder[index].id) {
+      return true;
+    }
+  }
+  return false;
+}

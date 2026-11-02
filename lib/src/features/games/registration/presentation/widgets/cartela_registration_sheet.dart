@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/network/api_exception.dart';
@@ -581,9 +582,10 @@ class _CartelaRegistrationSheetState
   }
 
   Future<void> _register() async {
-    if (!_canRegister) {
+    if (!_canRegister || _isSubmitting) {
       return;
     }
+    HapticFeedback.heavyImpact();
 
     final reservationId = _reservationId;
     if (reservationId == null) {
@@ -596,6 +598,7 @@ class _CartelaRegistrationSheetState
     try {
       final GameCartelaModel registeredCartela;
       if (_isBigGame) {
+        await _releaseReservation(applyAvailablePatch: false);
         final sessionId = _resolvedSessionId ?? widget.sessionId;
         if (sessionId != null && sessionId.isNotEmpty) {
           registeredCartela = await ref

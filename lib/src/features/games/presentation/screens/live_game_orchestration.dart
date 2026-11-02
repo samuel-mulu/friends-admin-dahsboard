@@ -14,10 +14,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _chain.chainBingoArmedAfterCalledCount;
   set _chainBingoArmedAfterCalledCount(int? value) =>
       _chain.chainBingoArmedAfterCalledCount = value;
-  Listenable get _cartelaTileLiveListenable => Listenable.merge([
-        _cn.calledNumbersPanelRevision,
-        _chain.claimEligibilityRevision,
-      ]);
+  Listenable get _cartelaTileLiveListenable => _chain.claimEligibilityRevision;
   DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
   /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
@@ -36,7 +33,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
-  LiveRealtimeController get _realtime => controllers.realtime;
   LiveResumeSyncCoordinator get _resumeSync => controllers.resumeSync;
 
   void _syncChainPauseLatchFromGame() {
@@ -3166,8 +3162,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             ownershipLiveCandidate.sessionId!.isNotEmpty
         ? () {
             final liveSessionId = ownershipLiveCandidate.sessionId!;
-            final snapshotToken = _registration
-                .captureCurrentSessionFetchToken(liveSessionId);
             return _gamesRepository
                 .getMyGameCartelas(liveSessionId)
                 .then((fetched) {
@@ -3189,7 +3183,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
                   if (fetchedCartelas.isNotEmpty) {
                     preloadedPrimaryCartelas = fetchedCartelas;
-                    preloadedPrimaryCartelasToken = snapshotToken;
+                    preloadedPrimaryCartelasToken = _registration
+                        .captureCurrentSessionFetchToken(liveSessionId);
                   }
 
                   return _resolvePrimaryFromOperations(
@@ -3545,7 +3540,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (!pauseStripForClaim &&
         applyResult.applied &&
         !applyResult.requiresCanonicalSync) {
-      _markCalledNumbersPanelDirty();
+      _markCalledNumbersPanelDirty(forNewBall: true);
     }
 
     if (applyResult.requiresCanonicalSync) {
@@ -5840,16 +5835,28 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final maxRemains = ref.read(cartelaSortMaxRemainsProvider);
+    final nextOrdered = _orderedMyCartelas(sortMode, maxRemains);
+    final orderChanged = hasCartelaDisplayOrderChanged(
+      previousOrder: _frozenPlayCartelaOrder,
+      nextOrder: nextOrdered,
+    );
+
     final shouldApply =
         applyDisplayOrder ?? _liveCartelaScrollIdle.value;
     if (shouldApply) {
       _pendingCartelaSortDisplayApply = false;
-      _frozenPlayCartelaOrder = null;
+      _frozenPlayCartelaOrder = nextOrdered;
+      if (orderChanged && isLiveHostActive) {
+        markNeedsBuild();
+      }
       return;
     }
 
-    _pendingCartelaSortDisplayApply = true;
-    LiveCartelaScrollDebug.sortDisplayDeferred();
+    if (orderChanged) {
+      _pendingCartelaSortDisplayApply = true;
+      LiveCartelaScrollDebug.sortDisplayDeferred();
+    }
   }
 
   @override

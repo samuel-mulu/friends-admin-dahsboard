@@ -10,6 +10,8 @@ class LiveCartelaLiveStore extends ChangeNotifier {
   final ValueNotifier<int> gridRevision = ValueNotifier<int>(0);
   final Map<String, ValueNotifier<int>> _tileRevisions = {};
   Map<int, Set<String>> _ballNumberToCartelaIds = {};
+  int _lastSyncedCartelasCount = -1;
+  int? _lastSyncedCartelasSignature;
 
   ValueListenable<int> get gridListenable => gridRevision;
 
@@ -22,6 +24,8 @@ class LiveCartelaLiveStore extends ChangeNotifier {
 
   void clear() {
     _ballNumberToCartelaIds = {};
+    _lastSyncedCartelasCount = -1;
+    _lastSyncedCartelasSignature = null;
     for (final listenable in _tileRevisions.values) {
       listenable.dispose();
     }
@@ -30,7 +34,28 @@ class LiveCartelaLiveStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  static int _signatureForCartelas(List<GameCartelaModel> cartelas) {
+    return Object.hashAll(
+      cartelas.map(
+        (c) => Object.hash(
+          c.id,
+          c.cartelaId,
+          c.status,
+          c.isWinner,
+          c.blockedAt?.millisecondsSinceEpoch,
+        ),
+      ),
+    );
+  }
+
   void syncCartelas(List<GameCartelaModel> cartelas) {
+    final nextSignature = _signatureForCartelas(cartelas);
+    if (_lastSyncedCartelasCount == cartelas.length &&
+        _lastSyncedCartelasSignature == nextSignature) {
+      return;
+    }
+    _lastSyncedCartelasCount = cartelas.length;
+    _lastSyncedCartelasSignature = nextSignature;
     _ballNumberToCartelaIds = buildBallNumberToCartelaIds(cartelas);
     final active = cartelas.map((c) => c.id).toSet();
     for (final id in _tileRevisions.keys.toList()) {

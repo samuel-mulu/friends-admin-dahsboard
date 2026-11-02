@@ -32,7 +32,7 @@ void main() {
     expect(find.text('N'), findsOneWidget);
     expect(find.text('G'), findsOneWidget);
     expect(find.text('O'), findsOneWidget);
-    expect(find.text('#42'), findsOneWidget); // Card header number
+    expect(find.text('42'), findsOneWidget); // Card header number
     expect(find.text('FREE'), findsOneWidget); // Center Free space
   });
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
@@ -147,12 +148,22 @@ class RegistrationActionDock extends StatelessWidget {
                   ],
                   const Spacer(),
                   TextButton(
-                    onPressed: selectedCount > 0 ? onCancelSelection : null,
+                    onPressed: selectedCount > 0
+                        ? () {
+                            HapticFeedback.selectionClick();
+                            onCancelSelection();
+                          }
+                        : null,
                     child: Text(l10n.gameClear),
                   ),
                   const SizedBox(width: 4),
                   FilledButton(
-                    onPressed: selectedCount > 0 ? onReview : null,
+                    onPressed: selectedCount > 0
+                        ? () {
+                            HapticFeedback.mediumImpact();
+                            onReview();
+                          }
+                        : null,
                     child: Text(l10n.gameReview(selectedCount)),
                   ),
                 ],

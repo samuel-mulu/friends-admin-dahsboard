@@ -754,14 +754,16 @@ mixin _LiveGameViews on
                           ),
                         ),
                       )
-                    : SizedBox(
-                        height: 640,
-                        child: _buildMissedRoundRegistrationSection(
-                          target: registrationTarget,
-                          panel: _buildRegistrationPanelForTarget(
+                    : RegistrationGridScrollIsolation(
+                        child: SizedBox(
+                          height: 640,
+                          child: _buildMissedRoundRegistrationSection(
                             target: registrationTarget,
-                            registeredCartelas: _registrationTargetCartelas,
-                            isCurrentRound: false,
+                            panel: _buildRegistrationPanelForTarget(
+                              target: registrationTarget,
+                              registeredCartelas: _registrationTargetCartelas,
+                              isCurrentRound: false,
+                            ),
                           ),
                         ),
                       )

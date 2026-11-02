@@ -8,6 +8,7 @@ class RegistrationCartelaGridIndex {
   String _searchQuery = '';
   bool _serverSideSearch = false;
   List<String>? _shuffledCartelaIds;
+  int? _shuffledOrderHash;
   String _catalogVersion = '';
 
   int get length => _displayIndices.length;
@@ -19,10 +20,12 @@ class RegistrationCartelaGridIndex {
       return 'empty';
     }
 
-    return '${catalog.length}:${catalog.first.id}:${catalog.last.id}';
+    final idsHash = Object.hashAll(catalog.map((c) => c.id));
+    return '${catalog.length}:${catalog.first.id}:${catalog.last.id}:$idsHash';
   }
 
-  CartelaModel cartelaAt(int displayIndex) => _catalog[_displayIndices[displayIndex]];
+  CartelaModel cartelaAt(int displayIndex) =>
+      _catalog[_displayIndices[displayIndex]];
 
   void update({
     required List<CartelaModel> catalog,
@@ -31,15 +34,22 @@ class RegistrationCartelaGridIndex {
     bool serverSideSearch = false,
   }) {
     final catalogVersion = versionForCatalog(catalog);
+    final nextShuffleHash = shuffledCartelaIds == null
+        ? null
+        : Object.hashAll(shuffledCartelaIds);
+    final nextShuffleLength = shuffledCartelaIds?.length;
+    final prevShuffleLength = _shuffledCartelaIds?.length;
     final needsRebuild =
         catalogVersion != _catalogVersion ||
         searchQuery != _searchQuery ||
-        shuffledCartelaIds != _shuffledCartelaIds ||
+        nextShuffleLength != prevShuffleLength ||
+        nextShuffleHash != _shuffledOrderHash ||
         serverSideSearch != _serverSideSearch;
 
     _catalog = catalog;
     _searchQuery = searchQuery;
     _shuffledCartelaIds = shuffledCartelaIds;
+    _shuffledOrderHash = nextShuffleHash;
     _serverSideSearch = serverSideSearch;
     _catalogVersion = catalogVersion;
 

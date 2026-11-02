@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_branding.dart';
 
@@ -25,6 +26,7 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _pulse;
+  bool _tapInFlight = false;
 
   @override
   void initState() {
@@ -44,6 +46,9 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
         oldWidget.showReadyPulse != widget.showReadyPulse ||
         oldWidget.isClaiming != widget.isClaiming) {
       _syncAnimation();
+      if (widget.isClaiming || !widget.canClaim) {
+        _tapInFlight = false;
+      }
     }
   }
 
@@ -68,6 +73,13 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEnabled = widget.canClaim && !widget.isClaiming;
 
+    void handleTap() {
+      if (_tapInFlight || !isEnabled) return;
+      setState(() => _tapInFlight = true);
+      HapticFeedback.heavyImpact();
+      widget.onPressed();
+    }
+
     final Widget buttonContent;
     if (widget.isClaiming) {
       buttonContent = SizedBox(
@@ -89,8 +101,8 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
           letterSpacing: 0.8,
           height: 1,
           color: isEnabled
-              ? AppBranding.casinoPurpleDeep
-              : (isDark ? Colors.white38 : AppBranding.lightOnDisabled),
+            ? AppBranding.casinoPurpleDeep
+            : (isDark ? Colors.white38 : AppBranding.lightOnDisabled),
         ),
       );
     }
@@ -98,7 +110,7 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
     final button = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: isEnabled ? widget.onPressed : null,
+        onTap: isEnabled ? handleTap : null,
         borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -149,8 +161,18 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
       children: [button],
     );
 
+    final accessibleButton = Semantics(
+      button: true,
+      enabled: isEnabled,
+      label: 'Claim Bingo',
+      value: widget.isClaiming
+          ? 'Checking claim'
+          : (isEnabled ? 'Ready to claim' : 'Unavailable'),
+      child: snugButton,
+    );
+
     if (!widget.showReadyPulse || widget.isClaiming) {
-      return snugButton;
+      return accessibleButton;
     }
 
     return AnimatedBuilder(
@@ -176,7 +198,7 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
           ),
         );
       },
-      child: snugButton,
+      child: accessibleButton,
     );
   }
 }

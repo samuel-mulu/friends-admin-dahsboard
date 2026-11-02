@@ -373,6 +373,12 @@ class LiveRealtimeController {
       return;
     }
 
+    if (trigger != LiveSyncTrigger.manualRefresh &&
+        host.controllers.resumeSync.shouldThrottleResumeSync()) {
+      LiveRealtimeDebug.resumeSyncIgnored(reason: '${reason}_throttled');
+      return _resumeSyncCompleter?.future ?? Future<void>.value();
+    }
+
     if (ResumeSyncGuard.inFlight || resumeSyncInFlight) {
       _collectedResumeReasons.add(reason);
       LiveRealtimeDebug.resumeSyncIgnored(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/time/server_clock_provider.dart';
@@ -12,10 +13,13 @@ import 'package:friends_bingo_app/src/features/games/data/models/game_model.dart
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/resolved_cartela_availability.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_panel_session.dart';
+import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_catalog_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_cartela_grid_summary_provider.dart';
+import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_state_patch_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_index.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_layout.dart';
+import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_number_chip.dart';
 
 class RegistrationGridScope extends InheritedWidget {
@@ -37,7 +41,7 @@ class RegistrationGridScope extends InheritedWidget {
   final int cartelaHoldSeconds;
   final bool isGuest;
   final int? maxAffordable;
-  final ValueListenable<int> selectModeEnabledListenable;
+  final Listenable selectModeEnabledListenable;
 
   static RegistrationGridScope of(BuildContext context) {
     final scope = context
@@ -56,7 +60,7 @@ class RegistrationGridScope extends InheritedWidget {
   bool updateShouldNotify(RegistrationGridScope oldWidget) {
     return session != oldWidget.session ||
         sessionId != oldWidget.sessionId ||
-        lockedCartelaIds != oldWidget.lockedCartelaIds ||
+        !setEquals(lockedCartelaIds, oldWidget.lockedCartelaIds) ||
         cartelaHoldSeconds != oldWidget.cartelaHoldSeconds ||
         isGuest != oldWidget.isGuest ||
         maxAffordable != oldWidget.maxAffordable ||
@@ -115,6 +119,8 @@ class _RegistrationCartelaGridState
 
   late ScrollController _scrollController;
   var _ownsScrollController = false;
+  var _loadMoreScheduled = false;
+  late Listenable _cellVisualListenable;
   final RegistrationCartelaGridIndex _gridIndex =
       RegistrationCartelaGridIndex();
   Timer? _selectionReservationTimer;
@@ -125,21 +131,25 @@ class _RegistrationCartelaGridState
     _ownsScrollController = widget.scrollController == null;
     _scrollController = widget.scrollController ?? ScrollController();
     _scrollController.addListener(_onScroll);
+    _cellVisualListenable = Listenable.merge([
+      widget.selectModeRevision,
+      widget.gridVisualRevision,
+    ]);
     _syncSelectionReservationTimer();
     widget.gridVisualRevision.addListener(_handleGridVisualRevision);
-    widget.selectModeRevision.addListener(_handleSelectModeRevision);
   }
 
   @override
   void didUpdateWidget(covariant RegistrationCartelaGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.gridVisualRevision != widget.gridVisualRevision) {
+    if (oldWidget.gridVisualRevision != widget.gridVisualRevision ||
+        oldWidget.selectModeRevision != widget.selectModeRevision) {
       oldWidget.gridVisualRevision.removeListener(_handleGridVisualRevision);
       widget.gridVisualRevision.addListener(_handleGridVisualRevision);
-    }
-    if (oldWidget.selectModeRevision != widget.selectModeRevision) {
-      oldWidget.selectModeRevision.removeListener(_handleSelectModeRevision);
-      widget.selectModeRevision.addListener(_handleSelectModeRevision);
+      _cellVisualListenable = Listenable.merge([
+        widget.selectModeRevision,
+        widget.gridVisualRevision,
+      ]);
     }
     if (oldWidget.scrollController != widget.scrollController) {
       _scrollController.removeListener(_onScroll);
@@ -156,7 +166,6 @@ class _RegistrationCartelaGridState
   @override
   void dispose() {
     widget.gridVisualRevision.removeListener(_handleGridVisualRevision);
-    widget.selectModeRevision.removeListener(_handleSelectModeRevision);
     _selectionReservationTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     if (_ownsScrollController) {
@@ -167,14 +176,7 @@ class _RegistrationCartelaGridState
 
   void _handleGridVisualRevision() {
     if (mounted) {
-      setState(() {});
       _syncSelectionReservationTimer();
-    }
-  }
-
-  void _handleSelectModeRevision() {
-    if (mounted) {
-      setState(() {});
     }
   }
 
@@ -186,7 +188,7 @@ class _RegistrationCartelaGridState
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
+    if (!_scrollController.hasClients || _loadMoreScheduled) {
       return;
     }
 
@@ -212,7 +214,14 @@ class _RegistrationCartelaGridState
       return;
     }
 
-    ref.read(cartelaCatalogProvider.notifier).loadMore();
+    _loadMoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMoreScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      unawaited(ref.read(cartelaCatalogProvider.notifier).loadMore());
+    });
   }
 
   void _syncSelectionReservationTimer() {
@@ -251,7 +260,7 @@ class _RegistrationCartelaGridState
   Widget build(BuildContext context) {
     ref.listen(cartelaCatalogProvider, (previous, next) {
       final catalogState = next.asData?.value;
-      if (catalogState == null || catalogState.isShuffled) {
+      if (catalogState == null) {
         return;
       }
 
@@ -271,8 +280,8 @@ class _RegistrationCartelaGridState
     }
 
     // Client-side search filters the full shuffled pool so every number is findable.
-    final catalogForGrid = widget.searchQuery.isNotEmpty &&
-            catalogState.shuffledPool.isNotEmpty
+    final catalogForGrid =
+        widget.searchQuery.isNotEmpty && catalogState.shuffledPool.isNotEmpty
         ? catalogState.shuffledPool
         : catalogState.items;
 
@@ -285,15 +294,14 @@ class _RegistrationCartelaGridState
 
     if (_gridIndex.isEmpty) {
       if (widget.searchQuery.isNotEmpty) {
-        return const Center(
-          child: Text('No matches. Try another number.'),
-        );
+        return const Center(child: Text('No matches. Try another number.'));
       }
       return const SizedBox.shrink();
     }
 
-    final extraTiles =
-        widget.searchQuery.isEmpty && catalogState.isLoadingMore ? 8 : 0;
+    final extraTiles = widget.searchQuery.isEmpty && catalogState.isLoadingMore
+        ? 8
+        : 0;
     final isShuffled = catalogState.isShuffled;
     final isSearching = widget.searchQuery.isNotEmpty;
 
@@ -304,15 +312,19 @@ class _RegistrationCartelaGridState
       cartelaHoldSeconds: widget.cartelaHoldSeconds,
       isGuest: widget.isGuest,
       maxAffordable: widget.maxAffordable,
-      selectModeEnabledListenable: widget.selectModeRevision,
+      selectModeEnabledListenable: _cellVisualListenable,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final visibleCount = _gridIndex.length;
+          final canScrollForMore = catalogState.isShuffled
+              ? catalogState.hasMoreShufflePool
+              : catalogState.hasMore;
           // Search is a plain filter — never use shuffle fit-to-height layout
           // (that stretches a few matches into tall thin strips).
           final fitsWithoutScrolling =
               !isSearching &&
               isShuffled &&
+              !canScrollForMore &&
               RegistrationCartelaGridLayout.fitsWithoutScrolling(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
@@ -328,14 +340,22 @@ class _RegistrationCartelaGridState
 
           return GridView.builder(
             scrollCacheExtent: ScrollCacheExtent.pixels(
-              fitsWithoutScrolling ? 0 : 1200,
+              fitsWithoutScrolling ? 0 : 250,
             ),
             controller: _scrollController,
             primary: false,
             physics: fitsWithoutScrolling
                 ? const NeverScrollableScrollPhysics()
-                : const ClampingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 8),
+                : const AlwaysScrollableScrollPhysics(
+                    parent: ClampingScrollPhysics(),
+                  ),
+            padding: EdgeInsets.only(
+              bottom:
+                  8 +
+                  (widget.session.selectModeEnabled
+                      ? 0
+                      : MediaQuery.paddingOf(context).bottom),
+            ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: RegistrationCartelaGridLayout.crossAxisCount,
               mainAxisSpacing: RegistrationCartelaGridLayout.mainAxisSpacing,
@@ -461,19 +481,38 @@ class _RegistrationCartelaGridCellState
   Widget build(BuildContext context) {
     final scope = RegistrationGridScope.of(context);
     final sessionId = scope.sessionId;
-    final summary = sessionId == null
+    final snapshotSummary = sessionId == null
         ? null
         : ref.watch(
-            registrationCartelaGridSummaryProvider((
+            registrationTakenSummaryMapProvider(
               sessionId,
-              widget.cartela.id,
-            )),
+            ).select((map) => map[widget.cartela.id]),
+          );
+    final (patchSummary, isRemoved) = sessionId == null
+        ? (null, false)
+        : ref.watch(
+            registrationStatePatchProvider.select((all) {
+              final sessionPatch = all[sessionId];
+              if (sessionPatch == null) {
+                return (null, false);
+              }
+              return (
+                sessionPatch.patches[widget.cartela.id],
+                sessionPatch.removedCartelaIds.contains(widget.cartela.id),
+              );
+            }),
+          );
+    final summary = isRemoved
+        ? null
+        : mergeCartelaSummaryWithPatch(
+            base: snapshotSummary,
+            patch: patchSummary,
           );
     final clock = ref.watch(serverClockProvider);
 
-    return ValueListenableBuilder<int>(
-      valueListenable: scope.selectModeEnabledListenable,
-      builder: (context, _, child) {
+    return ListenableBuilder(
+      listenable: scope.selectModeEnabledListenable,
+      builder: (context, child) {
         final selectModeEnabled = scope.session.selectModeEnabled;
         final resolved = _resolveAvailability(
           scope: scope,
@@ -501,8 +540,14 @@ class _RegistrationCartelaGridCellState
             isRegistering: resolved.isRegistering,
             selectBlocked: selectBlocked,
             reservationSecondsRemaining: resolved.reservationSecondsRemaining,
-            onTap: () => widget.onTap(widget.cartela, resolved),
-            onLongPress: () => widget.onLongPress(widget.cartela, resolved),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              widget.onTap(widget.cartela, resolved);
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              widget.onLongPress(widget.cartela, resolved);
+            },
           ),
         );
       },

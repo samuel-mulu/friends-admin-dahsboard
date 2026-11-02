@@ -3,6 +3,24 @@ import 'dart:math';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartela_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_catalog_limits.dart';
 
+({List<CartelaModel> pool, List<CartelaModel> visibleBatch})
+reshuffleCatalogPool(
+  List<CartelaModel> pool, {
+  int batchSize = CartelaCatalogShuffle.displayBatchSize,
+  Random? random,
+}) {
+  if (pool.isEmpty) {
+    return (pool: const [], visibleBatch: const []);
+  }
+
+  final working = pool.toList(growable: false)..shuffle(random ?? Random());
+  final visibleBatch = CartelaCatalogShuffle.visibleSliceFromPool(
+    working,
+    visibleCount: batchSize,
+  );
+  return (pool: working, visibleBatch: visibleBatch);
+}
+
 class CartelaCatalogShuffle {
   const CartelaCatalogShuffle._();
 
@@ -18,13 +36,16 @@ class CartelaCatalogShuffle {
       return const [];
     }
 
-    final working = pool.toList();
     if (reshuffle) {
-      working.shuffle(random ?? Random());
+      return reshuffleCatalogPool(
+        pool,
+        batchSize: batchSize,
+        random: random,
+      ).visibleBatch;
     }
 
     return visibleSliceFromPool(
-      working,
+      pool,
       visibleCount: batchSize,
     );
   }

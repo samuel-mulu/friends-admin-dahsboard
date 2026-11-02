@@ -314,9 +314,13 @@ class _CollapsedCallHeader extends StatelessWidget {
                             separatorBuilder: (context, index) =>
                                 const SizedBox(width: 8),
                             itemBuilder: (context, index) {
-                              return _CalledBall(
-                                calledNumber: recentCalls[index],
-                                size: _recentBallSize,
+                              final item = recentCalls[index];
+                              return RepaintBoundary(
+                                key: ValueKey('called_ball_${item.number}_${item.order}'),
+                                child: _CalledBall(
+                                  calledNumber: item,
+                                  size: _recentBallSize,
+                                ),
                               );
                             },
                           ),

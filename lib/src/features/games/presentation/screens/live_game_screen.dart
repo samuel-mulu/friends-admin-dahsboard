@@ -329,13 +329,10 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _stopPreparingPhasePolling();
     controllers.transition.clearReadyTransitionLock();
     _cancelCanonicalRefetchDebounce();
-    controllers.dispose();
     _stopDisconnectedCalledNumbersPolling();
     _invalidSocketPayloadRefetchTimer?.cancel();
-    _myCartelasRefreshDebounceTimer?.cancel();
-    _nextCartelasRefreshDebounceTimer?.cancel();
     _applySocketSessionMembership(null);
-    _socketMembership.dispose();
+    controllers.dispose();
     LiveGameResumeOwnerRegistry.setMasterRefresh(null);
     LiveGameResumeOwnerRegistry.deactivate();
     super.dispose();

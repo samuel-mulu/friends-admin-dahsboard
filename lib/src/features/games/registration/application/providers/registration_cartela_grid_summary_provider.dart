@@ -18,22 +18,13 @@ final registrationCartelaGridSummaryProvider = Provider.family<
     return null;
   }
 
-  final snapshotSummary = ref.watch(
-    registrationTakenSummaryMapProvider(sessionId).select(
-      (map) => map[cartelaId],
-    ),
-  );
+  final snapshotSummary =
+      ref.watch(registrationTakenSummaryMapProvider(sessionId))[cartelaId];
 
-  final patchSummary = ref.watch(
-    registrationStatePatchProvider.select(
-      (all) => all[sessionId]?.patches[cartelaId],
-    ),
-  );
-  final isRemoved = ref.watch(
-    registrationStatePatchProvider.select(
-      (all) => all[sessionId]?.removedCartelaIds.contains(cartelaId) ?? false,
-    ),
-  );
+  final sessionPatch = ref.watch(registrationStatePatchProvider)[sessionId];
+  final patchSummary = sessionPatch?.patches[cartelaId];
+  final isRemoved =
+      sessionPatch?.removedCartelaIds.contains(cartelaId) ?? false;
 
   if (isRemoved) {
     return null;
