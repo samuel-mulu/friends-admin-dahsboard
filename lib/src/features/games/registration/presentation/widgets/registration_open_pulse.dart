@@ -322,9 +322,10 @@ class _RegistrationOpenPulseState extends State<RegistrationOpenPulse>
         : AppBranding.brandPurple;
     final staticTitle = widget.titleOverride ?? widget.ruleName;
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
         if (widget.embedded) {
           return Padding(
             padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
@@ -514,6 +515,7 @@ class _RegistrationOpenPulseState extends State<RegistrationOpenPulse>
           ],
         ],
       ),
+    ),
     );
   }
 }

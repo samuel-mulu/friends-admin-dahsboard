@@ -148,6 +148,7 @@ class _CartelaRegistrationPanelState
   Map<String, CartelaModel> _catalogById = const {};
   String _catalogByIdVersion = '';
   String _shuffledCatalogVersion = '';
+  List<CartelaModel>? _lastShuffledCatalogItems;
 
   RegistrationPanelSession get _session =>
       widget.registration.panelSessionFor(widget.slotId);
@@ -512,18 +513,25 @@ class _CartelaRegistrationPanelState
 
   void _applyCatalogShuffleOrder(CartelaCatalogState catalogState) {
     if (catalogState.isShuffled) {
+      if (identical(catalogState.items, _lastShuffledCatalogItems) &&
+          _shuffledCartelaIds != null) {
+        return;
+      }
       final version = RegistrationCartelaGridIndex.versionForCatalog(
         catalogState.items,
       );
       if (version == _shuffledCatalogVersion && _shuffledCartelaIds != null) {
+        _lastShuffledCatalogItems = catalogState.items;
         return;
       }
+      _lastShuffledCatalogItems = catalogState.items;
       _shuffledCatalogVersion = version;
       _shuffledCartelaIds =
           catalogState.items.map((cartela) => cartela.id).toList();
       return;
     }
 
+    _lastShuffledCatalogItems = null;
     _shuffledCatalogVersion = '';
     _shuffledCartelaIds = null;
   }

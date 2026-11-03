@@ -200,7 +200,8 @@ mixin _LiveGameViews on
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (showRegistrationPulseHeader)
-            CollapsibleRegistrationOpenCluster(
+            RepaintBoundary(
+              child: CollapsibleRegistrationOpenCluster(
               game: game,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
               expanded: _gameInfoExpanded,
@@ -259,9 +260,11 @@ mixin _LiveGameViews on
                         registrationSessionId: game.sessionId,
                       ),
               ),
-            )
+            ),
+          )
           else
-            CollapsibleLiveTopSection(
+            RepaintBoundary(
+              child: CollapsibleLiveTopSection(
               game: game,
               nextGame: isCurrentRound && !_suppressNextGameQueueHint
                   ? _queueUpcomingGameForDisplay
@@ -274,6 +277,7 @@ mixin _LiveGameViews on
               nextRegisteredCartelaNumbers: _nextRegisteredCartelaNumbers,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
             ),
+          ),
           if (!showRegistrationPulseHeader && statusBanner != null) ...[
             VGap.sm,
             statusBanner,
@@ -298,7 +302,7 @@ mixin _LiveGameViews on
                           child: FriendsBingoLoader.inline(compact: true),
                         ))
                 : showRegistrationActions
-                ? registrationBody
+                ? RepaintBoundary(child: registrationBody)
                 : widget.embedded && game.isBigGame
                 ? _BigGameEmbeddedWaitingPanel(isRefetching: _isLoading)
                 : _PreparingGamePanel(

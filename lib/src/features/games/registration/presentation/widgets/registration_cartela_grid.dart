@@ -115,7 +115,7 @@ class RegistrationCartelaGrid extends ConsumerStatefulWidget {
 class _RegistrationCartelaGridState
     extends ConsumerState<RegistrationCartelaGrid> {
   static const _loadMoreThreshold = 240.0;
-  static const _reservationExpiryInterval = Duration(milliseconds: 250);
+  static const _reservationExpiryInterval = Duration(seconds: 1);
 
   late ScrollController _scrollController;
   var _ownsScrollController = false;
@@ -338,8 +338,9 @@ class _RegistrationCartelaGridState
                 )
               : RegistrationCartelaGridLayout.childAspectRatio;
 
-          return GridView.builder(
-            scrollCacheExtent: ScrollCacheExtent.pixels(
+          return RepaintBoundary(
+            child: GridView.builder(
+              scrollCacheExtent: ScrollCacheExtent.pixels(
               fitsWithoutScrolling ? 0 : 250,
             ),
             controller: _scrollController,
@@ -382,6 +383,7 @@ class _RegistrationCartelaGridState
                 onLongPress: widget.onCartelaLongPress,
               );
             },
+          ),
           );
         },
       ),
@@ -408,7 +410,7 @@ class RegistrationCartelaGridCell extends ConsumerStatefulWidget {
 
 class _RegistrationCartelaGridCellState
     extends ConsumerState<RegistrationCartelaGridCell> {
-  static const _countdownInterval = Duration(milliseconds: 250);
+  static const _countdownInterval = Duration(seconds: 1);
 
   Timer? _countdownTimer;
 

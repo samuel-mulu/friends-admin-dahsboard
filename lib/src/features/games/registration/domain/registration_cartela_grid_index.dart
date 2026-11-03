@@ -10,6 +10,8 @@ class RegistrationCartelaGridIndex {
   List<String>? _shuffledCartelaIds;
   int? _shuffledOrderHash;
   String _catalogVersion = '';
+  Map<String, int>? _cachedShuffleIndex;
+  int? _cachedShuffleOrderHash;
 
   int get length => _displayIndices.length;
 
@@ -20,7 +22,10 @@ class RegistrationCartelaGridIndex {
       return 'empty';
     }
 
-    final idsHash = Object.hashAll(catalog.map((c) => c.id));
+    var idsHash = 0;
+    for (var i = 0; i < catalog.length; i++) {
+      idsHash = Object.hash(idsHash, catalog[i].id);
+    }
     return '${catalog.length}:${catalog.first.id}:${catalog.last.id}:$idsHash';
   }
 
@@ -77,10 +82,7 @@ class RegistrationCartelaGridIndex {
     }
 
     if (_shuffledCartelaIds != null) {
-      final shuffleIndex = {
-        for (var index = 0; index < _shuffledCartelaIds!.length; index++)
-          _shuffledCartelaIds![index]: index,
-      };
+      final shuffleIndex = _getOrBuildShuffleIndex();
       final fallbackIndex = shuffleIndex.length;
 
       indices.sort((left, right) {
@@ -98,6 +100,19 @@ class RegistrationCartelaGridIndex {
     }
 
     return indices;
+  }
+
+  Map<String, int> _getOrBuildShuffleIndex() {
+    final list = _shuffledCartelaIds!;
+    final hash = _shuffledOrderHash;
+    if (_cachedShuffleIndex != null && _cachedShuffleOrderHash == hash) {
+      return _cachedShuffleIndex!;
+    }
+    _cachedShuffleOrderHash = hash;
+    return _cachedShuffleIndex = {
+      for (var index = 0; index < list.length; index++)
+        list[index]: index,
+    };
   }
 }
 
