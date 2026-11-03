@@ -878,7 +878,7 @@ mixin _LiveGameViews on
     required List<GameCartelaModel> registeredCartelas,
     required bool isCurrentRound,
   }) {
-    return _CartelaRegistrationPanel(
+    return CartelaRegistrationPanel(
       registration: _registration,
       slotId: target.id,
       sessionId: target.sessionId,

@@ -21,7 +21,7 @@ import 'package:friends_bingo_app/src/features/games/registration/domain/registr
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
 import 'registration_cartela_card.dart';
 
-class RegistrationGridScope extends InheritedWidget {
+class RegistrationGridScope extends InheritedModel<String> {
   const RegistrationGridScope({
     required this.session,
     required this.sessionId,
@@ -30,6 +30,7 @@ class RegistrationGridScope extends InheritedWidget {
     required this.isGuest,
     required this.maxAffordable,
     required this.selectModeEnabledListenable,
+    required this.countdownTicker,
     required super.child,
     super.key,
   });
@@ -41,8 +42,17 @@ class RegistrationGridScope extends InheritedWidget {
   final bool isGuest;
   final int? maxAffordable;
   final Listenable selectModeEnabledListenable;
+  final Listenable countdownTicker;
 
-  static RegistrationGridScope of(BuildContext context) {
+  static RegistrationGridScope of(BuildContext context, {String? cartelaId}) {
+    if (cartelaId != null) {
+      final scope = InheritedModel.inheritFrom<RegistrationGridScope>(
+        context,
+        aspect: cartelaId,
+      );
+      assert(scope != null, 'RegistrationGridScope not found in context');
+      return scope!;
+    }
     final scope = context
         .dependOnInheritedWidgetOfExactType<RegistrationGridScope>();
     assert(scope != null, 'RegistrationGridScope not found in context');
@@ -63,7 +73,59 @@ class RegistrationGridScope extends InheritedWidget {
         cartelaHoldSeconds != oldWidget.cartelaHoldSeconds ||
         isGuest != oldWidget.isGuest ||
         maxAffordable != oldWidget.maxAffordable ||
-        selectModeEnabledListenable != oldWidget.selectModeEnabledListenable;
+        selectModeEnabledListenable != oldWidget.selectModeEnabledListenable ||
+        countdownTicker != oldWidget.countdownTicker;
+  }
+
+  @override
+  bool updateShouldNotifyDependent(
+    RegistrationGridScope oldWidget,
+    Set<String> dependencies,
+  ) {
+    if (sessionId != oldWidget.sessionId ||
+        isGuest != oldWidget.isGuest ||
+        maxAffordable != oldWidget.maxAffordable ||
+        selectModeEnabledListenable != oldWidget.selectModeEnabledListenable ||
+        cartelaHoldSeconds != oldWidget.cartelaHoldSeconds ||
+        countdownTicker != oldWidget.countdownTicker) {
+      return true;
+    }
+
+    for (final cartelaId in dependencies) {
+      final wasLocked = oldWidget.lockedCartelaIds.contains(cartelaId);
+      final isLocked = lockedCartelaIds.contains(cartelaId);
+      if (wasLocked != isLocked) {
+        return true;
+      }
+
+      final wasMine = oldWidget.isTrackedMine(cartelaId);
+      final isMine = isTrackedMine(cartelaId);
+      if (wasMine != isMine) {
+        return true;
+      }
+
+      final wasSelected =
+          oldWidget.session.selectedCartelaIds.contains(cartelaId);
+      final isSelected = session.selectedCartelaIds.contains(cartelaId);
+      if (wasSelected != isSelected) {
+        return true;
+      }
+
+      final wasPending =
+          oldWidget.session.pendingBulkReserveIds.contains(cartelaId);
+      final isPending = session.pendingBulkReserveIds.contains(cartelaId);
+      if (wasPending != isPending) {
+        return true;
+      }
+
+      final oldRes = oldWidget.session.selectionReservations[cartelaId];
+      final newRes = session.selectionReservations[cartelaId];
+      if (oldRes != newRes) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
@@ -123,6 +185,8 @@ class _RegistrationCartelaGridState
   final RegistrationCartelaGridIndex _gridIndex =
       RegistrationCartelaGridIndex();
   Timer? _selectionReservationTimer;
+  final ValueNotifier<int> _countdownTicker = ValueNotifier<int>(0);
+  Timer? _countdownMasterTimer;
 
   @override
   void initState() {
@@ -135,6 +199,11 @@ class _RegistrationCartelaGridState
       widget.gridVisualRevision,
     ]);
     _syncSelectionReservationTimer();
+    _countdownMasterTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        _countdownTicker.value++;
+      }
+    });
     widget.gridVisualRevision.addListener(_handleGridVisualRevision);
   }
 
@@ -166,6 +235,8 @@ class _RegistrationCartelaGridState
   void dispose() {
     widget.gridVisualRevision.removeListener(_handleGridVisualRevision);
     _selectionReservationTimer?.cancel();
+    _countdownMasterTimer?.cancel();
+    _countdownTicker.dispose();
     _scrollController.removeListener(_onScroll);
     if (_ownsScrollController) {
       _scrollController.dispose();
@@ -312,6 +383,7 @@ class _RegistrationCartelaGridState
       isGuest: widget.isGuest,
       maxAffordable: widget.maxAffordable,
       selectModeEnabledListenable: _cellVisualListenable,
+      countdownTicker: _countdownTicker,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final visibleCount = _gridIndex.length;
@@ -409,26 +481,39 @@ class RegistrationCartelaGridCell extends ConsumerStatefulWidget {
 
 class _RegistrationCartelaGridCellState
     extends ConsumerState<RegistrationCartelaGridCell> {
-  static const _countdownInterval = Duration(seconds: 1);
-
-  Timer? _countdownTimer;
+  Listenable? _activeTicker;
+  var _isListeningToCountdown = false;
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
+    _stopListeningToCountdown();
     super.dispose();
   }
 
-  void _syncCountdownTimer(bool needsCountdown) {
-    if (needsCountdown && _countdownTimer == null) {
-      _countdownTimer = Timer.periodic(_countdownInterval, (_) {
-        if (mounted) {
-          setState(() {});
-        }
-      });
-    } else if (!needsCountdown && _countdownTimer != null) {
-      _countdownTimer?.cancel();
-      _countdownTimer = null;
+  void _stopListeningToCountdown() {
+    if (_isListeningToCountdown && _activeTicker != null) {
+      _activeTicker!.removeListener(_handleCountdownTick);
+      _isListeningToCountdown = false;
+      _activeTicker = null;
+    }
+  }
+
+  void _syncCountdownListener(Listenable ticker, bool needsCountdown) {
+    if (needsCountdown) {
+      if (!_isListeningToCountdown || _activeTicker != ticker) {
+        _stopListeningToCountdown();
+        _activeTicker = ticker;
+        ticker.addListener(_handleCountdownTick);
+        _isListeningToCountdown = true;
+      }
+    } else {
+      _stopListeningToCountdown();
+    }
+  }
+
+  void _handleCountdownTick() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -480,7 +565,10 @@ class _RegistrationCartelaGridCellState
 
   @override
   Widget build(BuildContext context) {
-    final scope = RegistrationGridScope.of(context);
+    final scope = RegistrationGridScope.of(
+      context,
+      cartelaId: widget.cartela.id,
+    );
     final sessionId = scope.sessionId;
     final snapshotSummary = sessionId == null
         ? null
@@ -523,7 +611,7 @@ class _RegistrationCartelaGridCellState
         );
 
         final needsCountdown = resolved.reservationSecondsRemaining != null;
-        _syncCountdownTimer(needsCountdown);
+        _syncCountdownListener(scope.countdownTicker, needsCountdown);
 
         final isSelected = scope.session.selectedCartelaIds.contains(
           widget.cartela.id,
