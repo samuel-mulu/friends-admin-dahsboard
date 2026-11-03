@@ -6,7 +6,12 @@ import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_c
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
+
+import 'package:friends_bingo_app/src/features/games/cartelas/application/live_cartela_live_store.dart';
+
 import 'live_cartela_card.dart';
+import 'live_cartela_tile.dart';
 
 class RegisteredCartelaList extends StatelessWidget {
   const RegisteredCartelaList({required this.cartelas, super.key});
@@ -53,6 +58,9 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     this.onReorder,
     this.bingoLockListenable,
     this.decorativeMotionAllowedListenable,
+    this.cartelaLiveStore,
+    this.cartelaLiveListenable,
+    this.liveSortResultFor,
     super.key,
   });
 
@@ -81,6 +89,16 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   final void Function(int fromIndex, int toIndex)? onReorder;
   final ValueListenable<bool>? bingoLockListenable;
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
+  final LiveCartelaLiveStore? cartelaLiveStore;
+  final Listenable? cartelaLiveListenable;
+  final CartelaPatternUiResult? Function(GameCartelaModel)?
+      liveSortResultFor;
+
+  CartelaPatternUiResult? _resolveSortResult(GameCartelaModel gameCartela) {
+    return sortResultFor(gameCartela) ??
+        liveSortResultFor?.call(gameCartela) ??
+        sortResultsByCartelaId[gameCartela.id];
+  }
 
   Widget _buildCartelaCard({
     required GameCartelaModel gameCartela,
@@ -90,11 +108,15 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required Set<int> storedWinnerHighlights,
     required Set<int> winningHighlightCells,
   }) {
-    return LiveCartelaCard(
+    final isBlocked = gameCartela.status == GameCartelaStatus.blocked;
+    final isClaiming = claimingCartelaIds.contains(gameCartela.id);
+    final lockListenable = bingoLockListenable;
+
+    final card = LiveCartelaCard(
       key: ValueKey(gameCartela.id),
       gameCartela: gameCartela,
       canClaimBingo: canClaimBingoFor(gameCartela),
-      isClaiming: claimingCartelaIds.contains(gameCartela.id),
+      isClaiming: isClaiming,
       pendingReview:
           showPendingClaimState &&
           (pendingClaimCartelaIds.contains(gameCartela.id) ||
@@ -125,8 +147,45 @@ class InlineRegisteredCartelaList extends StatelessWidget {
       onClaimBingo: () => onClaimBingo(gameCartela),
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
-      bingoLockListenable: bingoLockListenable,
+      bingoLockListenable: lockListenable,
+      resolveCanClaimBingo: lockListenable == null
+          ? null
+          : () => canClaimBingoFor(gameCartela),
+      resolveShowReadyPulse: lockListenable == null
+          ? null
+          : () {
+              final liveSort = _resolveSortResult(gameCartela);
+              return (liveSort?.hasLocalPatternComplete ?? false) &&
+                  !(liveSort?.isLateClaim ?? false) &&
+                  canClaimBingoFor(gameCartela) &&
+                  !isClaiming &&
+                  !isBlocked &&
+                  !showFinishedOutcome;
+            },
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+    );
+
+    return card;
+  }
+
+  Widget _buildCartelaCardForGrid({
+    required GameCartelaModel gameCartela,
+    required CartelaPatternProgressOverlay storedWinnerOverlay,
+    required bool useStoredWinnerOverlay,
+    required Set<int> storedWinnerHighlights,
+  }) {
+    final sortResult = _resolveSortResult(gameCartela);
+    final winningHighlightCells = {
+      ...?sortResult?.completedPatternCells,
+      ...storedWinnerHighlights,
+    };
+    return _buildCartelaCard(
+      gameCartela: gameCartela,
+      sortResult: sortResult,
+      storedWinnerOverlay: storedWinnerOverlay,
+      useStoredWinnerOverlay: useStoredWinnerOverlay,
+      storedWinnerHighlights: storedWinnerHighlights,
+      winningHighlightCells: winningHighlightCells,
     );
   }
 
@@ -178,7 +237,7 @@ class InlineRegisteredCartelaList extends StatelessWidget {
             ),
           );
 
-    return KeyedSubtree(
+    return RepaintBoundary(
       key: ValueKey('cartela_cell_${cartelas[index].id}'),
       child: wrapped,
     );
@@ -191,8 +250,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required double cellHeight,
   }) {
     final gameCartela = cartelas[index];
-    final sortResult =
-        sortResultFor(gameCartela) ?? sortResultsByCartelaId[gameCartela.id];
     final rawStoredWinnerOverlay =
         winningPatternOverlayByGameCartelaId[gameCartela.id];
     final storedWinnerOverlay =
@@ -202,19 +259,32 @@ class InlineRegisteredCartelaList extends StatelessWidget {
             ? rawStoredWinnerOverlay.allOverlayCellIndexes
             : winningPatternCellsByGameCartelaId[gameCartela.id] ??
                 const <int>{};
-    final winningHighlightCells = {
-      ...?sortResult?.completedPatternCells,
-      ...storedWinnerHighlights,
-    };
-    final card = _buildCartelaCard(
-      gameCartela: gameCartela,
-      sortResult: sortResult,
-      storedWinnerOverlay: storedWinnerOverlay,
-      useStoredWinnerOverlay:
-          rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
-      storedWinnerHighlights: storedWinnerHighlights,
-      winningHighlightCells: winningHighlightCells,
-    );
+    final store = cartelaLiveStore;
+    final liveListenable = cartelaLiveListenable;
+    final Widget card;
+    if (store != null && liveListenable != null) {
+      card = LiveCartelaTile(
+        key: ValueKey('tile_${gameCartela.id}'),
+        gameCartelaId: gameCartela.id,
+        store: store,
+        liveListenable: liveListenable,
+        builder: (_) => _buildCartelaCardForGrid(
+          gameCartela: gameCartela,
+          storedWinnerOverlay: storedWinnerOverlay,
+          useStoredWinnerOverlay:
+              rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
+          storedWinnerHighlights: storedWinnerHighlights,
+        ),
+      );
+    } else {
+      card = _buildCartelaCardForGrid(
+        gameCartela: gameCartela,
+        storedWinnerOverlay: storedWinnerOverlay,
+        useStoredWinnerOverlay:
+            rawStoredWinnerOverlay != null && !rawStoredWinnerOverlay.isEmpty,
+        storedWinnerHighlights: storedWinnerHighlights,
+      );
+    }
 
     return _wrapReorderableCell(
       context: context,
@@ -228,24 +298,27 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   static const _crossAxisSpacing = 6.0;
   static const _mainAxisSpacing = 6.0;
 
-  static double _resolveChildAspectRatio(BuildContext context) {
+  static double _resolveChildAspectRatio(
+    BuildContext context,
+    double tileWidth,
+  ) {
+    var ratio = CartelaBoardLayout.liveTwoUpTileAspectRatio(tileWidth);
     final scale = MediaQuery.textScalerOf(context).scale(1.0);
     if (scale > 1.25) {
-      return 0.54;
+      ratio *= 0.96;
+    } else if (scale > 1.05) {
+      ratio *= 0.98;
     }
-    if (scale > 1.05) {
-      return 0.58;
-    }
-    return 0.63;
+    return ratio.clamp(0.70, 0.86);
   }
 
   /// Real scrolling 2-col grid for sticky live play ([CustomScrollView]).
   Widget asSliver({required double crossAxisExtent}) {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final ratio = _resolveChildAspectRatio(context);
         final safeExtent = crossAxisExtent > 0 ? crossAxisExtent : 1.0;
         final cellWidth = (safeExtent - _crossAxisSpacing) / 2;
+        final ratio = _resolveChildAspectRatio(context, cellWidth);
         final cellHeight = cellWidth / ratio;
 
         return SliverGrid(
@@ -272,10 +345,10 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Nested inside a parent [ListView] (non-sticky layouts only).
-    final ratio = _resolveChildAspectRatio(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellWidth = (constraints.maxWidth - _crossAxisSpacing) / 2;
+        final ratio = _resolveChildAspectRatio(context, cellWidth);
         final cellHeight = cellWidth / ratio;
 
         return GridView.builder(

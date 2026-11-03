@@ -8,7 +8,7 @@ import '../../data/models/admin_broadcast_model.dart';
 import '../../application/providers/broadcasts_provider.dart';
 import 'broadcast_message_ui.dart';
 
-/// Blocks the entire app until admin removes a forced broadcast.
+/// Blocks the entire app until admin turns off or deletes the live forced broadcast.
 class ForcedBroadcastOverlay extends ConsumerWidget {
   const ForcedBroadcastOverlay({required this.child, super.key});
 
@@ -57,6 +57,7 @@ class _ForcedBroadcastScreen extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.jumbo),
           child: Column(
             children: [
+              const SizedBox(height: 48),
               const Spacer(),
               Container(
                 width: double.infinity,

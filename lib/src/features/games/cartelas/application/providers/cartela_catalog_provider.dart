@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/cartelas_repository.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_preview_cache.dart';
+import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_catalog_limits.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_catalog_shuffle.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_catalog_state.dart';
 
@@ -11,7 +12,7 @@ final cartelaCatalogProvider =
     );
 
 class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
-  static const defaultPageSize = 1000;
+  static const defaultPageSize = CartelaCatalogLimits.fetchPoolSize;
 
   @override
   Future<CartelaCatalogState> build() async {
@@ -45,14 +46,12 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
 
     state = AsyncData(previous.copyWith(isReshuffling: true));
 
-    final visibleItems = CartelaCatalogShuffle.visibleBatchFromPool(
-      previous.shuffledPool,
-      reshuffle: true,
-    );
+    final reshuffled = reshuffleCatalogPool(previous.shuffledPool);
 
     state = AsyncData(
       previous.copyWith(
-        items: visibleItems,
+        items: reshuffled.visibleBatch,
+        shuffledPool: reshuffled.pool,
         isReshuffling: false,
       ),
     );
@@ -65,8 +64,6 @@ class CartelaCatalogNotifier extends AsyncNotifier<CartelaCatalogState> {
         current.isLoadingMore) {
       return;
     }
-
-    state = AsyncData(current.copyWith(isLoadingMore: true));
 
     final nextVisibleCount = CartelaCatalogShuffle.nextVisibleCount(
       currentVisibleCount: current.items.length,

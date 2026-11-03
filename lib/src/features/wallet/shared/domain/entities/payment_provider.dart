@@ -106,4 +106,7 @@ enum PaymentProvider {
         return '0912345678';
     }
   }
+
+  /// Full SMS / receipt paste (Smart Deposit tab) is Telebirr-only.
+  bool get supportsSmartDepositEntry => this == PaymentProvider.telebirr;
 }

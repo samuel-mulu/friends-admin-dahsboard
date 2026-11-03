@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_branding.dart';
+import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/core/utils/formatters.dart';
 import 'package:friends_bingo_app/src/core/utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
@@ -41,6 +42,8 @@ class LiveCartelaCard extends StatelessWidget {
     this.blockedReasonCode,
     this.blockedServerReason,
     this.bingoLockListenable,
+    this.resolveCanClaimBingo,
+    this.resolveShowReadyPulse,
     this.decorativeMotionAllowedListenable,
     super.key,
   });
@@ -62,8 +65,13 @@ class LiveCartelaCard extends StatelessWidget {
   final bool showMarkColorPicker;
   final String? blockedReasonCode;
   final String? blockedServerReason;
-  /// When set, BINGO button toggles from this notifier without rebuilding the card body.
+  /// When set, BINGO lock/enabled state updates from this notifier without rebuilding
+  /// the card body. Pair with [resolveCanClaimBingo] so eligibility is re-read on unlock.
   final ValueListenable<bool>? bingoLockListenable;
+  /// Re-evaluated when [bingoLockListenable] changes (live claim eligibility).
+  final bool Function()? resolveCanClaimBingo;
+  /// Re-evaluated when [bingoLockListenable] changes (ready pulse on BINGO button).
+  final bool Function()? resolveShowReadyPulse;
   /// When false (e.g. while scrolling), claim/one-away pulses pause so scroll stays calm.
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final Set<String> manualMarkedNumbers;
@@ -104,44 +112,61 @@ class LiveCartelaCard extends StatelessWidget {
         !isBlocked &&
         !readOnlyOutcome;
 
+    final showOneAwayHighlight =
+        isOneAwayFromWin &&
+        !hasLocalPatternComplete &&
+        !isLateClaim &&
+        canClaimBingo &&
+        !isClaiming &&
+        !isBlocked &&
+        !isWinner &&
+        !readOnlyOutcome &&
+        !showClaimReadyHighlight;
+
     return RepaintBoundary(
       child: _GreenClaimPulseWrapper(
       active: showClaimReadyHighlight || (isWinner && !isBlocked),
       motionAllowedListenable: decorativeMotionAllowedListenable,
       child: _OneAwayPulseWrapper(
-        active:
-            isOneAwayFromWin &&
-            !canClaimBingo &&
-            !isBlocked &&
-            !isWinner &&
-            !readOnlyOutcome,
+        active: showOneAwayHighlight,
         motionAllowedListenable: decorativeMotionAllowedListenable,
         child: Card(
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
         color: theme.brightness == Brightness.dark
             ? null
-            : AppBranding.panelBackground(context),
+            : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: theme.brightness == Brightness.dark
-                ? theme.colorScheme.outlineVariant.withValues(alpha: 0.35)
-                : AppBranding.panelBorder(context),
+            color: isBlocked
+                ? theme.colorScheme.error.withValues(alpha: 0.75)
+                : (isWinner
+                    ? AppBranding.gold
+                    : (theme.brightness == Brightness.dark
+                        ? theme.colorScheme.outlineVariant.withValues(alpha: 0.35)
+                        : AppBranding.panelBorder(context))),
+            width: isBlocked || isWinner ? 1.5 : 1.0,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
               decoration: isBlocked
                   ? BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          theme.colorScheme.error.withValues(alpha: 0.92),
-                          theme.colorScheme.error,
-                        ],
+                      color: isDark
+                          ? theme.colorScheme.errorContainer.withValues(alpha: 0.22)
+                          : theme.colorScheme.error.withValues(alpha: 0.08),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.error.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
                       ),
                     )
                   : isWinner
@@ -160,42 +185,78 @@ class LiveCartelaCard extends StatelessWidget {
                     ),
               child: Row(
                 children: [
-                  if (isBlocked || isWinner)
-                    CartelaNumberTapTarget(
+                  CartelaNumberTapTarget(
+                    number: gameCartela.cartela.number,
+                    child: CartelaNumberCompactBadge(
                       number: gameCartela.cartela.number,
-                      child: CartelaNumberHeaderLabel(
-                        number: gameCartela.cartela.number,
-                        style: theme.textTheme.titleMedium!.copyWith(
-                          color: headerOnColor,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    )
-                  else
-                    CartelaNumberTapTarget(
-                      number: gameCartela.cartela.number,
-                      child: CartelaNumberCompactCircleBadge(
-                        number: gameCartela.cartela.number,
-                      ),
+                      isBlocked: isBlocked,
                     ),
+                  ),
                   Expanded(
                     child: Center(
                       child: isBlocked
-                          ? Text(
-                              'BLOCKED',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: headerOnColor,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
+                          ? FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: theme.colorScheme.error.withValues(alpha: 0.45),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.block_rounded,
+                                      size: 11,
+                                      color: theme.colorScheme.error,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'BLOCKED',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.error,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 9,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             )
                           : isWinner
-                          ? Text(
-                              context.l10n.cartelaOutcomeValid,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: headerOnColor,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
+                          ? FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.4),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  context.l10n.cartelaOutcomeValid,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 9.5,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
                               ),
                             )
                           : isClaiming
@@ -226,24 +287,35 @@ class LiveCartelaCard extends StatelessWidget {
                     ),
                   ),
                   if (isBlocked)
-                    IconButton(
-                      onPressed: () => showBlockedCartelaReasonDialog(
-                        context: context,
-                        gameCartela: gameCartela,
-                        reasonCode: blockedReasonCode,
-                        serverReason: blockedServerReason,
-                      ),
-                      tooltip: context.l10n.cartelaBlockedInfoTooltip,
-                      padding: const EdgeInsets.all(2),
-                      constraints: const BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(
-                        Icons.info_outline_rounded,
-                        size: 20,
-                        color: headerOnColor,
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => showBlockedCartelaReasonDialog(
+                          context: context,
+                          gameCartela: gameCartela,
+                          reasonCode: blockedReasonCode,
+                          serverReason: blockedServerReason,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.error.withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.info_outline_rounded,
+                            size: 15,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
                       ),
                     )
                   else if (showMarkColorPicker &&
@@ -258,7 +330,7 @@ class LiveCartelaCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(2, 2, 2, 3),
+                padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -273,6 +345,9 @@ class LiveCartelaCard extends StatelessWidget {
                           manualMarkedNumbers: manualMarkedNumbers,
                           lastManualMarkedKey: lastManualMarkedKey,
                           oneAwayCellIndexes: oneAwayCellIndexes,
+                          pulseOneAwayCells: showOneAwayHighlight,
+                          decorativeMotionAllowedListenable:
+                              decorativeMotionAllowedListenable,
                           winningPatternOverlay: trackingOverlay,
                           winningHighlightCells: winningHighlightCells,
                           winningBallCellIndex:
@@ -350,12 +425,18 @@ class LiveCartelaCard extends StatelessWidget {
       );
     }
 
+    final resolveCanClaim = resolveCanClaimBingo;
+    final resolvePulse = resolveShowReadyPulse;
+
     return ValueListenableBuilder<bool>(
       valueListenable: lockListenable,
       builder: (context, locked, _) {
+        final canClaim = (resolveCanClaim?.call() ?? canClaimBase) && !locked;
+        final pulse =
+            (resolvePulse?.call() ?? showReadyPulse) && !locked;
         return BingoClaimButton(
-          canClaim: canClaimBase && !locked,
-          showReadyPulse: showReadyPulse && !locked,
+          canClaim: canClaim,
+          showReadyPulse: pulse,
           isClaiming: isClaiming,
           onPressed: onClaimBingo,
         );
@@ -371,6 +452,8 @@ class _MarkedCartelaGrid extends ConsumerWidget {
     required this.manualMarkedNumbers,
     this.lastManualMarkedKey,
     required this.oneAwayCellIndexes,
+    this.pulseOneAwayCells = false,
+    this.decorativeMotionAllowedListenable,
     required this.winningPatternOverlay,
     this.winningHighlightCells = const {},
     this.winningBallCellIndex,
@@ -383,6 +466,8 @@ class _MarkedCartelaGrid extends ConsumerWidget {
   final Set<String> manualMarkedNumbers;
   final String? lastManualMarkedKey;
   final Set<int> oneAwayCellIndexes;
+  final bool pulseOneAwayCells;
+  final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final CartelaPatternProgressOverlay winningPatternOverlay;
   final Set<int> winningHighlightCells;
   final int? winningBallCellIndex;
@@ -393,6 +478,7 @@ class _MarkedCartelaGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final markColor = ref.watch(cartelaMarkColorProvider);
+    final motionListenable = decorativeMotionAllowedListenable;
 
     final markedNumbers = <int>{};
     for (int col = 0; col < columns.length; col++) {
@@ -430,22 +516,42 @@ class _MarkedCartelaGrid extends ConsumerWidget {
       }
     }
 
-    return CartelaBoardWidget(
-      cartela: gameCartela.cartela,
-      markedCells: markedNumbers,
-      lastMarkedNumber: lastMarkedNum,
-      winningBallNumber: winningBallNum,
-      oneAwayCellIndexes: oneAwayCellIndexes,
-      patternOverlay: winningPatternOverlay,
-      markColor: markColor,
-      interactive: !interactionDisabled,
-      showHeader: false,
-      onCellTapped: interactionDisabled
-          ? null
-          : (number) {
-              final header = BingoBallBadge.getLetter(number);
-              onMarkedNumberToggled(gameCartela, header, number.toString());
-            },
+    Widget buildBoard(CartelaVisualTier visualTier) {
+      return CartelaBoardWidget(
+        cartela: gameCartela.cartela,
+        markedCells: markedNumbers,
+        lastMarkedNumber: lastMarkedNum,
+        winningBallNumber: winningBallNum,
+        oneAwayCellIndexes: oneAwayCellIndexes,
+        patternOverlay: winningPatternOverlay,
+        markColor: markColor,
+        interactive: !interactionDisabled,
+        showHeader: false,
+        expandToFill: true,
+        pulseOneAwayCells: pulseOneAwayCells,
+        decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+        visualTier: visualTier,
+        onCellTapped: interactionDisabled
+            ? null
+            : (number) {
+                final header = BingoBallBadge.getLetter(number);
+                onMarkedNumberToggled(gameCartela, header, number.toString());
+              },
+      );
+    }
+
+    if (motionListenable == null) {
+      return buildBoard(CartelaVisualTier.idle);
+    }
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: motionListenable,
+      builder: (context, scrollIdle, _) {
+        final visualTier = scrollIdle
+            ? CartelaVisualTier.idle
+            : CartelaVisualTier.scrolling;
+        return buildBoard(visualTier);
+      },
     );
   }
 }
@@ -641,12 +747,12 @@ class _OneAwayPulseWrapperState extends State<_OneAwayPulseWrapper>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.redAccent.withValues(alpha: 0.35 + (t * 0.65)),
+              color: AppBranding.oneAwayRedBorder(t),
               width: 1.2 + (t * 2.2),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.redAccent.withValues(alpha: 0.12 + (t * 0.38)),
+                color: AppBranding.oneAwayRedShadow(t),
                 blurRadius: 6 + (t * 10),
                 spreadRadius: 0.5 + (t * 1.6),
               ),

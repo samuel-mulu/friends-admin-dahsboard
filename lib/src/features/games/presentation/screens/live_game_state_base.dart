@@ -60,6 +60,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
       if (!isLiveHostActive) {
         return;
       }
+      LiveCartelaScrollDebug.fullScreenRebuild();
       if (fn != null) {
         setState(fn);
       } else {
@@ -124,6 +125,8 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
 
   LiveRegistrationController get _registration => controllers.registration;
 
+  LiveRealtimeController get _realtime => controllers.realtime;
+
   LiveReviewController get _review => controllers.review;
 
   LiveCalledNumbersController get _cn => controllers.calledNumbers;
@@ -147,8 +150,14 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   String? _errorMessage;
   String? _emptyMessage;
   GameModel? _game;
-  String? _joinedGameId;
-  List<String> _myCartelaDisplayOrderIds = const [];
+  String? get _joinedGameId => _realtime.joinedGameId;
+  set _joinedGameId(String? value) {
+    _realtime.joinedGameId = value;
+  }
+
+  List<String> get _myCartelaDisplayOrderIds =>
+      _registration.myCartelaDisplayOrderIds;
+
   final Map<String, Map<String, dynamic>> _pendingWinnerWindowPayloads = {};
   final Map<String, Map<String, dynamic>> _pendingBingoInvalidPayloads = {};
   bool _awaitingPrizeWalletRefresh = false;
@@ -162,10 +171,22 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   ProviderSubscription<AsyncValue<FeatureSettingsUiState>>?
   _featureSettingsSubscription;
   LivePresentationPhase? _lastDebugPhase;
-  final bool _isSyncingLiveGame = false;
+  bool get _isSyncingLiveGame => _realtime.isSyncingLiveGame;
 
   /// True while cartela list is idle — false during scroll so pulses don't fight the gesture.
   final ValueNotifier<bool> _liveCartelaScrollIdle = ValueNotifier<bool>(true);
+
+  /// Smart/Lines grid order updates deferred until scroll idle.
+  bool _pendingCartelaSortDisplayApply = false;
+
+  List<GameCartelaModel>? _frozenPlayCartelaOrder;
+
+  int? _lastCalledNumbersDirtyCount;
+  int? _lastCalledNumbersDirtyOrder;
+
+  late final LiveCartelaLiveStore _cartelaLiveStore = LiveCartelaLiveStore();
+
+  LiveCartelaLiveStore get cartelaLiveStore => _cartelaLiveStore;
   Timer? _invalidSocketPayloadRefetchTimer;
   String? _lastInvalidSocketPayloadLogKey;
   DateTime? _lastInvalidSocketPayloadLogAt;
@@ -178,11 +199,14 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   /// this session until a real next game appears.
   String? _releasedIdleTerminalSessionId;
   bool _hasBlockingLiveGame = false;
-  List<int>? _pendingAutoOpenCartelaNumbers;
-  Timer? _myCartelasRefreshDebounceTimer;
-  Timer? _nextCartelasRefreshDebounceTimer;
-  final LiveSocketSessionMembership _socketMembership =
-      LiveSocketSessionMembership();
+  List<int>? get _pendingAutoOpenCartelaNumbers =>
+      _registration.pendingAutoOpenCartelaNumbers;
+  set _pendingAutoOpenCartelaNumbers(List<int>? value) {
+    _registration.pendingAutoOpenCartelaNumbers = value;
+  }
+
+  LiveSocketSessionMembership get _socketMembership =>
+      _realtime.socketMembership;
   bool _gameInfoExpanded = false;
   String? _autoExpandedForNextGameSessionId;
   DateTime? _lastSocketAppliedAt;
@@ -716,9 +740,58 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         game.status == GameStatus.winnerWindow;
   }
 
-  void _markCalledNumbersPanelDirty() {
+  void _markCalledNumbersPanelDirty({bool forNewBall = false}) {
+    final count = _cn.calledNumbers.length;
+    final lastOrder =
+        count == 0 ? null : _cn.calledNumbers.last.order;
+    if (forNewBall &&
+        _lastCalledNumbersDirtyCount == count &&
+        _lastCalledNumbersDirtyOrder == lastOrder) {
+      LiveCartelaScrollDebug.log(
+        'called_numbers_dirty_skipped_duplicate count=$count order=${lastOrder ?? '-'}',
+      );
+      return;
+    }
+    _lastCalledNumbersDirtyCount = count;
+    _lastCalledNumbersDirtyOrder = lastOrder;
+
     _cn.markCalledNumbersPanelDirty();
+    refreshCartelaSortAfterCalledNumbers();
+    if (_myCartelas.isEmpty) {
+      return;
+    }
+    final latest =
+        _cn.calledNumbers.isEmpty ? null : _cn.calledNumbers.last.number;
+    final fullGrid = !forNewBall || latest == null;
+    LiveCartelaScrollDebug.calledNumbersDirty(
+      calledCount: _cn.calledNumbers.length,
+      latestBall: latest,
+      autoMark: _cn.effectiveAutoMark,
+      fullGrid: fullGrid,
+    );
+    refreshCartelaLivePresentation(
+      committedBallNumber: latest,
+      fullGrid: fullGrid,
+    );
   }
+
+  @override
+  void refreshCartelaSortAfterCalledNumbers();
+
+  @override
+  void applyPendingCartelaSortDisplayOrder();
+
+  @override
+  void freezePlayCartelaDisplayOrderForScroll();
+
+  @override
+  void refreshCartelaLivePresentation({
+    int? committedBallNumber,
+    bool fullGrid = false,
+  });
+
+  @override
+  void refreshCartelaLiveAfterManualMark(String gameCartelaId);
 
   void markCanonicalSocketStateApplied() {
     _lastSocketAppliedAt = DateTime.now();
@@ -816,7 +889,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   }
 
   void _clearMyCartelaDisplayOrder() {
-    _myCartelaDisplayOrderIds = const [];
+    _registration.clearMyCartelaDisplayOrder();
   }
 
   void _capturePreviousCartelasForAutoOpen() {
@@ -824,25 +897,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
   }
 
   void _reorderMyCartela(int fromIndex, int toIndex) {
-    if (fromIndex == toIndex) {
-      return;
-    }
-
-    final ordered = _orderedMyCartelas(CartelaSortMode.manual);
-    if (fromIndex < 0 ||
-        toIndex < 0 ||
-        fromIndex >= ordered.length ||
-        toIndex >= ordered.length) {
-      return;
-    }
-
-    setState(() {
-      _myCartelaDisplayOrderIds = reorderCartelaDisplayOrderIds(
-        cartelas: ordered,
-        fromIndex: fromIndex,
-        toIndex: toIndex,
-      );
-    });
+    _registration.reorderMyCartela(fromIndex, toIndex);
   }
 
   Future<void> openNextGameRegistrationSheet();

@@ -99,6 +99,23 @@ Set<String> manualMarksForCartela({
   return globalMarks.intersection(markKeysOnCartela(cartela));
 }
 
+/// Gold “active mark” highlight key for cartela UI.
+/// Manual mode uses [lastManualMarkedKey]; Auto Mark uses the latest called ball.
+String? lastActiveMarkKeyForDisplay({
+  required bool effectiveAutoMark,
+  required String? lastManualMarkedKey,
+  required Iterable<CalledNumberModel> calledNumbers,
+}) {
+  if (!effectiveAutoMark) {
+    return lastManualMarkedKey;
+  }
+  if (calledNumbers.isEmpty) {
+    return lastManualMarkedKey;
+  }
+  final last = calledNumbers.last;
+  return manualMarkKey(last.letter, last.number.toString());
+}
+
 String? lastManualMarkedKeyForCartela({
   required String? lastManualMarkedKey,
   required GameCartelaModel cartela,

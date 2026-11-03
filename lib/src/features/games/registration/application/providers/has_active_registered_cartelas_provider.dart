@@ -20,11 +20,14 @@ class ActiveRegisteredCartelasState {
 
   ActiveRegisteredCartelasState copyWith({
     String? activeSessionId,
+    bool clearActiveSessionId = false,
     int? registeredCartelaCount,
     bool? requiresLeaveConfirmation,
   }) {
     return ActiveRegisteredCartelasState(
-      activeSessionId: activeSessionId ?? this.activeSessionId,
+      activeSessionId: clearActiveSessionId
+          ? null
+          : (activeSessionId ?? this.activeSessionId),
       registeredCartelaCount:
           registeredCartelaCount ?? this.registeredCartelaCount,
       requiresLeaveConfirmation:
@@ -51,7 +54,7 @@ class HasActiveRegisteredCartelasNotifier
     int cartelaCount, {
     bool requiresLeaveConfirmation = false,
   }) {
-    state = state.copyWith(
+    state = ActiveRegisteredCartelasState(
       activeSessionId: sessionId,
       registeredCartelaCount: cartelaCount,
       requiresLeaveConfirmation: requiresLeaveConfirmation,

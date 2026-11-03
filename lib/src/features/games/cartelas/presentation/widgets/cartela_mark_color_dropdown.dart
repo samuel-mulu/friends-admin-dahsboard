@@ -71,19 +71,32 @@ class CartelaMarkColorDropdown extends ConsumerWidget {
             })
             .toList(growable: false);
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.black.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 1,
+          ),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             CartelaMarkColorSwatch(
               color: selectedPalette.swatch,
               selected: true,
-              size: 16,
+              size: 13,
             ),
+            const SizedBox(width: 1),
             Icon(
               Icons.arrow_drop_down_rounded,
-              size: 18,
+              size: 17,
               color: iconColor,
             ),
           ],

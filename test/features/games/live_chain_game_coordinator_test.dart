@@ -126,5 +126,25 @@ void main() {
       expect(coordinator.chainRoundPlan, isNull);
       expect(coordinator.chainRoundPlanKey, isNull);
     });
+
+    test('bumpClaimEligibilityPresentation notifies tile listenables', () {
+      final coordinator = LiveChainGameCoordinator();
+      var notifications = 0;
+      coordinator.claimEligibilityRevision.addListener(() {
+        notifications++;
+      });
+
+      expect(coordinator.claimEligibilityRevision.value, 0);
+      coordinator.bumpClaimEligibilityPresentation();
+      coordinator.bumpClaimEligibilityPresentation();
+      expect(coordinator.claimEligibilityRevision.value, 2);
+      expect(notifications, 2);
+
+      coordinator.chainBingoArmedAfterCalledCount = 18;
+      coordinator.bumpClaimEligibilityPresentation();
+      expect(coordinator.claimEligibilityRevision.value, 3);
+
+      coordinator.dispose();
+    });
   });
 }

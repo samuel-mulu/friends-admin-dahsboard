@@ -55,6 +55,7 @@ class _BroadcastRealtimeSyncState extends ConsumerState<BroadcastRealtimeSync> {
     }
 
     _socketService.on('admin:broadcast', _onAdminBroadcast);
+    _socketService.on('admin:broadcast_remind', _onAdminBroadcastRemind);
     _socketService.on('admin:broadcast_removed', _onAdminBroadcastRemoved);
     _socketService.on('connect', _onSocketConnect);
     _listenersBound = true;
@@ -71,6 +72,7 @@ class _BroadcastRealtimeSyncState extends ConsumerState<BroadcastRealtimeSync> {
     }
 
     _socketService.off('admin:broadcast', _onAdminBroadcast);
+    _socketService.off('admin:broadcast_remind', _onAdminBroadcastRemind);
     _socketService.off('admin:broadcast_removed', _onAdminBroadcastRemoved);
     _socketService.off('connect', _onSocketConnect);
     _listenersBound = false;
@@ -82,6 +84,30 @@ class _BroadcastRealtimeSyncState extends ConsumerState<BroadcastRealtimeSync> {
     }
 
     unawaited(ref.read(broadcastsProvider.notifier).refresh(quiet: true));
+  }
+
+  void _onAdminBroadcastRemind(dynamic payload) {
+    if (!mounted) {
+      return;
+    }
+
+    final normalized = normalizeSocketPayload(payload);
+    if (normalized == null) {
+      return;
+    }
+
+    try {
+      final message = AdminBroadcastModel.fromJson(normalized);
+      ref.read(broadcastsProvider.notifier).applyRemindFromSocket(message);
+      ref.read(broadcastBannerProvider.notifier).showFromSocket(message);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          '[Broadcasts/Socket] Failed to parse admin:broadcast_remind: $error\n'
+          '$stackTrace',
+        );
+      }
+    }
   }
 
   void _onAdminBroadcast(dynamic payload) {

@@ -9,7 +9,7 @@ class CartelaSortModeController extends Notifier<CartelaSortMode> {
     final storageAsync = ref.watch(appPreferencesStorageProvider);
     return storageAsync.maybeWhen(
       data: (storage) => storage.readCartelaSortMode(),
-      orElse: () => CartelaSortMode.manual,
+      orElse: () => CartelaSortMode.smart,
     );
   }
 

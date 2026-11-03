@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/time/countdown_target_tracker.dart';
 import '../../data/models/game_model.dart';
+import '../../presentation/debug/live_cartela_scroll_debug.dart';
 import '../../presentation/debug/live_realtime_debug.dart';
 import '../../presentation/utils/live_presentation_phase.dart';
 import '../../presentation/utils/next_ball_countdown.dart' as next_ball_countdown;
@@ -79,6 +80,10 @@ class LiveCountdownController {
     }
     final wasLocked = bingoClaimLocked.value;
     bingoClaimLocked.value = value;
+    LiveCartelaScrollDebug.log(
+      'bingo_claim_locked ${wasLocked ? 'true' : 'false'}'
+      '→${value ? 'true' : 'false'}',
+    );
     if (wasLocked && !value) {
       onBingoClaimUnlocked?.call();
     }
@@ -356,6 +361,7 @@ class LiveCountdownController {
     required GameModel game,
     required DateTime? nextAutoCallAt,
     required bool scheduleChanged,
+    int committedMaxOrder = 0,
   }) {
     final scopeKey = game.sessionId ?? game.id;
     if (!scheduleChanged &&
@@ -401,6 +407,8 @@ class LiveCountdownController {
       target: nextAutoCallAt,
       sessionId: scopeKey,
       rawRemaining: rawSeconds,
+      committedMaxOrder: committedMaxOrder,
+      authoritativeCalledCount: game.calledNumbersCount,
     );
   }
 
@@ -584,6 +592,8 @@ class LiveCountdownController {
       target: target,
       sessionId: game.sessionId ?? game.id,
       rawRemaining: rawSeconds,
+      committedMaxOrder: context.committedMaxCalledOrder,
+      authoritativeCalledCount: game.calledNumbersCount,
     );
     final staleEvaluation = nextBallStaleGuard.evaluate(
       game: game,

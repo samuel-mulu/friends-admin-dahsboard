@@ -36,6 +36,23 @@ abstract class LiveGameHost {
 
   void markNeedsBuild([VoidCallback? fn]);
 
+  /// Recompute cartela pattern sort results after called-number / mark changes.
+  void refreshCartelaSortAfterCalledNumbers();
+
+  /// Apply deferred Smart/Lines display order after the cartela list stops scrolling.
+  void applyPendingCartelaSortDisplayOrder();
+
+  /// Snapshot current play-list order while scrolling (Smart/Lines modes).
+  void freezePlayCartelaDisplayOrderForScroll();
+
+  /// Auto Mark / live cartela grid presentation (scoped rebuild, not full screen).
+  void refreshCartelaLivePresentation({
+    int? committedBallNumber,
+    bool fullGrid,
+  });
+
+  void refreshCartelaLiveAfterManualMark(String gameCartelaId);
+
   // Canonical session snapshot (backend truth after apply).
   GameModel? get game;
 

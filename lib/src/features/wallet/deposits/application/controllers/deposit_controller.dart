@@ -53,6 +53,12 @@ class DepositController extends Notifier<DepositState> {
 
   void switchTab(DepositEntryTab tab) {
     if (state.entryTab == tab) return;
+    final provider = state.provider;
+    if (tab == DepositEntryTab.smart &&
+        provider != null &&
+        !provider.supportsSmartDepositEntry) {
+      return;
+    }
     state = state.copyWith(entryTab: tab);
   }
 
@@ -61,7 +67,9 @@ class DepositController extends Notifier<DepositState> {
     state = state.copyWith(
       provider: provider,
       isChoosingProvider: false,
-      entryTab: DepositEntryTab.smart,
+      entryTab: provider.supportsSmartDepositEntry
+          ? DepositEntryTab.smart
+          : DepositEntryTab.regular,
       clearSmartParseResult: true,
       clearConfirmation: true,
       clearTrackedId: true,
@@ -106,6 +114,10 @@ class DepositController extends Notifier<DepositState> {
       clearAmountServerError: true,
       clearTransactionRefServerError: true,
     );
+  }
+
+  void resetSmartDepositEntry() {
+    state = state.copyWith(clearSmartParseResult: true);
   }
 
   SmartDepositParseResult parseSmartInput(String value) {
@@ -268,6 +280,7 @@ class DepositController extends Notifier<DepositState> {
     );
 
     if (kind == DepositConfirmationKind.approved) {
+      resetSmartDepositEntry();
       _autoDismissTimer?.cancel();
       _autoDismissTimer = Timer(_approvedDismissDelay, clearConfirmation);
       _clearStoredPendingAttempt();
@@ -483,6 +496,10 @@ class DepositController extends Notifier<DepositState> {
       }
     } catch (error) {
       final code = error is ApiException ? error.code : null;
+      final isUnavailable = code == 'VERIFICATION_UNAVAILABLE';
+      if (isUnavailable) {
+        ref.invalidate(depositConfigProvider);
+      }
       final displayMessage = error is ApiException
           ? error.displayMessage
           : 'Failed to process deposit. Please check your connection and try again.';
@@ -493,11 +510,14 @@ class DepositController extends Notifier<DepositState> {
           kind: code == 'UNDER_REVIEW'
               ? DepositConfirmationKind.underReview
               : DepositConfirmationKind.rejected,
-          message: displayMessage,
+          message: isUnavailable
+              ? 'Telebirr is temporarily busy. Please tap Try Again in a moment.'
+              : displayMessage,
           provider: provider,
           amount: amount,
           transactionRef: rawTransactionInput.toUpperCase(),
           canRetry: code != 'ALREADY_USED' && code != 'UNDER_REVIEW',
+          retryLabel: isUnavailable ? 'Try Again' : null,
         ),
       );
     } finally {

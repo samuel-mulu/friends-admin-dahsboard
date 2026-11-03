@@ -40,6 +40,21 @@ abstract final class AppBranding {
   static const latestCallBorder = Color(0xFFEF4444);
   static const latestCallGlow = Color(0xFFF5C542);
 
+  /// One-away-from-win alert (cartela border + cell highlight), pulsed via [pulseT] 0..1.
+  static const oneAwayRed = Color(0xFFE53935);
+
+  static Color oneAwayRedFill(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.15 + pulseT.clamp(0.0, 1.0) * 0.28);
+  }
+
+  static Color oneAwayRedBorder(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.55 + pulseT.clamp(0.0, 1.0) * 0.45);
+  }
+
+  static Color oneAwayRedShadow(double pulseT) {
+    return oneAwayRed.withValues(alpha: 0.2 + pulseT.clamp(0.0, 1.0) * 0.42);
+  }
+
   static bool _isDark(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark;
   }
@@ -197,9 +212,9 @@ abstract final class AppBranding {
     }
 
     return BoxDecoration(
-      color: lightSurfaceRaised,
+      color: Colors.white,
       border: Border(
-        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.95)),
+        bottom: BorderSide(color: lightOutline.withValues(alpha: 0.35)),
       ),
     );
   }
@@ -231,7 +246,7 @@ abstract final class AppBranding {
     }
     return _isDark(context)
         ? const Color(0xFF2A2340)
-        : const Color(0xFFFAF6F0);
+        : Colors.white;
   }
 
   static Color cellBorder(BuildContext context, {required bool marked}) {

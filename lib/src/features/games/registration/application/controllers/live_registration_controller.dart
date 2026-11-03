@@ -427,7 +427,6 @@ class LiveRegistrationController {
       _bulkDebugLog(
         'deselect cartela=${cartela.cartelaNumber} selected_set=[${session.selectedCartelaIds.map((id) => session.selectedCartelaNumbers[id]).join(',')}]',
       );
-      host.markNeedsBuild();
       return const RegistrationActionSuccess();
     }
 
@@ -436,7 +435,6 @@ class LiveRegistrationController {
     _bulkDebugLog(
       'selected_set after_add=[${session.selectedCartelaIds.map((id) => session.selectedCartelaNumbers[id]).join(',')}]',
     );
-    host.markNeedsBuild();
     return const RegistrationActionSuccess();
   }
 

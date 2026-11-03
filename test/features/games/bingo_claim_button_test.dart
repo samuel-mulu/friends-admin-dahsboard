@@ -40,4 +40,30 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('BINGO'), findsNothing);
   });
+
+  testWidgets('BingoClaimButton debounces multiple rapid taps and includes accessibility semantics', (tester) async {
+    int pressCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BingoClaimButton(
+            canClaim: true,
+            showReadyPulse: true,
+            isClaiming: false,
+            onPressed: () => pressCount++,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Claim Bingo',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('BINGO'));
+    await tester.tap(find.text('BINGO'));
+    expect(pressCount, 1);
+  });
 }

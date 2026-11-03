@@ -264,6 +264,7 @@ mixin _LiveGameRealtime on _LiveGameOrchestration {
           game: patched,
           nextAutoCallAt: patched.nextAutoCallAt,
           scheduleChanged: true,
+          committedMaxOrder: _cn.committedMaxCalledOrder,
         );
         if (patched.status == GameStatus.winnerWindow) {
           _countdown.winnerWindowEndsAt = patched.winnerWindowEndsAt;

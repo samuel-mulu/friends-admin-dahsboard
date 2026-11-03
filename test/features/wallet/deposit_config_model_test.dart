@@ -89,4 +89,35 @@ void main() {
     expect(cbe?.approvalMode, 'manual');
     expect(cbe?.receiptBaseUrl, 'https://mbreciept.cbe.com.et/receipt');
   });
+
+  group('DepositProviderConfig fallback and mode helpers', () {
+    test('isLocalOrFallback returns true for local and local_with_fallback', () {
+      final local = DepositProviderConfig.fromJson({
+        'key': 'TELEBIRR',
+        'name': 'Telebirr',
+        'receiptCodeLabel': 'Receipt code',
+        'approvalMode': 'local',
+      });
+      final localWithFallback = DepositProviderConfig.fromJson({
+        'key': 'TELEBIRR',
+        'name': 'Telebirr',
+        'receiptCodeLabel': 'Receipt code',
+        'approvalMode': 'local_with_fallback',
+        'isFallbackActive': false,
+      });
+      final automatic = DepositProviderConfig.fromJson({
+        'key': 'TELEBIRR',
+        'name': 'Telebirr',
+        'receiptCodeLabel': 'Receipt code',
+        'approvalMode': 'automatic',
+        'isFallbackActive': true,
+      });
+
+      expect(local.isLocalOrFallback, isTrue);
+      expect(localWithFallback.isLocalOrFallback, isTrue);
+      expect(automatic.isLocalOrFallback, isFalse);
+      expect(automatic.isFallbackActive, isTrue);
+    });
+  });
 }
+

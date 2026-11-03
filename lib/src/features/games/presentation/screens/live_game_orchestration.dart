@@ -14,6 +14,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _chain.chainBingoArmedAfterCalledCount;
   set _chainBingoArmedAfterCalledCount(int? value) =>
       _chain.chainBingoArmedAfterCalledCount = value;
+  Listenable get _cartelaTileLiveListenable => _chain.claimEligibilityRevision;
   DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
   /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
@@ -32,7 +33,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
-  LiveRealtimeController get _realtime => controllers.realtime;
   LiveResumeSyncCoordinator get _resumeSync => controllers.resumeSync;
 
   void _syncChainPauseLatchFromGame() {
@@ -821,17 +821,29 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final autoDismissDuration =
-        _winnerCelebration.calculateAutoDismissDuration(_game?.winnerWindowEndsAt);
+    final chainInterRoundDialog = pauseEndsAt != null || _ownsChainInterRoundBreak;
+    final autoDismissDuration = chainInterRoundDialog
+        ? _winnerCelebration.calculateAutoDismissDuration(
+            _game?.winnerWindowEndsAt,
+          )
+        : _effectiveTimingConfig.winningPatternDisplayHold;
+
+    ChainGameDebug.log(
+      'winner_dialog_open interRound=$chainInterRoundDialog '
+      'results=${results.length} round=${roundIndex ?? '-'}',
+    );
 
     _review.winnerCartelaDialogVisible = true;
-    // Embedded Big Game only: do not burn the configured summary hold while
-    // the winner cartela dialog is on top of the PIN summary.
-    final pauseEmbeddedBigGameHold = _embeddedBigGame &&
-        _review.postGameSummaryReviewActive &&
-        !_review.postGameSummaryHoldBypassed &&
-        !_review.postGameSummaryAdvancing;
-    if (pauseEmbeddedBigGameHold) {
+    // Do not burn the configured summary hold while the winner cartela dialog
+    // is on top of the terminal PIN summary (all game types; not inter-round).
+    final pausePostGameSummaryHold =
+        shouldPausePostGameSummaryHoldForWinnerDialog(
+      postGameSummaryReviewActive: _review.postGameSummaryReviewActive,
+      holdBypassed: _review.postGameSummaryHoldBypassed,
+      advancing: _review.postGameSummaryAdvancing,
+      chainInterRoundDialog: chainInterRoundDialog,
+    );
+    if (pausePostGameSummaryHold) {
       _review.finishTransitionTimer?.cancel();
       _review.finishTransitionTimer = null;
       if (_embeddedBigGame) {
@@ -853,31 +865,43 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoDismissDuration: autoDismissDuration,
       ).whenComplete(
         () {
+          final interRoundClose =
+              chainInterRoundDialog || _isChainRoundPaused;
           if (_isChainRoundPaused) {
             _review.winnerCartelaDialogAutoShownForPauseKey = null;
           }
+          ChainGameDebug.log(
+            'winner_dialog_closed interRound=$interRoundClose '
+            'postSummary=${_review.postGameSummaryReviewActive}',
+          );
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
-            _beginPostGameSummaryAdvance();
-            unawaited(_runFinishedAdvanceSequence(force: true));
+            if (!interRoundClose && !_review.postGameSummaryReviewActive) {
+              _beginPostGameSummaryAdvance();
+              unawaited(_runFinishedAdvanceSequence(force: true));
+            }
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
           // Restart the full configured hold after the dialog closes so the
           // PIN summary remains visible for finishedResultDisplaySeconds.
-          if (pauseEmbeddedBigGameHold &&
-              mounted &&
-              _embeddedBigGame &&
-              _review.postGameSummaryReviewActive &&
-              !_review.postGameSummaryHoldBypassed &&
-              !_review.postGameSummaryAdvancing) {
+          if (shouldRestartPostGameSummaryHoldAfterWinnerDialog(
+                pauseWasActive: pausePostGameSummaryHold,
+                postGameSummaryReviewActive:
+                    _review.postGameSummaryReviewActive,
+                holdBypassed: _review.postGameSummaryHoldBypassed,
+                advancing: _review.postGameSummaryAdvancing,
+              ) &&
+              mounted) {
             _review.postGameSummaryShownAt = _countdownNow();
             _review.syncPostGameSummaryCountdownTicker();
             _scheduleAdvanceToNextGame();
-            BigGameDebug.log(
-              'summary_hold_restarted reason=winner_dialog_closed '
-              'session=${_game?.sessionId ?? '-'}',
-            );
+            if (_embeddedBigGame) {
+              BigGameDebug.log(
+                'summary_hold_restarted reason=winner_dialog_closed '
+                'session=${_game?.sessionId ?? '-'}',
+              );
+            }
           }
         },
       ),
@@ -1016,6 +1040,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           _game?.status == GameStatus.winnerWindow &&
           _effectiveWinnerWindowEndsAt != null,
       highestKnownCalledOrder: _highestKnownCalledOrder,
+      committedMaxCalledOrder: _cn.committedMaxCalledOrder,
     );
   }
 
@@ -1220,6 +1245,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _syncChainPauseEndsAtListenable();
+    ChainGameDebug.log(
+      'winner_dialog_reopen_manual round=$finishedRound '
+      'results=${dialogResults.length}',
+    );
     _showWinnerCartelaDialogForReview(
       dialogResults,
       pauseEndsAt: game.roundPausedUntil,
@@ -1288,6 +1317,18 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Future<void> _onWinnerCartelaChipTapped(int cartelaNumber) async {
     if (_review.winnerCartelaDialogVisible || !_winnerReviewEligibleViewer) {
+      return;
+    }
+
+    if (_ownsChainInterRoundBreak) {
+      final game = _game;
+      if (game != null && game.isChainGame) {
+        final finishedRound = chainRevealedRoundIndex(game, now: _countdownNow());
+        ChainGameDebug.log(
+          'winner_strip_tap cartela=$cartelaNumber round=$finishedRound',
+        );
+        await _openChainInterRoundWinnerDialog(finishedRound: finishedRound);
+      }
       return;
     }
 
@@ -1584,7 +1625,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     _syncWinnerWindowTicker();
     _syncNextBallCountdownTicker();
-    _sortMyCartelas();
+    refreshCartelaSortAfterCalledNumbers();
     _syncCalledNumbersForFinishedReview();
 
     if (game.status == GameStatus.finished ||
@@ -2635,6 +2676,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     required bool shouldClearFinished,
     bool resumeSync = false,
   }) {
+    final previousRoundIndex = _game?.displayRoundIndex;
+    final previousSessionId = _game?.sessionId;
     final previousMarksSessionId = _cn.marksSessionId;
     final marksSessionChanged = previousMarksSessionId != game.sessionId;
 
@@ -2741,6 +2784,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           game: mergedGame,
           nextAutoCallAt: mergedGame.nextAutoCallAt,
           scheduleChanged: scheduleChanged,
+          committedMaxOrder: _cn.committedMaxCalledOrder,
         );
       }
       if (_allBallsDrawnForCurrentGame && mergedGame.nextAutoCallAt == null) {
@@ -2822,7 +2866,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         // Cartela snapshots are presentation truth, not attempt resolution.
         // The recovery GET must resolve the retained UUID.
       }
-      _sortMyCartelas();
+      refreshCartelaSortAfterCalledNumbers();
+      refreshCartelaLivePresentation(fullGrid: true);
       _syncChainPlayableCartelas();
       _isLoading = false;
       // Canonical truth is now on screen; feed the reconnect throttle so a
@@ -2854,6 +2899,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         sharedCalledNumbers: calledNumbers,
       );
     });
+    if (!sessionChanged &&
+        _game != null &&
+        _game!.isChainGame &&
+        _game!.sessionId == previousSessionId &&
+        _game!.displayRoundIndex > (previousRoundIndex ?? _game!.displayRoundIndex)) {
+      _armChainBingoAfterCurrentBalls();
+    }
     _syncActiveCartelasToProvider();
     _syncLiveGameStateToProvider();
     if (!resumeSync || !includeCalledNumbers) {
@@ -2991,7 +3043,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           return;
         }
         setState(() {
-          _sortMyCartelas();
+          refreshCartelaSortAfterCalledNumbers();
         });
         _syncActiveCartelasToProvider();
         _markCalledNumbersPanelDirty();
@@ -3114,8 +3166,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             ownershipLiveCandidate.sessionId!.isNotEmpty
         ? () {
             final liveSessionId = ownershipLiveCandidate.sessionId!;
-            final snapshotToken = _registration
-                .captureCurrentSessionFetchToken(liveSessionId);
             return _gamesRepository
                 .getMyGameCartelas(liveSessionId)
                 .then((fetched) {
@@ -3137,7 +3187,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
                   if (fetchedCartelas.isNotEmpty) {
                     preloadedPrimaryCartelas = fetchedCartelas;
-                    preloadedPrimaryCartelasToken = snapshotToken;
+                    preloadedPrimaryCartelasToken = _registration
+                        .captureCurrentSessionFetchToken(liveSessionId);
                   }
 
                   return _resolvePrimaryFromOperations(
@@ -3387,9 +3438,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
     if (_cn.isDuplicateCalledNumber(calledNumber)) {
-      LiveRealtimeDebug.log(
-        'number_called_duplicate order=${calledNumber.order} refresh=false',
-      );
+      if (calledNumber.order > _cn.committedMaxCalledOrder) {
+        LiveRealtimeDebug.log(
+          'number_called_duplicate_strip_behind order=${calledNumber.order} '
+          'committedMax=${_cn.committedMaxCalledOrder} recovery=called_numbers',
+        );
+        unawaited(_recoverCalledNumbersAfterSocketGap());
+      } else {
+        LiveRealtimeDebug.log(
+          'number_called_duplicate order=${calledNumber.order} refresh=false',
+        );
+      }
       return;
     }
 
@@ -3470,6 +3529,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           game: updatedGame,
           nextAutoCallAt: updatedGame.nextAutoCallAt,
           scheduleChanged: true,
+          committedMaxOrder: _cn.committedMaxCalledOrder,
         );
         _syncNextBallCountdownTicker();
       }
@@ -3479,6 +3539,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: highestKnownOrder,
       );
+    }
+
+    if (!pauseStripForClaim &&
+        applyResult.applied &&
+        !applyResult.requiresCanonicalSync) {
+      _markCalledNumbersPanelDirty(forNewBall: true);
     }
 
     if (applyResult.requiresCanonicalSync) {
@@ -4327,6 +4393,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _countdown.winnerWindowEndsAt = null;
       _cn.socketAutoCallEnabled = false;
     });
+    _chain.bumpClaimEligibilityPresentation();
     // Mid-round owns the UI now — kill any WW-expiry closing poll/refetch loop.
     _review.resetWinnerWindowClosingState();
     if (_review.postGameSummaryReviewActive) {
@@ -4658,6 +4725,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         ? _cn.calledNumbers.length
         : game.calledNumbersCount;
     _chainBingoArmedAfterCalledCount = count;
+    _chain.bumpClaimEligibilityPresentation();
     ChainGameDebug.log(
       'bingo armed after calledCount>$count '
       'round=${game.displayRoundIndex}',
@@ -5411,6 +5479,13 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
+    final healSnapshot = (
+      wasInCallingPhase: wasInCallingPlayPhase(_countdown.nextBallPlayPhase),
+      callingBaselineOrder: _countdown.callingPhaseBaselineOrder,
+      committedMax: _cn.committedMaxCalledOrder,
+      gameCalledNumbersCount: game.calledNumbersCount,
+    );
+
     final hasNextAutoCallAt = payload.containsKey('nextAutoCallAt');
     final nextAutoCallAt = hasNextAutoCallAt
         ? _parseNextAutoCallAtValue(payload['nextAutoCallAt'])
@@ -5425,8 +5500,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         !dateTimesEqualForSchedule(nextAutoCallAt, game.nextAutoCallAt);
     final intervalChanged =
         intervalRaw is num && autoCallIntervalMs != game.autoCallIntervalMs;
+    final payloadCalledCount = parseCalledNumbersCountFromSchedulePayload(
+      payload,
+    );
 
-    if (!scheduleChanged && autoCallEnabled == null && !intervalChanged) {
+    if (!scheduleChanged &&
+        autoCallEnabled == null &&
+        intervalChanged == false &&
+        payloadCalledCount == null) {
       return;
     }
 
@@ -5434,11 +5515,17 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (autoCallEnabled != null) {
         _cn.socketAutoCallEnabled = autoCallEnabled;
       }
+      var nextCalledCount = game.calledNumbersCount;
+      if (payloadCalledCount != null &&
+          payloadCalledCount > nextCalledCount) {
+        nextCalledCount = payloadCalledCount;
+      }
       _game = game.copyWith(
         nextAutoCallAt: hasNextAutoCallAt
             ? nextAutoCallAt
             : game.nextAutoCallAt,
         autoCallIntervalMs: autoCallIntervalMs,
+        calledNumbersCount: nextCalledCount,
       );
     });
     markCanonicalSocketStateApplied();
@@ -5449,6 +5536,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         game: updatedGame,
         nextAutoCallAt: updatedGame.nextAutoCallAt,
         scheduleChanged: scheduleChanged,
+        committedMaxOrder: healSnapshot.committedMax,
       );
       if (scheduleChanged) {
         _syncNextBallCountdownTicker();
@@ -5458,6 +5546,27 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: _highestKnownCalledOrder,
       );
+    }
+
+    final shouldHeal = shouldHealAfterAutoCallSchedulePatch(
+      gameStatus: updatedGame.status,
+      autoCallActive: _isAutoCallActiveForSession,
+      scheduleChanged: scheduleChanged,
+      committedMax: healSnapshot.committedMax,
+      gameCalledNumbersCount: updatedGame.calledNumbersCount,
+      payloadCalledNumbersCount: payloadCalledCount,
+      wasInCallingPhase: healSnapshot.wasInCallingPhase,
+      callingBaselineOrder: healSnapshot.callingBaselineOrder,
+    );
+    if (shouldHeal) {
+      LiveRealtimeDebug.log(
+        'auto_call_schedule_strip_heal committedMax=${healSnapshot.committedMax} '
+        'authoritative=${authoritativeCalledNumbersCount(
+          gameCalledNumbersCount: updatedGame.calledNumbersCount,
+          payloadCalledNumbersCount: payloadCalledCount,
+        )}',
+      );
+      unawaited(_recoverCalledNumbersAfterSocketGap());
     }
 
     LiveRealtimeDebug.log('auto_call_schedule_applied refresh=false');
@@ -5684,8 +5793,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
     final signature = _buildCartelaSortSignature();
     if (_cn.cartelaSortSignature == signature) {
+      LiveCartelaScrollDebug.sortEval(
+        signatureChanged: false,
+        cartelaCount: _myCartelas.length,
+      );
       return;
     }
+    LiveCartelaScrollDebug.sortEval(
+      signatureChanged: true,
+      cartelaCount: _myCartelas.length,
+    );
 
     _ensureBlockedCartelaSnapshots();
 
@@ -5707,6 +5824,115 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
             _cn.blockedCartelaFrozenSortResults[entry.key] ?? entry.value,
     };
     _cn.cartelaSortSignature = signature;
+  }
+
+  @override
+  void refreshCartelaSortAfterCalledNumbers() {
+    if (!isLiveHostActive || _myCartelas.isEmpty) {
+      return;
+    }
+
+    _sortMyCartelas();
+    _refreshCartelaSortDisplayOrder(applyDisplayOrder: null);
+  }
+
+  void _refreshCartelaSortDisplayOrder({bool? applyDisplayOrder}) {
+    final sortMode = ref.read(cartelaSortModeProvider);
+    if (sortMode.allowsManualReorder) {
+      _pendingCartelaSortDisplayApply = false;
+      return;
+    }
+
+    final maxRemains = ref.read(cartelaSortMaxRemainsProvider);
+    final nextOrdered = _orderedMyCartelas(sortMode, maxRemains);
+    final orderChanged = hasCartelaDisplayOrderChanged(
+      previousOrder: _frozenPlayCartelaOrder,
+      nextOrder: nextOrdered,
+    );
+
+    final shouldApply =
+        applyDisplayOrder ?? _liveCartelaScrollIdle.value;
+    if (shouldApply) {
+      _pendingCartelaSortDisplayApply = false;
+      _frozenPlayCartelaOrder = nextOrdered;
+      if (orderChanged && isLiveHostActive) {
+        markNeedsBuild();
+      }
+      return;
+    }
+
+    if (orderChanged) {
+      _pendingCartelaSortDisplayApply = true;
+      LiveCartelaScrollDebug.sortDisplayDeferred();
+    }
+  }
+
+  @override
+  void freezePlayCartelaDisplayOrderForScroll() {
+    final sortMode = ref.read(cartelaSortModeProvider);
+    if (sortMode.allowsManualReorder) {
+      return;
+    }
+
+    final maxRemains = ref.read(cartelaSortMaxRemainsProvider);
+    _frozenPlayCartelaOrder = _orderedMyCartelas(sortMode, maxRemains);
+  }
+
+  @override
+  void applyPendingCartelaSortDisplayOrder() {
+    if (!_pendingCartelaSortDisplayApply) {
+      return;
+    }
+    _pendingCartelaSortDisplayApply = false;
+    _frozenPlayCartelaOrder = null;
+    LiveCartelaScrollDebug.deferredSortApplied();
+    if (isLiveHostActive) {
+      markNeedsBuild();
+    }
+  }
+
+  List<GameCartelaModel> _cartelasForPlayList(
+    CartelaSortMode sortMode,
+    int cartelaSortMaxRemains,
+  ) {
+    if (sortMode.allowsManualReorder) {
+      return _orderedMyCartelas(sortMode, cartelaSortMaxRemains);
+    }
+
+    if (_pendingCartelaSortDisplayApply &&
+        !_liveCartelaScrollIdle.value &&
+        _frozenPlayCartelaOrder != null) {
+      return _frozenPlayCartelaOrder!;
+    }
+
+    final ordered = _orderedMyCartelas(sortMode, cartelaSortMaxRemains);
+    if (_liveCartelaScrollIdle.value) {
+      _frozenPlayCartelaOrder = ordered;
+    }
+    return ordered;
+  }
+
+  @override
+  void refreshCartelaLivePresentation({
+    int? committedBallNumber,
+    bool fullGrid = false,
+  }) {
+    if (!isLiveHostActive) {
+      return;
+    }
+    _cartelaLiveStore.afterCalledNumbersUpdated(
+      cartelas: _myCartelas,
+      committedBallNumber: committedBallNumber,
+      fullGrid: fullGrid,
+    );
+  }
+
+  @override
+  void refreshCartelaLiveAfterManualMark(String gameCartelaId) {
+    if (!isLiveHostActive) {
+      return;
+    }
+    _cartelaLiveStore.afterManualMarkOnCartela(gameCartelaId);
   }
 
   @override
@@ -5820,7 +6046,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         _cn.marksOwnerUserId = userId;
         _cn.restoredMarksSessionId = sessionId;
         _cn.notifyManualMarksChanged();
-        _sortMyCartelas();
+        refreshCartelaSortAfterCalledNumbers();
       });
 
       LiveRealtimeDebug.log(

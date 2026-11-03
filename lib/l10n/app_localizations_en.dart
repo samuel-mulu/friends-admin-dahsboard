@@ -2729,6 +2729,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'The app will reopen when the admin removes this notice.';
 
   @override
+  String get adminMessagesForcedClosableHint =>
+      'You can close this notice and continue using the app.';
+
+  @override
+  String get adminMessagesForcedClose => 'Close and continue';
+
+  @override
+  String get registrationCashbackCelebrationTitle =>
+      'Cartela cashback received!';
+
+  @override
+  String registrationCashbackCelebrationBody(String amount, int count) {
+    return 'You received $amount for registering $count wallet-paid cartelas in this game.';
+  }
+
+  @override
+  String get registrationCashbackCelebrationClose => 'Great!';
+
+  @override
   String get accountBannedTitle => 'Account banned';
 
   @override

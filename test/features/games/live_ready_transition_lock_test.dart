@@ -207,6 +207,55 @@ void main() {
         'a',
       );
     });
+
+    test('clears when pinnedGame enters PLAYING even without operations', () {
+      final lock = _lock();
+      final pinnedPlaying = _game(sessionId: 'a', status: GameStatus.playing);
+
+      expect(
+        shouldClearReadyTransitionLock(
+          lock: lock,
+          operations: null,
+          pinnedGame: pinnedPlaying,
+          now: _now,
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+      'clears when pinnedGame enters CHECKING or WINNER_WINDOW even without operations',
+      () {
+        final lock = _lock();
+        final pinnedChecking = _game(
+          sessionId: 'a',
+          status: GameStatus.checking,
+        );
+        final pinnedWinnerWindow = _game(
+          sessionId: 'a',
+          status: GameStatus.winnerWindow,
+        );
+
+        expect(
+          shouldClearReadyTransitionLock(
+            lock: lock,
+            operations: null,
+            pinnedGame: pinnedChecking,
+            now: _now,
+          ),
+          isTrue,
+        );
+        expect(
+          shouldClearReadyTransitionLock(
+            lock: lock,
+            operations: null,
+            pinnedGame: pinnedWinnerWindow,
+            now: _now,
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('noPlayersHandoff remains unchanged', () {

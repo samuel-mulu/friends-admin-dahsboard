@@ -11,6 +11,7 @@ import 'package:friends_bingo_app/src/features/games/claims/data/models/bingo_cl
 import 'models/called_numbers_snapshot.dart';
 import 'models/chain_round_plan_model.dart';
 import 'models/game_model.dart';
+import 'models/app_display_config_model.dart';
 import 'models/game_timing_config_model.dart';
 import 'models/round_winner_history_model.dart';
 import 'models/session_winner_result_model.dart';
@@ -30,6 +31,19 @@ class GamesRepository {
         }
 
         return GameTimingConfigModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<AppDisplayConfigModel> getDisplayConfig() {
+    return _apiClient.get<AppDisplayConfigModel>(
+      '/games/display-config',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid display config response.');
+        }
+
+        return AppDisplayConfigModel.fromJson(rawData);
       },
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_branding.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../../core/widgets/app_back_confirm_scope.dart';
 import '../../../../core/widgets/friends_bingo_wordmark.dart';
@@ -19,6 +20,7 @@ import '../../../messages/application/providers/broadcasts_provider.dart';
 import '../../../messages/presentation/widgets/admin_messages_modal.dart';
 import '../../../support/application/providers/support_unread_provider.dart';
 import '../../../support/presentation/widgets/support_feedback_modals.dart';
+import '../../../wallet/deposits/presentation/deposit_in_flow_back.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 
 class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -48,7 +50,8 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final isGamesRoot = location == '/games';
     final isBigGameRoute = location == '/games/big-game';
     final showMenuButton = isGamesBranch && isGamesRoot;
-    final isNonLiveRootTab = location == '/wallet' ||
+    final isNonLiveRootTab =
+        location == '/wallet' ||
         location == '/home' ||
         location == '/profile' ||
         location.startsWith('/wallet/') ||
@@ -56,12 +59,12 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
         location.startsWith('/profile/');
 
     final showBackButton =
-        !showMenuButton &&
-        (canPop || isNonLiveRootTab || isBigGameRoute);
+        !showMenuButton && (canPop || isNonLiveRootTab || isBigGameRoute);
 
     final headerForeground = AppBranding.appShellHeaderForeground(context);
-    final headerForegroundMuted =
-        AppBranding.appShellHeaderForegroundMuted(context);
+    final headerForegroundMuted = AppBranding.appShellHeaderForegroundMuted(
+      context,
+    );
 
     return AppBar(
       centerTitle: false,
@@ -82,18 +85,18 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
               tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
             )
           : showBackButton
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () async {
-                    await _handleShellBack(
-                      context: context,
-                      ref: ref,
-                      router: router,
-                      location: location,
-                    );
-                  },
-                )
-              : null,
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () async {
+                await _handleShellBack(
+                  context: context,
+                  ref: ref,
+                  router: router,
+                  location: location,
+                );
+              },
+            )
+          : null,
       title: isGuest || firstName == null
           ? const FriendsBingoWordmark(compact: true)
           : Text.rich(
@@ -120,15 +123,17 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         _MasterRefreshButton(headerForeground: headerForeground),
         Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: ConnectionStatusDot(
-            status: switch (ref.watch(realtimeConnectionProvider)) {
-              LiveConnectionStatus.live => LiveConnectionState.online,
-              LiveConnectionStatus.reconnecting =>
-                LiveConnectionState.reconnecting,
-              LiveConnectionStatus.offline => LiveConnectionState.offline,
-            },
-            theme: theme,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Center(
+            child: ConnectionStatusDot(
+              status: switch (ref.watch(realtimeConnectionProvider)) {
+                LiveConnectionStatus.live => LiveConnectionState.online,
+                LiveConnectionStatus.reconnecting =>
+                  LiveConnectionState.reconnecting,
+                LiveConnectionStatus.offline => LiveConnectionState.offline,
+              },
+              theme: theme,
+            ),
           ),
         ),
         if (!isGuest && !ref.watch(hasActiveForcedBroadcastProvider))
@@ -141,6 +146,7 @@ class AppShellAppBar extends ConsumerWidget implements PreferredSizeWidget {
             onPressed: () => showFeedbackHubModal(context, ref),
             icon: Icon(Icons.comment_outlined, color: headerForeground),
           ),
+        const SizedBox(width: AppSpacing.xs),
         if (isGuest) ...[
           TextButton(
             onPressed: () => context.go(loginPathWithRedirect('/games')),
@@ -244,6 +250,13 @@ Future<void> _handleShellBack({
   required GoRouter router,
   required String location,
 }) async {
+  if (location == '/wallet/deposit') {
+    final container = ProviderScope.containerOf(context);
+    if (tryDepositInFlowBack(container)) {
+      return;
+    }
+  }
+
   if (Navigator.of(context).canPop()) {
     Navigator.of(context).pop();
     return;
@@ -358,15 +371,9 @@ class _FeedbackMessageButtonState extends ConsumerState<_FeedbackMessageButton>
       _blinkController.value = 1;
     }
 
-    final icon = Icon(
-      Icons.comment_outlined,
-      color: widget.headerForeground,
-    );
+    final icon = Icon(Icons.comment_outlined, color: widget.headerForeground);
 
-    final badged = _FeedbackUnreadBadge(
-      count: unreadCount,
-      child: icon,
-    );
+    final badged = _FeedbackUnreadBadge(count: unreadCount, child: icon);
 
     return IconButton(
       tooltip: context.l10n.drawerSendFeedback,
@@ -387,10 +394,7 @@ class _FeedbackMessageButtonState extends ConsumerState<_FeedbackMessageButton>
 }
 
 class _FeedbackUnreadBadge extends StatelessWidget {
-  const _FeedbackUnreadBadge({
-    required this.count,
-    required this.child,
-  });
+  const _FeedbackUnreadBadge({required this.count, required this.child});
 
   final int count;
   final Widget child;
@@ -442,7 +446,8 @@ class _FeedbackUnreadBadge extends StatelessWidget {
   }
 }
 
-class _BroadcastMessageButtonState extends ConsumerState<_BroadcastMessageButton>
+class _BroadcastMessageButtonState
+    extends ConsumerState<_BroadcastMessageButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _blinkController;
 
@@ -488,24 +493,15 @@ class _BroadcastMessageButtonState extends ConsumerState<_BroadcastMessageButton
                   curve: Curves.easeInOut,
                 ),
               ),
-              child: _BroadcastBellBadge(
-                badge: badge,
-                child: icon,
-              ),
+              child: _BroadcastBellBadge(badge: badge, child: icon),
             )
-          : _BroadcastBellBadge(
-              badge: badge,
-              child: icon,
-            ),
+          : _BroadcastBellBadge(badge: badge, child: icon),
     );
   }
 }
 
 class _BroadcastBellBadge extends StatelessWidget {
-  const _BroadcastBellBadge({
-    required this.badge,
-    required this.child,
-  });
+  const _BroadcastBellBadge({required this.badge, required this.child});
 
   final BroadcastBellBadgeState badge;
   final Widget child;

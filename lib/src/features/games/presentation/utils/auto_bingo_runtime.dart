@@ -4,6 +4,8 @@ import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_c
 import '../../data/models/game_model.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_helpers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_marked_pattern_evaluator.dart';
+import 'chain_round_cartela_state.dart';
+import 'live_presentation_phase.dart';
 
 /// Why an AUTO-queued cartela cannot submit right now.
 enum AutoBingoBlockKind {
@@ -47,6 +49,42 @@ int completingCalledOrderOf(List<CalledNumberModel> calledNumbers) {
   return maxOrder;
 }
 
+/// Chain AUTO must mirror manual: no round N+1 claim until a new ball is committed.
+bool isChainAutoBingoClaimAllowed({
+  required GameModel? game,
+  required int calledNumbersCount,
+  required int? chainBingoArmedAfterCalledCount,
+  DateTime? now,
+}) {
+  if (game == null || !game.isChainGame) {
+    return true;
+  }
+  if (isChainRoundPauseActive(game, now: now)) {
+    return false;
+  }
+  final needsArmSnapshot =
+      game.displayRoundIndex > 1 || hasAuthoritativeChainRoundAdvance(game);
+  if (needsArmSnapshot && chainBingoArmedAfterCalledCount == null) {
+    return false;
+  }
+  return isChainBingoArmedAfterNewBall(
+    game: game,
+    calledNumbersCount: calledNumbersCount,
+    armedAfterCalledCount: chainBingoArmedAfterCalledCount,
+  );
+}
+
+/// Round 2+ AUTO cannot use the pre-arm max order (e.g. round-1 winning ball).
+bool isChainAutoBingoCompletingBallFresh({
+  required int completingCalledOrder,
+  required int? chainBingoArmedAfterCalledCount,
+}) {
+  if (chainBingoArmedAfterCalledCount == null) {
+    return true;
+  }
+  return completingCalledOrder > chainBingoArmedAfterCalledCount;
+}
+
 /// Local scheduling only — Nest remains claim authority.
 /// Evaluates with [calledNumberMarkKeys], never manual/visual marks.
 List<GameCartelaModel> selectAutoBingoPatternCompleteCartelas({
@@ -58,8 +96,22 @@ List<GameCartelaModel> selectAutoBingoPatternCompleteCartelas({
   required String sessionId,
   required int roundIndex,
   required int completingCalledOrder,
+  GameModel? chainGateGame,
+  int calledNumbersCount = 0,
+  int? chainBingoArmedAfterCalledCount,
+  DateTime? chainGateNow,
 }) {
   if (calledNumbers.isEmpty || completingCalledOrder <= 0) {
+    return const [];
+  }
+
+  if (chainGateGame != null &&
+      !isChainAutoBingoClaimAllowed(
+        game: chainGateGame,
+        calledNumbersCount: calledNumbersCount,
+        chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
+        now: chainGateNow,
+      )) {
     return const [];
   }
 
@@ -93,9 +145,16 @@ List<GameCartelaModel> selectAutoBingoPatternCompleteCartelas({
       manualMarkedNumbers: calledKeys,
       ruleKey: ruleKey,
     );
-    if (result.hasLocalPatternComplete) {
-      eligible.add(cartela);
+    if (!result.hasLocalPatternComplete) {
+      continue;
     }
+    if (!isChainAutoBingoCompletingBallFresh(
+      completingCalledOrder: completingCalledOrder,
+      chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
+    )) {
+      continue;
+    }
+    eligible.add(cartela);
   }
 
   eligible.sort((a, b) {
@@ -153,6 +212,10 @@ AutoBingoBlockKind classifyAutoBingoQueueHead({
   required bool claimScopeLoading,
   required bool autoSubmitInFlight,
   required bool terminalSuppressed,
+  GameModel? chainGateGame,
+  int calledNumbersCount = 0,
+  int? chainBingoArmedAfterCalledCount,
+  DateTime? chainGateNow,
 }) {
   if (!effectiveAutoBingo ||
       !gameAllowsClaims ||
@@ -169,7 +232,13 @@ AutoBingoBlockKind classifyAutoBingoQueueHead({
       hasUnresolvedAttemptForCartela ||
       bingoClaimLocked ||
       claimScopeLoading ||
-      autoSubmitInFlight) {
+      autoSubmitInFlight ||
+      !isChainAutoBingoClaimAllowed(
+        game: chainGateGame,
+        calledNumbersCount: calledNumbersCount,
+        chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
+        now: chainGateNow,
+      )) {
     return AutoBingoBlockKind.temporary;
   }
 

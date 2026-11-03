@@ -200,7 +200,8 @@ mixin _LiveGameViews on
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (showRegistrationPulseHeader)
-            CollapsibleRegistrationOpenCluster(
+            RepaintBoundary(
+              child: CollapsibleRegistrationOpenCluster(
               game: game,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
               expanded: _gameInfoExpanded,
@@ -259,9 +260,11 @@ mixin _LiveGameViews on
                         registrationSessionId: game.sessionId,
                       ),
               ),
-            )
+            ),
+          )
           else
-            CollapsibleLiveTopSection(
+            RepaintBoundary(
+              child: CollapsibleLiveTopSection(
               game: game,
               nextGame: isCurrentRound && !_suppressNextGameQueueHint
                   ? _queueUpcomingGameForDisplay
@@ -274,6 +277,7 @@ mixin _LiveGameViews on
               nextRegisteredCartelaNumbers: _nextRegisteredCartelaNumbers,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
             ),
+          ),
           if (!showRegistrationPulseHeader && statusBanner != null) ...[
             VGap.sm,
             statusBanner,
@@ -298,7 +302,7 @@ mixin _LiveGameViews on
                           child: FriendsBingoLoader.inline(compact: true),
                         ))
                 : showRegistrationActions
-                ? registrationBody
+                ? RepaintBoundary(child: registrationBody)
                 : widget.embedded && game.isBigGame
                 ? _BigGameEmbeddedWaitingPanel(isRefetching: _isLoading)
                 : _PreparingGamePanel(
@@ -478,53 +482,20 @@ mixin _LiveGameViews on
       cartelaSortMode: cartelaSortMode,
       cartelaSortMaxRemains: cartelaSortMaxRemains,
       decorativeMotionAllowedListenable: _liveCartelaScrollIdle,
+      debugSource: 'sticky_sliver',
     );
 
     final showRegistrationFooter =
         _shouldShowInlineRegistrationPanel && !_blocksRegistrationPromotion;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.depth != 0) {
-              return false;
-            }
-            // Pause decorative pulses only for the whole gesture — keep scroll continuous.
-            if (notification is ScrollStartNotification) {
-              if (_liveCartelaScrollIdle.value) {
-                _liveCartelaScrollIdle.value = false;
-              }
-            } else if (notification is ScrollEndNotification) {
-              if (!_liveCartelaScrollIdle.value) {
-                _liveCartelaScrollIdle.value = true;
-              }
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            // Whole cartela pane scrolls continuously (not row/column snap).
-            // ignore: deprecated_member_use
-            cacheExtent: 900,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: padding,
-                sliver: cartelaList.asSliver(
-                  crossAxisExtent: constraints.maxWidth - padding.horizontal,
-                ),
-              ),
-              if (showRegistrationFooter)
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.md),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildRegistrationTargetSection(),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+    return LiveCartelaViewport(
+      scrollIdleListenable: _liveCartelaScrollIdle,
+      onScrollStart: freezePlayCartelaDisplayOrderForScroll,
+      onScrollEnd: applyPendingCartelaSortDisplayOrder,
+      padding: padding,
+      buildCartelaSliver: (crossAxisExtent) =>
+          cartelaList.asSliver(crossAxisExtent: crossAxisExtent),
+      footer: showRegistrationFooter ? _buildRegistrationTargetSection() : null,
     );
   }
 
@@ -668,21 +639,21 @@ mixin _LiveGameViews on
               ? null
               : _queueUpcomingGameForDisplay,
         ),
-        if (_buildLiveStatusBanner() case final banner?) ...[VGap.sm, banner],
+        if (_buildLiveStatusBanner() case final banner?) ...[VGap.xs, banner],
         if (_buildChainGameInfoStrip() case final chainStrip?) ...[
-          VGap.sm,
+          VGap.xs,
           chainStrip,
         ],
         if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
-          VGap.sm,
+          VGap.xs,
           chainSummary,
         ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
-          VGap.sm,
+          VGap.xs,
           summaryBanner,
         ],
         if (_buildChainRoundWinnersBar() case final chainWinners?) ...[
-          VGap.sm,
+          VGap.xs,
           chainWinners,
         ],
         VGap.sm,
@@ -695,14 +666,14 @@ mixin _LiveGameViews on
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_buildLiveStatusBanner() case final banner?) ...[banner, VGap.sm],
+        if (_buildLiveStatusBanner() case final banner?) ...[banner, VGap.xs],
         if (_buildChainInterRoundSummaryBanner() case final chainSummary?) ...[
           chainSummary,
-          VGap.sm,
+          VGap.xs,
         ],
         if (_buildPostGameSummaryBanner() case final summaryBanner?) ...[
           summaryBanner,
-          VGap.sm,
+          VGap.xs,
         ],
         _buildCalledNumbersPanel(),
       ],
@@ -787,14 +758,16 @@ mixin _LiveGameViews on
                           ),
                         ),
                       )
-                    : SizedBox(
-                        height: 640,
-                        child: _buildMissedRoundRegistrationSection(
-                          target: registrationTarget,
-                          panel: _buildRegistrationPanelForTarget(
+                    : RegistrationGridScrollIsolation(
+                        child: SizedBox(
+                          height: 640,
+                          child: _buildMissedRoundRegistrationSection(
                             target: registrationTarget,
-                            registeredCartelas: _registrationTargetCartelas,
-                            isCurrentRound: false,
+                            panel: _buildRegistrationPanelForTarget(
+                              target: registrationTarget,
+                              registeredCartelas: _registrationTargetCartelas,
+                              isCurrentRound: false,
+                            ),
                           ),
                         ),
                       )
@@ -821,6 +794,7 @@ mixin _LiveGameViews on
               return _buildPlayCartelaList(
                 cartelaSortMode: cartelaSortMode,
                 cartelaSortMaxRemains: cartelaSortMaxRemains,
+                debugSource: 'inline_list',
               );
             },
           ),
@@ -904,7 +878,7 @@ mixin _LiveGameViews on
     required List<GameCartelaModel> registeredCartelas,
     required bool isCurrentRound,
   }) {
-    return _CartelaRegistrationPanel(
+    return CartelaRegistrationPanel(
       registration: _registration,
       slotId: target.id,
       sessionId: target.sessionId,

@@ -831,15 +831,12 @@ class _DrawerSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      width: double.infinity,
-      padding: padding,
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppBranding.panelBackground(context),
         borderRadius: BorderRadius.circular(AppSpacing.xl),
-        border: Border.all(color: AppBranding.panelBorder(context)),
-        boxShadow: theme.brightness == Brightness.dark
+        boxShadow: isDark
             ? null
             : [
                 BoxShadow(
@@ -849,7 +846,19 @@ class _DrawerSectionCard extends StatelessWidget {
                 ),
               ],
       ),
-      child: child,
+      child: Material(
+        color: AppBranding.panelBackground(context),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.xl),
+          side: BorderSide(color: AppBranding.panelBorder(context)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          width: double.infinity,
+          padding: padding,
+          child: child,
+        ),
+      ),
     );
   }
 }

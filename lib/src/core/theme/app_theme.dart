@@ -266,6 +266,7 @@ class AppTheme {
     headlineSmall: GoogleFonts.inter(
       fontSize: 21,
       fontWeight: FontWeight.w700,
+      fontFeatures: const [FontFeature.tabularFigures()],
     ),
     titleLarge: GoogleFonts.inter(
       fontSize: 20,
@@ -274,6 +275,7 @@ class AppTheme {
     titleMedium: GoogleFonts.inter(
       fontSize: 15,
       fontWeight: FontWeight.w600,
+      fontFeatures: const [FontFeature.tabularFigures()],
     ),
     titleSmall: GoogleFonts.inter(
       fontSize: 13,
@@ -286,6 +288,7 @@ class AppTheme {
     bodyMedium: GoogleFonts.inter(
       fontSize: 13,
       fontWeight: FontWeight.w500,
+      fontFeatures: const [FontFeature.tabularFigures()],
     ),
     bodySmall: GoogleFonts.inter(
       fontSize: 11,

@@ -16,6 +16,20 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
   }
 
   List<int> get _winnerCartelaNumbers {
+    if (_ownsChainInterRoundBreak) {
+      final game = _game;
+      if (game != null && game.isChainGame) {
+        final finishedRound = chainRevealedRoundIndex(game, now: _countdownNow());
+        final fromRound = winnerCartelaNumbersFromChainRoundResults(
+          roundResults: game.roundResults,
+          roundIndex: finishedRound,
+        );
+        return mergeSortedCartelaNumbers([
+          ...fromRound,
+          ..._review.sessionWinnerCartelaNumbers,
+        ]);
+      }
+    }
     return winnerCartelaNumbersForStrip(
       useSessionWideOutcomeChips: _usesSessionWideOutcomeChips,
       sessionWinnerCartelaNumbers: _review.sessionWinnerCartelaNumbers,
@@ -47,7 +61,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         final blockedCartelaNumbers = showWinnerOnly
             ? const <int>[]
             : _blockedCartelaNumbers;
-        final winnerCartelaNumbers = showWinnerOnly
+        final winnerCartelaNumbers =
+            showWinnerOnly && !_ownsChainInterRoundBreak
             ? winnerCartelaNumbersForStrip(
                 useSessionWideOutcomeChips: true,
                 sessionWinnerCartelaNumbers:
@@ -55,11 +70,17 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
                 myCartelas: _myCartelas,
               )
             : _winnerCartelaNumbers;
-        final canOpenWinnerDialog =
+        final canOpenInterRoundWinner =
+            _ownsChainInterRoundBreak &&
+            _winnerReviewEligibleViewer &&
+            winnerCartelaNumbers.isNotEmpty;
+        final canOpenPostGameWinner =
             winnerCartelaNumbers.isNotEmpty &&
             _winnerReviewEligibleViewer &&
             _showsPostGameSummary &&
             (_stripShowsWinnerOnly || _usesSessionWideOutcomeChips);
+        final canOpenWinnerDialog =
+            canOpenInterRoundWinner || canOpenPostGameWinner;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -554,6 +575,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     }
 
     final completingOrder = completingCalledOrderOf(_cn.calledNumbers);
+    final calledCount = _cn.calledNumbers.length;
+    final chainArmed = _chainBingoArmedAfterCalledCount;
     final eligible = selectAutoBingoPatternCompleteCartelas(
       cartelas: _myCartelas,
       calledNumbers: _cn.calledNumbers,
@@ -563,6 +586,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       sessionId: sessionId,
       roundIndex: roundIndex,
       completingCalledOrder: completingOrder,
+      chainGateGame: game,
+      calledNumbersCount: calledCount,
+      chainBingoArmedAfterCalledCount: chainArmed,
     );
     if (eligible.isNotEmpty) {
       _cn.autoBingoQueue = enqueueAutoBingoCartelas(
@@ -634,6 +660,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           autoSubmitInFlight: _cn.autoBingoSubmitInFlight,
           terminalSuppressed:
               _cn.autoBingoTerminalSuppressKeys.contains(suppressKey),
+          chainGateGame: game,
+          calledNumbersCount: _cn.calledNumbers.length,
+          chainBingoArmedAfterCalledCount: _chainBingoArmedAfterCalledCount,
         );
 
         if (block == AutoBingoBlockKind.temporary) {
@@ -993,22 +1022,24 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
     return game.copyWith(nextAutoCallAt: result.nextAutoCallAt);
   }
 
-  /// Builds the play cartela grid. When Auto Mark is on, refreshes pattern
-  /// sort from derived visual marks before paint.
+  /// Builds the play cartela grid. Sort evaluation runs on mark/ball events
+  /// via [refreshCartelaSortAfterCalledNumbers], not during build.
   _InlineRegisteredCartelaList _buildPlayCartelaList({
     required CartelaSortMode cartelaSortMode,
     required int cartelaSortMaxRemains,
     ValueListenable<bool>? decorativeMotionAllowedListenable,
+    String debugSource = 'unknown',
   }) {
-    if (_cn.effectiveAutoMark) {
-      _sortMyCartelas();
-    }
-
+    final ordered = _cartelasForPlayList(
+      cartelaSortMode,
+      cartelaSortMaxRemains,
+    );
+    LiveCartelaScrollDebug.playListBuild(
+      cartelaCount: ordered.length,
+      source: debugSource,
+    );
     return _InlineRegisteredCartelaList(
-      cartelas: _orderedMyCartelas(
-        cartelaSortMode,
-        cartelaSortMaxRemains,
-      ),
+      cartelas: ordered,
       sortResultsByCartelaId: _cn.cartelaSortResults,
       canClaimBingoFor: _canClaimBingoForCartela,
       claimingCartelaIds: _cn.confirmingOrClaimingCartelaIds,
@@ -1017,7 +1048,11 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       showFinishedOutcome: _showFinishedCartelaOutcome,
       freezeCartelaMarks: _cartelaMarksFrozenForEvidence,
       manualMarkedNumbers: _cn.effectiveMarkedNumbers,
-      lastManualMarkedKey: _cn.lastManualMarkedKey,
+      lastManualMarkedKey: lastActiveMarkKeyForDisplay(
+        effectiveAutoMark: _cn.effectiveAutoMark,
+        lastManualMarkedKey: _cn.lastManualMarkedKey,
+        calledNumbers: _cn.calledNumbers,
+      ),
       markedNumbersFor: _markedNumbersForCartela,
       sortResultFor: _sortResultForCartela,
       winningPatternCellsByGameCartelaId:
@@ -1036,6 +1071,9 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
           : null,
       bingoLockListenable: _countdown.bingoClaimLocked,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
+      cartelaLiveStore: _cartelaLiveStore,
+      cartelaLiveListenable: _cartelaTileLiveListenable,
+      liveSortResultFor: (cartela) => _cn.cartelaSortResults[cartela.id],
     );
   }
 
@@ -1070,7 +1108,8 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
         toggledKey: toggledKey,
       );
       _cn.notifyManualMarksChanged();
-      _sortMyCartelas();
+      refreshCartelaSortAfterCalledNumbers();
+      refreshCartelaLiveAfterManualMark(cartela.id);
     });
     unawaited(_persistManualMarks());
   }

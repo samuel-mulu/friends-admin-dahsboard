@@ -263,6 +263,39 @@ void main() {
       expect(identical(visual, manual), isFalse);
     });
 
+    test('lastActiveMarkKeyForDisplay follows manual key when Auto Mark OFF', () {
+      expect(
+        lastActiveMarkKeyForDisplay(
+          effectiveAutoMark: false,
+          lastManualMarkedKey: 'G:50',
+          calledNumbers: called,
+        ),
+        'G:50',
+      );
+    });
+
+    test('lastActiveMarkKeyForDisplay uses latest call when Auto Mark ON', () {
+      expect(
+        lastActiveMarkKeyForDisplay(
+          effectiveAutoMark: true,
+          lastManualMarkedKey: 'G:50',
+          calledNumbers: called,
+        ),
+        'N:35',
+      );
+    });
+
+    test('lastActiveMarkKeyForDisplay falls back when Auto Mark ON and no calls', () {
+      expect(
+        lastActiveMarkKeyForDisplay(
+          effectiveAutoMark: true,
+          lastManualMarkedKey: 'O:61',
+          calledNumbers: const [],
+        ),
+        'O:61',
+      );
+    });
+
     test('isManuallyMarkedCell reuses existing highlight rules for auto marks', () {
       final visual = visualMarkedNumbers(
         manualMarkedNumbers: const {},

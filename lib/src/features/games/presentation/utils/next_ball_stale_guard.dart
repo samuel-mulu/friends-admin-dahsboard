@@ -43,21 +43,29 @@ class NextBallStaleGuard {
     required DateTime? target,
     required String? sessionId,
     required int rawRemaining,
+    int committedMaxOrder = 0,
+    int authoritativeCalledCount = 0,
   }) {
+    final stripBehindCount =
+        authoritativeCalledCount > committedMaxOrder;
     final targetChanged =
         !_dateTimesEqual(target, _target) || sessionId != _sessionId;
     if (targetChanged) {
       _target = target;
       _sessionId = sessionId;
-      _zeroSince = null;
-      _calledNumbersSyncDone = false;
-      _canonicalRefetchDone = false;
+      if (!stripBehindCount) {
+        _zeroSince = null;
+        _calledNumbersSyncDone = false;
+        _canonicalRefetchDone = false;
+      }
     }
 
     if (rawRemaining > 0) {
-      _zeroSince = null;
-      _calledNumbersSyncDone = false;
-      _canonicalRefetchDone = false;
+      if (!stripBehindCount) {
+        _zeroSince = null;
+        _calledNumbersSyncDone = false;
+        _canonicalRefetchDone = false;
+      }
       return;
     }
 

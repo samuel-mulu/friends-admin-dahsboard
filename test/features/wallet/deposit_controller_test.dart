@@ -56,6 +56,24 @@ void main() {
     final state = container.read(depositControllerProvider);
     expect(state.isChoosingProvider, isFalse);
     expect(state.provider, equals(PaymentProvider.cbe));
+    expect(state.entryTab, equals(DepositEntryTab.regular));
+  });
+
+  test('selectProvider opens Smart tab for Telebirr only', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+
+    controller.selectProvider(PaymentProvider.telebirr);
+    expect(
+      container.read(depositControllerProvider).entryTab,
+      equals(DepositEntryTab.smart),
+    );
+
+    controller.selectProvider(PaymentProvider.awash);
+    expect(
+      container.read(depositControllerProvider).entryTab,
+      equals(DepositEntryTab.regular),
+    );
   });
 
   test('changeProvider returns to choosing provider mode', () {
@@ -85,6 +103,37 @@ void main() {
     controller.clearConfirmation();
     expect(container.read(depositControllerProvider).confirmation, isNull);
     expect(container.read(depositControllerProvider).trackedDepositId, isNull);
+  });
+
+  test('applyDepositTerminalStatus clears smart parse result on approval', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+    controller.selectProvider(PaymentProvider.telebirr);
+    controller.parseSmartInput(
+      'Dear Customer, You have transferred ETB 100.00 to Friends Bingo. '
+      'Your transaction number is DJ1A2B3C4D.',
+    );
+    expect(
+      container.read(depositControllerProvider).smartParseResult?.isSuccess,
+      isTrue,
+    );
+
+    controller.applyDepositTerminalStatus(
+      kind: DepositConfirmationKind.approved,
+      depositId: 'dep-1',
+      provider: PaymentProvider.telebirr,
+      amount: '50.00',
+      transactionRef: 'ABC123',
+    );
+
+    expect(
+      container.read(depositControllerProvider).smartParseResult,
+      isNull,
+    );
+    expect(
+      container.read(depositControllerProvider).confirmation?.kind,
+      DepositConfirmationKind.approved,
+    );
   });
 
   test('handleRealtimeUpdate processes approved terminal event', () {

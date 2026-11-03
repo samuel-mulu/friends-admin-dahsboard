@@ -25,6 +25,7 @@ class AppConfig {
     required this.apiBaseUrl,
     required this.socketBaseUrl,
     this.realtimeDebug = false,
+    this.cartelaScrollDebug = false,
     this.chainDebug = false,
     this.bigGameDebug = false,
     this.debug = false,
@@ -36,6 +37,9 @@ class AppConfig {
 
   /// Verbose live-game / auto-call socket tracing (debug builds only).
   final bool realtimeDebug;
+
+  /// Live cartela list scroll / rebuild tracing (debug builds only).
+  final bool cartelaScrollDebug;
 
   /// Chain Game round-boundary tracing (debug builds only).
   final bool chainDebug;
@@ -66,31 +70,21 @@ class AppConfig {
       compileTimeValue: const String.fromEnvironment('SOCKET_BASE_URL'),
     );
 
-    final realtimeDebug = _resolveBool(
-      key: 'REALTIME_DEBUG',
-      hasCompileTimeDefine: const bool.hasEnvironment('REALTIME_DEBUG'),
-      compileTimeValue: const bool.fromEnvironment('REALTIME_DEBUG'),
-    );
-    final chainDebug = _resolveBool(
-      key: 'CHAIN_DEBUG',
-      hasCompileTimeDefine: const bool.hasEnvironment('CHAIN_DEBUG'),
-      compileTimeValue: const bool.fromEnvironment('CHAIN_DEBUG'),
-    );
-    final bigGameDebug = _resolveBool(
-      key: 'BIG_GAME_DEBUG',
-      hasCompileTimeDefine: const bool.hasEnvironment('BIG_GAME_DEBUG'),
-      compileTimeValue: const bool.fromEnvironment('BIG_GAME_DEBUG'),
-    );
-    final debug = _resolveBool(
-      key: 'DEBUG',
-      hasCompileTimeDefine: const bool.hasEnvironment('DEBUG'),
-      compileTimeValue: const bool.fromEnvironment('DEBUG'),
-    );
-    final telebirrDepositDebug = _resolveBool(
-      key: 'TELEBIRR_DEPOSIT_DEBUG',
-      hasCompileTimeDefine: const bool.hasEnvironment('TELEBIRR_DEPOSIT_DEBUG'),
-      compileTimeValue: const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG'),
-    );
+    final realtimeDebug =
+        const bool.fromEnvironment('REALTIME_DEBUG') ||
+        _envBool('REALTIME_DEBUG');
+    final cartelaScrollDebug =
+        const bool.fromEnvironment('CARTELA_SCROLL_DEBUG') ||
+        _envBool('CARTELA_SCROLL_DEBUG');
+    final chainDebug =
+        const bool.fromEnvironment('CHAIN_DEBUG') || _envBool('CHAIN_DEBUG');
+    final bigGameDebug =
+        const bool.fromEnvironment('BIG_GAME_DEBUG') ||
+        _envBool('BIG_GAME_DEBUG');
+    final debug = const bool.fromEnvironment('DEBUG') || _envBool('DEBUG');
+    final telebirrDepositDebug =
+        const bool.fromEnvironment('TELEBIRR_DEPOSIT_DEBUG') ||
+        _envBool('TELEBIRR_DEPOSIT_DEBUG');
 
     if (apiBaseUrlOverride.isEmpty) {
       throw StateError(
@@ -115,6 +109,7 @@ class AppConfig {
       apiBaseUrl: apiBaseUrl,
       socketBaseUrl: socketBaseUrl,
       realtimeDebug: realtimeDebug,
+      cartelaScrollDebug: cartelaScrollDebug,
       chainDebug: chainDebug,
       bigGameDebug: bigGameDebug,
       debug: debug,
@@ -122,14 +117,12 @@ class AppConfig {
     );
   }
 
-  static String _resolveString({
-    required String key,
-    required String compileTimeValue,
-  }) {
-    if (compileTimeValue.isNotEmpty) {
-      return compileTimeValue;
+  static String _envString(String key) {
+    try {
+      return dotenv.maybeGet(key)?.trim() ?? '';
+    } catch (_) {
+      return '';
     }
-    return _envString(key);
   }
 
   static bool _resolveBool({
@@ -165,9 +158,7 @@ class AppConfig {
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
-  static void _validateReleaseApiBaseUrl({
-    required String apiBaseUrl,
-  }) {
+  static void _validateReleaseApiBaseUrl({required String apiBaseUrl}) {
     if (!kReleaseMode) {
       return;
     }

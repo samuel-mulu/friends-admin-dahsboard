@@ -1,30 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
-
-/// Mirrors deposit screen provider-first tab policy.
-enum DepositEntryTab { smart, regular }
+import 'package:friends_bingo_app/src/features/wallet/deposits/application/models/deposit_state.dart';
+import 'package:friends_bingo_app/src/features/wallet/shared/domain/entities/payment_provider.dart';
 
 void main() {
-  test('defaults to Smart Deposit after provider selection', () {
-    var entryTab = DepositEntryTab.smart;
-    // Selecting a provider always resets to Smart.
-    entryTab = DepositEntryTab.smart;
+  test('Telebirr supports Smart and Regular deposit tabs', () {
+    expect(PaymentProvider.telebirr.supportsSmartDepositEntry, isTrue);
+  });
+
+  test('CBE, Awash, and BOA use Regular deposit entry only', () {
+    expect(PaymentProvider.cbe.supportsSmartDepositEntry, isFalse);
+    expect(PaymentProvider.awash.supportsSmartDepositEntry, isFalse);
+    expect(PaymentProvider.boa.supportsSmartDepositEntry, isFalse);
+  });
+
+  test('selecting Telebirr defaults to Smart tab', () {
+    const provider = PaymentProvider.telebirr;
+    final entryTab = provider.supportsSmartDepositEntry
+        ? DepositEntryTab.smart
+        : DepositEntryTab.regular;
     expect(entryTab, DepositEntryTab.smart);
   });
 
-  test('switching tabs preserves selected provider identity', () {
-    const provider = 'TELEBIRR';
-    var entryTab = DepositEntryTab.smart;
-    entryTab = DepositEntryTab.regular;
-    expect(provider, 'TELEBIRR');
-    expect(entryTab, DepositEntryTab.regular);
-    entryTab = DepositEntryTab.smart;
-    expect(provider, 'TELEBIRR');
-  });
-
-  test('pending recovery prefers Regular tab for existing fields', () {
-    var entryTab = DepositEntryTab.smart;
-    // Restore pending attempt → show filled Regular form.
-    entryTab = DepositEntryTab.regular;
+  test('selecting CBE defaults to Regular tab', () {
+    const provider = PaymentProvider.cbe;
+    final entryTab = provider.supportsSmartDepositEntry
+        ? DepositEntryTab.smart
+        : DepositEntryTab.regular;
     expect(entryTab, DepositEntryTab.regular);
   });
 }

@@ -8,7 +8,10 @@ class RegistrationCartelaGridIndex {
   String _searchQuery = '';
   bool _serverSideSearch = false;
   List<String>? _shuffledCartelaIds;
+  int? _shuffledOrderHash;
   String _catalogVersion = '';
+  Map<String, int>? _cachedShuffleIndex;
+  int? _cachedShuffleOrderHash;
 
   int get length => _displayIndices.length;
 
@@ -19,10 +22,15 @@ class RegistrationCartelaGridIndex {
       return 'empty';
     }
 
-    return '${catalog.length}:${catalog.first.id}:${catalog.last.id}';
+    var idsHash = 0;
+    for (var i = 0; i < catalog.length; i++) {
+      idsHash = Object.hash(idsHash, catalog[i].id);
+    }
+    return '${catalog.length}:${catalog.first.id}:${catalog.last.id}:$idsHash';
   }
 
-  CartelaModel cartelaAt(int displayIndex) => _catalog[_displayIndices[displayIndex]];
+  CartelaModel cartelaAt(int displayIndex) =>
+      _catalog[_displayIndices[displayIndex]];
 
   void update({
     required List<CartelaModel> catalog,
@@ -31,15 +39,22 @@ class RegistrationCartelaGridIndex {
     bool serverSideSearch = false,
   }) {
     final catalogVersion = versionForCatalog(catalog);
+    final nextShuffleHash = shuffledCartelaIds == null
+        ? null
+        : Object.hashAll(shuffledCartelaIds);
+    final nextShuffleLength = shuffledCartelaIds?.length;
+    final prevShuffleLength = _shuffledCartelaIds?.length;
     final needsRebuild =
         catalogVersion != _catalogVersion ||
         searchQuery != _searchQuery ||
-        shuffledCartelaIds != _shuffledCartelaIds ||
+        nextShuffleLength != prevShuffleLength ||
+        nextShuffleHash != _shuffledOrderHash ||
         serverSideSearch != _serverSideSearch;
 
     _catalog = catalog;
     _searchQuery = searchQuery;
     _shuffledCartelaIds = shuffledCartelaIds;
+    _shuffledOrderHash = nextShuffleHash;
     _serverSideSearch = serverSideSearch;
     _catalogVersion = catalogVersion;
 
@@ -67,10 +82,7 @@ class RegistrationCartelaGridIndex {
     }
 
     if (_shuffledCartelaIds != null) {
-      final shuffleIndex = {
-        for (var index = 0; index < _shuffledCartelaIds!.length; index++)
-          _shuffledCartelaIds![index]: index,
-      };
+      final shuffleIndex = _getOrBuildShuffleIndex();
       final fallbackIndex = shuffleIndex.length;
 
       indices.sort((left, right) {
@@ -88,6 +100,19 @@ class RegistrationCartelaGridIndex {
     }
 
     return indices;
+  }
+
+  Map<String, int> _getOrBuildShuffleIndex() {
+    final list = _shuffledCartelaIds!;
+    final hash = _shuffledOrderHash;
+    if (_cachedShuffleIndex != null && _cachedShuffleOrderHash == hash) {
+      return _cachedShuffleIndex!;
+    }
+    _cachedShuffleOrderHash = hash;
+    return _cachedShuffleIndex = {
+      for (var index = 0; index < list.length; index++)
+        list[index]: index,
+    };
   }
 }
 
