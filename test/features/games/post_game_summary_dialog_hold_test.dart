@@ -139,6 +139,7 @@ void main() {
         },
       );
 
+      expect(advanceRuns, 0);
       expect(review.postGameSummaryHoldBypassed, isFalse);
       expect(review.postGameSummaryAdvancing, isFalse);
       expect(review.postGameSummaryHold.inSeconds, finishedSeconds);

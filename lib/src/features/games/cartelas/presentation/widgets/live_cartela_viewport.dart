@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:friends_bingo_app/src/core/theme/app_spacing.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/debug/live_cartela_scroll_debug.dart';
@@ -77,7 +78,7 @@ class _LiveCartelaViewportState extends State<LiveCartelaViewport> {
             return false;
           },
           child: CustomScrollView(
-            cacheExtent: LiveCartelaViewport.defaultCacheExtent,
+            scrollCacheExtent: ScrollCacheExtent.pixels(LiveCartelaViewport.defaultCacheExtent),
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(

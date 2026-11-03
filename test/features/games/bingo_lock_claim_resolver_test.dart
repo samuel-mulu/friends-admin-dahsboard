@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,7 +71,7 @@ void main() {
                     pendingReview: false,
                     showMarkColorPicker: false,
                     manualMarkedNumbers: const {},
-                    onMarkedNumberToggled: (_, __, ___) {},
+                    onMarkedNumberToggled: (_, _, _) {},
                     onClaimBingo: () {},
                     bingoLockListenable: lock,
                     resolveCanClaimBingo: () => resolverEligible,
@@ -117,7 +116,7 @@ void main() {
                 pendingReview: false,
                 showMarkColorPicker: false,
                 manualMarkedNumbers: const {},
-                onMarkedNumberToggled: (_, __, ___) {},
+                onMarkedNumberToggled: (_, _, _) {},
                 onClaimBingo: () {},
                 bingoLockListenable: lock,
                 resolveCanClaimBingo: () => true,

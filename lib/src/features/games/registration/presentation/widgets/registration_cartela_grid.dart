@@ -15,12 +15,11 @@ import 'package:friends_bingo_app/src/features/games/cartelas/domain/resolved_ca
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_panel_session.dart';
 import 'package:friends_bingo_app/src/features/games/application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_catalog_provider.dart';
-import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_cartela_grid_summary_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/registration_state_patch_provider.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_index.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_cartela_grid_layout.dart';
 import 'package:friends_bingo_app/src/features/games/registration/domain/registration_state_patch.dart';
-import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/cartela_number_chip.dart';
+import 'registration_cartela_card.dart';
 
 class RegistrationGridScope extends InheritedWidget {
   const RegistrationGridScope({
@@ -532,25 +531,24 @@ class _RegistrationCartelaGridCellState
         final selectBlocked =
             selectModeEnabled && !isSelected && !_canAddMoreSelections(scope);
 
-        return RepaintBoundary(
-          child: CartelaNumberChip(
-            number: widget.cartela.number,
-            availability: resolved.availability,
-            isSelected: isSelected,
-            selectModeEnabled: selectModeEnabled,
-            isReservePending: resolved.isPending,
-            isRegistering: resolved.isRegistering,
-            selectBlocked: selectBlocked,
-            reservationSecondsRemaining: resolved.reservationSecondsRemaining,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              widget.onTap(widget.cartela, resolved);
-            },
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              widget.onLongPress(widget.cartela, resolved);
-            },
-          ),
+        return RegistrationCartelaCard(
+          number: widget.cartela.number,
+          availability: resolved.availability,
+          displayMode: RegistrationCartelaDisplayMode.tile,
+          isSelected: isSelected,
+          selectModeEnabled: selectModeEnabled,
+          isReservePending: resolved.isPending,
+          isRegistering: resolved.isRegistering,
+          selectBlocked: selectBlocked,
+          reservationSecondsRemaining: resolved.reservationSecondsRemaining,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            widget.onTap(widget.cartela, resolved);
+          },
+          onLongPress: () {
+            HapticFeedback.mediumImpact();
+            widget.onLongPress(widget.cartela, resolved);
+          },
         );
       },
     );

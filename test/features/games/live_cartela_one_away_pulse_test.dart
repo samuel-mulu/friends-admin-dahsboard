@@ -85,7 +85,7 @@ void main() {
                 pendingReview: false,
                 showMarkColorPicker: false,
                 manualMarkedNumbers: const {},
-                onMarkedNumberToggled: (_, __, ___) {},
+                onMarkedNumberToggled: (_, _, _) {},
                 onClaimBingo: () {},
                 isOneAwayFromWin: true,
                 hasLocalPatternComplete: false,
