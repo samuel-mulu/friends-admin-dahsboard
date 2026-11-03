@@ -876,6 +876,10 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
           );
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
+            if (!interRoundClose && !_review.postGameSummaryReviewActive) {
+              _beginPostGameSummaryAdvance();
+              unawaited(_runFinishedAdvanceSequence(force: true));
+            }
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
