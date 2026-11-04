@@ -821,17 +821,24 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       return;
     }
 
-    final autoDismissDuration =
-        _winnerCelebration.calculateAutoDismissDuration(_game?.winnerWindowEndsAt);
+    final chainInterRoundDialog = pauseEndsAt != null || _ownsChainInterRoundBreak;
+    final autoDismissDuration = chainInterRoundDialog
+        ? _winnerCelebration.calculateAutoDismissDuration(
+            _game?.winnerWindowEndsAt,
+          )
+        : _effectiveTimingConfig.winningPatternDisplayHold;
 
     _review.winnerCartelaDialogVisible = true;
-    // Embedded Big Game only: do not burn the configured summary hold while
-    // the winner cartela dialog is on top of the PIN summary.
-    final pauseEmbeddedBigGameHold = _embeddedBigGame &&
-        _review.postGameSummaryReviewActive &&
-        !_review.postGameSummaryHoldBypassed &&
-        !_review.postGameSummaryAdvancing;
-    if (pauseEmbeddedBigGameHold) {
+    // Do not burn the configured summary hold while the winner cartela dialog
+    // is on top of the terminal PIN summary (all game types; not inter-round).
+    final pausePostGameSummaryHold =
+        shouldPausePostGameSummaryHoldForWinnerDialog(
+      postGameSummaryReviewActive: _review.postGameSummaryReviewActive,
+      holdBypassed: _review.postGameSummaryHoldBypassed,
+      advancing: _review.postGameSummaryAdvancing,
+      chainInterRoundDialog: chainInterRoundDialog,
+    );
+    if (pausePostGameSummaryHold) {
       _review.finishTransitionTimer?.cancel();
       _review.finishTransitionTimer = null;
       if (_embeddedBigGame) {
@@ -853,31 +860,39 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         autoDismissDuration: autoDismissDuration,
       ).whenComplete(
         () {
+          final interRoundClose =
+              chainInterRoundDialog || _isChainRoundPaused;
           if (_isChainRoundPaused) {
             _review.winnerCartelaDialogAutoShownForPauseKey = null;
           }
+          ChainGameDebug.log(
+            'winner_dialog_closed interRound=$interRoundClose '
+            'postSummary=${_review.postGameSummaryReviewActive}',
+          );
           if (mounted) {
             setState(() => _review.winnerCartelaDialogVisible = false);
-            _beginPostGameSummaryAdvance();
-            unawaited(_runFinishedAdvanceSequence(force: true));
           } else {
             _review.winnerCartelaDialogVisible = false;
           }
           // Restart the full configured hold after the dialog closes so the
           // PIN summary remains visible for finishedResultDisplaySeconds.
-          if (pauseEmbeddedBigGameHold &&
-              mounted &&
-              _embeddedBigGame &&
-              _review.postGameSummaryReviewActive &&
-              !_review.postGameSummaryHoldBypassed &&
-              !_review.postGameSummaryAdvancing) {
+          if (shouldRestartPostGameSummaryHoldAfterWinnerDialog(
+                pauseWasActive: pausePostGameSummaryHold,
+                postGameSummaryReviewActive:
+                    _review.postGameSummaryReviewActive,
+                holdBypassed: _review.postGameSummaryHoldBypassed,
+                advancing: _review.postGameSummaryAdvancing,
+              ) &&
+              mounted) {
             _review.postGameSummaryShownAt = _countdownNow();
             _review.syncPostGameSummaryCountdownTicker();
             _scheduleAdvanceToNextGame();
-            BigGameDebug.log(
-              'summary_hold_restarted reason=winner_dialog_closed '
-              'session=${_game?.sessionId ?? '-'}',
-            );
+            if (_embeddedBigGame) {
+              BigGameDebug.log(
+                'summary_hold_restarted reason=winner_dialog_closed '
+                'session=${_game?.sessionId ?? '-'}',
+              );
+            }
           }
         },
       ),
@@ -4314,7 +4329,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       _review.resetWinnerWindowClosingState();
       _countdown.winnerWindowEndsAt = null;
-      if (_review.postGameSummaryReviewActive) {
+      if (_review.postGameSummaryReviewActive &&
+          _chainInterRoundBreakEligibleNow()) {
         _review.clearPostGameSummaryHold(
           resetRegistrationCountdown: _resetRegistrationCountdownAfterSummary,
           patternClearReason: WinnerPatternClearReason.sessionChanged,
@@ -4336,7 +4352,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     });
     // Mid-round owns the UI now — kill any WW-expiry closing poll/refetch loop.
     _review.resetWinnerWindowClosingState();
-    if (_review.postGameSummaryReviewActive) {
+    if (_review.postGameSummaryReviewActive &&
+        _chainInterRoundBreakEligibleNow()) {
       _clearPostGameSummaryHold(
         patternClearReason: WinnerPatternClearReason.sessionChanged,
         clearWinnerPatterns: false,
@@ -4394,7 +4411,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   void _startPostGameSummary({required bool scheduleAdvance}) {
-    final status = _game?.status;
+    final game = _game;
+    final status = game?.status;
     if (status != GameStatus.finished && status != GameStatus.noWinner) {
       ChainGameDebug.log(
         'skip postGameSummary status=${status?.name} '
@@ -4402,7 +4420,16 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       return;
     }
-    if (_ownsChainInterRoundBreak ||
+
+    // Last chain round is terminal FINISHED — never treat stale inter-round
+    // pause/latch as blocking the configured finishedResultDisplaySeconds hold.
+    final chainSessionTerminal = game?.isChainGame == true &&
+        !game!.hasRemainingChainRounds;
+    if (chainSessionTerminal) {
+      _review.resetChainInterRoundSummary();
+      _clearChainPauseLatch();
+      _stopChainRoundPauseTicker();
+    } else if (_ownsChainInterRoundBreak ||
         _isChainRoundPaused ||
         _review.showsChainInterRoundSummary) {
       ChainGameDebug.log(
@@ -4413,6 +4440,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       return;
     }
+
     _review.resetChainInterRoundSummary();
     _clearChainPauseLatch();
     ChainGameDebug.log(
@@ -4761,11 +4789,19 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _review.sessionWinnerResultsLoading = false;
   }
 
+  String? _registrationChainPlanRequestKey;
+
   /// Fetches the fixed round ladder once per chain session, and again whenever a
   /// round is decided so the tile states stay honest.
-  void _syncChainRoundPlan() {
-    final game = _game;
+  ///
+  /// [source] is the registration-open chain when that session is not [_game]
+  /// yet. Passing it does not clear a plan that belongs to another session.
+  void _syncChainRoundPlan([GameModel? source]) {
+    final game = source ?? _game;
     if (game == null || !game.isChainGame) {
+      if (source != null || _chain.isPlanInFlight) {
+        return;
+      }
       if (_chain.chainRoundPlan != null) {
         setState(() {
           _chain.clearPlan();
@@ -4806,6 +4842,88 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   String? _chainCurrentRuleName() => _chain.resolveCurrentRuleName(_game);
 
+  /// Registration layout can be on screen before play sync runs. Ask for the
+  /// ladder once per session so the top bar can open every round's rule.
+  void _ensureRegistrationChainPlan(GameModel game) {
+    if (!game.isChainGame) {
+      return;
+    }
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return;
+    }
+    final key =
+        '$sessionId:${game.roundResults.length}:${game.displayRoundIndex}';
+    if (_chain.chainRoundPlanKey == key || _chain.isPlanInFlight) {
+      return;
+    }
+    if (_registrationChainPlanRequestKey == key) {
+      return;
+    }
+    _registrationChainPlanRequestKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _syncChainRoundPlan(game);
+      if (_chain.chainRoundPlanKey != key && !_chain.isPlanInFlight) {
+        _registrationChainPlanRequestKey = null;
+      }
+    });
+  }
+
+  ChainRoundPlan _chainPlanFor(GameModel game) {
+    final cached = _chainRoundPlan;
+    if (cached != null &&
+        cached.sessionId.isNotEmpty &&
+        cached.sessionId == game.sessionId &&
+        cached.rounds.isNotEmpty) {
+      return cached;
+    }
+    return ChainRoundPlan.fromGame(game);
+  }
+
+  bool _chainPlanHasRuleNames(ChainRoundPlan plan) {
+    if (plan.rounds.isEmpty) {
+      return false;
+    }
+    return plan.rounds.every(
+      (round) => (round.gameRuleName ?? '').trim().isNotEmpty,
+    );
+  }
+
+  Future<void> _openChainRoundsForRegistration(GameModel game) async {
+    if (!mounted || !game.isChainGame) {
+      return;
+    }
+
+    var plan = _chainPlanFor(game);
+    final sessionId = game.sessionId;
+    if (!_chainPlanHasRuleNames(plan) &&
+        sessionId != null &&
+        sessionId.isNotEmpty) {
+      try {
+        final fetched = await ref
+            .read(gamesRepositoryProvider)
+            .getChainRoundPlan(sessionId);
+        if (!mounted) {
+          return;
+        }
+        final key =
+            '$sessionId:${game.roundResults.length}:${game.displayRoundIndex}';
+        setState(() => _chain.setPlan(fetched, key: key));
+        plan = fetched;
+      } catch (_) {
+        plan = _chainPlanFor(game);
+      }
+    }
+
+    if (!mounted || plan.rounds.isEmpty) {
+      return;
+    }
+    await showChainGameRoundsDialog(context: context, plan: plan);
+  }
+
   Widget? _buildChainGameInfoStrip() {
     final game = _game;
     if (game == null || !game.isChainGame) {
@@ -4838,7 +4956,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
 
   Widget? _buildChainRoundWinnersBar() {
     final game = _game;
-    if (game == null || !game.isChainGame || game.roundResults.isEmpty) {
+    if (game == null ||
+        !shouldShowPinnedChainRoundWinnersBar(
+          game: game,
+          roundBreakOwner: _liveRoundBreakOwner,
+          postGameSummaryReviewActive: _review.postGameSummaryReviewActive,
+        )) {
       return null;
     }
 

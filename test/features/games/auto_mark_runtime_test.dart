@@ -295,5 +295,38 @@ void main() {
         isTrue,
       );
     });
+
+    test('Auto Mark highlights only the latest called number', () {
+      expect(
+        visualLastMarkedKey(
+          lastManualMarkedKey: 'G:50',
+          calledNumbers: called,
+          effectiveAutoMark: true,
+        ),
+        'N:35',
+      );
+    });
+
+    test('Auto Mark off keeps the manual highlight', () {
+      expect(
+        visualLastMarkedKey(
+          lastManualMarkedKey: 'G:50',
+          calledNumbers: called,
+          effectiveAutoMark: false,
+        ),
+        'G:50',
+      );
+    });
+
+    test('Auto Mark with no calls keeps the manual highlight', () {
+      expect(
+        visualLastMarkedKey(
+          lastManualMarkedKey: 'G:50',
+          calledNumbers: const [],
+          effectiveAutoMark: true,
+        ),
+        'G:50',
+      );
+    });
   });
 }

@@ -11,6 +11,7 @@ import 'package:friends_bingo_app/src/features/games/presentation/utils/chain_ro
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_game_finish_transition.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_presentation_phase.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/utils/live_primary_game_selection.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/utils/live_round_break.dart';
 
 GameModel _chainGame({
   required GameStatus status,
@@ -818,6 +819,96 @@ void main() {
           finishedRoundIndex: 2,
         ),
         [roundTwoApi],
+      );
+    });
+
+    test('pinned winners bar hidden during active chain play', () {
+      final roundOneWon = ChainRoundResultSummary(
+        roundIndex: 1,
+        prizeAmount: '1000',
+        outcome: ChainRoundOutcome.won,
+        winners: const [
+          ChainRoundWinnerSummary(
+            gameCartelaId: 'gc-1',
+            cartelaNumber: 4875,
+            amount: '1000',
+          ),
+        ],
+      );
+      final playingRoundTwo = _chainGame(
+        status: GameStatus.playing,
+        roundIndex: 2,
+        roundCount: 3,
+      ).copyWith(roundResults: [roundOneWon]);
+
+      expect(
+        shouldShowPinnedChainRoundWinnersBar(
+          game: playingRoundTwo,
+          roundBreakOwner: LiveRoundBreakOwner.none,
+          postGameSummaryReviewActive: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('pinned winners bar visible during inter-round pause', () {
+      final roundOneWon = ChainRoundResultSummary(
+        roundIndex: 1,
+        prizeAmount: '1000',
+        outcome: ChainRoundOutcome.won,
+        winners: const [
+          ChainRoundWinnerSummary(
+            gameCartelaId: 'gc-1',
+            cartelaNumber: 4875,
+            amount: '1000',
+          ),
+        ],
+      );
+      final paused = _chainGame(
+        status: GameStatus.playing,
+        roundIndex: 2,
+        roundCount: 3,
+        roundPausedUntil: DateTime.parse('2026-09-14T10:00:20.000Z'),
+      ).copyWith(roundResults: [roundOneWon]);
+
+      expect(
+        shouldShowPinnedChainRoundWinnersBar(
+          game: paused,
+          roundBreakOwner: LiveRoundBreakOwner.chainInterRound,
+          postGameSummaryReviewActive: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('pinned winners bar visible on final finished review', () {
+      final roundResults = [
+        ChainRoundResultSummary(
+          roundIndex: 3,
+          prizeAmount: '1000',
+          outcome: ChainRoundOutcome.won,
+          winners: const [
+            ChainRoundWinnerSummary(
+              gameCartelaId: 'gc-3',
+              cartelaNumber: 99,
+              amount: '1000',
+            ),
+          ],
+        ),
+      ];
+      final finished = _chainGame(
+        status: GameStatus.finished,
+        roundIndex: 3,
+        roundCount: 3,
+      ).copyWith(roundResults: roundResults);
+
+      expect(
+        shouldShowPinnedChainRoundWinnersBar(
+          game: finished,
+          roundBreakOwner: LiveRoundBreakOwner.postGameTerminal,
+          postGameSummaryReviewActive: true,
+        ),
+        isTrue,
       );
     });
 

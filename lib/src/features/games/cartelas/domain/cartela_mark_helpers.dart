@@ -156,6 +156,23 @@ Set<String> visualMarkedNumbers({
   return marks;
 }
 
+/// Paint-only highlight for the newest mark. While Auto Mark is on, the
+/// latest called number uses the same special color as a manual tap.
+/// [calledNumbers] is call order; the last item is the active ball.
+/// This key is never written into manual mark storage.
+String? visualLastMarkedKey({
+  required String? lastManualMarkedKey,
+  required List<CalledNumberModel> calledNumbers,
+  required bool effectiveAutoMark,
+}) {
+  if (!effectiveAutoMark || calledNumbers.isEmpty) {
+    return lastManualMarkedKey;
+  }
+
+  final latest = calledNumbers.last;
+  return manualMarkKey(latest.letter, latest.number.toString());
+}
+
 Set<String> reviewMarksIncludingCalled({
   required Set<String> manualMarkedNumbers,
   required List<CalledNumberModel> calledNumbers,

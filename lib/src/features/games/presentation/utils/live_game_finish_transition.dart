@@ -40,6 +40,32 @@ Duration resolvePostGameAdvanceTimerDelay({
   return delay;
 }
 
+/// Freezes the finished-summary hold timer while the winner cartela modal is open.
+bool shouldPausePostGameSummaryHoldForWinnerDialog({
+  required bool postGameSummaryReviewActive,
+  required bool holdBypassed,
+  required bool advancing,
+  required bool chainInterRoundDialog,
+}) {
+  return postGameSummaryReviewActive &&
+      !holdBypassed &&
+      !advancing &&
+      !chainInterRoundDialog;
+}
+
+/// Restarts the full [finishedResultDisplaySeconds] hold after the modal closes.
+bool shouldRestartPostGameSummaryHoldAfterWinnerDialog({
+  required bool pauseWasActive,
+  required bool postGameSummaryReviewActive,
+  required bool holdBypassed,
+  required bool advancing,
+}) {
+  return pauseWasActive &&
+      postGameSummaryReviewActive &&
+      !holdBypassed &&
+      !advancing;
+}
+
 /// Whether the shared finish machine should schedule another automatic attempt.
 bool shouldSchedulePostGameAdvanceRetry({
   required PostGameAdvanceOutcome outcome,

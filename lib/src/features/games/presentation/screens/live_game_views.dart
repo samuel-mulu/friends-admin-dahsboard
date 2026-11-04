@@ -193,6 +193,14 @@ mixin _LiveGameViews on
             panel: registrationPanel,
           )
         : registrationPanel;
+    if (game.isChainGame) {
+      _ensureRegistrationChainPlan(game);
+    }
+    final chainRoundCount = game.roundPrizes != null &&
+            game.roundPrizes!.length > game.displayRoundCount
+        ? game.roundPrizes!.length
+        : game.displayRoundCount;
+    final chainRuleName = game.isChainGame ? game.localizedRuleName(ref) : null;
 
     return Padding(
       padding: AppSpacing.screenPadding.copyWith(top: 0, bottom: 0),
@@ -274,6 +282,18 @@ mixin _LiveGameViews on
               nextRegisteredCartelaNumbers: _nextRegisteredCartelaNumbers,
               myRegisteredCartelasCount: _regDisplayCountForGame(game),
             ),
+          if (game.isChainGame) ...[
+            VGap.sm,
+            ChainGameInfoStrip(
+              roundIndex: game.displayRoundIndex,
+              roundCount: chainRoundCount,
+              thisRoundPrize:
+                  game.effectiveRoundPrizeAmount ?? game.prizeAmount,
+              totalPrize: game.prizeAmount,
+              patternName: chainRuleName,
+              onTap: () => unawaited(_openChainRoundsForRegistration(game)),
+            ),
+          ],
           if (!showRegistrationPulseHeader && statusBanner != null) ...[
             VGap.sm,
             statusBanner,

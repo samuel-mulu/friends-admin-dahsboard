@@ -6,8 +6,9 @@ import '../../data/models/game_model.dart';
 import '../../domain/game_category_theme.dart';
 import '../utils/chain_round_cartela_state.dart';
 
-/// Past Chain Game round winners, pinned under the board for the whole session.
-/// Stays visible while later rounds play so players can see who already won.
+/// Past Chain Game round winners shown during inter-round pause and after the
+/// final round finished review — hidden while a later round is actively playing
+/// (open the chain info strip for the full ladder).
 class ChainRoundWinnersBar extends StatelessWidget {
   const ChainRoundWinnersBar({
     required this.roundResults,

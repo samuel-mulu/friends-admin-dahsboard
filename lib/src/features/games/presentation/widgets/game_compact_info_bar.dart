@@ -212,9 +212,6 @@ class _RegistrationOpenInfoBar extends StatelessWidget {
         ] else if (game.isBigGame) ...[
           const SizedBox(height: 8),
           BigGameInfoStrip(game: game),
-        ] else if (game.isChainGame) ...[
-          const SizedBox(height: 8),
-          _ChainGameRegistrationRounds(game: game),
         ],
       ],
     );

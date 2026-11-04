@@ -7,12 +7,16 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/game_model.dart';
 import '../../domain/big_game_phase.dart';
 import '../../domain/game_category_theme.dart';
+import '../../application/providers/app_display_config_provider.dart';
 import '../../application/providers/big_game_prompt_dismiss_provider.dart';
 import '../../application/providers/current_big_game_provider.dart';
 import '../../application/providers/current_game_operations_provider.dart';
 import '../utils/big_game_navigation.dart';
 
 /// Persistent strip on the normal games tab when Big Game is actionable.
+///
+/// Hidden when the admin display config turns Big Game promotion off, the
+/// same switch as the centered [GameAnnouncementBanner] card.
 class BigGameLivePromptBanner extends ConsumerWidget {
   const BigGameLivePromptBanner({
     required this.currentGame,
@@ -25,7 +29,12 @@ class BigGameLivePromptBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (embedded || currentGame?.isBigGame == true) {
+    final displayConfig = ref.watch(appDisplayConfigProvider);
+    final promoCardEnabled = displayConfig.maybeWhen(
+      data: (config) => config.bigGamePromotionCardEnabled,
+      orElse: () => false,
+    );
+    if (!promoCardEnabled || embedded || currentGame?.isBigGame == true) {
       return const SizedBox.shrink();
     }
 
@@ -34,20 +43,24 @@ class BigGameLivePromptBanner extends ConsumerWidget {
     final bigGame = ref.watch(currentBigGameProvider).value;
     final clock = ref.watch(serverClockProvider);
     final now = clock.isSynced ? clock.nowLocal() : DateTime.now();
-    final phase =
-        bigGame == null ? null : resolveBigGamePhase(bigGame, now: now);
+    final phase = bigGame == null
+        ? null
+        : resolveBigGamePhase(bigGame, now: now);
 
     final nextRound = bigGame?.nextRoundRegistration;
-    final nextRegistrationOpenWhileLive = phase == BigGamePhase.live &&
+    final nextRegistrationOpenWhileLive =
+        phase == BigGamePhase.live &&
         nextRound != null &&
         (nextRound.canRegister ||
             isBigGameRegistrationWindowOpen(nextRound, now: now));
-    final finishedWithFollowUp = phase == BigGamePhase.finishedReview &&
+    final finishedWithFollowUp =
+        phase == BigGamePhase.finishedReview &&
         bigGame != null &&
         bigGame.displayRoundIndex < bigGame.displayRoundCount &&
         (nextRound != null || bigGame.nextRoundStartsAt != null);
 
-    final shouldShow = elsewhere != null ||
+    final shouldShow =
+        elsewhere != null ||
         bigGame?.heldWaitingForLiveSlot == true ||
         phase == BigGamePhase.live ||
         phase == BigGamePhase.registrationOpen ||
@@ -141,12 +154,7 @@ class BigGameLivePromptBanner extends ConsumerWidget {
   }
 }
 
-enum _BigGamePromptKind {
-  held,
-  registrationOpen,
-  finishedFollowUp,
-  playing,
-}
+enum _BigGamePromptKind { held, registrationOpen, finishedFollowUp, playing }
 
 _BigGamePromptKind _resolvePromptKind({
   required BigGameLiveElsewhere? elsewhere,
@@ -154,7 +162,8 @@ _BigGamePromptKind _resolvePromptKind({
   required BigGamePhase? phase,
   required bool nextRegistrationOpenWhileLive,
 }) {
-  final isHeld = elsewhere?.isHeld == true ||
+  final isHeld =
+      elsewhere?.isHeld == true ||
       bigGame?.heldWaitingForLiveSlot == true ||
       phase == BigGamePhase.waitingToPlay;
   if (isHeld) {
@@ -162,7 +171,8 @@ _BigGamePromptKind _resolvePromptKind({
   }
 
   // Prefer next-round registration messaging while Round N is live.
-  final isRegistrationOpen = phase == BigGamePhase.registrationOpen ||
+  final isRegistrationOpen =
+      phase == BigGamePhase.registrationOpen ||
       nextRegistrationOpenWhileLive ||
       (phase == BigGamePhase.finishedReview &&
           bigGame?.nextRoundRegistration?.canRegister == true);
@@ -185,8 +195,9 @@ String _resolvePromptText({
 }) {
   return switch (promptKind) {
     _BigGamePromptKind.held => l10n.bigGameHeldPrompt,
-    _BigGamePromptKind.registrationOpen =>
-      l10n.bigGameRegistrationOpenPrompt(registrationRound),
+    _BigGamePromptKind.registrationOpen => l10n.bigGameRegistrationOpenPrompt(
+      registrationRound,
+    ),
     _BigGamePromptKind.finishedFollowUp => l10n.bigGameBetweenRoundsPrompt,
     _BigGamePromptKind.playing => l10n.bigGamePlayingPrompt(playingRound),
   };

@@ -56,7 +56,9 @@ class _ChainRoundsRecap extends StatelessWidget {
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: round.isForfeited
                           ? theme.colorScheme.onSurfaceVariant
-                          : AppBranding.gold,
+                          : theme.brightness == Brightness.dark
+                          ? AppBranding.gold
+                          : const Color(0xFF6E5210),
                       fontWeight: FontWeight.w700,
                       decoration: round.isForfeited
                           ? TextDecoration.lineThrough

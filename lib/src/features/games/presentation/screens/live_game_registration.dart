@@ -1308,35 +1308,6 @@ class _CartelaRegistrationPanelState
     unawaited(ref.read(cartelaCatalogProvider.notifier).reshuffle());
   }
 
-  void _openChainRoundsFromRegistration() {
-    final prizes = widget.roundPrizes;
-    if (prizes == null || prizes.isEmpty || !mounted) {
-      return;
-    }
-    unawaited(
-      showChainGameRoundsDialog(
-        context: context,
-        plan: ChainRoundPlan(
-          sessionId: widget.sessionId ?? '',
-          roundCount: prizes.length,
-          currentRound: 1,
-          totalPrizeAmount: widget.fixedPrizeAmount ?? widget.prizePerCartela,
-          currentRoundPrizeAmount: prizes.first,
-          rounds: [
-            for (var i = 0; i < prizes.length; i++)
-              ChainRoundPlanEntry(
-                roundIndex: i + 1,
-                prizeAmount: prizes[i],
-                state: i == 0
-                    ? ChainRoundState.current
-                    : ChainRoundState.upcoming,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(cartelaCatalogProvider, (previous, next) {
@@ -1409,10 +1380,6 @@ class _CartelaRegistrationPanelState
           searchController: _searchController,
           onReshuffle: _requestShuffleReshuffle,
           onRegisteredNumberTap: _handleRegisteredNumberTap,
-          onViewChainRounds: _isChainGame &&
-                  (widget.roundPrizes ?? const []).isNotEmpty
-              ? _openChainRoundsFromRegistration
-              : null,
         ),
         if (_session.registeringCartelaIds.isNotEmpty) ...[
           VGap.sm,
@@ -1698,7 +1665,6 @@ class _RegistrationToolbar extends StatelessWidget {
     required this.searchController,
     required this.onReshuffle,
     required this.onRegisteredNumberTap,
-    this.onViewChainRounds,
   });
 
   final List<int> registeredNumbers;
@@ -1723,7 +1689,6 @@ class _RegistrationToolbar extends StatelessWidget {
   final TextEditingController searchController;
   final VoidCallback onReshuffle;
   final ValueChanged<int> onRegisteredNumberTap;
-  final VoidCallback? onViewChainRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -1761,10 +1726,6 @@ class _RegistrationToolbar extends StatelessWidget {
     );
     final bigGotdBorder = GameCategoryTheme.borderColor(
       GameCategory.bigGotd,
-      isDark: isDark,
-    );
-    final chainAccent = GameCategoryTheme.accentColor(
-      GameCategory.chainGame,
       isDark: isDark,
     );
     final chainSurface = GameCategoryTheme.surfaceColor(
@@ -1955,73 +1916,9 @@ class _RegistrationToolbar extends StatelessWidget {
             VGap.sm,
           ],
           if (isChainGame) ...[
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                GameCategoryBadge(
-                  category: GameCategory.chainGame,
-                  compact: true,
-                ),
-                Text(
-                  '${l10n.bigGameEntryFee}: ${formatMoney(entryFee)}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: chainAccent,
-                  ),
-                ),
-                if (roundPrizes != null && roundPrizes!.length > 1)
-                  ...[
-                    for (var i = 0; i < roundPrizes!.length; i++)
-                      Text(
-                        '${l10n.bigGameRoundPrize(i + 1)}: ${formatMoney(roundPrizes![i])}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    if (fixedPrizeAmount != null)
-                      Text(
-                        '${l10n.chainRoundTotalPrize}: ${formatMoney(fixedPrizeAmount!)}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                  ]
-                else if (fixedPrizeAmount != null)
-                  Text(
-                    l10n.gameBonusFixedPrize(formatMoney(fixedPrizeAmount!)),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                if (maxCartelasPerPlayer != null)
-                  Text(
-                    l10n.gameBonusMaxCartelas(bonusLimit),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                if (remainingBonusCartelas != null)
-                  Text(
-                    '$remainingBonusCartelas${l10n.registrationLeft}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                if (onViewChainRounds != null)
-                  GestureDetector(
-                    onTap: onViewChainRounds,
-                    child: Text(
-                      l10n.chainRoundViewAll,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: chainAccent,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-              ],
+            GameCategoryBadge(
+              category: GameCategory.chainGame,
+              compact: true,
             ),
             VGap.sm,
           ],

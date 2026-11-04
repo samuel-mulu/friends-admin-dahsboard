@@ -2,6 +2,7 @@ import '../../../../core/utils/api_date_time.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
+import 'live_round_break.dart';
 
 /// True when session metadata proves a prior Chain round has closed and the
 /// current PLAYING view is a later round — not merely a stale same-round
@@ -158,6 +159,33 @@ List<int> winnerCartelaNumbersFromChainRoundResults({
     ];
   }
   return const [];
+}
+
+/// Pinned "Round winners" bar — only during inter-round pause or terminal
+/// finished review. During active PLAYING, use the chain info strip tap instead.
+bool shouldShowPinnedChainRoundWinnersBar({
+  required GameModel? game,
+  required LiveRoundBreakOwner roundBreakOwner,
+  required bool postGameSummaryReviewActive,
+}) {
+  if (game == null || !game.isChainGame) {
+    return false;
+  }
+  final hasDecidedWinners = game.roundResults.any(
+    (round) => !round.isForfeited && round.winners.isNotEmpty,
+  );
+  if (!hasDecidedWinners) {
+    return false;
+  }
+
+  if (roundBreakOwner == LiveRoundBreakOwner.chainInterRound) {
+    return true;
+  }
+  if (roundBreakOwner == LiveRoundBreakOwner.postGameTerminal &&
+      postGameSummaryReviewActive) {
+    return true;
+  }
+  return false;
 }
 
 /// Pinned winners bar: show every round when there are few; otherwise round 1,
