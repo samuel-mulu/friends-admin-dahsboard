@@ -117,41 +117,30 @@ class AppConfig {
     );
   }
 
+  static String _resolveString({
+    required String key,
+    required String compileTimeValue,
+  }) {
+    if (compileTimeValue.isNotEmpty) {
+      return compileTimeValue;
+    }
+    return _envString(key);
+  }
+
   static String _envString(String key) {
     try {
+      if (!dotenv.isInitialized) {
+        return '';
+      }
       return dotenv.maybeGet(key)?.trim() ?? '';
     } catch (_) {
       return '';
     }
   }
 
-  static bool _resolveBool({
-    required String key,
-    required bool hasCompileTimeDefine,
-    required bool compileTimeValue,
-    bool defaultValue = false,
-  }) {
-    // 1. Compile-time `--dart-define` always takes top priority
-    if (hasCompileTimeDefine) {
-      return compileTimeValue;
-    }
-    // 2. Bundled .env asset (runtime via flutter_dotenv)
-    if (dotenv.isInitialized) {
-      final envVal = dotenv.maybeGet(key)?.trim();
-      if (envVal != null && envVal.isNotEmpty) {
-        final lower = envVal.toLowerCase();
-        return lower == 'true' || lower == '1';
-      }
-    }
-    // 3. Fallback default
-    return defaultValue;
-  }
-
-  static String _envString(String key) {
-    if (!dotenv.isInitialized) {
-      return '';
-    }
-    return dotenv.maybeGet(key)?.trim() ?? '';
+  static bool _envBool(String key) {
+    final value = _envString(key).toLowerCase();
+    return value == 'true' || value == '1';
   }
 
   static String _normalize(String url) {
