@@ -45,6 +45,9 @@ class LiveCountdownController {
   /// BINGO claim button lock during pre-call / awaiting ball — does not dirty the cartela list.
   final ValueNotifier<bool> bingoClaimLocked = ValueNotifier<bool>(false);
 
+  /// Admin display setting. Off by default. Chain-round Bingo lock is separate.
+  bool bingoClaimLastSecondLockEnabled = false;
+
   /// Fired when [bingoClaimLocked] transitions true → false (post-call hold,
   /// winner window unlock, force unlock). Used to resume Auto Bingo drain.
   VoidCallback? onBingoClaimUnlocked;
@@ -84,6 +87,31 @@ class LiveCountdownController {
     }
   }
 
+  /// Apply the admin last-second lock switch. Turning it off clears that lock
+  /// immediately. Chain-round eligibility is not part of this flag.
+  void syncBingoClaimLastSecondLockEnabled({
+    required bool enabled,
+    required GameModel? game,
+    required bool autoCallActive,
+    required int highestKnownCalledOrder,
+  }) {
+    if (bingoClaimLastSecondLockEnabled == enabled) {
+      return;
+    }
+    bingoClaimLastSecondLockEnabled = enabled;
+    if (!enabled) {
+      _bingoLockSeenCalledOrder = null;
+      _clearBingoPostCallHold();
+      updateBingoClaimLocked(false);
+      return;
+    }
+    refreshBingoClaimLock(
+      game: game,
+      autoCallActive: autoCallActive,
+      highestKnownCalledOrder: highestKnownCalledOrder,
+    );
+  }
+
   /// Recompute BINGO pre-call / post-call lock from schedule + called order.
   void refreshBingoClaimLock({
     required GameModel? game,
@@ -108,11 +136,15 @@ class LiveCountdownController {
     }
 
     final clock = host.controllers.realtime.serverClock;
-    _noteCalledOrderForBingoLock(
-      highestKnownCalledOrder: highestKnownCalledOrder,
-      autoCallActive: autoCallActive,
-      nowUtc: clock.nowUtc(),
-    );
+    if (bingoClaimLastSecondLockEnabled) {
+      _noteCalledOrderForBingoLock(
+        highestKnownCalledOrder: highestKnownCalledOrder,
+        autoCallActive: autoCallActive,
+        nowUtc: clock.nowUtc(),
+      );
+    } else {
+      _clearBingoPostCallHold();
+    }
 
     final target = _effectiveNextAutoCallTarget(game);
     final resolvedPlayPhase = next_ball_countdown.resolveNextBallPlayPhase(
@@ -130,7 +162,7 @@ class LiveCountdownController {
     }
     nextBallPlayPhase = resolvedPlayPhase;
 
-    if (!autoCallActive) {
+    if (!autoCallActive || !bingoClaimLastSecondLockEnabled) {
       _clearBingoPostCallHold();
     } else if (bingoPostCallLockUntil != null &&
         !next_ball_countdown.isBingoPostCallHoldActive(
@@ -140,7 +172,8 @@ class LiveCountdownController {
       _clearBingoPostCallHold();
     }
 
-    final locked = next_ball_countdown.isBingoClaimCountdownLocked(
+    final locked = bingoClaimLastSecondLockEnabled &&
+        next_ball_countdown.isBingoClaimCountdownLocked(
       gameStatus: game.status,
       autoCallActive: autoCallActive,
       nextAutoCallAt: target,

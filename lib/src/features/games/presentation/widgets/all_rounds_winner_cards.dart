@@ -116,6 +116,36 @@ class _RoundWinnerPager extends StatefulWidget {
 class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
   final PageController _controller = PageController();
   int _index = 0;
+  bool _pageHandoffArmed = true;
+
+  /// A sideways drag on a multi-winner row scrolls those cards. Once that row
+  /// is at its end, the same drag moves to the next round so round paging
+  /// still works.
+  void _onCardScroll(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      _pageHandoffArmed = true;
+      return;
+    }
+    if (notification is! OverscrollNotification ||
+        notification.metrics.axis != Axis.horizontal ||
+        notification.dragDetails == null ||
+        !_pageHandoffArmed ||
+        notification.overscroll.abs() < 8) {
+      return;
+    }
+
+    final count = _groupByRound(widget.cards).length;
+    final next = notification.overscroll > 0 ? _index + 1 : _index - 1;
+    if (next < 0 || next >= count || !_controller.hasClients) {
+      return;
+    }
+    _pageHandoffArmed = false;
+    _controller.animateToPage(
+      next,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOut,
+    );
+  }
 
   @override
   void didUpdateWidget(covariant _RoundWinnerPager oldWidget) {
@@ -179,9 +209,9 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 88,
+          height: 96,
           child: PageView.builder(
             controller: _controller,
             itemCount: rounds.length,
@@ -196,6 +226,7 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
               return _RoundWinnerRow(
                 cards: roundCards,
                 onOpen: widget.onOpen,
+                onCardScroll: _onCardScroll,
               );
             },
           ),
@@ -263,40 +294,57 @@ class _RoundDots extends StatelessWidget {
   }
 }
 
+const double _winnerCardWidth = 240;
+
 class _RoundWinnerRow extends StatelessWidget {
-  const _RoundWinnerRow({required this.cards, required this.onOpen});
+  const _RoundWinnerRow({
+    required this.cards,
+    required this.onOpen,
+    this.onCardScroll,
+  });
 
   final List<AllRoundsWinnerCardData> cards;
   final ValueChanged<AllRoundsWinnerCardData> onOpen;
+  final void Function(ScrollNotification notification)? onCardScroll;
 
   @override
   Widget build(BuildContext context) {
     if (cards.length == 1) {
       return Align(
         alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: 240,
-          child: _AllRoundsWinnerCard(
-            card: cards.first,
-            onTap: _tapFor(cards.first),
-          ),
-        ),
+        child: _winnerCard(cards.first),
       );
     }
 
-    return Row(
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(
-            child: _AllRoundsWinnerCard(
-              card: cards[i],
-              expand: true,
-              onTap: _tapFor(cards[i]),
-            ),
-          ),
-        ],
-      ],
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        onCardScroll?.call(notification);
+        return false;
+      },
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        padding: EdgeInsets.zero,
+        itemCount: cards.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: 1,
+            child: _winnerCard(cards[index]),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _winnerCard(AllRoundsWinnerCardData card) {
+    return SizedBox(
+      width: _winnerCardWidth,
+      child: _AllRoundsWinnerCard(
+        card: card,
+        onTap: _tapFor(card),
+      ),
     );
   }
 
@@ -309,14 +357,9 @@ class _RoundWinnerRow extends StatelessWidget {
 }
 
 class _AllRoundsWinnerCard extends StatelessWidget {
-  const _AllRoundsWinnerCard({
-    required this.card,
-    this.expand = false,
-    this.onTap,
-  });
+  const _AllRoundsWinnerCard({required this.card, this.onTap});
 
   final AllRoundsWinnerCardData card;
-  final bool expand;
   final VoidCallback? onTap;
 
   @override
@@ -350,11 +393,8 @@ class _AllRoundsWinnerCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          width: expand ? double.infinity : null,
-          constraints: expand
-              ? null
-              : const BoxConstraints(minWidth: 140, maxWidth: 240),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -366,13 +406,15 @@ class _AllRoundsWinnerCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 subtitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  height: 1.35,
                   fontWeight: FontWeight.w800,
                   color: card.isNoWinner
                       ? theme.colorScheme.onSurfaceVariant
@@ -383,19 +425,20 @@ class _AllRoundsWinnerCard extends StatelessWidget {
                 ),
               ),
               if (canTap) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.grid_view_rounded,
-                      size: 12,
+                      size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Text(
                       l10n.allRoundsWinnersViewCartela,
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),

@@ -34,5 +34,24 @@ void main() {
 
       controller.dispose();
     });
+
+    test('last-second lock defaults off and turning it off clears the lock', () {
+      final controller = LiveCountdownController(_FakeHost());
+      expect(controller.bingoClaimLastSecondLockEnabled, isFalse);
+
+      controller.bingoClaimLastSecondLockEnabled = true;
+      controller.updateBingoClaimLocked(true);
+      controller.syncBingoClaimLastSecondLockEnabled(
+        enabled: false,
+        game: null,
+        autoCallActive: true,
+        highestKnownCalledOrder: 4,
+      );
+
+      expect(controller.bingoClaimLocked.value, isFalse);
+      expect(controller.bingoClaimLastSecondLockEnabled, isFalse);
+
+      controller.dispose();
+    });
   });
 }

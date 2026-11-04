@@ -437,7 +437,7 @@ class RoundFinishedBanner extends StatelessWidget {
                           ),
                         ],
                       )
-                    else if (!isAdvancing) ...[
+                    else if (!isAdvancing && !showAllRoundsWinners) ...[
                       if (winnerLabel.isNotEmpty)
                         Text(
                           winnerLabel,
@@ -535,7 +535,7 @@ class RoundFinishedBanner extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (results.length > 1)
+                        if (results.length > 1 && !showAllRoundsWinners)
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
                             child: Icon(

@@ -63,9 +63,11 @@ class LiveCartelaCard extends StatelessWidget {
   final bool showMarkColorPicker;
   final String? blockedReasonCode;
   final String? blockedServerReason;
+
   /// When set, BINGO button toggles from this notifier without rebuilding the card body.
   final ValueListenable<bool>? bingoLockListenable;
-  /// When false (e.g. while scrolling), claim/one-away pulses pause so scroll stays calm.
+
+  /// When false (e.g. while scrolling), the one-away pulse pauses so scroll stays calm.
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
   final Set<String> manualMarkedNumbers;
   final String? lastManualMarkedKey;
@@ -97,14 +99,6 @@ class LiveCartelaCard extends StatelessWidget {
         ? Colors.white
         : AppBranding.headerActionIcon(context);
 
-    final showClaimReadyHighlight =
-        hasLocalPatternComplete &&
-        !isLateClaim &&
-        canClaimBingo &&
-        !isClaiming &&
-        !isBlocked &&
-        !readOnlyOutcome;
-
     final showOneAwayHighlight =
         isOneAwayFromWin &&
         !hasLocalPatternComplete &&
@@ -113,306 +107,311 @@ class LiveCartelaCard extends StatelessWidget {
         !isClaiming &&
         !isBlocked &&
         !isWinner &&
-        !readOnlyOutcome &&
-        !showClaimReadyHighlight;
+        !readOnlyOutcome;
 
     return RepaintBoundary(
-      child: _GreenClaimPulseWrapper(
-      active: showClaimReadyHighlight || (isWinner && !isBlocked),
-      motionAllowedListenable: decorativeMotionAllowedListenable,
       child: _OneAwayPulseWrapper(
         active: showOneAwayHighlight,
         motionAllowedListenable: decorativeMotionAllowedListenable,
         child: Card(
-        clipBehavior: Clip.antiAlias,
-        margin: EdgeInsets.zero,
-        color: theme.brightness == Brightness.dark
-            ? null
-            : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: isBlocked
-                ? theme.colorScheme.error.withValues(alpha: 0.75)
-                : (isWinner
-                    ? AppBranding.gold
-                    : (theme.brightness == Brightness.dark
-                        ? theme.colorScheme.outlineVariant.withValues(alpha: 0.35)
-                        : AppBranding.panelBorder(context))),
-            width: isBlocked || isWinner ? 1.5 : 1.0,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: isBlocked
-                  ? BoxDecoration(
-                      color: isDark
-                          ? theme.colorScheme.errorContainer.withValues(alpha: 0.22)
-                          : theme.colorScheme.error.withValues(alpha: 0.08),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: theme.colorScheme.error.withValues(alpha: 0.25),
-                          width: 1,
-                        ),
-                      ),
-                    )
-                  : isWinner
-                  ? const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppBranding.feltGreen,
-                          AppBranding.bingoFreeGreen,
-                        ],
-                      ),
-                    )
-                  : AppBranding.cartelaHeaderDecoration(
-                      context,
-                      isBlocked: isBlocked,
-                      isWinner: isWinner,
-                    ),
-              child: Row(
-                children: [
-                  CartelaNumberTapTarget(
-                    number: gameCartela.cartela.number,
-                    child: CartelaNumberCompactBadge(
-                      number: gameCartela.cartela.number,
-                      isBlocked: isBlocked,
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: isBlocked
-                          ? FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.error.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: theme.colorScheme.error.withValues(alpha: 0.45),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.block_rounded,
-                                      size: 11,
-                                      color: theme.colorScheme.error,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'BLOCKED',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.error,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 9,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : isWinner
-                          ? FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  context.l10n.cartelaOutcomeValid,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 9.5,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : isClaiming
-                          ? Text(
-                              context.l10n.gameCheckingTitle,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: isDark
-                                    ? Colors.white
-                                    : headerOnColor,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
-                            )
-                          : readOnlyOutcome
-                          ? Text(
-                              context.l10n.cartelaOutcomeRegistered,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: headerOnColor,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
-                              ),
-                            )
-                          : _buildBingoClaimButton(
-                              canClaimBase: canClaimBingo,
-                              showReadyPulse: showClaimReadyHighlight,
-                              isClaiming: isClaiming,
-                            ),
-                    ),
-                  ),
-                  if (isBlocked)
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => showBlockedCartelaReasonDialog(
-                          context: context,
-                          gameCartela: gameCartela,
-                          reasonCode: blockedReasonCode,
-                          serverReason: blockedServerReason,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.error.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.error.withValues(alpha: 0.35),
-                              width: 1,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.info_outline_rounded,
-                            size: 15,
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    )
-                  else if (showMarkColorPicker &&
-                      !readOnlyMarks &&
-                      !isBlocked &&
-                      !isWinner) ...[
-                    CartelaMarkColorDropdown(iconColor: headerActionColor),
-                  ] else
-                    const SizedBox(width: 4),
-                ],
-              ),
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsets.zero,
+          color: theme.brightness == Brightness.dark ? null : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isBlocked
+                  ? theme.colorScheme.error.withValues(alpha: 0.75)
+                  : (isWinner
+                        ? AppBranding.gold
+                        : (theme.brightness == Brightness.dark
+                              ? theme.colorScheme.outlineVariant.withValues(
+                                  alpha: 0.35,
+                                )
+                              : AppBranding.panelBorder(context))),
+              width: isBlocked || isWinner ? 1.5 : 1.0,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: Opacity(
-                        opacity: readOnlyMarks && !isWinner && !isBlocked
-                            ? 0.45
-                            : 1,
-                        child: _MarkedCartelaGrid(
-                          gameCartela: gameCartela,
-                          columns: gameCartela.cartela.columns,
-                          manualMarkedNumbers: manualMarkedNumbers,
-                          lastManualMarkedKey: lastManualMarkedKey,
-                          oneAwayCellIndexes: oneAwayCellIndexes,
-                          pulseOneAwayCells: showOneAwayHighlight,
-                          decorativeMotionAllowedListenable:
-                              decorativeMotionAllowedListenable,
-                          winningPatternOverlay: trackingOverlay,
-                          winningHighlightCells: winningHighlightCells,
-                          winningBallCellIndex:
-                              isWinner ? winningBallCellIndex : null,
-                          interactionDisabled: isBlocked,
-                          onMarkedNumberToggled: readOnlyMarks || isBlocked
-                              ? (cartela, header, value) {}
-                              : onMarkedNumberToggled,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: isBlocked
+                    ? BoxDecoration(
+                        color: isDark
+                            ? theme.colorScheme.errorContainer.withValues(
+                                alpha: 0.22,
+                              )
+                            : theme.colorScheme.error.withValues(alpha: 0.08),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: theme.colorScheme.error.withValues(
+                              alpha: 0.25,
+                            ),
+                            width: 1,
+                          ),
                         ),
+                      )
+                    : isWinner
+                    ? const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppBranding.feltGreen,
+                            AppBranding.bingoFreeGreen,
+                          ],
+                        ),
+                      )
+                    : AppBranding.cartelaHeaderDecoration(
+                        context,
+                        isBlocked: isBlocked,
+                        isWinner: isWinner,
+                      ),
+                child: Row(
+                  children: [
+                    CartelaNumberTapTarget(
+                      number: gameCartela.cartela.number,
+                      child: CartelaNumberCompactBadge(
+                        number: gameCartela.cartela.number,
+                        isBlocked: isBlocked,
                       ),
                     ),
-                    if (pendingReview && !isClaiming) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        'Under review',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.tertiary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 9,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    if (isWinner) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        prizeAmount == null
-                            ? context.l10n.cartelaOutcomeValid
-                            : context.l10n.winningCartelasPrize(
-                                formatMoney(prizeAmount!),
+                    Expanded(
+                      child: Center(
+                        child: isBlocked
+                            ? FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: theme.colorScheme.error.withValues(
+                                        alpha: 0.45,
+                                      ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.block_rounded,
+                                        size: 11,
+                                        color: theme.colorScheme.error,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'BLOCKED',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.error,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 9,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : isWinner
+                            ? FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    context.l10n.cartelaOutcomeValid,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 9.5,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : isClaiming
+                            ? Text(
+                                context.l10n.gameCheckingTitle,
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: isDark ? Colors.white : headerOnColor,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                ),
+                              )
+                            : readOnlyOutcome
+                            ? Text(
+                                context.l10n.cartelaOutcomeRegistered,
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: headerOnColor,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                ),
+                              )
+                            : _buildBingoClaimButton(
+                                canClaimBase: canClaimBingo,
+                                isClaiming: isClaiming,
                               ),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppBranding.balanceAccent(context),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 9,
-                        ),
                       ),
-                    ] else if (showFinishedOutcome) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        context.l10n.cartelaOutcomeNoWin,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 9,
+                    ),
+                    if (isBlocked)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => showBlockedCartelaReasonDialog(
+                            context: context,
+                            gameCartela: gameCartela,
+                            reasonCode: blockedReasonCode,
+                            serverReason: blockedServerReason,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.error.withValues(
+                                alpha: 0.10,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.error.withValues(
+                                  alpha: 0.35,
+                                ),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.info_outline_rounded,
+                              size: 15,
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      )
+                    else if (showMarkColorPicker &&
+                        !readOnlyMarks &&
+                        !isBlocked &&
+                        !isWinner) ...[
+                      CartelaMarkColorDropdown(iconColor: headerActionColor),
+                    ] else
+                      const SizedBox(width: 4),
                   ],
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Opacity(
+                          opacity: readOnlyMarks && !isWinner && !isBlocked
+                              ? 0.45
+                              : 1,
+                          child: _MarkedCartelaGrid(
+                            gameCartela: gameCartela,
+                            columns: gameCartela.cartela.columns,
+                            manualMarkedNumbers: manualMarkedNumbers,
+                            lastManualMarkedKey: lastManualMarkedKey,
+                            oneAwayCellIndexes: oneAwayCellIndexes,
+                            pulseOneAwayCells: showOneAwayHighlight,
+                            decorativeMotionAllowedListenable:
+                                decorativeMotionAllowedListenable,
+                            winningPatternOverlay: trackingOverlay,
+                            winningHighlightCells: winningHighlightCells,
+                            winningBallCellIndex: isWinner
+                                ? winningBallCellIndex
+                                : null,
+                            interactionDisabled: isBlocked,
+                            onMarkedNumberToggled: readOnlyMarks || isBlocked
+                                ? (cartela, header, value) {}
+                                : onMarkedNumberToggled,
+                          ),
+                        ),
+                      ),
+                      if (pendingReview && !isClaiming) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          'Under review',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.tertiary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 9,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      if (isWinner) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          prizeAmount == null
+                              ? context.l10n.cartelaOutcomeValid
+                              : context.l10n.winningCartelasPrize(
+                                  formatMoney(prizeAmount!),
+                                ),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppBranding.balanceAccent(context),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ] else if (showFinishedOutcome) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          context.l10n.cartelaOutcomeNoWin,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      ),
       ),
     );
   }
 
   Widget _buildBingoClaimButton({
     required bool canClaimBase,
-    required bool showReadyPulse,
     required bool isClaiming,
   }) {
     final lockListenable = bingoLockListenable;
     if (lockListenable == null) {
       return BingoClaimButton(
         canClaim: canClaimBase,
-        showReadyPulse: showReadyPulse,
         isClaiming: isClaiming,
         onPressed: onClaimBingo,
       );
@@ -423,7 +422,6 @@ class LiveCartelaCard extends StatelessWidget {
       builder: (context, locked, _) {
         return BingoClaimButton(
           canClaim: canClaimBase && !locked,
-          showReadyPulse: showReadyPulse && !locked,
           isClaiming: isClaiming,
           onPressed: onClaimBingo,
         );
@@ -473,11 +471,13 @@ class _MarkedCartelaGrid extends ConsumerWidget {
       for (int row = 0; row < columns[col].length; row++) {
         final val = columns[col][row];
         final cellIdx = (row * 5) + col;
-        final isMarked = isManuallyMarkedCell(
-          manualMarkedNumbers: manualMarkedNumbers,
-          header: header,
-          value: val,
-        ) || winningHighlightCells.contains(cellIdx);
+        final isMarked =
+            isManuallyMarkedCell(
+              manualMarkedNumbers: manualMarkedNumbers,
+              header: header,
+              value: val,
+            ) ||
+            winningHighlightCells.contains(cellIdx);
         final number = int.tryParse(val) ?? 0;
         if (isMarked && number > 0) {
           markedNumbers.add(number);
@@ -521,111 +521,6 @@ class _MarkedCartelaGrid extends ConsumerWidget {
               final header = BingoBallBadge.getLetter(number);
               onMarkedNumberToggled(gameCartela, header, number.toString());
             },
-    );
-  }
-}
-
-class _GreenClaimPulseWrapper extends StatefulWidget {
-  const _GreenClaimPulseWrapper({
-    required this.active,
-    required this.child,
-    this.motionAllowedListenable,
-  });
-
-  final bool active;
-  final Widget child;
-  final ValueListenable<bool>? motionAllowedListenable;
-
-  @override
-  State<_GreenClaimPulseWrapper> createState() => _GreenClaimPulseWrapperState();
-}
-
-class _GreenClaimPulseWrapperState extends State<_GreenClaimPulseWrapper>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 520),
-    );
-    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    widget.motionAllowedListenable?.addListener(_syncAnimation);
-    _syncAnimation();
-  }
-
-  @override
-  void didUpdateWidget(covariant _GreenClaimPulseWrapper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
-      oldWidget.motionAllowedListenable?.removeListener(_syncAnimation);
-      widget.motionAllowedListenable?.addListener(_syncAnimation);
-    }
-    if (oldWidget.active != widget.active ||
-        oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
-      _syncAnimation();
-    }
-  }
-
-  bool get _motionAllowed => widget.motionAllowedListenable?.value ?? true;
-
-  void _syncAnimation() {
-    if (!mounted) {
-      return;
-    }
-    final shouldPulse = widget.active && _motionAllowed;
-    if (shouldPulse) {
-      if (!_controller.isAnimating) {
-        _controller.repeat(reverse: true);
-      }
-      setState(() {});
-      return;
-    }
-    _controller
-      ..stop()
-      ..value = 0;
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    widget.motionAllowedListenable?.removeListener(_syncAnimation);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.active || !_motionAllowed) {
-      return widget.child;
-    }
-
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) {
-        final t = _pulse.value;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppBranding.feltGreen.withValues(alpha: 0.35 + (t * 0.65)),
-              width: 1.2 + (t * 2.2),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppBranding.feltGreen.withValues(alpha: 0.12 + (t * 0.38)),
-                blurRadius: 6 + (t * 10),
-                spreadRadius: 0.5 + (t * 1.6),
-              ),
-            ],
-          ),
-          child: child,
-        );
-      },
-      child: widget.child,
     );
   }
 }
