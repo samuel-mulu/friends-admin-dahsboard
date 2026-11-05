@@ -713,6 +713,8 @@
   "chainRoundNextPattern": "ዝቕጽል ሕግ፦ {pattern}",
   "allRoundsWinnersTitle": "ናይ ኩሎም ዙራት ኣሸነፍቲ",
   "allRoundsWinnersViewCartela": "ካርቴላ ርአ",
+  "allRoundsWinnersLoadFailed": "ኣሸነፍቲ ዙር ምምጻእ ኣይተኻእለን።",
+  "allRoundsWinnersRetry": "እንደገና ፈትን",
   "chainRoundWinnersTitle": "ኣሸነፍቲ ዙር",
   "chainRoundWinnerChip": "ዙር {round} · #{cartela}",
   "chainRoundsTitle": "ዙራት ሰንሰለት",

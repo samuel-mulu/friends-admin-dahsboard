@@ -102,4 +102,89 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'scroll motion toggle does not rebuild a board that is not pulsing',
+    (tester) async {
+      final motionAllowed = ValueNotifier<bool>(true);
+      addTearDown(motionAllowed.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 220,
+              height: 280,
+              child: CartelaBoardWidget(
+                cartela: _boardCartela(),
+                markedCells: const {5},
+                showHeader: false,
+                expandToFill: true,
+                decorativeMotionAllowedListenable: motionAllowed,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Simulates ScrollStart / ScrollEnd flipping the shared scroll-idle flag.
+      motionAllowed.value = false;
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      motionAllowed.value = true;
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    },
+  );
+
+  testWidgets('pulsing live card subtree survives scroll motion toggles', (
+    tester,
+  ) async {
+    final motionAllowed = ValueNotifier<bool>(true);
+    addTearDown(motionAllowed.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 220,
+              height: 400,
+              child: LiveCartelaCard(
+                gameCartela: _sampleGameCartela(),
+                canClaimBingo: true,
+                isClaiming: false,
+                pendingReview: false,
+                showMarkColorPicker: false,
+                manualMarkedNumbers: const {},
+                onMarkedNumberToggled: (_, __, ___) {},
+                onClaimBingo: () {},
+                isOneAwayFromWin: true,
+                hasLocalPatternComplete: false,
+                oneAwayCellIndexes: const {4},
+                decorativeMotionAllowedListenable: motionAllowed,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final cellStateBefore = tester.state(find.byType(AnimatedContainer).first);
+
+    motionAllowed.value = false;
+    await tester.pump();
+    motionAllowed.value = true;
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      identical(
+        tester.state(find.byType(AnimatedContainer).first),
+        cellStateBefore,
+      ),
+      isTrue,
+      reason: 'pulse toggle must not remount the card body',
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

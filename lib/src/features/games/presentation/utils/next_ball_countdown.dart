@@ -42,11 +42,10 @@ bool isNextBallCountdownInactive({
 
 enum NextBallPlayPhase {
   counting,
-  preCallLocked,
   calling,
 }
 
-/// Active auto-call window for BINGO lock and calling UI.
+/// Active auto-call window for the calling UI and strip self-heal.
 NextBallPlayPhase resolveNextBallPlayPhase({
   required GameStatus? gameStatus,
   required bool autoCallActive,
@@ -67,9 +66,6 @@ NextBallPlayPhase resolveNextBallPlayPhase({
   );
   if (seconds <= 0) {
     return NextBallPlayPhase.calling;
-  }
-  if (seconds <= kBingoClaimLockSeconds) {
-    return NextBallPlayPhase.preCallLocked;
   }
   return NextBallPlayPhase.counting;
 }
@@ -129,90 +125,9 @@ int nextBallCountdownSeconds(
   return secondsUntilCeil(nextAutoCallAt, now: now, clock: clock);
 }
 
-/// Seconds before the next auto-call when BINGO claims are disabled.
-const kBingoClaimLockSeconds = 1;
-
-/// Seconds to keep BINGO claims disabled after a new ball reaches the strip.
-const kBingoClaimPostCallUnlockSeconds = 1;
-
-/// True while auto-call is overdue and the new ball has not reached the local strip.
-bool isAwaitingAutoCalledBall({
-  required NextBallPlayPhase playPhase,
-  required int highestKnownCalledOrder,
-  int? callingPhaseBaselineOrder,
-}) {
-  if (playPhase != NextBallPlayPhase.calling) {
-    return false;
-  }
-
-  final baseline = callingPhaseBaselineOrder ?? highestKnownCalledOrder;
-  return highestKnownCalledOrder <= baseline;
-}
-
-/// True while the post-call unlock hold has not expired yet.
-bool isBingoPostCallHoldActive({
-  required DateTime? postCallLockUntil,
-  DateTime? now,
-  ServerClockService? clock,
-}) {
-  if (postCallLockUntil == null) {
-    return false;
-  }
-
-  final effectiveNow = now ?? clock?.nowUtc() ?? DateTime.now().toUtc();
-  return effectiveNow.isBefore(postCallLockUntil.toUtc());
-}
-
-/// True during the last [kBingoClaimLockSeconds] before the next auto-call,
-/// while waiting for the socket to deliver the ball after the schedule is due,
-/// and during the [kBingoClaimPostCallUnlockSeconds] hold after the ball arrives.
-bool isBingoClaimCountdownLocked({
-  required GameStatus? gameStatus,
-  required bool autoCallActive,
-  required DateTime? nextAutoCallAt,
-  DateTime? now,
-  ServerClockService? clock,
-  NextBallPlayPhase? playPhase,
-  int highestKnownCalledOrder = 0,
-  int? callingPhaseBaselineOrder,
-  DateTime? postCallLockUntil,
-}) {
-  if (gameStatus == GameStatus.winnerWindow) {
-    return false;
-  }
-
-  if (isBingoPostCallHoldActive(
-    postCallLockUntil: postCallLockUntil,
-    now: now,
-    clock: clock,
-  )) {
-    return true;
-  }
-
-  if (!autoCallActive || nextAutoCallAt == null) {
-    return false;
-  }
-
-  final resolvedPhase =
-      playPhase ??
-      resolveNextBallPlayPhase(
-        gameStatus: gameStatus,
-        autoCallActive: autoCallActive,
-        nextAutoCallAt: nextAutoCallAt,
-        now: now,
-        clock: clock,
-      );
-
-  if (resolvedPhase == NextBallPlayPhase.preCallLocked) {
-    return true;
-  }
-
-  return isAwaitingAutoCalledBall(
-    playPhase: resolvedPhase,
-    highestKnownCalledOrder: highestKnownCalledOrder,
-    callingPhaseBaselineOrder: callingPhaseBaselineOrder,
-  );
-}
+/// In the last N seconds before the next auto-call the countdown ticker runs
+/// faster so the "calling" phase is detected promptly (display + strip heal).
+const kNextBallFastTickWindowSeconds = 1;
 
 /// Label for the called-numbers header badge (server-tracked seconds).
 String? buildNextBallCountdownLabel({

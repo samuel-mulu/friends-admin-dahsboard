@@ -2325,6 +2325,12 @@ class AppLocalizationsTi extends AppLocalizations {
   String get allRoundsWinnersViewCartela => 'ካርቴላ ርአ';
 
   @override
+  String get allRoundsWinnersLoadFailed => 'ኣሸነፍቲ ዙር ምምጻእ ኣይተኻእለን።';
+
+  @override
+  String get allRoundsWinnersRetry => 'እንደገና ፈትን';
+
+  @override
   String get chainRoundWinnersTitle => 'ኣሸነፍቲ ዙር';
 
   @override

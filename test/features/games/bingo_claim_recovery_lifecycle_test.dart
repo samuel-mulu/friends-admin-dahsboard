@@ -466,12 +466,10 @@ bool _can(
   LiveCalledNumbersController c, {
   GameModel? game,
   GameCartelaModel? cartela,
-  bool countdown = false,
 }) => c.canClaimBingoForCartela(
   game: game ?? _game(),
   gameCartela: cartela ?? _cartela(),
   winnerWindowExpired: false,
-  isCountdownLocked: countdown,
 );
 BingoClaimAttempt _begin(
   LiveCalledNumbersController c, [
@@ -1433,7 +1431,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isFalse,
       );
@@ -1719,7 +1716,6 @@ void main() {
             game: host.game,
             gameCartela: host.myCartelas.single,
             winnerWindowExpired: false,
-            isCountdownLocked: false,
           ),
           isFalse,
         );
@@ -1754,7 +1750,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isFalse,
       );
@@ -1776,7 +1771,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isTrue,
       );
@@ -1814,7 +1808,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isTrue,
       );
@@ -1837,7 +1830,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isTrue,
         reason:
@@ -1874,7 +1866,6 @@ void main() {
           game: host.game,
           gameCartela: host.myCartelas.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isTrue,
       );
@@ -1920,7 +1911,6 @@ void main() {
       expect(c.pendingClaimCartelaIds, isEmpty);
       expect(_can(c), isTrue);
       expect(_can(c, game: _game(status: GameStatus.finished)), isFalse);
-      expect(_can(c, countdown: true), isFalse);
       final next = _begin(c, 'attempt-new');
       expect(next.claimAttemptId, isNot(attempt.claimAttemptId));
       c.dispose();

@@ -30,6 +30,35 @@ bool shouldShowAllRoundsWinnersHistory({
   return false;
 }
 
+enum AllRoundsHistoryLoadStep {
+  /// Already loaded, or a request for this key is running.
+  skip,
+
+  /// The server has not confirmed the final session finished yet: show loading
+  /// only. Asking early fails either way — Chain's endpoint rejects a session
+  /// still being finalized (400), and Big Game's silently omits the final round
+  /// (and that incomplete list would then be cached).
+  waitForServerFinish,
+
+  /// Send the request.
+  request,
+}
+
+/// What the final summary should do about All Rounds Winners right now.
+/// [serverConfirmedFinished] must refer to the current (final) round session.
+AllRoundsHistoryLoadStep resolveAllRoundsHistoryLoadStep({
+  required bool loadedOrInFlight,
+  required bool serverConfirmedFinished,
+}) {
+  if (loadedOrInFlight) {
+    return AllRoundsHistoryLoadStep.skip;
+  }
+  if (!serverConfirmedFinished) {
+    return AllRoundsHistoryLoadStep.waitForServerFinish;
+  }
+  return AllRoundsHistoryLoadStep.request;
+}
+
 /// Stable cache key so history is not re-fetched on every rebuild.
 String? allRoundsWinnerHistoryCacheKey(GameModel? game) {
   if (game == null) {

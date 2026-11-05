@@ -159,8 +159,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       game: _game,
       gameCartela: gameCartela,
       winnerWindowExpired: _winnerWindowExpired,
-      // Lock is applied on the BINGO button via bingoClaimLocked listenable.
-      isCountdownLocked: false,
       chainBingoArmedAfterCalledCount: _chainBingoArmedAfterCalledCount,
     );
   }
@@ -625,7 +623,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
               _cn.confirmingOrClaimingCartelaIds.isNotEmpty,
           claimStripHoldActive: _cn.claimStripHoldActive,
           hasUnresolvedAttemptForCartela: _cn.claimAttemptFor(headId) != null,
-          bingoClaimLocked: _countdown.bingoClaimLocked.value,
           claimScopeLoading: _cn.claimScopeLoading,
           autoSubmitInFlight: _cn.autoBingoSubmitInFlight,
           terminalSuppressed:
@@ -1034,7 +1031,6 @@ mixin _LiveGameCalledNumbers on _LiveGameOrchestration {
       onReorder: cartelaSortMode.allowsManualReorder && _myCartelas.length > 1
           ? _reorderMyCartela
           : null,
-      bingoLockListenable: _countdown.bingoClaimLocked,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
     );
   }

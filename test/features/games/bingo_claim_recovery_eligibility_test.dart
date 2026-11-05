@@ -72,7 +72,6 @@ void main() {
           game: _playingGame(),
           gameCartela: cartela,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isFalse,
       );
@@ -83,7 +82,6 @@ void main() {
           game: _playingGame(),
           gameCartela: cartela,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isTrue,
       );
@@ -108,7 +106,6 @@ void main() {
           ),
           winnerWindowExpired: false,
           hasPendingClaim: false,
-          isCountdownLocked: false,
           calledNumbersCount: 3,
         ),
         isFalse,
@@ -126,7 +123,6 @@ void main() {
           ),
           winnerWindowExpired: false,
           hasPendingClaim: false,
-          isCountdownLocked: false,
           calledNumbersCount: 3,
         ),
         isFalse,

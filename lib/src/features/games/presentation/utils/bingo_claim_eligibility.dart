@@ -1,4 +1,5 @@
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import 'chain_round_cartela_state.dart';
 import 'live_presentation_phase.dart';
@@ -9,8 +10,8 @@ bool isCartelaEligibleForBingoClaim({
   required GameCartelaModel gameCartela,
   required bool winnerWindowExpired,
   required bool hasPendingClaim,
-  required bool isCountdownLocked,
   int calledNumbersCount = 0,
+  List<CalledNumberModel> calledNumbers = const [],
   int? chainBingoArmedAfterCalledCount,
   DateTime? now,
 }) {
@@ -34,20 +35,22 @@ bool isCartelaEligibleForBingoClaim({
     return false;
   }
 
-  if (winnerWindowExpired || hasPendingClaim || isCountdownLocked) {
+  if (winnerWindowExpired || hasPendingClaim) {
     return false;
   }
 
-  // Chain inter-round 20s reveal: session stays PLAYING but Bingo must stay off
+  // Chain inter-round reveal: session stays PLAYING but Bingo must stay off
   // until the pause ends and a new ball arms the next round.
   if (isChainRoundPauseActive(game, now: now)) {
     return false;
   }
 
+  // Chain round 2+: locked from round finish until the next ball is called.
   if (!isChainBingoArmedAfterNewBall(
     game: game,
     calledNumbersCount: calledNumbersCount,
     armedAfterCalledCount: chainBingoArmedAfterCalledCount,
+    calledNumbers: calledNumbers,
   )) {
     return false;
   }

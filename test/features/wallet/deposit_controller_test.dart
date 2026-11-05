@@ -131,6 +131,33 @@ void main() {
     expect(state.confirmation?.kind, equals(DepositConfirmationKind.approved));
     expect(state.confirmation?.amount, equals('100.00'));
   });
+
+  test('approved deposit clears smart SMS parse result', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+    controller.selectProvider(PaymentProvider.telebirr);
+    controller.parseSmartInput(
+      'Dear Gezae You have transferred ETB 11.00 to Yonas '
+      'your transaction number is DJN27JZ2OA.',
+    );
+    expect(
+      container.read(depositControllerProvider).smartParseResult,
+      isNotNull,
+    );
+
+    controller.applyDepositTerminalStatus(
+      kind: DepositConfirmationKind.approved,
+      depositId: 'dep-ok',
+      provider: PaymentProvider.telebirr,
+      amount: '11.00',
+      transactionRef: 'DJN27JZ2OA',
+    );
+
+    expect(
+      container.read(depositControllerProvider).smartParseResult,
+      isNull,
+    );
+  });
 }
 
 class _TestAuthController extends AuthController {

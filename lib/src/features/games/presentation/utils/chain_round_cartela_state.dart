@@ -1,5 +1,6 @@
 import '../../../../core/utils/api_date_time.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
+import '../../data/models/called_number_model.dart';
 import '../../data/models/game_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import 'live_round_break.dart';
@@ -124,20 +125,81 @@ bool shouldShowChainFinalWinnerCartelaDialog({
   return true;
 }
 
-/// After a new Chain round becomes playable, Bingo stays off until at least
-/// one new auto-call ball arrives. Carried marks + old balls must not arm it.
+/// Chain Game round 2+: from the moment the previous round is decided, Bingo
+/// stays off until at least one NEW ball is called for the current round.
+/// Carried marks + old balls must never arm the new round's pattern.
+///
+/// Source of truth, in order:
+/// 1. Session data — the previous round's winning ball from
+///    [GameModel.roundResults] and the local called strip
+///    ([chainRoundHasNewBallSincePreviousWin]). Survives refetch, resume and
+///    app restart.
+/// 2. Fallback — [armedAfterCalledCount], the strip length recorded when the
+///    round transition was observed live (socket path, before a refetch
+///    delivers the winning ball).
 bool isChainBingoArmedAfterNewBall({
   required GameModel? game,
   required int calledNumbersCount,
   required int? armedAfterCalledCount,
+  List<CalledNumberModel> calledNumbers = const [],
 }) {
   if (game == null || !game.isChainGame) {
     return true;
+  }
+  final derived = chainRoundHasNewBallSincePreviousWin(
+    game: game,
+    calledNumbers: calledNumbers,
+  );
+  if (derived != null) {
+    return derived;
   }
   if (armedAfterCalledCount == null) {
     return true;
   }
   return calledNumbersCount > armedAfterCalledCount;
+}
+
+/// Whether a ball was called after the previous Chain round's winning ball.
+///
+/// Returns null when session data cannot decide (round 1, previous result or
+/// its winning ball not known yet, or the winning ball not in [calledNumbers]).
+bool? chainRoundHasNewBallSincePreviousWin({
+  required GameModel game,
+  required List<CalledNumberModel> calledNumbers,
+}) {
+  if (!game.isChainGame || calledNumbers.isEmpty) {
+    return null;
+  }
+  final currentRound = game.displayRoundIndex;
+  if (currentRound <= 1) {
+    return null;
+  }
+
+  int? winningBall;
+  for (final round in game.roundResults) {
+    if (round.roundIndex == currentRound - 1) {
+      winningBall = round.winningBallNumber;
+      break;
+    }
+  }
+  if (winningBall == null) {
+    return null;
+  }
+
+  int? winningOrder;
+  var maxOrder = 0;
+  for (final ball in calledNumbers) {
+    if (ball.number == winningBall) {
+      winningOrder = ball.order;
+    }
+    if (ball.order > maxOrder) {
+      maxOrder = ball.order;
+    }
+  }
+  if (winningOrder == null) {
+    return null;
+  }
+  return maxOrder > winningOrder;
 }
 
 /// Winners of a decided Chain round, from session `roundResults`.

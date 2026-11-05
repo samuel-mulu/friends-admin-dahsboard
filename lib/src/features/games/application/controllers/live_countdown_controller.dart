@@ -42,19 +42,6 @@ class LiveCountdownController {
   DateTime? winnerWindowEndsAt;
   Timer? winnerWindowTicker;
 
-  /// BINGO claim button lock during pre-call / awaiting ball — does not dirty the cartela list.
-  final ValueNotifier<bool> bingoClaimLocked = ValueNotifier<bool>(false);
-
-  /// Admin display setting. Off by default. Chain-round Bingo lock is separate.
-  bool bingoClaimLastSecondLockEnabled = false;
-
-  /// Fired when [bingoClaimLocked] transitions true → false (post-call hold,
-  /// winner window unlock, force unlock). Used to resume Auto Bingo drain.
-  VoidCallback? onBingoClaimUnlocked;
-
-  /// When set, BINGO stays locked until this instant (post-call hold).
-  DateTime? bingoPostCallLockUntil;
-
   DateTime? _trackedNextAutoCallAt;
   String? _trackedNextBallSessionScope;
   bool _nextBallScheduleAuthoritativelyNull = false;
@@ -64,88 +51,28 @@ class LiveCountdownController {
   bool _loggedCalledNumbersStaleSync = false;
   bool _loggedCanonicalStaleRefetch = false;
   bool _pausedForAppBackground = false;
-  int? _bingoLockSeenCalledOrder;
-  bool? _lastBingoAutoCallActive;
-  Timer? _bingoPostCallUnlockTimer;
 
   void dispose() {
-    _clearBingoPostCallHold();
-    bingoClaimLocked.dispose();
     _stopNextBallTicker(clearDisplay: false);
     winnerWindowTicker?.cancel();
     winnerWindowTicker = null;
   }
 
-  void updateBingoClaimLocked(bool value) {
-    if (bingoClaimLocked.value == value) {
-      return;
-    }
-    final wasLocked = bingoClaimLocked.value;
-    bingoClaimLocked.value = value;
-    if (wasLocked && !value) {
-      onBingoClaimUnlocked?.call();
-    }
-  }
-
-  /// Apply the admin last-second lock switch. Turning it off clears that lock
-  /// immediately. Chain-round eligibility is not part of this flag.
-  void syncBingoClaimLastSecondLockEnabled({
-    required bool enabled,
+  /// Recompute the next-ball play phase (counting / calling) and the calling
+  /// baseline order used by called-numbers strip self-heal.
+  ///
+  /// BINGO is never locked around auto-called balls; only Chain Game round
+  /// transitions gate claims (see `isCartelaEligibleForBingoClaim`).
+  void refreshNextBallPlayPhase({
     required GameModel? game,
     required bool autoCallActive,
     required int highestKnownCalledOrder,
   }) {
-    if (bingoClaimLastSecondLockEnabled == enabled) {
-      return;
-    }
-    bingoClaimLastSecondLockEnabled = enabled;
-    if (!enabled) {
-      _bingoLockSeenCalledOrder = null;
-      _clearBingoPostCallHold();
-      updateBingoClaimLocked(false);
-      return;
-    }
-    refreshBingoClaimLock(
-      game: game,
-      autoCallActive: autoCallActive,
-      highestKnownCalledOrder: highestKnownCalledOrder,
-    );
-  }
-
-  /// Recompute BINGO pre-call / post-call lock from schedule + called order.
-  void refreshBingoClaimLock({
-    required GameModel? game,
-    required bool autoCallActive,
-    required int highestKnownCalledOrder,
-    bool forceUnlock = false,
-  }) {
-    _lastBingoAutoCallActive = autoCallActive;
-
-    if (forceUnlock || game == null) {
-      _bingoLockSeenCalledOrder = null;
-      _clearBingoPostCallHold();
-      updateBingoClaimLocked(false);
-      return;
-    }
-
-    if (game.status == GameStatus.winnerWindow) {
-      _bingoLockSeenCalledOrder = null;
-      _clearBingoPostCallHold();
-      updateBingoClaimLocked(false);
+    if (game == null || game.status == GameStatus.winnerWindow) {
       return;
     }
 
     final clock = host.controllers.realtime.serverClock;
-    if (bingoClaimLastSecondLockEnabled) {
-      _noteCalledOrderForBingoLock(
-        highestKnownCalledOrder: highestKnownCalledOrder,
-        autoCallActive: autoCallActive,
-        nowUtc: clock.nowUtc(),
-      );
-    } else {
-      _clearBingoPostCallHold();
-    }
-
     final target = _effectiveNextAutoCallTarget(game);
     final resolvedPlayPhase = next_ball_countdown.resolveNextBallPlayPhase(
       gameStatus: game.status,
@@ -161,83 +88,6 @@ class LiveCountdownController {
       callingPhaseBaselineOrder = null;
     }
     nextBallPlayPhase = resolvedPlayPhase;
-
-    if (!autoCallActive || !bingoClaimLastSecondLockEnabled) {
-      _clearBingoPostCallHold();
-    } else if (bingoPostCallLockUntil != null &&
-        !next_ball_countdown.isBingoPostCallHoldActive(
-          postCallLockUntil: bingoPostCallLockUntil,
-          clock: clock,
-        )) {
-      _clearBingoPostCallHold();
-    }
-
-    final locked = bingoClaimLastSecondLockEnabled &&
-        next_ball_countdown.isBingoClaimCountdownLocked(
-      gameStatus: game.status,
-      autoCallActive: autoCallActive,
-      nextAutoCallAt: target,
-      clock: clock,
-      playPhase: resolvedPlayPhase,
-      highestKnownCalledOrder: highestKnownCalledOrder,
-      callingPhaseBaselineOrder: callingPhaseBaselineOrder,
-      postCallLockUntil: bingoPostCallLockUntil,
-    );
-    updateBingoClaimLocked(locked);
-  }
-
-  void _noteCalledOrderForBingoLock({
-    required int highestKnownCalledOrder,
-    required bool autoCallActive,
-    required DateTime nowUtc,
-  }) {
-    final seen = _bingoLockSeenCalledOrder;
-    if (seen == null || highestKnownCalledOrder < seen) {
-      _bingoLockSeenCalledOrder = highestKnownCalledOrder;
-      return;
-    }
-
-    if (highestKnownCalledOrder <= seen) {
-      return;
-    }
-
-    _bingoLockSeenCalledOrder = highestKnownCalledOrder;
-    if (!autoCallActive) {
-      return;
-    }
-    _armBingoPostCallHold(nowUtc);
-  }
-
-  void _armBingoPostCallHold(DateTime nowUtc) {
-    bingoPostCallLockUntil = nowUtc.add(
-      const Duration(seconds: next_ball_countdown.kBingoClaimPostCallUnlockSeconds),
-    );
-    _bingoPostCallUnlockTimer?.cancel();
-    _bingoPostCallUnlockTimer = Timer(
-      const Duration(
-        seconds: next_ball_countdown.kBingoClaimPostCallUnlockSeconds,
-      ),
-      _onBingoPostCallHoldElapsed,
-    );
-  }
-
-  void _onBingoPostCallHoldElapsed() {
-    _bingoPostCallUnlockTimer = null;
-    if (!host.isLiveHostActive) {
-      return;
-    }
-    refreshBingoClaimLock(
-      game: host.game,
-      autoCallActive: _lastBingoAutoCallActive ?? false,
-      highestKnownCalledOrder:
-          host.controllers.calledNumbers.highestKnownCalledOrder,
-    );
-  }
-
-  void _clearBingoPostCallHold() {
-    _bingoPostCallUnlockTimer?.cancel();
-    _bingoPostCallUnlockTimer = null;
-    bingoPostCallLockUntil = null;
   }
 
   @visibleForTesting
@@ -371,8 +221,6 @@ class LiveCountdownController {
     _claimPausesNextBallCountdown = false;
     nextBallPlayPhase = next_ball_countdown.NextBallPlayPhase.counting;
     callingPhaseBaselineOrder = null;
-    _bingoLockSeenCalledOrder = null;
-    _clearBingoPostCallHold();
     _loggedCalledNumbersStaleSync = false;
     _loggedCanonicalStaleRefetch = false;
     LiveRealtimeDebug.resetCountdownDedup();
@@ -574,9 +422,7 @@ class LiveCountdownController {
     bool logCountdown = true,
   }) {
     if (context.isAnyClaimChecking) {
-      // Do not freeze lock while checking — claim UI already blocks via isClaiming.
-      _clearBingoPostCallHold();
-      updateBingoClaimLocked(false);
+      // Claim UI already blocks taps via isClaiming; leave the display as-is.
       return false;
     }
 
@@ -611,7 +457,7 @@ class LiveCountdownController {
       clock: clock,
     );
     final rawSeconds = next_ball_countdown.nextBallCountdownSeconds(target, clock: clock);
-    refreshBingoClaimLock(
+    refreshNextBallPlayPhase(
       game: game,
       autoCallActive: context.autoCallActive,
       highestKnownCalledOrder: context.highestKnownCalledOrder,
@@ -828,8 +674,6 @@ class LiveCountdownController {
   }
 
   bool _clearNextBallDisplay() {
-    _clearBingoPostCallHold();
-    updateBingoClaimLocked(false);
     if (nextBallCountdownSeconds == null && nextBallZeroForMs == 0) {
       return false;
     }
@@ -858,10 +702,6 @@ class LiveCountdownController {
     DateTime? nextAutoCallAt,
     bool autoCallActive,
   ) {
-    if (bingoPostCallLockUntil != null) {
-      return const Duration(milliseconds: 250);
-    }
-
     if (nextAutoCallAt == null) {
       return const Duration(seconds: 1);
     }
@@ -870,7 +710,7 @@ class LiveCountdownController {
       nextAutoCallAt,
       clock: host.controllers.realtime.serverClock,
     );
-    return raw <= next_ball_countdown.kBingoClaimLockSeconds
+    return raw <= next_ball_countdown.kNextBallFastTickWindowSeconds
         ? const Duration(milliseconds: 250)
         : const Duration(seconds: 1);
   }

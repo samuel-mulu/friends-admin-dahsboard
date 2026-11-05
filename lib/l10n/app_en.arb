@@ -2325,6 +2325,12 @@
   "allRoundsWinnersViewCartela": "View cartela",
   "@allRoundsWinnersViewCartela": {},
 
+  "allRoundsWinnersLoadFailed": "Could not load round winners.",
+  "@allRoundsWinnersLoadFailed": {},
+
+  "allRoundsWinnersRetry": "Try again",
+  "@allRoundsWinnersRetry": {},
+
   "chainRoundWinnersTitle": "Round winners",
   "@chainRoundWinnersTitle": {},
 

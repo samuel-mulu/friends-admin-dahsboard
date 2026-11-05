@@ -14,13 +14,17 @@ class AllRoundsWinnerCards extends StatelessWidget {
   const AllRoundsWinnerCards({
     required this.cards,
     this.isLoading = false,
-    this.errorMessage,
+    this.hasError = false,
+    this.onRetry,
     super.key,
   });
 
   final List<AllRoundsWinnerCardData> cards;
   final bool isLoading;
-  final String? errorMessage;
+
+  /// Load failed; shows a friendly message (never the raw error) + [onRetry].
+  final bool hasError;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +64,27 @@ class AllRoundsWinnerCards extends StatelessWidget {
               ),
             ],
           )
-        else if (errorMessage != null && errorMessage!.trim().isNotEmpty)
-          Text(
-            errorMessage!,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
+        else if (hasError)
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.allRoundsWinnersLoadFailed,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+              if (onRetry != null)
+                TextButton(
+                  onPressed: onRetry,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(l10n.allRoundsWinnersRetry),
+                ),
+            ],
           )
         else if (cards.isEmpty)
           Text(
@@ -102,7 +121,9 @@ class AllRoundsWinnerCards extends StatelessWidget {
   }
 }
 
-/// One page per round. The "ዙር X ከ Y" label follows the page in view.
+/// One page per round, rounds in ascending order. Opens on the LAST round;
+/// the player swipes right (or taps a dot) to see earlier rounds. The
+/// "ዙር X ከ Y" label follows the page in view.
 class _RoundWinnerPager extends StatefulWidget {
   const _RoundWinnerPager({required this.cards, required this.onOpen});
 
@@ -114,9 +135,33 @@ class _RoundWinnerPager extends StatefulWidget {
 }
 
 class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
-  final PageController _controller = PageController();
-  int _index = 0;
+  late List<List<AllRoundsWinnerCardData>> _rounds;
+  late final PageController _controller;
+  late int _index;
+
+  /// Set once the player swipes or taps a dot. Until then a data refresh keeps
+  /// the pager on the last round; afterwards it keeps the player's page.
+  bool _userNavigated = false;
   bool _pageHandoffArmed = true;
+
+  int get _lastIndex => _rounds.isEmpty ? 0 : _rounds.length - 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _rounds = _groupByRound(widget.cards);
+    _index = _lastIndex;
+    _controller = PageController(initialPage: _index);
+  }
+
+  void _goToPage(int page) {
+    _userNavigated = true;
+    _controller.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOut,
+    );
+  }
 
   /// A sideways drag on a multi-winner row scrolls those cards. Once that row
   /// is at its end, the same drag moves to the next round so round paging
@@ -134,32 +179,42 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
       return;
     }
 
-    final count = _groupByRound(widget.cards).length;
     final next = notification.overscroll > 0 ? _index + 1 : _index - 1;
-    if (next < 0 || next >= count || !_controller.hasClients) {
+    if (next < 0 || next >= _rounds.length || !_controller.hasClients) {
       return;
     }
     _pageHandoffArmed = false;
-    _controller.animateToPage(
-      next,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOut,
-    );
+    _goToPage(next);
+  }
+
+  /// Marks a direct drag on the round pager itself (depth 0) as navigation.
+  bool _onPagerScrollStart(ScrollStartNotification notification) {
+    if (notification.depth == 0 && notification.dragDetails != null) {
+      _userNavigated = true;
+    }
+    return false;
   }
 
   @override
   void didUpdateWidget(covariant _RoundWinnerPager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final count = _groupByRound(widget.cards).length;
-    if (count == 0) {
+    if (!identical(oldWidget.cards, widget.cards)) {
+      _rounds = _groupByRound(widget.cards);
+    }
+    if (_rounds.isEmpty) {
       return;
     }
-    if (_index >= count) {
-      _index = 0;
-      if (_controller.hasClients) {
-        _controller.jumpToPage(0);
-      }
+    final target = _userNavigated ? _index.clamp(0, _lastIndex) : _lastIndex;
+    if (target == _index) {
+      return;
     }
+    _index = target;
+    // Jump after this frame: moving the page fires onPageChanged → setState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _controller.hasClients) {
+        _controller.jumpToPage(_index);
+      }
+    });
   }
 
   @override
@@ -172,7 +227,7 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final rounds = _groupByRound(widget.cards);
+    final rounds = _rounds;
     if (rounds.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -199,36 +254,33 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
               _RoundDots(
                 count: rounds.length,
                 index: index,
-                onSelected: (next) {
-                  _controller.animateToPage(
-                    next,
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeOut,
-                  );
-                },
+                onSelected: _goToPage,
               ),
           ],
         ),
         const SizedBox(height: 8),
         SizedBox(
           height: 96,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: rounds.length,
-            onPageChanged: (next) {
-              if (_index == next) {
-                return;
-              }
-              setState(() => _index = next);
-            },
-            itemBuilder: (context, page) {
-              final roundCards = rounds[page];
-              return _RoundWinnerRow(
-                cards: roundCards,
-                onOpen: widget.onOpen,
-                onCardScroll: _onCardScroll,
-              );
-            },
+          child: NotificationListener<ScrollStartNotification>(
+            onNotification: _onPagerScrollStart,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: rounds.length,
+              onPageChanged: (next) {
+                if (_index == next) {
+                  return;
+                }
+                setState(() => _index = next);
+              },
+              itemBuilder: (context, page) {
+                final roundCards = rounds[page];
+                return _RoundWinnerRow(
+                  cards: roundCards,
+                  onOpen: widget.onOpen,
+                  onCardScroll: _onCardScroll,
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -236,21 +288,17 @@ class _RoundWinnerPagerState extends State<_RoundWinnerPager> {
   }
 }
 
+/// Cards grouped per round, rounds ascending (so the last page = last round).
+/// Card order inside a round is kept as delivered.
 List<List<AllRoundsWinnerCardData>> _groupByRound(
   List<AllRoundsWinnerCardData> cards,
 ) {
   final groups = <int, List<AllRoundsWinnerCardData>>{};
-  final order = <int>[];
   for (final card in cards) {
-    final existing = groups[card.roundIndex];
-    if (existing == null) {
-      order.add(card.roundIndex);
-      groups[card.roundIndex] = [card];
-    } else {
-      existing.add(card);
-    }
+    groups.putIfAbsent(card.roundIndex, () => []).add(card);
   }
-  return [for (final roundIndex in order) groups[roundIndex]!];
+  final roundIndexes = groups.keys.toList()..sort();
+  return [for (final roundIndex in roundIndexes) groups[roundIndex]!];
 }
 
 class _RoundDots extends StatelessWidget {

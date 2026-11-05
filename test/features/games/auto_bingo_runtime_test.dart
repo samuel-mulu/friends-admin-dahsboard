@@ -305,7 +305,6 @@ void main() {
           isConfirmingOrClaimingAny: true,
           claimStripHoldActive: false,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
@@ -323,7 +322,6 @@ void main() {
           isConfirmingOrClaimingAny: false,
           claimStripHoldActive: false,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
@@ -341,7 +339,6 @@ void main() {
           isConfirmingOrClaimingAny: false,
           claimStripHoldActive: false,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
@@ -359,7 +356,6 @@ void main() {
           isConfirmingOrClaimingAny: false,
           claimStripHoldActive: false,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
@@ -452,7 +448,6 @@ void main() {
           isConfirmingOrClaimingAny: true,
           claimStripHoldActive: true,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
@@ -521,32 +516,11 @@ void main() {
           isConfirmingOrClaimingAny: false,
           claimStripHoldActive: false,
           hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: false,
           claimScopeLoading: false,
           autoSubmitInFlight: false,
           terminalSuppressed: false,
         ),
         AutoBingoBlockKind.permanent,
-      );
-    });
-
-    test('bingoClaimLocked is temporary so unlock can resume (A6.3)', () {
-      expect(
-        classifyAutoBingoQueueHead(
-          effectiveAutoBingo: true,
-          gameAllowsClaims: true,
-          winnerWindowExpired: false,
-          cartela: _cartela(id: 'a', number: 1),
-          sessionRoundMatches: true,
-          isConfirmingOrClaimingAny: false,
-          claimStripHoldActive: false,
-          hasUnresolvedAttemptForCartela: false,
-          bingoClaimLocked: true,
-          claimScopeLoading: false,
-          autoSubmitInFlight: false,
-          terminalSuppressed: false,
-        ),
-        AutoBingoBlockKind.temporary,
       );
     });
 

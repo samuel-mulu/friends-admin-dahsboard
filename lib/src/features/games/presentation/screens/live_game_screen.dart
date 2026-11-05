@@ -130,7 +130,6 @@ import 'package:friends_bingo_app/src/features/games/patterns/data/models/comple
 import '../../data/models/game_timing_config_model.dart';
 import '../../data/models/session_winner_result_model.dart';
 import '../../data/models/session_outcome_summary_model.dart';
-import '../../application/providers/app_display_config_provider.dart';
 import '../../application/providers/games_providers.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_catalog_provider.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_sort_mode_provider.dart';
@@ -238,9 +237,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
         _scheduleAutoBingoEvaluation(reason: 'claim_recovery_changed');
       }
     };
-    _countdown.onBingoClaimUnlocked = () {
-      _scheduleAutoBingoEvaluation(reason: 'bingo_claim_unlocked');
-    };
     _warmCartelaMarksStorage();
     if (widget.initialGame != null) {
       _game = widget.initialGame;
@@ -304,7 +300,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     _authSessionSubscription = null;
     _featureSettingsSubscription?.close();
     _featureSettingsSubscription = null;
-    _countdown.onBingoClaimUnlocked = null;
     // Riverpod forbids provider writes during widget-tree finalization; defer clear.
     final cartelasNotifier = _activeCartelasNotifier;
     _activeCartelasNotifier = null;
@@ -341,25 +336,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   @override
   @override
   Widget build(BuildContext context) {
-    final lastSecondLockEnabled = ref.watch(appDisplayConfigProvider).maybeWhen(
-      data: (config) => config.bingoClaimLastSecondLockEnabled,
-      orElse: () => false,
-    );
-    if (_countdown.bingoClaimLastSecondLockEnabled != lastSecondLockEnabled) {
-      final enabled = lastSecondLockEnabled;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _countdown.syncBingoClaimLastSecondLockEnabled(
-          enabled: enabled,
-          game: _game,
-          autoCallActive: _isAutoCallActiveForSession,
-          highestKnownCalledOrder: _highestKnownCalledOrder,
-        );
-      });
-    }
-
     final body = LiveGameContentSwitcher(
       transitionKey: _bodyTransitionKey,
       hasCompletedInitialPaint: _hasCompletedInitialPaint,

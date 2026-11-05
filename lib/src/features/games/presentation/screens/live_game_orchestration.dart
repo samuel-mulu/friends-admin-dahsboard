@@ -12,8 +12,6 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   ChainRoundPlan? get _chainRoundPlan => _chain.chainRoundPlan;
   int? get _chainBingoArmedAfterCalledCount =>
       _chain.chainBingoArmedAfterCalledCount;
-  set _chainBingoArmedAfterCalledCount(int? value) =>
-      _chain.chainBingoArmedAfterCalledCount = value;
   DateTime? get _latchedChainRoundPausedUntil => _chain.latchedPausedUntil;
 
   /// Final-round All Rounds Winners history (Big Game + Chain only) delegate.
@@ -21,14 +19,12 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       controllers.winnerCelebration;
   String? get _allRoundsWinnerHistoryKey =>
       _winnerCelebration.allRoundsWinnerHistoryKey;
-  RoundWinnerHistory? get _allRoundsWinnerHistory =>
-      _winnerCelebration.allRoundsWinnerHistory;
   bool get _allRoundsWinnerHistoryLoading =>
       _winnerCelebration.allRoundsWinnerHistoryLoading;
   List<AllRoundsWinnerCardData> get _allRoundsWinnerCards =>
       _winnerCelebration.allRoundsWinnerCards;
-  String? get _allRoundsWinnerHistoryError =>
-      _winnerCelebration.allRoundsWinnerHistoryError;
+  bool get _allRoundsWinnerHistoryFailed =>
+      _winnerCelebration.allRoundsWinnerHistoryFailed;
 
   LiveTransitionController get _transition => controllers.transition;
   LiveCountdownController get _countdown => controllers.countdown;
@@ -727,7 +723,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       _cn.blockedCartelaServerReasonById.clear();
       _cn.cartelaSortSignature = null;
     }
-    _chainBingoArmedAfterCalledCount = null;
+    _chain.clearBingoArming();
     _pendingWinnerWindowPayloads.clear();
     _pendingBingoInvalidPayloads.clear();
     _cn.clearSessionScopedState(
@@ -1038,8 +1034,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   void _syncNextBallCountdownTicker() {
     _countdown.syncNextBallTicker(
       _liveCountdownTickContext,
-      // Bingo lock uses bingoClaimLocked ValueNotifier — do not root setState
-      // on every tick (rebuilds all cartelas and makes scroll feel busy).
+      // Do not root setState on every tick (rebuilds all cartelas and makes
+      // scroll feel busy); the countdown badge listens on its own.
       onDisplayChanged: () {},
       onStaleRecovery: _handleNextBallStaleRecovery,
     );
@@ -2903,6 +2899,14 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     _logPresentationPhaseIfChanged(
       detail: 'status=${game.status.name} called=${game.calledNumbersCount}',
     );
+
+    // Raw server snapshot (not the merged/local state) says the game ended —
+    // covers reconnect / resume / app open after the live finish event.
+    if (_isCurrentLoad(generation) &&
+        (game.status == GameStatus.finished ||
+            game.status == GameStatus.noWinner)) {
+      _markServerConfirmedGameFinished(game.sessionId);
+    }
   }
 
   void _reopenRegistrationCountdownIfNeeded(GameModel game) {
@@ -3499,8 +3503,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         );
         _syncNextBallCountdownTicker();
       }
-      // Unlock/relock with the ball — do not wait for the next countdown tick.
-      _countdown.refreshBingoClaimLock(
+      // Leave the calling phase with the ball — do not wait for the next tick.
+      _countdown.refreshNextBallPlayPhase(
         game: updatedGame,
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: highestKnownOrder,
@@ -4171,6 +4175,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     }
 
     _applyTerminalWinnerResultsFromSocket(normalizedPayload);
+    // Emitted after the server finalized that session: its round history is
+    // ready. Use the event's own session (Big Game rounds share one slot).
+    _markServerConfirmedGameFinished(eventSessionId ?? _game?.sessionId);
 
     final game = _game;
     if (game != null &&
@@ -4327,6 +4334,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         game: game.copyWith(roundResults: existing),
         payload: payload,
       );
+      // Next round's Bingo is locked from now until its first new ball.
+      _armChainBingoAfterCurrentBalls();
       _review.resetWinnerWindowClosingState();
       _countdown.winnerWindowEndsAt = null;
       if (_review.postGameSummaryReviewActive &&
@@ -4349,6 +4358,8 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       );
       _countdown.winnerWindowEndsAt = null;
       _cn.socketAutoCallEnabled = false;
+      // Next round's Bingo is locked from now until its first new ball.
+      _armChainBingoAfterCurrentBalls();
     });
     // Mid-round owns the UI now — kill any WW-expiry closing poll/refetch loop.
     _review.resetWinnerWindowClosingState();
@@ -4480,6 +4491,15 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         postGameSummaryVisible: _showsPostGameSummary,
       );
 
+  /// Loads All Rounds Winners for the final finished summary (Chain Game and
+  /// Big Game). Event-driven, no polling — called on summary start, on
+  /// `game:finished`, on a terminal canonical snapshot
+  /// ([_markServerConfirmedGameFinished]) and from Retry.
+  ///
+  /// The local winner window can end 1–3 s before the server finalizes the
+  /// final round session, and asking early fails (Chain: 400; Big Game: final
+  /// round missing). Until the server confirms that session finished, the
+  /// section only shows loading.
   Future<void> _fetchAllRoundsWinnerHistoryIfNeeded() async {
     final game = _game;
     if (!_shouldShowAllRoundsWinnersSection || game == null) {
@@ -4490,20 +4510,34 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
     if (cacheKey == null) {
       return;
     }
-    if (_allRoundsWinnerHistoryKey == cacheKey &&
-        _allRoundsWinnerHistory != null &&
-        !_allRoundsWinnerHistoryLoading) {
+    final celebration = _winnerCelebration;
+    final sameKey = celebration.allRoundsWinnerHistoryKey == cacheKey;
+    final step = resolveAllRoundsHistoryLoadStep(
+      loadedOrInFlight: sameKey &&
+          (celebration.allRoundsWinnerHistory != null ||
+              celebration.allRoundsWinnerHistoryRequestInFlight),
+      serverConfirmedFinished: celebration.isServerConfirmedFinished(
+        game.sessionId,
+      ),
+    );
+    if (step == AllRoundsHistoryLoadStep.skip) {
       return;
     }
 
-    if (mounted) {
-      setState(() {
-        _winnerCelebration.startAllRoundsHistoryLoading(cacheKey);
-      });
-    } else {
-      _winnerCelebration.startAllRoundsHistoryLoading(cacheKey);
+    final alreadyShowingLoading =
+        sameKey && celebration.allRoundsWinnerHistoryLoading;
+    if (!alreadyShowingLoading) {
+      if (mounted) {
+        setState(() => celebration.startAllRoundsHistoryLoading(cacheKey));
+      } else {
+        celebration.startAllRoundsHistoryLoading(cacheKey);
+      }
+    }
+    if (step == AllRoundsHistoryLoadStep.waitForServerFinish) {
+      return;
     }
 
+    celebration.allRoundsWinnerHistoryRequestInFlight = true;
     try {
       final RoundWinnerHistory history;
       if (game.isBigGame) {
@@ -4533,16 +4567,32 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
         );
       });
     } catch (error) {
+      ChainGameDebug.log('all_rounds_winners load failed key=$cacheKey $error');
       if (!mounted || _allRoundsWinnerHistoryKey != cacheKey) {
         return;
       }
-      setState(() {
-        _winnerCelebration.setAllRoundsHistoryError(
-          error.toString(),
-          key: cacheKey,
-        );
-      });
+      setState(() => celebration.setAllRoundsHistoryFailed(key: cacheKey));
+    } finally {
+      // A session change resets the coordinator; never clear a newer request.
+      if (celebration.allRoundsWinnerHistoryKey == cacheKey) {
+        celebration.allRoundsWinnerHistoryRequestInFlight = false;
+      }
     }
+  }
+
+  /// The server — not the local winner-window countdown — reports session
+  /// [sessionId] as finished. Unlocks the round-winners request and triggers
+  /// it (it only runs if that session is the one the final summary shows).
+  void _markServerConfirmedGameFinished(String? sessionId) {
+    if (sessionId == null || sessionId.isEmpty) {
+      return;
+    }
+    _winnerCelebration.markServerConfirmedFinished(sessionId);
+    unawaited(_fetchAllRoundsWinnerHistoryIfNeeded());
+  }
+
+  void _retryAllRoundsWinnerHistory() {
+    unawaited(_fetchAllRoundsWinnerHistoryIfNeeded());
   }
 
   void _applyTerminalWinnerResultsFromSocket(Map<String, dynamic> payload) {
@@ -4682,20 +4732,26 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
   }
 
   /// Carried balls must not arm Bingo for the new round pattern until the
-  /// next auto-call. Round 1 leaves [_chainBingoArmedAfterCalledCount] null.
+  /// next auto-call. Called at round finish (lock starts immediately) and again
+  /// at resume as a backstop; the first threshold recorded for a round wins.
+  /// Round 1 never arms.
   void _armChainBingoAfterCurrentBalls() {
     final game = _game;
     if (game == null || !game.isChainGame) {
-      _chainBingoArmedAfterCalledCount = null;
+      _chain.clearBingoArming();
+      return;
+    }
+    final roundIndex = game.displayRoundIndex;
+    if (roundIndex <= 1) {
       return;
     }
     final count = _cn.calledNumbers.isNotEmpty
         ? _cn.calledNumbers.length
         : game.calledNumbersCount;
-    _chainBingoArmedAfterCalledCount = count;
+    _chain.armBingoForRound(roundIndex: roundIndex, calledCount: count);
     ChainGameDebug.log(
-      'bingo armed after calledCount>$count '
-      'round=${game.displayRoundIndex}',
+      'bingo armed after calledCount>${_chain.chainBingoArmedAfterCalledCount} '
+      'round=$roundIndex',
     );
   }
 
@@ -5078,8 +5134,9 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       allRoundsWinnerCards: showAllRounds ? _allRoundsWinnerCards : const [],
       allRoundsWinnerCardsLoading:
           showAllRounds && _allRoundsWinnerHistoryLoading,
-      allRoundsWinnerCardsError:
-          showAllRounds ? _allRoundsWinnerHistoryError : null,
+      allRoundsWinnerCardsFailed:
+          showAllRounds && _allRoundsWinnerHistoryFailed,
+      onRetryAllRoundsWinners: _retryAllRoundsWinnerHistory,
       secondsRemaining: postGameSummarySecondsRemaining(
         shownAt: _review.postGameSummaryShownAt,
         now: _countdownNow(),
@@ -5603,7 +5660,7 @@ mixin _LiveGameOrchestration on _LiveGameScreenStateBase {
       if (scheduleChanged) {
         _syncNextBallCountdownTicker();
       }
-      _countdown.refreshBingoClaimLock(
+      _countdown.refreshNextBallPlayPhase(
         game: updatedGame,
         autoCallActive: _isAutoCallActiveForSession,
         highestKnownCalledOrder: _highestKnownCalledOrder,

@@ -4138,6 +4138,18 @@ abstract class AppLocalizations {
   /// **'View cartela'**
   String get allRoundsWinnersViewCartela;
 
+  /// No description provided for @allRoundsWinnersLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load round winners.'**
+  String get allRoundsWinnersLoadFailed;
+
+  /// No description provided for @allRoundsWinnersRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get allRoundsWinnersRetry;
+
   /// No description provided for @chainRoundWinnersTitle.
   ///
   /// In en, this message translates to:

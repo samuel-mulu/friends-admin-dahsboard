@@ -66,7 +66,9 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.byType(AppBar), findsOneWidget);
+    // Shell owns the AppBar; withdraw shows its title in the body.
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.text('Withdraw'), findsOneWidget);
     expect(find.byType(WithdrawBalanceStrip), findsOneWidget);
     expect(find.byType(WithdrawProviderChips), findsOneWidget);
 

@@ -2321,6 +2321,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get allRoundsWinnersViewCartela => 'ካርቴላ ይመልከቱ';
 
   @override
+  String get allRoundsWinnersLoadFailed => 'የዙር አሸናፊዎችን ማምጣት አልተቻለም።';
+
+  @override
+  String get allRoundsWinnersRetry => 'እንደገና ሞክር';
+
+  @override
   String get chainRoundWinnersTitle => 'የዙር አሸናፊዎች';
 
   @override

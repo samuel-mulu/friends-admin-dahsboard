@@ -282,7 +282,8 @@ class RoundFinishedBanner extends StatelessWidget {
     this.interRoundTitle,
     this.allRoundsWinnerCards = const [],
     this.allRoundsWinnerCardsLoading = false,
-    this.allRoundsWinnerCardsError,
+    this.allRoundsWinnerCardsFailed = false,
+    this.onRetryAllRoundsWinners,
     this.showAllRoundsWinners = false,
     this.onNext,
     this.onOpenWinners,
@@ -313,7 +314,8 @@ class RoundFinishedBanner extends StatelessWidget {
   /// BIG_GAME / CHAIN final finished PIN only — historical winners by round.
   final List<AllRoundsWinnerCardData> allRoundsWinnerCards;
   final bool allRoundsWinnerCardsLoading;
-  final String? allRoundsWinnerCardsError;
+  final bool allRoundsWinnerCardsFailed;
+  final VoidCallback? onRetryAllRoundsWinners;
   final bool showAllRoundsWinners;
   final VoidCallback? onNext;
   final VoidCallback? onOpenWinners;
@@ -484,7 +486,8 @@ class RoundFinishedBanner extends StatelessWidget {
                       AllRoundsWinnerCards(
                         cards: allRoundsWinnerCards,
                         isLoading: allRoundsWinnerCardsLoading,
-                        errorMessage: allRoundsWinnerCardsError,
+                        hasError: allRoundsWinnerCardsFailed,
+                        onRetry: onRetryAllRoundsWinners,
                       ),
                     ],
                     const SizedBox(height: 6),

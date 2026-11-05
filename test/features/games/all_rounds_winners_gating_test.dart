@@ -210,4 +210,39 @@ void main() {
       expect(cards[2].isNoWinner, isTrue);
     });
   });
+
+  // Applies to Chain Game and Big Game alike: asking before the server
+  // finalized the final round session fails (Chain 400 / Big Game missing the
+  // final round), so both wait for the server-confirmed finish.
+  group('resolveAllRoundsHistoryLoadStep', () {
+    test('waits for the server finish before requesting', () {
+      expect(
+        resolveAllRoundsHistoryLoadStep(
+          loadedOrInFlight: false,
+          serverConfirmedFinished: false,
+        ),
+        AllRoundsHistoryLoadStep.waitForServerFinish,
+      );
+    });
+
+    test('requests once the server confirmed the finish', () {
+      expect(
+        resolveAllRoundsHistoryLoadStep(
+          loadedOrInFlight: false,
+          serverConfirmedFinished: true,
+        ),
+        AllRoundsHistoryLoadStep.request,
+      );
+    });
+
+    test('never requests twice for a loaded or in-flight key', () {
+      expect(
+        resolveAllRoundsHistoryLoadStep(
+          loadedOrInFlight: true,
+          serverConfirmedFinished: true,
+        ),
+        AllRoundsHistoryLoadStep.skip,
+      );
+    });
+  });
 }

@@ -599,6 +599,8 @@
   "chainRoundNextPattern": "Seera itti aanu: {pattern}",
   "allRoundsWinnersTitle": "Mo'attoota Raawundii Hunda",
   "allRoundsWinnersViewCartela": "Kaartelaa ilaali",
+  "allRoundsWinnersLoadFailed": "Mo'attoota raawundii fe'uu hin dandeenye.",
+  "allRoundsWinnersRetry": "Irra deebi'ii yaali",
   "chainRoundWinnersTitle": "Mo'attoota raawundii",
   "chainRoundWinnerChip": "R{round} · #{cartela}",
   "chainRoundsTitle": "Raawundiiwwan sanqaa",

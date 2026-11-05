@@ -59,14 +59,21 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
 
     final availableBalance = walletAsync.asData?.value.balance;
 
+    // No local AppBar — shell already owns back navigation (same as deposit).
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.withdrawScreenTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                l10n.withdrawScreenTitle,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 16),
               walletAsync.maybeWhen(
                 data: (wallet) => WithdrawBalanceStrip(
                   availableBalance: wallet.balance,

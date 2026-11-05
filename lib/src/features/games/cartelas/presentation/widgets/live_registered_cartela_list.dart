@@ -53,7 +53,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
     required this.blockedReasonCodeFor,
     required this.blockedServerReasonFor,
     this.onReorder,
-    this.bingoLockListenable,
     this.decorativeMotionAllowedListenable,
     super.key,
   });
@@ -81,7 +80,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   final String? Function(GameCartelaModel) blockedReasonCodeFor;
   final String? Function(GameCartelaModel) blockedServerReasonFor;
   final void Function(int fromIndex, int toIndex)? onReorder;
-  final ValueListenable<bool>? bingoLockListenable;
   final ValueListenable<bool>? decorativeMotionAllowedListenable;
 
   Widget _buildCartelaCard({
@@ -127,7 +125,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
       onClaimBingo: () => onClaimBingo(gameCartela),
       blockedReasonCode: blockedReasonCodeFor(gameCartela),
       blockedServerReason: blockedServerReasonFor(gameCartela),
-      bingoLockListenable: bingoLockListenable,
       decorativeMotionAllowedListenable: decorativeMotionAllowedListenable,
     );
   }

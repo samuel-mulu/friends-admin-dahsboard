@@ -2374,6 +2374,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allRoundsWinnersViewCartela => 'View cartela';
 
   @override
+  String get allRoundsWinnersLoadFailed => 'Could not load round winners.';
+
+  @override
+  String get allRoundsWinnersRetry => 'Try again';
+
+  @override
   String get chainRoundWinnersTitle => 'Round winners';
 
   @override

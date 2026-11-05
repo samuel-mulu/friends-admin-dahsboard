@@ -12,21 +12,5 @@ void main() {
   test('fromJson defaults promo card to enabled when field missing', () {
     final config = AppDisplayConfigModel.fromJson({});
     expect(config.bigGamePromotionCardEnabled, isTrue);
-    expect(config.bingoClaimLastSecondLockEnabled, isFalse);
-  });
-
-  test('fromJson reads last-second Bingo lock only when true', () {
-    expect(
-      AppDisplayConfigModel.fromJson({
-        'bingoClaimLastSecondLockEnabled': true,
-      }).bingoClaimLastSecondLockEnabled,
-      isTrue,
-    );
-    expect(
-      AppDisplayConfigModel.fromJson({
-        'bingoClaimLastSecondLockEnabled': false,
-      }).bingoClaimLastSecondLockEnabled,
-      isFalse,
-    );
   });
 }

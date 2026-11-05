@@ -366,7 +366,6 @@ void main() {
             game: newerPlayable,
             gameCartela: applied.single,
             winnerWindowExpired: false,
-            isCountdownLocked: false,
           ),
           isFalse,
         );
@@ -413,7 +412,6 @@ void main() {
             game: newerPlayable,
             gameCartela: stillRegistered,
             winnerWindowExpired: false,
-            isCountdownLocked: false,
           ),
           isFalse,
         );
@@ -422,7 +420,6 @@ void main() {
             game: newerPlayable,
             gameCartela: visible,
             winnerWindowExpired: false,
-            isCountdownLocked: false,
           ),
           isTrue,
         );
@@ -468,7 +465,6 @@ void main() {
             game: newer,
             gameCartela: applied.single,
             winnerWindowExpired: false,
-            isCountdownLocked: false,
           ),
           isFalse,
         );
@@ -558,7 +554,6 @@ void main() {
             hasPendingClaim: controller.pendingClaimCartelaIds.contains(
               cartela.id,
             ),
-            isCountdownLocked: false,
             calledNumbersCount: 5,
           );
         },
@@ -577,7 +572,6 @@ void main() {
           ),
           gameCartela: applied.single,
           winnerWindowExpired: false,
-          isCountdownLocked: false,
         ),
         isFalse,
       );

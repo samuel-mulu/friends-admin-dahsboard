@@ -48,6 +48,15 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     super.dispose();
   }
 
+  void _clearSmartEntryFields() {
+    if (_smartMessageController.text.isNotEmpty) {
+      _smartMessageController.clear();
+    }
+    if (_smartAmountController.text.isNotEmpty) {
+      _smartAmountController.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<WalletEntityRealtimeState>(walletEntityRealtimeProvider, (
@@ -57,6 +66,18 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       final update = next.lastUpdate;
       if (update == null || update.kind != WalletEntityKind.deposit) return;
       ref.read(depositControllerProvider.notifier).handleRealtimeUpdate(update);
+    });
+
+    ref.listen<DepositState>(depositControllerProvider, (previous, next) {
+      if (previous == null) return;
+      final parseCleared =
+          previous.smartParseResult != null && next.smartParseResult == null;
+      final returnedToChooser =
+          !previous.isChoosingProvider && next.isChoosingProvider;
+      final providerChanged = previous.provider != next.provider;
+      if (parseCleared || returnedToChooser || providerChanged) {
+        _clearSmartEntryFields();
+      }
     });
 
     final l10n = context.l10n;
@@ -77,14 +98,23 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
             providerConfig,
           );
 
+    // No local AppBar — HomeShell already shows the back control. A second
+    // AppBar duplicated the arrow and popped the whole deposit route instead of
+    // returning to provider selection first.
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.depositScreenTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacing.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                l10n.depositScreenTitle,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              VGap.lg,
               DepositProviderChips(
                 value: selectedProvider,
                 availableProviders: availableProviders,

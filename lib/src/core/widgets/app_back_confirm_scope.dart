@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../utils/l10n.dart';
 import 'package:friends_bingo_app/src/features/games/registration/application/providers/has_active_registered_cartelas_provider.dart';
+import '../../features/wallet/shared/presentation/wallet_flow_back.dart';
 
 enum ConfirmBackChoice { stay, leave }
 
@@ -96,27 +97,36 @@ Future<void> handleAppBackPop({
     return;
   }
 
-  // Priority 1: Close any open modal/sheet first
+  final router = GoRouter.maybeOf(context);
+  final location = router?.state.matchedLocation ?? '';
+
+  // Priority 1: Deposit/withdraw provider step (same screen, not a route).
+  // Must run before Navigator.pop — on these routes canPop is already true.
+  if (router != null &&
+      tryConsumeWalletProviderStepBack(
+        container: ProviderScope.containerOf(context),
+        location: location,
+      )) {
+    return;
+  }
+
+  // Priority 2: Close any open modal/sheet / pop nested route
   if (Navigator.of(context).canPop()) {
     Navigator.of(context).pop();
     return;
   }
 
-  final router = GoRouter.maybeOf(context);
-
-  // Priority 2: Pop nested go_router route
+  // Priority 3: Pop nested go_router route
   if (router != null && router.canPop()) {
     router.pop();
     return;
   }
 
-  // Priority 3: Root tab navigation
+  // Priority 4: Root tab navigation
   if (router == null) {
     await SystemNavigator.pop();
     return;
   }
-
-  final location = router.state.matchedLocation;
 
   if (location == '/games/big-game') {
     router.go('/games');

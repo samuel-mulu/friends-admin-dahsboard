@@ -48,7 +48,7 @@ void main() {
       coordinator.startAllRoundsHistoryLoading(cacheKey);
       expect(coordinator.allRoundsWinnerHistoryLoading, isTrue);
       expect(coordinator.allRoundsWinnerHistoryKey, equals(cacheKey));
-      expect(coordinator.allRoundsWinnerHistoryError, isNull);
+      expect(coordinator.allRoundsWinnerHistoryFailed, isFalse);
 
       const dummyCards = <AllRoundsWinnerCardData>[
         AllRoundsWinnerCardData(
@@ -70,7 +70,7 @@ void main() {
 
       expect(coordinator.allRoundsWinnerHistoryLoading, isFalse);
       expect(coordinator.allRoundsWinnerCards.length, equals(1));
-      expect(coordinator.allRoundsWinnerHistoryError, isNull);
+      expect(coordinator.allRoundsWinnerHistoryFailed, isFalse);
 
       // Reset
       coordinator.reset();
@@ -78,6 +78,48 @@ void main() {
       expect(coordinator.allRoundsWinnerCards, isEmpty);
       expect(coordinator.allRoundsWinnerHistoryLoading, isFalse);
       expect(coordinator.allRoundsWinnerHistoryKey, isNull);
+    });
+
+    test('failure is a flag (no raw error text) and retry clears it', () {
+      final coordinator = LiveWinnerCelebrationCoordinator();
+      const cacheKey = 'chain:session-1';
+
+      coordinator.startAllRoundsHistoryLoading(cacheKey);
+      coordinator.setAllRoundsHistoryFailed(key: cacheKey);
+      expect(coordinator.allRoundsWinnerHistoryLoading, isFalse);
+      expect(coordinator.allRoundsWinnerHistoryFailed, isTrue);
+
+      // A stale key from an older session must not mark the new one failed.
+      coordinator.startAllRoundsHistoryLoading(cacheKey);
+      coordinator.setAllRoundsHistoryFailed(key: 'chain:old-session');
+      expect(coordinator.allRoundsWinnerHistoryFailed, isFalse);
+      expect(coordinator.allRoundsWinnerHistoryLoading, isTrue);
+    });
+
+    test('server-confirmed finish is per session and cleared on reset', () {
+      final coordinator = LiveWinnerCelebrationCoordinator();
+
+      expect(coordinator.isServerConfirmedFinished('session-1'), isFalse);
+      expect(coordinator.isServerConfirmedFinished(null), isFalse);
+      coordinator.markServerConfirmedFinished('session-1');
+      expect(coordinator.isServerConfirmedFinished('session-1'), isTrue);
+
+      coordinator.allRoundsWinnerHistoryRequestInFlight = true;
+      coordinator.resetAllRoundsHistory();
+      expect(coordinator.isServerConfirmedFinished('session-1'), isFalse);
+      expect(coordinator.allRoundsWinnerHistoryRequestInFlight, isFalse);
+    });
+
+    test('Big Game: an earlier round finish does not confirm the final round', () {
+      // All Big Game rounds share the slot history key; confirmation must be
+      // for the final round's own session or the list would miss that round.
+      final coordinator = LiveWinnerCelebrationCoordinator();
+
+      coordinator.markServerConfirmedFinished('big-round-1-session');
+      expect(coordinator.isServerConfirmedFinished('big-round-3-session'), isFalse);
+
+      coordinator.markServerConfirmedFinished('big-round-3-session');
+      expect(coordinator.isServerConfirmedFinished('big-round-3-session'), isTrue);
     });
   });
 }

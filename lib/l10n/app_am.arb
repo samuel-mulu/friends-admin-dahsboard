@@ -713,6 +713,8 @@
   "chainRoundNextPattern": "ቀጣይ ህግ፦ {pattern}",
   "allRoundsWinnersTitle": "የሁሉም ዙሮች አሸናፊዎች",
   "allRoundsWinnersViewCartela": "ካርቴላ ይመልከቱ",
+  "allRoundsWinnersLoadFailed": "የዙር አሸናፊዎችን ማምጣት አልተቻለም።",
+  "allRoundsWinnersRetry": "እንደገና ሞክር",
   "chainRoundWinnersTitle": "የዙር አሸናፊዎች",
   "chainRoundWinnerChip": "ዙር {round} · #{cartela}",
   "chainRoundsTitle": "የሰንሰለት ዙሮች",

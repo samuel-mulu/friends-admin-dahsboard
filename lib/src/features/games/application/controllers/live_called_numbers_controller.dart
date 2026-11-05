@@ -973,7 +973,6 @@ class LiveCalledNumbersController {
     required GameModel? game,
     required GameCartelaModel gameCartela,
     required bool winnerWindowExpired,
-    required bool isCountdownLocked,
     int? chainBingoArmedAfterCalledCount,
   }) {
     final effectiveCalledCount = calledNumbers.isNotEmpty
@@ -988,8 +987,8 @@ class LiveCalledNumbersController {
       gameCartela: gameCartela,
       winnerWindowExpired: winnerWindowExpired,
       hasPendingClaim: pendingClaimCartelaIds.contains(gameCartela.id),
-      isCountdownLocked: isCountdownLocked,
       calledNumbersCount: effectiveCalledCount,
+      calledNumbers: calledNumbers,
       chainBingoArmedAfterCalledCount: chainBingoArmedAfterCalledCount,
     )) {
       return false;

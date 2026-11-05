@@ -149,7 +149,6 @@ AutoBingoBlockKind classifyAutoBingoQueueHead({
   required bool isConfirmingOrClaimingAny,
   required bool claimStripHoldActive,
   required bool hasUnresolvedAttemptForCartela,
-  required bool bingoClaimLocked,
   required bool claimScopeLoading,
   required bool autoSubmitInFlight,
   required bool terminalSuppressed,
@@ -167,7 +166,6 @@ AutoBingoBlockKind classifyAutoBingoQueueHead({
   if (isConfirmingOrClaimingAny ||
       claimStripHoldActive ||
       hasUnresolvedAttemptForCartela ||
-      bingoClaimLocked ||
       claimScopeLoading ||
       autoSubmitInFlight) {
     return AutoBingoBlockKind.temporary;

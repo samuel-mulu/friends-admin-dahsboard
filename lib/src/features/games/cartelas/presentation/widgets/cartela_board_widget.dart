@@ -539,15 +539,9 @@ class CartelaBoardWidget extends StatelessWidget {
       fillColor = AppBranding.cellBackground(context, marked: false);
       borderColor = AppBranding.cellBorder(context, marked: false);
       textColor = AppBranding.cellForeground(context, marked: false);
-      shadows = isDark
-          ? const []
-          : [
-              BoxShadow(
-                color: AppBranding.brandPurple.withValues(alpha: 0.04),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ];
+      // Unmarked cells: no blur shadow (the old 4%-alpha one was invisible but
+      // cost ~20 blurred shadows per card while scrolling).
+      shadows = const [];
     }
 
     final padding = cellExtent != null ? CartelaBoardLayout.cellPadding : 2.0;
@@ -563,8 +557,10 @@ class CartelaBoardWidget extends StatelessWidget {
         ? math.max(8.0, cellExtent * (liveExpanded ? 0.24 : 0.28))
         : 11.0;
 
+    // Transparency type: InkWell still works, but no per-cell
+    // _MaterialInterior (implicit animation + physical shape) is built.
     final cellBody = Material(
-      color: Colors.transparent,
+      type: MaterialType.transparency,
       child: InkWell(
         onTap:
             (interactive && !isFreeSpace && onCellTapped != null && number > 0)
@@ -647,6 +643,11 @@ class _OneAwayCellPulseHostState extends State<_OneAwayCellPulseHost>
   late final AnimationController _controller;
   late final Animation<double> _pulse;
 
+  /// Current effective pulse state. Scroll start/end flips the motion
+  /// listenable on every mounted card; only cards whose pulse state actually
+  /// changes may rebuild, so inactive boards stay untouched while scrolling.
+  bool _pulsing = false;
+
   @override
   void initState() {
     super.initState();
@@ -655,59 +656,67 @@ class _OneAwayCellPulseHostState extends State<_OneAwayCellPulseHost>
       duration: const Duration(milliseconds: 520),
     );
     _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    widget.motionAllowedListenable?.addListener(_syncAnimation);
-    _syncAnimation();
+    widget.motionAllowedListenable?.addListener(_onMotionAllowedChanged);
+    _applyPulseState(_shouldPulse);
   }
 
   @override
   void didUpdateWidget(covariant _OneAwayCellPulseHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
-      oldWidget.motionAllowedListenable?.removeListener(_syncAnimation);
-      widget.motionAllowedListenable?.addListener(_syncAnimation);
+      oldWidget.motionAllowedListenable?.removeListener(_onMotionAllowedChanged);
+      widget.motionAllowedListenable?.addListener(_onMotionAllowedChanged);
     }
-    if (oldWidget.active != widget.active ||
-        oldWidget.motionAllowedListenable != widget.motionAllowedListenable) {
-      _syncAnimation();
-    }
+    // A build always follows didUpdateWidget, so no setState is needed here.
+    _applyPulseState(_shouldPulse);
   }
 
   bool get _motionAllowed => widget.motionAllowedListenable?.value ?? true;
 
-  void _syncAnimation() {
-    if (!mounted) {
-      return;
+  bool get _shouldPulse => widget.active && _motionAllowed;
+
+  /// Starts/stops the controller. Returns true when the pulse state changed.
+  bool _applyPulseState(bool shouldPulse) {
+    if (shouldPulse == _pulsing) {
+      return false;
     }
-    final shouldPulse = widget.active && _motionAllowed;
+    _pulsing = shouldPulse;
     if (shouldPulse) {
       if (!_controller.isAnimating) {
         _controller.repeat(reverse: true);
       }
-      setState(() {});
+    } else {
+      _controller
+        ..stop()
+        ..value = 0;
+    }
+    return true;
+  }
+
+  void _onMotionAllowedChanged() {
+    if (!mounted) {
       return;
     }
-    _controller
-      ..stop()
-      ..value = 0;
-    setState(() {});
+    if (_applyPulseState(_shouldPulse)) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    widget.motionAllowedListenable?.removeListener(_syncAnimation);
+    widget.motionAllowedListenable?.removeListener(_onMotionAllowedChanged);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.active || !_motionAllowed) {
-      return widget.builder(0);
-    }
-
+    // Same widget shape whether pulsing or not, so toggling the pulse (e.g. on
+    // scroll start/end) never remounts the 25-cell board. A stopped controller
+    // does not tick, so idle boards do not rebuild.
     return AnimatedBuilder(
       animation: _pulse,
-      builder: (context, _) => widget.builder(_pulse.value),
+      builder: (context, _) => widget.builder(_pulsing ? _pulse.value : 0),
     );
   }
 }

@@ -12,9 +12,21 @@ class LiveWinnerCelebrationCoordinator {
   // All-Rounds Winner History state (Big Game + Chain only).
   RoundWinnerHistory? allRoundsWinnerHistory;
   List<AllRoundsWinnerCardData> allRoundsWinnerCards = const [];
+
+  /// True while the section shows its loading state — either waiting for the
+  /// server to confirm the game finished, or while the request is in flight.
   bool allRoundsWinnerHistoryLoading = false;
-  String? allRoundsWinnerHistoryError;
+  bool allRoundsWinnerHistoryFailed = false;
   String? allRoundsWinnerHistoryKey;
+
+  /// True only while a history HTTP request is running (dedupes triggers).
+  bool allRoundsWinnerHistoryRequestInFlight = false;
+
+  /// Session the SERVER has confirmed finished (via `game:finished` or a
+  /// FINISHED / NO_WINNER snapshot). The local winner window can end a few
+  /// seconds before the server finalizes it. Keyed by session — not by history
+  /// cache key — because every Big Game round shares one slot key.
+  String? _serverConfirmedFinishedSessionId;
 
   List<int> get winnerCartelaNumbers => List.unmodifiable(_winnerCartelaNumbers);
   Map<int, GameCartelaModel> get winnerCards => Map.unmodifiable(_winnerCards);
@@ -40,9 +52,16 @@ class LiveWinnerCelebrationCoordinator {
     return const Duration(seconds: 8);
   }
 
+  bool isServerConfirmedFinished(String? sessionId) =>
+      sessionId != null && _serverConfirmedFinishedSessionId == sessionId;
+
+  void markServerConfirmedFinished(String sessionId) {
+    _serverConfirmedFinishedSessionId = sessionId;
+  }
+
   void startAllRoundsHistoryLoading(String cacheKey) {
     allRoundsWinnerHistoryLoading = true;
-    allRoundsWinnerHistoryError = null;
+    allRoundsWinnerHistoryFailed = false;
     allRoundsWinnerHistoryKey = cacheKey;
   }
 
@@ -55,21 +74,23 @@ class LiveWinnerCelebrationCoordinator {
     allRoundsWinnerHistory = history;
     allRoundsWinnerCards = cards;
     allRoundsWinnerHistoryLoading = false;
-    allRoundsWinnerHistoryError = null;
+    allRoundsWinnerHistoryFailed = false;
   }
 
-  void setAllRoundsHistoryError(String error, {required String key}) {
+  void setAllRoundsHistoryFailed({required String key}) {
     if (allRoundsWinnerHistoryKey != key) return;
     allRoundsWinnerHistoryLoading = false;
-    allRoundsWinnerHistoryError = error;
+    allRoundsWinnerHistoryFailed = true;
   }
 
   void resetAllRoundsHistory() {
     allRoundsWinnerHistory = null;
     allRoundsWinnerCards = const [];
     allRoundsWinnerHistoryLoading = false;
-    allRoundsWinnerHistoryError = null;
+    allRoundsWinnerHistoryFailed = false;
     allRoundsWinnerHistoryKey = null;
+    allRoundsWinnerHistoryRequestInFlight = false;
+    _serverConfirmedFinishedSessionId = null;
   }
 
   void reset() {

@@ -262,6 +262,8 @@ class DepositController extends Notifier<DepositState> {
       trackedDepositId:
           kind == DepositConfirmationKind.approved ? depositId : null,
       clearTrackedId: kind != DepositConfirmationKind.approved,
+      // Drop parsed SMS so a successful Telebirr deposit cannot be resubmitted.
+      clearSmartParseResult: kind == DepositConfirmationKind.approved,
       confirmation: DepositConfirmationState(
         kind: kind,
         depositId: depositId,

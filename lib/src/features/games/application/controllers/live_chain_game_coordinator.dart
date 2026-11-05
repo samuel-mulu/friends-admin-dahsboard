@@ -16,8 +16,31 @@ class LiveChainGameCoordinator {
   final ValueNotifier<DateTime?> pauseEndsAtListenable =
       ValueNotifier<DateTime?>(null);
 
-  /// After round 2+ resumes, Bingo stays off until called count exceeds this.
+  /// Round 2+: Bingo stays off until called count exceeds this. Fallback for
+  /// when session data cannot yet prove a new ball (see
+  /// `isChainBingoArmedAfterNewBall`).
   int? chainBingoArmedAfterCalledCount;
+
+  /// Round the [chainBingoArmedAfterCalledCount] threshold belongs to. The
+  /// threshold is recorded once per round (at round finish, or at resume if
+  /// the finish was missed) and never moved forward, so a late resume event
+  /// cannot re-lock Bingo after the round's first new ball already arrived.
+  int? chainBingoArmedForRoundIndex;
+
+  /// Records the fallback threshold for [roundIndex] unless one already exists.
+  void armBingoForRound({required int roundIndex, required int calledCount}) {
+    if (chainBingoArmedForRoundIndex == roundIndex &&
+        chainBingoArmedAfterCalledCount != null) {
+      return;
+    }
+    chainBingoArmedForRoundIndex = roundIndex;
+    chainBingoArmedAfterCalledCount = calledCount;
+  }
+
+  void clearBingoArming() {
+    chainBingoArmedForRoundIndex = null;
+    chainBingoArmedAfterCalledCount = null;
+  }
 
   DateTime? get latchedPausedUntil => _latchedChainRoundPausedUntil;
   String? get latchedSessionId => _latchedChainPauseSessionId;
@@ -119,7 +142,7 @@ class LiveChainGameCoordinator {
     clearPauseLatch();
     clearPlan();
     clearPause();
-    chainBingoArmedAfterCalledCount = null;
+    clearBingoArming();
   }
 
   void dispose() {
