@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/utils/l10n.dart';
 import '../../../shared/domain/entities/payment_provider.dart';
 import '../../application/controllers/deposit_controller.dart';
+import '../../application/models/deposit_confirmation_state.dart';
 import '../../application/models/deposit_state.dart';
 import '../../application/providers/deposit_config_provider.dart';
 import '../../data/models/deposit_config_model.dart';
@@ -48,15 +49,6 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
     super.dispose();
   }
 
-  void _clearSmartEntryFields() {
-    if (_smartMessageController.text.isNotEmpty) {
-      _smartMessageController.clear();
-    }
-    if (_smartAmountController.text.isNotEmpty) {
-      _smartAmountController.clear();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen<WalletEntityRealtimeState>(walletEntityRealtimeProvider, (
@@ -68,15 +60,17 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
       ref.read(depositControllerProvider.notifier).handleRealtimeUpdate(update);
     });
 
+    // After Telebirr SMS deposit is approved, clear the pasted full message.
     ref.listen<DepositState>(depositControllerProvider, (previous, next) {
-      if (previous == null) return;
-      final parseCleared =
-          previous.smartParseResult != null && next.smartParseResult == null;
-      final returnedToChooser =
-          !previous.isChoosingProvider && next.isChoosingProvider;
-      final providerChanged = previous.provider != next.provider;
-      if (parseCleared || returnedToChooser || providerChanged) {
-        _clearSmartEntryFields();
+      final becameApproved =
+          previous?.confirmation?.kind != DepositConfirmationKind.approved &&
+          next.confirmation?.kind == DepositConfirmationKind.approved;
+      if (!becameApproved) return;
+      if (_smartMessageController.text.isNotEmpty) {
+        _smartMessageController.clear();
+      }
+      if (_smartAmountController.text.isNotEmpty) {
+        _smartAmountController.clear();
       }
     });
 

@@ -132,13 +132,13 @@ void main() {
     expect(state.confirmation?.amount, equals('100.00'));
   });
 
-  test('approved deposit clears smart SMS parse result', () {
+  test('approved Telebirr deposit clears smart SMS parse result only', () {
     final container = createContainer();
     final controller = container.read(depositControllerProvider.notifier);
     controller.selectProvider(PaymentProvider.telebirr);
     controller.parseSmartInput(
-      'Dear Gezae You have transferred ETB 11.00 to Yonas '
-      'your transaction number is DJN27JZ2OA.',
+      'Dear Customer You have transferred ETB 11.00. '
+      'Your transaction number is DJN27JZ2OA.',
     );
     expect(
       container.read(depositControllerProvider).smartParseResult,
@@ -153,9 +153,31 @@ void main() {
       transactionRef: 'DJN27JZ2OA',
     );
 
+    final state = container.read(depositControllerProvider);
+    expect(state.confirmation?.kind, DepositConfirmationKind.approved);
+    expect(state.smartParseResult, isNull);
+  });
+
+  test('rejected deposit keeps smart SMS parse result', () {
+    final container = createContainer();
+    final controller = container.read(depositControllerProvider.notifier);
+    controller.selectProvider(PaymentProvider.telebirr);
+    controller.parseSmartInput(
+      'Dear Customer You have transferred ETB 11.00. '
+      'Your transaction number is DJN27JZ2OA.',
+    );
+
+    controller.applyDepositTerminalStatus(
+      kind: DepositConfirmationKind.rejected,
+      depositId: 'dep-bad',
+      provider: PaymentProvider.telebirr,
+      amount: '11.00',
+      canRetry: true,
+    );
+
     expect(
       container.read(depositControllerProvider).smartParseResult,
-      isNull,
+      isNotNull,
     );
   });
 }
