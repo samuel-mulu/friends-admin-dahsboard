@@ -40,5 +40,52 @@ void main() {
       final result = parseTelebirrSmartDepositInput('FT26152ZN0XY');
       expect(result.status, SmartDepositParseStatus.wrongProvider);
     });
+
+    test('real DK SMS: reads code from the receipt link and the amount', () {
+      const sms = '''
+Dear Samueal
+You have transferred ETB 140.00 to Ambaye terefe (2519****0067) on 06/11/2026 07:48:23. Your transaction number is DK66RGL5R0. The service fee is  ETB 1.74 and  15% VAT on the service fee is ETB 0.26. Your current E-Money Account  balance is ETB 364.69. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DK66RGL5R0.
+
+Thank you for using telebirr
+Ethio telecom''';
+      final result = parseTelebirrSmartDepositInput(sms);
+      expect(result.status, SmartDepositParseStatus.success);
+      expect(result.transactionRef, 'DK66RGL5R0');
+      expect(result.amount, '140');
+    });
+
+    test('receipt link code wins and needs no D prefix', () {
+      const sms =
+          'You have transferred ETB 50.00. '
+          'https://transactioninfo.ethiotelecom.et/receipt/XQ12AB34CD.';
+      final result = parseTelebirrSmartDepositInput(sms);
+      expect(result.status, SmartDepositParseStatus.success);
+      expect(result.transactionRef, 'XQ12AB34CD');
+    });
+
+    test('SMS without link: reads any D-code from the body (DK, DL, ...)', () {
+      const sms =
+          'Dear Samuel You have transferred ETB 75.50 to Friends Bingo. '
+          'Your transaction number is DL7Q2W9E4R. Thank you for using telebirr';
+      final result = parseTelebirrSmartDepositInput(sms);
+      expect(result.status, SmartDepositParseStatus.success);
+      expect(result.transactionRef, 'DL7Q2W9E4R');
+      expect(result.amount, '75.50');
+    });
+
+    test('words like "Dear" / "DEAR" are never taken as the code', () {
+      const sms =
+          'DEAR Customer, You have transferred ETB 20.00. Thank you for using telebirr';
+      final result = parseTelebirrSmartDepositInput(sms);
+      expect(result.status, SmartDepositParseStatus.incomplete);
+    });
+
+    test('official receipt link pasted alone with trailing full stop', () {
+      final result = parseTelebirrSmartDepositInput(
+        'https://transactioninfo.ethiotelecom.et/receipt/DK66RGL5R0.',
+      );
+      expect(result.status, SmartDepositParseStatus.success);
+      expect(result.transactionRef, 'DK66RGL5R0');
+    });
   });
 }
