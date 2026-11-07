@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_support.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/data/models/game_cartela_model.dart';
@@ -44,6 +45,19 @@ class GamesRepository {
         }
 
         return AppDisplayConfigModel.fromJson(rawData);
+      },
+    );
+  }
+
+  Future<AppSupportConfig> getSupportConfig() {
+    return _apiClient.get<AppSupportConfig>(
+      '/games/support-config',
+      decoder: (rawData) {
+        if (rawData is! Map<String, dynamic>) {
+          throw StateError('Invalid support config response.');
+        }
+
+        return AppSupportConfig.fromJson(rawData);
       },
     );
   }
