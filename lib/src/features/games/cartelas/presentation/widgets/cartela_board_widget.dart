@@ -8,6 +8,7 @@ import 'package:friends_bingo_app/src/features/games/cartelas/data/models/cartel
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mark_color.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/theme/live_play_theme_tokens.dart';
 import 'cartela_pattern_progress_painter.dart';
 
 enum CartelaBoardSize { compact, standard, large }
@@ -112,12 +113,13 @@ class CartelaBoardWidget extends StatelessWidget {
     required double oneAwayPulseT,
   }) {
     final theme = Theme.of(context);
+    final tokens = LivePlayThemeTokens.of(context);
 
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: isWinner ? 6 : 0,
       margin: EdgeInsets.zero,
-      color: theme.brightness == Brightness.dark ? null : Colors.white,
+      color: theme.brightness == Brightness.dark ? null : tokens.cardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -212,7 +214,7 @@ class CartelaBoardWidget extends StatelessWidget {
               const Icon(Icons.style_outlined, size: 18),
               const SizedBox(width: 6),
               Text(
-                '${cartela.number}',
+                '#${cartela.number}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -227,11 +229,20 @@ class CartelaBoardWidget extends StatelessWidget {
 
   Widget _buildBingoLetterBar(BuildContext context, {required bool expanded}) {
     final theme = Theme.of(context);
+    final tokens = LivePlayThemeTokens.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
-      color: theme.brightness == Brightness.dark
-          ? theme.colorScheme.primary.withValues(alpha: 0.08)
-          : Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: 2,
+        vertical: expanded ? 2.5 : 3.5,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? theme.colorScheme.primary.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final letterFontSize = expanded
@@ -245,24 +256,32 @@ class CartelaBoardWidget extends StatelessWidget {
             children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
               final colColor = AppBranding.bingoColumnColor(letter);
               return Expanded(
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 1.5),
-                    decoration: BoxDecoration(
-                      color: colColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                  padding: EdgeInsets.symmetric(
+                    vertical: expanded ? 3.0 : 2.5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? colColor.withValues(alpha: 0.24)
+                        : colColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isDark
+                          ? colColor.withValues(alpha: 0.38)
+                          : colColor.withValues(alpha: 0.22),
+                      width: 0.8,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      letter,
-                      style: TextStyle(
-                        fontSize: letterFontSize,
-                        fontWeight: FontWeight.w900,
-                        color: colColor,
-                        height: 1.1,
-                        letterSpacing: 0.5,
-                      ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    letter,
+                    style: TextStyle(
+                      fontSize: letterFontSize,
+                      fontWeight: FontWeight.w900,
+                      color: colColor,
+                      height: 1.1,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -524,21 +543,35 @@ class CartelaBoardWidget extends StatelessWidget {
         ),
       ];
     } else if (isMarked) {
-      final palette = CartelaMarkColorPalette.forColor(markColor);
-      fillColor = palette.fill;
-      borderColor = palette.border;
-      textColor = palette.text;
+      final tokens = LivePlayThemeTokens.of(context);
+      if (markColor == CartelaMarkColor.green) {
+        fillColor = tokens.cellMarkedGreenFill;
+        borderColor = tokens.cellMarkedGreenBorder;
+        textColor = tokens.cellMarkedGreenText;
+      } else {
+        final palette = CartelaMarkColorPalette.forColor(markColor);
+        fillColor = palette.fill;
+        borderColor = palette.border;
+        textColor = palette.text;
+      }
       shadows = [
         BoxShadow(
-          color: palette.shadow.withValues(alpha: 0.38),
+          color: fillColor.withValues(alpha: 0.38),
           blurRadius: 3.5,
           offset: const Offset(0, 1.5),
         ),
       ];
     } else {
-      fillColor = AppBranding.cellBackground(context, marked: false);
-      borderColor = AppBranding.cellBorder(context, marked: false);
-      textColor = AppBranding.cellForeground(context, marked: false);
+      final tokens = LivePlayThemeTokens.of(context);
+      fillColor = theme.brightness == Brightness.dark
+          ? AppBranding.cellBackground(context, marked: false)
+          : tokens.cellUnmarkedBackground;
+      borderColor = theme.brightness == Brightness.dark
+          ? AppBranding.cellBorder(context, marked: false)
+          : tokens.cellUnmarkedBorder;
+      textColor = theme.brightness == Brightness.dark
+          ? AppBranding.cellForeground(context, marked: false)
+          : tokens.cellUnmarkedText;
       // Unmarked cells: no blur shadow (the old 4%-alpha one was invisible but
       // cost ~20 blurred shadows per card while scrolling).
       shadows = const [];
