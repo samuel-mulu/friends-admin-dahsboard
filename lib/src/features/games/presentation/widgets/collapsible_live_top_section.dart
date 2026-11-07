@@ -14,6 +14,7 @@ import 'chain_game_info_strip.dart';
 import 'chain_game_rounds_dialog.dart';
 import 'game_compact_info_bar.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/presentation/widgets/collapsible_registered_cartela_chips.dart';
+import '../theme/live_play_theme_tokens.dart';
 import 'live_status_chip.dart';
 
 enum LiveTopSectionVariant { livePlay, registration }
@@ -346,11 +347,28 @@ class _StandaloneInfoCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = LivePlayThemeTokens.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppBranding.statPillBackground(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppBranding.panelBorder(context)),
+        color: isDark
+            ? AppBranding.statPillBackground(context)
+            : tokens.topClusterBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark
+              ? AppBranding.panelBorder(context)
+              : tokens.topClusterBorder,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -408,11 +426,28 @@ class _LivePlayInfoCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = LivePlayThemeTokens.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppBranding.statPillBackground(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppBranding.panelBorder(context)),
+        color: isDark
+            ? AppBranding.statPillBackground(context)
+            : tokens.topClusterBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark
+              ? AppBranding.panelBorder(context)
+              : tokens.topClusterBorder,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -453,7 +488,9 @@ class _LivePlayInfoCluster extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: AppBranding.panelBorder(context).withValues(alpha: 0.65),
+            color: isDark
+                ? AppBranding.panelBorder(context).withValues(alpha: 0.65)
+                : tokens.topClusterBorder.withValues(alpha: 0.8),
           ),
           GameCompactInfoBar(
             game: game,
