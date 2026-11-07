@@ -6,6 +6,7 @@ import '../../../../core/utils/l10n.dart';
 import '../../data/models/called_number_model.dart';
 import '../../domain/live_connection_status.dart';
 import '../components/bingo_ball_badge.dart';
+import '../theme/live_play_theme_tokens.dart';
 import 'latest_call_pulse.dart';
 import 'live_status_chip.dart';
 
@@ -76,6 +77,9 @@ class _CalledNumbersStripState extends State<CalledNumbersStrip> {
         widget.winnerCartelaNumbers.isNotEmpty ||
         widget.blockedCartelaNumbers.isNotEmpty;
 
+    final tokens = LivePlayThemeTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         _boardExpanded ? AppSpacing.sm : AppSpacing.xl,
@@ -84,14 +88,27 @@ class _CalledNumbersStripState extends State<CalledNumbersStrip> {
         _boardExpanded ? AppSpacing.sm : AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AppBranding.panelBackground(context),
+        color: isDark
+            ? AppBranding.panelBackground(context)
+            : tokens.topClusterBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: widget.isCheckingClaim
-              ? AppBranding.gold.withValues(alpha: 0.65)
-              : AppBranding.panelBorder(context),
+              ? tokens.bingoClaimGold.withValues(alpha: 0.85)
+              : (isDark
+                    ? AppBranding.panelBorder(context)
+                    : tokens.topClusterBorder),
           width: widget.isCheckingClaim ? 1.5 : 1,
         ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -819,6 +836,7 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = LivePlayThemeTokens.of(context);
     final isChecking = widget.variant == _ClaimCartelaChipVariant.checking;
     final isWinner = widget.variant == _ClaimCartelaChipVariant.winner;
 
@@ -826,19 +844,19 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
         ? AppBranding.gold.withValues(alpha: 0.22)
         : isWinner
         ? Colors.green.withValues(alpha: 0.22)
-        : theme.colorScheme.error.withValues(alpha: 0.18);
+        : tokens.blockedPillBackground;
 
     final borderColor = isChecking
         ? AppBranding.gold
         : isWinner
         ? Colors.green.shade600
-        : theme.colorScheme.error.withValues(alpha: 0.7);
+        : tokens.blockedPillBorder;
 
     final textColor = isChecking
         ? AppBranding.goldDark
         : isWinner
         ? Colors.green.shade700
-        : theme.colorScheme.error;
+        : tokens.blockedPillText;
 
     Widget chip = Container(
       width: _claimCartelaChipWidth(widget.number),
@@ -919,13 +937,30 @@ class _CalledBall extends StatelessWidget {
     );
 
     if (isLatest && !isEmpty) {
+      final tokens = LivePlayThemeTokens.of(context);
+      final haloBall = Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              tokens.latestBallHaloColor.withValues(alpha: isDark ? 0.35 : 0.42),
+              tokens.latestBallHaloColor.withValues(alpha: isDark ? 0.12 : 0.15),
+              Colors.transparent,
+            ],
+            stops: const [0.35, 0.72, 1.0],
+          ),
+        ),
+        child: ball,
+      );
+
       return LatestCallPulse(
         key: ValueKey<String>(
           '${calledNumber!.letter}-${calledNumber!.number}-${calledNumber!.order}',
         ),
         shape: BoxShape.circle,
         highlightColor: isDark ? AppBranding.gold : AppBranding.goldDark,
-        child: ball,
+        child: haloBall,
       );
     }
 
@@ -945,14 +980,15 @@ class _CalledNumbersBallsTray extends StatelessWidget {
       return child;
     }
 
+    final tokens = LivePlayThemeTokens.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: AppBranding.cartelaBoardBackground(context),
+        color: tokens.scaffoldBackground,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: AppBranding.lightOutline.withValues(alpha: 0.55),
+          color: tokens.topClusterBorder.withValues(alpha: 0.75),
         ),
       ),
       child: child,
