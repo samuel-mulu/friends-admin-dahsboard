@@ -9,8 +9,8 @@ abstract final class CartelaBoardLayout {
   static const double boardBorderRadius = 6.0;
   static const double headerToGridGap = 2.0;
 
-  static const double liveHeaderFontSize = 10.0;
-  static const double liveBingoLetterRowHeight = 18.0;
+  static const double liveHeaderFontSize = 14.0;
+  static const double liveBingoLetterRowHeight = 24.0;
   static const double reviewHeaderFontSize = 13.0;
   static const double compactReviewHeaderFontSize = 9.0;
 

@@ -214,7 +214,7 @@ class CartelaBoardWidget extends StatelessWidget {
               const Icon(Icons.style_outlined, size: 18),
               const SizedBox(width: 6),
               Text(
-                '${cartela.number}',
+                '#${cartela.number}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -232,7 +232,7 @@ class CartelaBoardWidget extends StatelessWidget {
     final tokens = LivePlayThemeTokens.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return Container(
-      padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
+      padding: EdgeInsets.symmetric(vertical: expanded ? 3 : 4),
       color: isDark
           ? theme.colorScheme.primary.withValues(alpha: 0.08)
           : tokens.cardBackground,
@@ -241,9 +241,9 @@ class CartelaBoardWidget extends StatelessWidget {
           final letterFontSize = expanded
               ? math.max(
                   CartelaBoardLayout.liveHeaderFontSize,
-                  constraints.maxWidth / 5 * 0.32,
+                  constraints.maxWidth / 5 * 0.40,
                 )
-              : 14.0;
+              : 15.0;
 
           return Row(
             children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
@@ -256,11 +256,11 @@ class CartelaBoardWidget extends StatelessWidget {
               return Expanded(
                 child: Center(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                    padding: const EdgeInsets.symmetric(vertical: 3.0),
                     decoration: BoxDecoration(
                       color: colColor.withValues(alpha: bgAlpha),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -294,7 +294,7 @@ class CartelaBoardWidget extends StatelessWidget {
     final cellSize = CartelaBoardLayout.liveGridCellSlotSize(boardWidth);
     final gridBackground = theme.brightness == Brightness.dark
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.65)
-        : const Color(0xFFF7F5F0);
+        : const Color(0xFFEFE9DE);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -546,8 +546,9 @@ class CartelaBoardWidget extends StatelessWidget {
       }
       shadows = [
         BoxShadow(
-          color: fillColor.withValues(alpha: 0.38),
-          blurRadius: 3.5,
+          color: fillColor.withValues(alpha: 0.45),
+          blurRadius: 5.5,
+          spreadRadius: 0.5,
           offset: const Offset(0, 1.5),
         ),
       ];
@@ -569,8 +570,8 @@ class CartelaBoardWidget extends StatelessWidget {
 
     final padding = cellExtent != null ? CartelaBoardLayout.cellPadding : 2.0;
     final borderRadius = cellExtent != null
-        ? math.max(4.0, cellExtent * 0.16)
-        : 6.0;
+        ? math.max(6.0, cellExtent * 0.22)
+        : 7.0;
     final numberFontSize = cellExtent != null
         ? (liveExpanded
               ? CartelaBoardLayout.liveExpandedCellNumberFontSize(cellExtent)
