@@ -28,6 +28,7 @@ import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_ava
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_payment_source.dart';
 import 'package:friends_bingo_app/src/features/games/patterns/domain/game_rule_localized_name.dart';
 import '../../domain/game_category_theme.dart';
+import '../theme/live_play_theme_tokens.dart';
 import '../../domain/big_game_phase.dart';
 import '../utils/big_game_live_presentation.dart';
 import '../widgets/game_category_badge.dart';
@@ -258,18 +259,12 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
     WidgetsBinding.instance.addObserver(this);
     LiveGameResumeOwnerRegistry.activate();
     LiveGameResumeOwnerRegistry.setMasterRefresh(_refresh);
-    _activeCartelasNotifier = ref.read(
-      hasActiveRegisteredCartelasProvider.notifier,
-    );
-    _authSessionSubscription = ref.listenManual(
-      authControllerProvider,
-      _onAuthSessionChanged,
-    );
-    final initialFeatureSettings = ref
-        .read(featureSettingsControllerProvider)
-        .asData
-        ?.value
-        .settings;
+    _activeCartelasNotifier =
+        ref.read(hasActiveRegisteredCartelasProvider.notifier);
+    _authSessionSubscription =
+        ref.listenManual(authControllerProvider, _onAuthSessionChanged);
+    final initialFeatureSettings =
+        ref.read(featureSettingsControllerProvider).asData?.value.settings;
     _cn.setEffectiveAutoMark(
       initialFeatureSettings?.effectiveAutoMark ?? false,
     );
@@ -334,7 +329,6 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     final body = LiveGameContentSwitcher(
       transitionKey: _bodyTransitionKey,
@@ -355,19 +349,29 @@ class _LiveGameScreenState extends _LiveGameScreenStateBase
             ],
           );
 
+    final liveTokens = LivePlayThemeTokens.of(context);
     final content = widget.showAppBar
         ? Scaffold(
+            backgroundColor: liveTokens.scaffoldBackground,
             appBar: const LiveGameAppBarSection(),
             body: framedBody,
           )
-        : framedBody;
+        : Container(color: liveTokens.scaffoldBackground, child: framedBody);
+
+    final themedContent = Theme(
+      data: Theme.of(context).copyWith(
+        scaffoldBackgroundColor: liveTokens.scaffoldBackground,
+        extensions: [liveTokens],
+      ),
+      child: content,
+    );
 
     return RealtimeBrandingOverlay(
       visible: _awaitingLiveRoom,
       child: Stack(
         children: [
           Positioned.fill(
-            child: _awaitingLiveRoom ? const SizedBox.shrink() : content,
+            child: _awaitingLiveRoom ? const SizedBox.shrink() : themedContent,
           ),
           if (!_awaitingLiveRoom)
             _LiveSyncOverlay(
