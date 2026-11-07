@@ -49,9 +49,6 @@ class BingoClaimButton extends StatelessWidget {
     }
 
     final tokens = LivePlayThemeTokens.of(context);
-    final enabledGradient = LinearGradient(
-      colors: [tokens.bingoClaimGold, tokens.bingoClaimGoldDark],
-    );
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -60,24 +57,27 @@ class BingoClaimButton extends StatelessWidget {
         Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isEnabled ? onPressed : null,
-                borderRadius: BorderRadius.circular(14),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  height: 20,
+            child: SizedBox(
+              height: 22,
+              child: FilledButton(
+                onPressed: isEnabled ? onPressed : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: tokens.bingoClaimGold,
+                  foregroundColor: AppBranding.casinoPurpleDeep,
+                  disabledBackgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : tokens.bingoClaimGold.withValues(alpha: 0.16),
+                  disabledForegroundColor: isDark
+                      ? Colors.white38
+                      : AppBranding.lightOnDisabled,
+                  elevation: isEnabled ? 2 : 0,
+                  shadowColor: tokens.bingoClaimGold.withValues(alpha: 0.5),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: isEnabled ? enabledGradient : null,
-                    color: isEnabled
-                        ? null
-                        : (isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : tokens.bingoClaimGold.withValues(alpha: 0.16)),
-                    border: Border.all(
+                    side: BorderSide(
                       color: isEnabled
                           ? Colors.white.withValues(alpha: 0.5)
                           : (isDark
@@ -85,21 +85,12 @@ class BingoClaimButton extends StatelessWidget {
                                 : tokens.bingoClaimGold.withValues(alpha: 0.35)),
                       width: 1.0,
                     ),
-                    boxShadow: isEnabled
-                        ? [
-                            BoxShadow(
-                              color: tokens.bingoClaimGold.withValues(alpha: 0.38),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1.5),
-                            ),
-                          ]
-                        : null,
                   ),
-                  child: Center(
-                    widthFactor: 1.0,
-                    heightFactor: 1.0,
-                    child: buttonContent,
-                  ),
+                ),
+                child: Center(
+                  widthFactor: 1.0,
+                  heightFactor: 1.0,
+                  child: buttonContent,
                 ),
               ),
             ),

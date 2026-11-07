@@ -113,6 +113,10 @@ class LiveCartelaCard extends StatelessWidget {
       child: Card(
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
+        elevation: isWinner ? 6 : (isDark ? 2 : 3),
+        shadowColor: isDark
+            ? Colors.black.withValues(alpha: 0.5)
+            : tokens.cardBorder.withValues(alpha: 0.45),
         color: isDark ? null : tokens.cardBackground,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

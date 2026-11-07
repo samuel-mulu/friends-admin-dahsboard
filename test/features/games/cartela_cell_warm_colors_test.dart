@@ -43,11 +43,16 @@ void main() {
       );
 
       // Check B-I-N-G-O header letter pills
-      expect(find.text('B'), findsOneWidget);
-      expect(find.text('I'), findsOneWidget);
-      expect(find.text('N'), findsOneWidget);
-      expect(find.text('G'), findsOneWidget);
-      expect(find.text('O'), findsOneWidget);
+      for (final letter in ['B', 'I', 'N', 'G', 'O']) {
+        final textFinder = find.text(letter);
+        expect(textFinder, findsOneWidget);
+        // Ensure each letter is wrapped with a FittedBox to guarantee zero vertical/horizontal clipping
+        final fittedBoxFinder = find.ancestor(
+          of: textFinder,
+          matching: find.byType(FittedBox),
+        );
+        expect(fittedBoxFinder, findsWidgets);
+      }
 
       // Find animated containers representing cells
       final cellContainers = tester.widgetList<AnimatedContainer>(

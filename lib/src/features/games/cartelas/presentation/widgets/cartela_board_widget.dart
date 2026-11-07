@@ -115,11 +115,16 @@ class CartelaBoardWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = LivePlayThemeTokens.of(context);
 
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: isWinner ? 6 : 0,
+      elevation: isWinner ? 6 : (isDark ? 2 : 3),
+      shadowColor: isDark
+          ? Colors.black.withValues(alpha: 0.5)
+          : tokens.cardBorder.withValues(alpha: 0.45),
       margin: EdgeInsets.zero,
-      color: theme.brightness == Brightness.dark ? null : tokens.cardBackground,
+      color: isDark ? null : tokens.cardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -127,9 +132,9 @@ class CartelaBoardWidget extends StatelessWidget {
               ? AppBranding.gold
               : isBlocked
               ? theme.colorScheme.error
-              : (theme.brightness == Brightness.dark
+              : (isDark
                     ? theme.dividerColor.withValues(alpha: 0.2)
-                    : Colors.transparent),
+                    : tokens.cardBorder),
           width: isWinner ? 2.5 : 1.0,
         ),
       ),
@@ -231,54 +236,65 @@ class CartelaBoardWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = LivePlayThemeTokens.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: expanded ? 3 : 4),
-      color: isDark
-          ? theme.colorScheme.primary.withValues(alpha: 0.08)
-          : tokens.cardBackground,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final letterFontSize = expanded
-              ? math.max(
-                  CartelaBoardLayout.liveHeaderFontSize,
-                  constraints.maxWidth / 5 * 0.40,
-                )
-              : 15.0;
+    return SizedBox(
+      height: CartelaBoardLayout.liveBingoLetterRowHeight,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark
+              ? theme.colorScheme.primary.withValues(alpha: 0.08)
+              : tokens.cardBackground,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final slotWidth = constraints.maxWidth / 5;
+            final letterFontSize = expanded
+                ? math.max(
+                    CartelaBoardLayout.liveHeaderFontSize,
+                    slotWidth * 0.44,
+                  )
+                : 15.0;
 
-          return Row(
-            children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
-              final colColor = AppBranding.bingoColumnColor(letter);
-              final bgAlpha = switch (letter) {
-                'O' => isDark ? 0.25 : 0.18,
-                'B' || 'N' => isDark ? 0.22 : 0.16,
-                _ => isDark ? 0.20 : 0.14,
-              };
-              return Expanded(
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                    padding: const EdgeInsets.symmetric(vertical: 3.0),
-                    decoration: BoxDecoration(
-                      color: colColor.withValues(alpha: bgAlpha),
-                      borderRadius: BorderRadius.circular(6),
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
+                final colColor = AppBranding.bingoColumnColor(letter);
+                final bgAlpha = switch (letter) {
+                  'O' => isDark ? 0.25 : 0.18,
+                  'B' || 'N' => isDark ? 0.22 : 0.16,
+                  _ => isDark ? 0.20 : 0.14,
+                };
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2.0,
+                      vertical: 2.0,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      letter,
-                      style: TextStyle(
-                        fontSize: letterFontSize,
-                        fontWeight: FontWeight.w900,
-                        color: colColor,
-                        height: 1.1,
-                        letterSpacing: 0.5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colColor.withValues(alpha: bgAlpha),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      alignment: Alignment.center,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          letter,
+                          style: TextStyle(
+                            fontSize: letterFontSize,
+                            fontWeight: FontWeight.w900,
+                            color: colColor,
+                            height: 1.0,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
-          );
-        },
+                );
+              }).toList(),
+            );
+          },
+        ),
       ),
     );
   }
