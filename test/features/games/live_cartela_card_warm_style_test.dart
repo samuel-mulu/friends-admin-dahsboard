@@ -63,7 +63,7 @@ void main() {
     );
 
     final card = tester.widget<Card>(find.byType(Card).first);
-    expect(card.color, const Color(0xFFFAF7F2));
+    expect(card.color, const Color(0xFFEAE3D5));
     expect(card.color, isNot(equals(Colors.white)));
   });
 }

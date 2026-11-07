@@ -48,7 +48,7 @@ class LivePlayThemeTokens extends ThemeExtension<LivePlayThemeTokens> {
 
   static const light = LivePlayThemeTokens(
     scaffoldBackground: Color(0xFFF3EFE6),
-    cardBackground: Color(0xFFFAF7F2),
+    cardBackground: Color(0xFFEAE3D5),
     cardBorder: Color(0xFFE5DEC9),
     topClusterBackground: Color(0xFFFAF7F0),
     topClusterBorder: Color(0xFFE4DBC7),

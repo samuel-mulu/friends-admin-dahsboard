@@ -28,7 +28,7 @@
 - Consumes: Flutter `ThemeExtension<LivePlayThemeTokens>`, `BuildContext`, `Color`
 - Produces: `LivePlayThemeTokens` class providing:
   - `scaffoldBackground`: `Color(0xFFF3EFE6)` (light) / `Color(0xFF0D0A14)` (dark)
-  - `cardBackground`: `Color(0xFFFAF7F2)` (light) / `Color(0xFF1A1528)` (dark)
+  - `cardBackground`: `Color(0xFFEAE3D5)` (light) / `Color(0xFF1A1528)` (dark)
   - `cardBorder`: `Color(0xFFE5DEC9)` (light) / `Color(0x33F5C542)` (dark)
   - `cellUnmarkedBackground`: `Color(0xFFF5EFE6)` (light) / `Color(0xFF2A2340)` (dark)
   - `cellUnmarkedBorder`: `Color(0xFFE4DAC7)` (light) / `Color(0x33B9B0CE)` (dark)
@@ -58,7 +58,7 @@ void main() {
       const tokens = LivePlayThemeTokens.light;
 
       expect(tokens.scaffoldBackground, const Color(0xFFF3EFE6));
-      expect(tokens.cardBackground, const Color(0xFFFAF7F2));
+      expect(tokens.cardBackground, const Color(0xFFEAE3D5));
       expect(tokens.cardBorder, const Color(0xFFE5DEC9));
       expect(tokens.cellUnmarkedBackground, const Color(0xFFF5EFE6));
       expect(tokens.cellUnmarkedText, const Color(0xFF2B0A57));
@@ -155,7 +155,7 @@ class LivePlayThemeTokens extends ThemeExtension<LivePlayThemeTokens> {
 
   static const light = LivePlayThemeTokens(
     scaffoldBackground: Color(0xFFF3EFE6),
-    cardBackground: Color(0xFFFAF7F2),
+    cardBackground: Color(0xFFEAE3D5),
     cardBorder: Color(0xFFE5DEC9),
     topClusterBackground: Color(0xFFFAF7F0),
     topClusterBorder: Color(0xFFE4DBC7),

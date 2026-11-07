@@ -8,7 +8,7 @@ void main() {
       const tokens = LivePlayThemeTokens.light;
 
       expect(tokens.scaffoldBackground, const Color(0xFFF3EFE6));
-      expect(tokens.cardBackground, const Color(0xFFFAF7F2));
+      expect(tokens.cardBackground, const Color(0xFFEAE3D5));
       expect(tokens.cardBorder, const Color(0xFFE5DEC9));
       expect(tokens.cellUnmarkedBackground, const Color(0xFFF5EFE6));
       expect(tokens.cellUnmarkedText, const Color(0xFF2B0A57));
