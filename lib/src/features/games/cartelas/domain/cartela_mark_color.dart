@@ -39,10 +39,10 @@ class CartelaMarkColorPalette {
   static CartelaMarkColorPalette forColor(CartelaMarkColor color) {
     return switch (color) {
       CartelaMarkColor.green => const CartelaMarkColorPalette(
-        swatch: AppBranding.bingoFreeGreen,
-        fill: AppBranding.bingoFreeGreen,
-        border: AppBranding.feltGreen,
-        shadow: AppBranding.bingoFreeGreen,
+        swatch: AppBranding.emeraldDaubFill,
+        fill: AppBranding.emeraldDaubFill,
+        border: AppBranding.emeraldDaubBorder,
+        shadow: AppBranding.emeraldDaubFill,
         text: Colors.white,
       ),
       CartelaMarkColor.red => CartelaMarkColorPalette(

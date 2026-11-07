@@ -100,7 +100,7 @@ class ConnectionStatusDot extends StatelessWidget {
     };
     final color = switch (status) {
       LiveConnectionState.online =>
-        isLight ? const Color(0xFF0F6B34) : Colors.greenAccent,
+        isLight ? AppBranding.emeraldPillText : Colors.greenAccent,
       LiveConnectionState.reconnecting =>
         isLight ? const Color(0xFFB45309) : Colors.orangeAccent,
       LiveConnectionState.syncing =>
@@ -115,14 +115,19 @@ class ConnectionStatusDot extends StatelessWidget {
         status == LiveConnectionState.reconnecting ||
         status == LiveConnectionState.syncing;
 
+    final pillBg = (status == LiveConnectionState.online && isLight)
+        ? AppBranding.emeraldPill
+        : color.withValues(alpha: isLight ? 0.14 : 0.15);
+    final pillBorder = (status == LiveConnectionState.online && isLight)
+        ? Border.all(color: AppBranding.emeraldPillBorder)
+        : (isLight ? Border.all(color: color.withValues(alpha: 0.35)) : null);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isLight ? 0.14 : 0.15),
+        color: pillBg,
         borderRadius: BorderRadius.circular(999),
-        border: isLight
-            ? Border.all(color: color.withValues(alpha: 0.35))
-            : null,
+        border: pillBorder,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -114,15 +114,22 @@ mixin _LiveGameViews on
         Expanded(
           child: RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: AppSpacing.screenPadding.copyWith(
-                top: 0,
-                bottom:
-                    AppSpacing.screenPadding.bottom +
-                    MediaQuery.viewPaddingOf(context).bottom,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                overscroll: false,
               ),
-              children: _buildFullScrollContent(),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
+                padding: AppSpacing.screenPadding.copyWith(
+                  top: 0,
+                  bottom:
+                      AppSpacing.screenPadding.bottom +
+                      MediaQuery.viewPaddingOf(context).bottom,
+                ),
+                children: _buildFullScrollContent(),
+              ),
             ),
           ),
         ),

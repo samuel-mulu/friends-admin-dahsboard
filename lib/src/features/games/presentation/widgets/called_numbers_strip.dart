@@ -826,23 +826,24 @@ class _ClaimCartelaChipState extends State<_ClaimCartelaChip>
     final isChecking = widget.variant == _ClaimCartelaChipVariant.checking;
     final isWinner = widget.variant == _ClaimCartelaChipVariant.winner;
 
+    final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isChecking
         ? AppBranding.gold.withValues(alpha: 0.22)
         : isWinner
-        ? Colors.green.withValues(alpha: 0.22)
-        : theme.colorScheme.error.withValues(alpha: 0.18);
+        ? (isDark ? Colors.green.withValues(alpha: 0.22) : AppBranding.emeraldPill)
+        : (isDark ? theme.colorScheme.error.withValues(alpha: 0.18) : AppBranding.coralPill);
 
     final borderColor = isChecking
         ? AppBranding.gold
         : isWinner
-        ? Colors.green.shade600
-        : theme.colorScheme.error.withValues(alpha: 0.7);
+        ? (isDark ? Colors.green.shade600 : AppBranding.emeraldDaubBorder)
+        : (isDark ? theme.colorScheme.error.withValues(alpha: 0.7) : AppBranding.coralPillBorder);
 
     final textColor = isChecking
         ? AppBranding.goldDark
         : isWinner
-        ? Colors.green.shade700
-        : theme.colorScheme.error;
+        ? (isDark ? Colors.green.shade700 : AppBranding.emeraldPillText)
+        : (isDark ? theme.colorScheme.error : AppBranding.coralPillText);
 
     Widget chip = Container(
       width: _claimCartelaChipWidth(widget.number),

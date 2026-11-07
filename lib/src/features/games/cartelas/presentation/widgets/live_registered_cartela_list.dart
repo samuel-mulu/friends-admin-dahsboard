@@ -198,8 +198,14 @@ class InlineRegisteredCartelaList extends StatelessWidget {
   }) {
     final onReorder = this.onReorder;
     final theme = Theme.of(context);
+    final sizedCard = SizedBox(
+      width: cellWidth,
+      height: cellHeight,
+      child: card,
+    );
+
     final wrapped = onReorder == null
-        ? card
+        ? sizedCard
         : LongPressDraggable<int>(
             data: index,
             delay: const Duration(milliseconds: 400),
@@ -231,7 +237,7 @@ class InlineRegisteredCartelaList extends StatelessWidget {
                           ),
                         )
                       : null,
-                  child: card,
+                  child: sizedCard,
                 );
               },
             ),

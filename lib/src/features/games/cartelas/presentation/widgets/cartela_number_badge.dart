@@ -135,7 +135,7 @@ class CartelaNumberCompactBadge extends StatelessWidget {
         '$number',
         maxLines: 1,
         style: const TextStyle(
-          color: AppBranding.gold,
+          color: Colors.white,
           fontSize: 10.5,
           fontWeight: FontWeight.w800,
           height: 1,

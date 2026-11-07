@@ -120,11 +120,80 @@ class CartelaBoardWidget extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        if (showHeader) _buildCartelaHeader(context),
+        if (expanded)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                CartelaBoardLayout.boardPadding,
+                CartelaBoardLayout.boardPadding,
+                CartelaBoardLayout.boardPadding,
+                0,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final boardWidth = constraints.maxWidth;
+                  final designHeight =
+                      CartelaBoardLayout.liveBingoLetterRowHeight +
+                      boardWidth;
+
+                  return FittedBox(
+                    fit: BoxFit.contain,
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: boardWidth,
+                      height: designHeight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            height:
+                                CartelaBoardLayout.liveBingoLetterRowHeight,
+                            child: _buildBingoLetterBar(
+                              context,
+                              expanded: true,
+                            ),
+                          ),
+                          SizedBox.square(
+                            dimension: boardWidth,
+                            child: _buildSquareLiveGrid(
+                              context,
+                              columns,
+                              boardWidth: boardWidth,
+                              oneAwayPulseT: oneAwayPulseT,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          )
+        else ...[
+          _buildBingoLetterBar(context, expanded: false),
+          Padding(
+            padding: const EdgeInsets.all(6),
+            child: _buildGrid(context, columns, oneAwayPulseT: oneAwayPulseT),
+          ),
+        ],
+      ],
+    );
+
+    if (!showHeader) {
+      return content;
+    }
+
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: isWinner ? 6 : 0,
       margin: EdgeInsets.zero,
-      color: theme.brightness == Brightness.dark ? null : Colors.white,
+      color: theme.brightness == Brightness.dark ? null : AppBranding.warmSurfaceRaised,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -134,75 +203,11 @@ class CartelaBoardWidget extends StatelessWidget {
               ? theme.colorScheme.error
               : (theme.brightness == Brightness.dark
                     ? theme.dividerColor.withValues(alpha: 0.2)
-                    : Colors.transparent),
+                    : AppBranding.warmOutline.withValues(alpha: 0.65)),
           width: isWinner ? 2.5 : 1.0,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          if (showHeader) _buildCartelaHeader(context),
-          if (expanded)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  CartelaBoardLayout.boardPadding,
-                  CartelaBoardLayout.boardPadding,
-                  CartelaBoardLayout.boardPadding,
-                  0,
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final boardWidth = constraints.maxWidth;
-                    final designHeight =
-                        CartelaBoardLayout.liveBingoLetterRowHeight +
-                        boardWidth;
-
-                    return FittedBox(
-                      fit: BoxFit.contain,
-                      alignment: Alignment.topCenter,
-                      child: SizedBox(
-                        width: boardWidth,
-                        height: designHeight,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(
-                              height:
-                                  CartelaBoardLayout.liveBingoLetterRowHeight,
-                              child: _buildBingoLetterBar(
-                                context,
-                                expanded: true,
-                              ),
-                            ),
-                            SizedBox(
-                              width: boardWidth,
-                              height: boardWidth,
-                              child: _buildSquareLiveGrid(
-                                context,
-                                columns,
-                                boardWidth: boardWidth,
-                                oneAwayPulseT: oneAwayPulseT,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            )
-          else ...[
-            _buildBingoLetterBar(context, expanded: false),
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: _buildGrid(context, columns, oneAwayPulseT: oneAwayPulseT),
-            ),
-          ],
-        ],
-      ),
+      child: content,
     );
   }
 
@@ -234,17 +239,26 @@ class CartelaBoardWidget extends StatelessWidget {
 
   Widget _buildBingoLetterBar(BuildContext context, {required bool expanded}) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final barBackground = isDark
+        ? theme.colorScheme.primary.withValues(alpha: 0.10)
+        : AppBranding.warmSurfaceMuted.withValues(alpha: 0.50);
+
     return Container(
-      padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
-      color: theme.brightness == Brightness.dark
-          ? theme.colorScheme.primary.withValues(alpha: 0.08)
-          : Colors.white,
+      padding: EdgeInsets.symmetric(
+        vertical: expanded ? 1.5 : 3,
+        horizontal: 2,
+      ),
+      decoration: BoxDecoration(
+        color: barBackground,
+        borderRadius: BorderRadius.circular(CartelaBoardLayout.boardBorderRadius),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final letterFontSize = expanded
               ? math.max(
                   CartelaBoardLayout.liveHeaderFontSize,
-                  constraints.maxWidth / 5 * 0.32,
+                  constraints.maxWidth / 5 * 0.30,
                 )
               : 14.0;
 
@@ -254,21 +268,27 @@ class CartelaBoardWidget extends StatelessWidget {
               return Expanded(
                 child: Center(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 1.0),
                     decoration: BoxDecoration(
-                      color: colColor.withValues(alpha: 0.08),
+                      color: isDark
+                          ? colColor.withValues(alpha: 0.12)
+                          : colColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      letter,
-                      style: TextStyle(
-                        fontSize: letterFontSize,
-                        fontWeight: FontWeight.w900,
-                        color: colColor,
-                        height: 1.1,
-                        letterSpacing: 0.5,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        letter,
+                        style: TextStyle(
+                          fontSize: letterFontSize,
+                          fontWeight: FontWeight.w900,
+                          color: colColor,
+                          height: 1.0,
+                          leadingDistribution: TextLeadingDistribution.even,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
@@ -292,70 +312,72 @@ class CartelaBoardWidget extends StatelessWidget {
     final cellSize = CartelaBoardLayout.liveGridCellSlotSize(boardWidth);
     final gridBackground = theme.brightness == Brightness.dark
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.65)
-        : const Color(0xFFF7F5F0);
+        : AppBranding.warmSurfaceMuted.withValues(alpha: 0.45);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: gridBackground,
-            borderRadius: BorderRadius.circular(
-              CartelaBoardLayout.boardBorderRadius,
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: gridBackground,
+              borderRadius: BorderRadius.circular(
+                CartelaBoardLayout.boardBorderRadius,
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(1),
-            child: Column(
-              children: List.generate(5, (rowIdx) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: rowIdx == 4 ? 0 : gap),
-                    child: Row(
-                      children: List.generate(5, (colIdx) {
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: colIdx == 4 ? 0 : gap,
-                            ),
-                            child: Center(
-                              child: SizedBox(
-                                width: cellSize,
-                                height: cellSize,
-                                child: _buildGridCell(
-                                  context: context,
-                                  columns: columns,
-                                  rowIdx: rowIdx,
-                                  colIdx: colIdx,
-                                  cellExtent: cellSize,
-                                  liveExpanded: true,
-                                  oneAwayPulseT: oneAwayPulseT,
+            child: Padding(
+              padding: const EdgeInsets.all(1),
+              child: Column(
+                children: List.generate(5, (rowIdx) {
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: rowIdx == 4 ? 0 : gap),
+                      child: Row(
+                        children: List.generate(5, (colIdx) {
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                right: colIdx == 4 ? 0 : gap,
+                              ),
+                              child: Center(
+                                child: SizedBox.square(
+                                  dimension: cellSize,
+                                  child: _buildGridCell(
+                                    context: context,
+                                    columns: columns,
+                                    rowIdx: rowIdx,
+                                    colIdx: colIdx,
+                                    cellExtent: cellSize,
+                                    liveExpanded: true,
+                                    oneAwayPulseT: oneAwayPulseT,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-        if (!patternOverlay.isEmpty)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: CartelaPatternProgressPainter(
-                  overlay: patternOverlay,
-                  gap: gap,
-                  cellInset: CartelaBoardLayout.cellPadding,
-                ),
+                  );
+                }),
               ),
             ),
           ),
-      ],
+          if (!patternOverlay.isEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: CartelaPatternProgressPainter(
+                    overlay: patternOverlay,
+                    gap: gap,
+                    cellInset: CartelaBoardLayout.cellPadding,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -465,12 +487,12 @@ class CartelaBoardWidget extends StatelessWidget {
     final Color textColor;
 
     if (isFreeSpace) {
-      fillColor = AppBranding.bingoFreeGreen;
-      borderColor = Colors.white.withValues(alpha: 0.22);
+      fillColor = AppBranding.emeraldDaubFill;
+      borderColor = AppBranding.emeraldDaubBorder;
       textColor = Colors.white;
       shadows = [
         BoxShadow(
-          color: AppBranding.bingoFreeGreen.withValues(alpha: 0.38),
+          color: AppBranding.emeraldDaubShadow,
           blurRadius: 3.5,
           offset: const Offset(0, 1.5),
         ),
@@ -632,10 +654,6 @@ class CartelaBoardWidget extends StatelessWidget {
         ),
       ),
     );
-
-    if (cellExtent != null) {
-      return Padding(padding: EdgeInsets.all(padding), child: cellBody);
-    }
 
     return Padding(
       padding: EdgeInsets.all(padding),

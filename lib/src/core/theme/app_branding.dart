@@ -18,15 +18,45 @@ abstract final class AppBranding {
   static const statPillDark = Color(0xFF251D3A);
 
   /// Premium light theme — warm cream surfaces (not near-white), readable contrast.
-  static const lightScaffold = Color(0xFFE8E2D8);
-  static const lightSurface = Color(0xFFF3EEE6);
-  static const lightSurfaceRaised = Color(0xFFF7F3EC);
-  static const lightSurfaceMuted = Color(0xFFDDD6CA);
-  static const lightSurfaceSubtle = Color(0xFFD4CCC0);
-  static const lightOutline = Color(0xFFC4B08A);
+  static const lightScaffold = Color(0xFFEDE7DD); // Warm soothing linen canvas
+  static const lightSurface = Color(0xFFF5EFE6);   // Soft neutral container/panel
+  static const lightSurfaceRaised = Color(0xFFFAF8F5); // Warm ivory card surface
+  static const lightSurfaceMuted = Color(0xFFE5DEC9);  // Subtle separation tone
+  static const lightSurfaceSubtle = Color(0xFFDDD4C2);
+  static const lightOutline = Color(0xFFD6CCA9);
   static const lightOnSurface = Color(0xFF2B0A57);
-  static const lightOnSurfaceMuted = Color(0xFF4A4560);
+  static const lightOnSurfaceMuted = Color(0xFF5E566D);
   static const lightOnDisabled = Color(0xFF8A8398);
+
+  /// "Warm Amber & Emerald Lounge" Live Game palette (soothing warm casino tones, zero white-glare).
+  static const warmScaffold = Color(0xFFEDE7DD);
+  static const warmSurface = Color(0xFFF5EFE6);
+  static const warmSurfaceRaised = Color(0xFFFAF8F5);
+  static const warmSurfaceMuted = Color(0xFFE5DEC9);
+  static const warmOutline = Color(0xFFD6CCA9);
+  static const warmOnSurface = Color(0xFF2B0A57);
+  static const warmOnSurfaceMuted = Color(0xFF5E566D);
+
+  /// Warm Casino Accents (BINGO claim button, badges, prizes)
+  static const bingoGoldButton = Color(0xFFE8C86A);
+  static const bingoGoldButtonBorder = Color(0xFFD4A836);
+  static const bingoGoldButtonText = Color(0xFF3B2205);
+  static const warmGoldPill = Color(0xFFFFF3D6);
+  static const warmGoldPillBorder = Color(0xFFF3D288);
+  static const warmGoldPillText = Color(0xFF8D5B00);
+
+  /// Emerald Daub Palette
+  static const emeraldDaubFill = Color(0xFF22A45D);
+  static const emeraldDaubBorder = Color(0xFF1B874B);
+  static const emeraldDaubShadow = Color(0x5522A45D);
+  static const emeraldPill = Color(0xFFE1F5EC);
+  static const emeraldPillBorder = Color(0xFFA7F3D0);
+  static const emeraldPillText = Color(0xFF14532D);
+
+  /// Soft Coral Alert / Blocked Chips
+  static const coralPill = Color(0xFFFEE2E2);
+  static const coralPillBorder = Color(0xFFFCA5A5);
+  static const coralPillText = Color(0xFFB91C1C);
 
   /// B-I-N-G-O column palette (board + cartela marks).
   static const bingoB = Color(0xFF2196F3);
@@ -212,7 +242,7 @@ abstract final class AppBranding {
     }
 
     return BoxDecoration(
-      color: Colors.white,
+      color: lightSurfaceRaised,
       border: Border(
         bottom: BorderSide(color: lightOutline.withValues(alpha: 0.35)),
       ),

@@ -135,7 +135,7 @@ class LiveCartelaCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         color: theme.brightness == Brightness.dark
             ? null
-            : Colors.white,
+            : AppBranding.warmSurfaceRaised,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
@@ -145,7 +145,7 @@ class LiveCartelaCard extends StatelessWidget {
                     ? AppBranding.gold
                     : (theme.brightness == Brightness.dark
                         ? theme.colorScheme.outlineVariant.withValues(alpha: 0.35)
-                        : AppBranding.panelBorder(context))),
+                        : AppBranding.warmOutline.withValues(alpha: 0.65))),
             width: isBlocked || isWinner ? 1.5 : 1.0,
           ),
         ),

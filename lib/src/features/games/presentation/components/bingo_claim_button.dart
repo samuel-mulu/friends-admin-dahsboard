@@ -88,7 +88,7 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
         child: CircularProgressIndicator(
           strokeWidth: 2,
           valueColor: AlwaysStoppedAnimation<Color>(
-            isEnabled ? AppBranding.casinoPurpleDeep : AppBranding.gold,
+            isEnabled ? AppBranding.bingoGoldButtonText : AppBranding.gold,
           ),
         ),
       );
@@ -101,8 +101,8 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
           letterSpacing: 0.8,
           height: 1,
           color: isEnabled
-            ? AppBranding.casinoPurpleDeep
-            : (isDark ? Colors.white38 : AppBranding.lightOnDisabled),
+            ? AppBranding.bingoGoldButtonText
+            : (isDark ? Colors.white38 : AppBranding.bingoGoldButtonText.withValues(alpha: 0.5)),
         ),
       );
     }
@@ -114,37 +114,55 @@ class _BingoClaimButtonState extends State<BingoClaimButton>
         borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: 20,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: isEnabled
                 ? const LinearGradient(
-                    colors: [AppBranding.goldAccent, AppBranding.gold],
+                    colors: [
+                      Color(0xFFF3D27C),
+                      AppBranding.bingoGoldButton,
+                    ],
                   )
-                : null,
+                : (isDark
+                    ? null
+                    : LinearGradient(
+                        colors: [
+                          AppBranding.bingoGoldButton.withValues(alpha: 0.75),
+                          AppBranding.bingoGoldButton.withValues(alpha: 0.65),
+                        ],
+                      )),
             color: isEnabled
                 ? null
                 : (isDark
                       ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05)),
+                      : null),
             border: Border.all(
               color: isEnabled
-                  ? Colors.white.withValues(alpha: 0.5)
+                  ? AppBranding.bingoGoldButtonBorder
                   : (isDark
                         ? Colors.white.withValues(alpha: 0.12)
-                        : Colors.black.withValues(alpha: 0.08)),
+                        : AppBranding.bingoGoldButtonBorder.withValues(alpha: 0.6)),
               width: 1.0,
             ),
             boxShadow: isEnabled
                 ? [
                     BoxShadow(
-                      color: AppBranding.gold.withValues(alpha: 0.35),
-                      blurRadius: 4,
+                      color: AppBranding.bingoGoldButton.withValues(alpha: 0.45),
+                      blurRadius: 5,
                       offset: const Offset(0, 1.5),
                     ),
                   ]
-                : null,
+                : (isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: AppBranding.bingoGoldButton.withValues(alpha: 0.2),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]),
           ),
           child: Center(
             widthFactor: 1.0,

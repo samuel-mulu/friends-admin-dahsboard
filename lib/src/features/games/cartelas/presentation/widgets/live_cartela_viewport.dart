@@ -77,22 +77,28 @@ class _LiveCartelaViewportState extends State<LiveCartelaViewport> {
             }
             return false;
           },
-          child: CustomScrollView(
-            scrollCacheExtent: ScrollCacheExtent.pixels(LiveCartelaViewport.defaultCacheExtent),
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: widget.padding,
-                sliver: widget.buildCartelaSliver(
-                  constraints.maxWidth - widget.padding.horizontal,
-                ),
-              ),
-              if (widget.footer != null)
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              overscroll: false,
+              physics: const ClampingScrollPhysics(),
+            ),
+            child: CustomScrollView(
+              scrollCacheExtent: ScrollCacheExtent.pixels(LiveCartelaViewport.defaultCacheExtent),
+              physics: const ClampingScrollPhysics(),
+              slivers: [
                 SliverPadding(
-                  padding: widget.padding.copyWith(top: AppSpacing.md),
-                  sliver: SliverToBoxAdapter(child: widget.footer),
+                  padding: widget.padding,
+                  sliver: widget.buildCartelaSliver(
+                    constraints.maxWidth - widget.padding.horizontal,
+                  ),
                 ),
-            ],
+                if (widget.footer != null)
+                  SliverPadding(
+                    padding: widget.padding.copyWith(top: AppSpacing.md),
+                    sliver: SliverToBoxAdapter(child: widget.footer),
+                  ),
+              ],
+            ),
           ),
         );
       },

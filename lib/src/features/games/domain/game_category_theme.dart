@@ -7,7 +7,7 @@ import '../data/models/game_model.dart';
 abstract final class GameCategoryTheme {
   static IconData iconFor(GameCategory category) {
     return switch (category) {
-      GameCategory.normal => Icons.sports_esports_rounded,
+      GameCategory.normal => Icons.star_rounded,
       GameCategory.bonus => Icons.redeem_rounded,
       GameCategory.bigGotd => Icons.star_rounded,
       GameCategory.bigGame => Icons.emoji_events_rounded,
@@ -17,7 +17,8 @@ abstract final class GameCategoryTheme {
 
   static Color accentColor(GameCategory category, {required bool isDark}) {
     return switch (category) {
-      GameCategory.normal => AppBranding.bingoB,
+      GameCategory.normal =>
+        isDark ? AppBranding.gold : AppBranding.warmGoldPillText,
       GameCategory.bonus => AppBranding.bingoFreeGreen,
       // Cream surface uses darker gold for readable contrast in light mode.
       GameCategory.bigGotd => isDark ? AppBranding.gold : AppBranding.goldDark,
@@ -33,7 +34,7 @@ abstract final class GameCategoryTheme {
   static Color surfaceColor(GameCategory category, {required bool isDark}) {
     return switch (category) {
       GameCategory.normal =>
-        isDark ? const Color(0xFF152238) : const Color(0xFFE8F1FF),
+        isDark ? const Color(0xFF2B2111) : AppBranding.warmGoldPill,
       GameCategory.bonus =>
         isDark ? const Color(0xFF0F2A1C) : const Color(0xFFE8F8EE),
       GameCategory.bigGotd =>
