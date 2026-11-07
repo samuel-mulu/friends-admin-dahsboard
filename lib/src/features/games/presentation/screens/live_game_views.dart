@@ -852,7 +852,9 @@ mixin _LiveGameViews on
         ] else if (_hasVisibleCurrentSessionCartelas)
           widget.embedded && (_game?.isBigGame ?? false)
               ? _BigGameEmbeddedWaitingPanel(isRefetching: _isLoading)
-              : _RegisteredCartelaList(cartelas: _myCartelas),
+              // Never-blank safety net (cancelled / unknown status). The
+              // READY → live boundary resolves to preparing or the live grid.
+              : RegisteredCartelaNumbersSummary(cartelas: _myCartelas),
       ],
     );
   }
@@ -1120,7 +1122,6 @@ mixin _LiveGameViews on
   }
 }
 
-typedef _RegisteredCartelaList = RegisteredCartelaList;
 typedef _InlineRegisteredCartelaList = InlineRegisteredCartelaList;
 typedef _LiveErrorState = LiveErrorState;
 typedef _GuestSpectatorHint = GuestSpectatorSection;

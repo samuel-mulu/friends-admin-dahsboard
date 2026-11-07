@@ -76,6 +76,7 @@ class ResolveLiveUiModeInput {
     this.operations,
     this.pinnedPrimaryGame,
     this.ownedLiveGameFallback,
+    this.ownedReadyGameFallback,
     required this.ownsLiveSessionCartelas,
     required this.hasPrimarySessionCartelas,
     this.calledNumbers = const [],
@@ -98,6 +99,11 @@ class ResolveLiveUiModeInput {
   /// player's own cartelas. Only consulted while `operations/current` has not
   /// caught up yet.
   final GameModel? ownedLiveGameFallback;
+
+  /// Local READY session backed by the player's own cartelas. Only consulted
+  /// when `operations/current` has no usable primary game (lag window around
+  /// READY → PLAYING); presented as preparing, never as registration open.
+  final GameModel? ownedReadyGameFallback;
   final bool ownsLiveSessionCartelas;
   final bool hasPrimarySessionCartelas;
   final List<CalledNumberModel> calledNumbers;
@@ -214,7 +220,7 @@ class LiveUiModeResolver {
     }
 
     if (operations == null || !operations.hasActiveGame) {
-      return _emptyState(input);
+      return _emptyOrOwnedReadyFallback(input);
     }
 
     final ownsLiveCartelas = input.ownsLiveSessionCartelas;
@@ -227,7 +233,7 @@ class LiveUiModeResolver {
     );
 
     if (primaryFromOps == null) {
-      return _emptyState(input);
+      return _emptyOrOwnedReadyFallback(input);
     }
 
     final liveGame = operations.liveGame;
@@ -316,6 +322,64 @@ class LiveUiModeResolver {
       operations: alignedOps,
       hasBlockingLiveGame: true,
       ownsLiveCartelas: true,
+    );
+  }
+
+  /// Where operations has no usable primary game: keep an owned READY round on
+  /// screen as preparing instead of the empty state. Never overrides a real
+  /// primary from operations, a transition lock, or a pinned terminal — those
+  /// are resolved before this is reached.
+  static LiveUiModeState _emptyOrOwnedReadyFallback(
+    ResolveLiveUiModeInput input,
+  ) {
+    final game = _ownedReadyGameFallback(input);
+    if (game == null) {
+      return _emptyState(input);
+    }
+    return _buildForOwnedReadyFallback(input: input, game: game);
+  }
+
+  static GameModel? _ownedReadyGameFallback(ResolveLiveUiModeInput input) {
+    final game = input.ownedReadyGameFallback;
+    if (game == null || game.status != GameStatus.ready || game.isBigGame) {
+      return null;
+    }
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return null;
+    }
+    final holds = input.holds;
+    if (holds.pinTerminalSession || holds.postGameSummaryReviewActive) {
+      return null;
+    }
+    return game;
+  }
+
+  static LiveUiModeState _buildForOwnedReadyFallback({
+    required ResolveLiveUiModeInput input,
+    required GameModel game,
+  }) {
+    // Operations dropped this session from registrationOpenGame, so
+    // registration is closing/closed: force preparing (canRegister=false).
+    // A stale local canRegister must never re-enable Register buttons.
+    final preparing = game.copyWith(canRegister: false, registrationOpen: false);
+    final operations = input.operations;
+    final alignedOps = GameOperationsCurrentResponse(
+      liveGame: null,
+      checkingGame: null,
+      registrationOpenGame: preparing,
+      queue: operations?.queue ?? const [],
+      timestamp: operations?.timestamp ?? input.now,
+      serverNow: operations?.serverNow ?? input.now,
+    );
+
+    // _buildForPrimaryGame promotes it to live if its draw already started.
+    return _buildForPrimaryGame(
+      input: input,
+      primary: preparing,
+      operations: alignedOps,
+      hasBlockingLiveGame: false,
+      ownsLiveCartelas: false,
     );
   }
 
@@ -669,6 +733,38 @@ class LiveUiModeResolver {
   }
 
   static LiveUiModeState _buildForPrimaryGame({
+    required ResolveLiveUiModeInput input,
+    required GameModel primary,
+    required GameOperationsCurrentResponse operations,
+    required bool hasBlockingLiveGame,
+    required bool ownsLiveCartelas,
+  }) {
+    // A READY session whose own draw has started (stale resume snapshot or
+    // operations lag) is presented exactly like the PLAYING session it really
+    // is. Otherwise mode (from status: registration) and phase (from balls:
+    // liveCalling) disagree and neither the registration layout nor the live
+    // grid paints. UI-only: `_game` and claim eligibility still use the real
+    // status, so BINGO waits for the authoritative PLAYING.
+    // Big Game keeps its own round-handoff presentation (next round READY may
+    // still carry the previous round's ball state) — never promoted here.
+    final effectivePrimary = !primary.isBigGame &&
+            readyGameIndicatesLiveCalling(
+              game: primary,
+              calledNumbers: input.calledNumbers,
+            )
+        ? primary.copyWith(status: GameStatus.playing)
+        : primary;
+
+    return _buildForResolvedPrimary(
+      input: input,
+      primary: effectivePrimary,
+      operations: operations,
+      hasBlockingLiveGame: hasBlockingLiveGame,
+      ownsLiveCartelas: ownsLiveCartelas,
+    );
+  }
+
+  static LiveUiModeState _buildForResolvedPrimary({
     required ResolveLiveUiModeInput input,
     required GameModel primary,
     required GameOperationsCurrentResponse operations,

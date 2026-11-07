@@ -8,25 +8,46 @@ import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_mar
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_pattern_progress_overlay.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/domain/cartela_board_layout.dart';
 
+import 'cartela_number_badge.dart';
 import 'live_cartela_card.dart';
 
-class RegisteredCartelaList extends StatelessWidget {
-  const RegisteredCartelaList({required this.cartelas, super.key});
+/// Lightweight, read-only summary of the player's registered cartela numbers
+/// (sorted). Used while the game is preparing and as the never-blank fallback
+/// in the live body — never as the play surface (no marking, no BINGO).
+///
+/// [scrollable] wraps it in a scroll view for bounded parents (e.g. inside
+/// `Expanded`); leave it false inside an already-scrolling list.
+class RegisteredCartelaNumbersSummary extends StatelessWidget {
+  const RegisteredCartelaNumbersSummary({
+    required this.cartelas,
+    this.scrollable = false,
+    super.key,
+  });
 
   final List<GameCartelaModel> cartelas;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: cartelas
-          .map(
-            (gameCartela) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-              child: RegisteredCartelaListTile(gameCartela: gameCartela),
-            ),
-          )
-          .toList(growable: false),
+    final sorted = [...cartelas]
+      ..sort((a, b) => a.cartela.number.compareTo(b.cartela.number));
+    final chips = Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        for (final gameCartela in sorted)
+          CartelaNumberCompactBadge(
+            key: ValueKey(gameCartela.id),
+            number: gameCartela.cartela.number,
+            isBlocked: gameCartela.status == GameCartelaStatus.blocked,
+          ),
+      ],
     );
+
+    if (!scrollable) {
+      return chips;
+    }
+    return SingleChildScrollView(child: chips);
   }
 }
 
@@ -298,110 +319,6 @@ class InlineRegisteredCartelaList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class RegisteredCartelaListTile extends StatelessWidget {
-  const RegisteredCartelaListTile({required this.gameCartela, super.key});
-
-  final GameCartelaModel gameCartela;
-
-  static ({Color background, Color foreground}) _statusColors(
-    ThemeData theme,
-    GameCartelaStatus status,
-  ) {
-    return switch (status) {
-      GameCartelaStatus.registered => (
-        background: theme.colorScheme.primaryContainer,
-        foreground: theme.colorScheme.onPrimaryContainer,
-      ),
-      GameCartelaStatus.winner => (
-        background: const Color(0xFFE8F5E9),
-        foreground: const Color(0xFF2E7D32),
-      ),
-      GameCartelaStatus.blocked => (
-        background: theme.colorScheme.errorContainer,
-        foreground: theme.colorScheme.onErrorContainer,
-      ),
-      GameCartelaStatus.cancelled => (
-        background: theme.colorScheme.surfaceContainerHighest,
-        foreground: theme.colorScheme.onSurfaceVariant,
-      ),
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColors = _statusColors(theme, gameCartela.status);
-    final statusLabel = gameCartela.isWinner
-        ? 'Winner'
-        : gameCartela.status == GameCartelaStatus.blocked
-        ? 'Blocked / Invalid Bingo'
-        : gameCartela.status.label;
-
-    return Material(
-      color: theme.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '#${gameCartela.cartela.number}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Cartela ${gameCartela.cartela.number}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    statusLabel,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: statusColors.background,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                statusLabel,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: statusColors.foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -285,6 +285,28 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         : null;
   }
 
+  /// Local READY round holding this player's cartelas, used only while
+  /// `operations/current` has no usable primary game (READY → PLAYING gap).
+  GameModel? get _ownedReadyGameFallback {
+    if (isGuest) {
+      return null;
+    }
+    final game = _game;
+    if (game == null || game.status != GameStatus.ready || game.isBigGame) {
+      return null;
+    }
+    final sessionId = game.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return null;
+    }
+    return ownsSessionByCartelas(
+          sessionId,
+          _myCartelas.map((cartela) => cartela.gameId),
+        )
+        ? game
+        : null;
+  }
+
   /// Cartela session ids used for missed-preview ownership (current + next).
   Iterable<String> get _ownershipCartelaSessionIds sync* {
     for (final cartela in _myCartelas) {
@@ -406,6 +428,7 @@ abstract class _LiveGameScreenStateBase extends ConsumerState<LiveGameScreen>
         operations: _operationsForLiveUiMode,
         pinnedPrimaryGame: _resolverPinsTerminalSession ? _game : null,
         ownedLiveGameFallback: _ownedLiveGameFallback,
+        ownedReadyGameFallback: _ownedReadyGameFallback,
         ownsLiveSessionCartelas: _ownsLiveSessionCartelas,
         hasPrimarySessionCartelas: _hasVisibleCurrentSessionCartelas,
         calledNumbers: _cn.calledNumbers,

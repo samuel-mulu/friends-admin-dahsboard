@@ -95,7 +95,12 @@ class PreparingGamePanel extends StatelessWidget {
         ),
         if (registeredCount > 0) ...[
           VGap.xl,
-          Expanded(child: RegisteredCartelaList(cartelas: registeredCartelas)),
+          Expanded(
+            child: RegisteredCartelaNumbersSummary(
+              cartelas: registeredCartelas,
+              scrollable: true,
+            ),
+          ),
         ],
       ],
     );
