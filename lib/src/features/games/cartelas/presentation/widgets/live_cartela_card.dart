@@ -16,6 +16,7 @@ import 'cartela_number_dialog.dart';
 import 'cartela_mark_color_dropdown.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/components/bingo_claim_button.dart';
 import 'package:friends_bingo_app/src/features/games/presentation/components/bingo_ball_badge.dart';
+import 'package:friends_bingo_app/src/features/games/presentation/theme/live_play_theme_tokens.dart';
 import 'cartela_board_widget.dart';
 
 class LiveCartelaCard extends StatelessWidget {
@@ -107,11 +108,12 @@ class LiveCartelaCard extends StatelessWidget {
 
     // One-away: only the missing cell blinks red (inside the board). The card
     // border/background stays still.
+    final tokens = LivePlayThemeTokens.of(context);
     return RepaintBoundary(
       child: Card(
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
-        color: theme.brightness == Brightness.dark ? null : Colors.white,
+        color: isDark ? null : tokens.cardBackground,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
@@ -119,11 +121,11 @@ class LiveCartelaCard extends StatelessWidget {
                 ? theme.colorScheme.error.withValues(alpha: 0.75)
                 : (isWinner
                       ? AppBranding.gold
-                      : (theme.brightness == Brightness.dark
+                      : (isDark
                             ? theme.colorScheme.outlineVariant.withValues(
                                 alpha: 0.35,
                               )
-                            : AppBranding.panelBorder(context))),
+                            : tokens.cardBorder)),
             width: isBlocked || isWinner ? 1.5 : 1.0,
           ),
         ),
@@ -160,10 +162,17 @@ class LiveCartelaCard extends StatelessWidget {
                         ],
                       ),
                     )
-                  : AppBranding.cartelaHeaderDecoration(
-                      context,
-                      isBlocked: isBlocked,
-                      isWinner: isWinner,
+                  : BoxDecoration(
+                      color: isDark ? null : tokens.cardBackground,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark
+                              ? theme.colorScheme.outlineVariant.withValues(
+                                  alpha: 0.25,
+                                )
+                              : tokens.cardBorder.withValues(alpha: 0.6),
+                        ),
+                      ),
                     ),
               child: Row(
                 children: [
