@@ -8,6 +8,7 @@ import '../../../../core/theme/app_branding.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/external_links.dart';
 import '../../../../core/utils/l10n.dart';
+import '../../../settings/application/providers/app_support_config_provider.dart';
 import '../../application/providers/account_ban_provider.dart';
 
 /// Blocks the app when the account is banned until the player acknowledges.
@@ -48,6 +49,9 @@ class _AccountBanScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.error;
+    final supportConfig =
+        ref.watch(appSupportConfigProvider).asData?.value ??
+            AppSupportConfig.fallback;
 
     return Material(
       color: isDark ? AppBranding.liveSurfaceDark : AppBranding.lightScaffold,
@@ -124,7 +128,7 @@ class _AccountBanScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     for (var i = 0;
-                        i < AppSupport.supportPhoneDisplays.length;
+                        i < supportConfig.supportPhoneDisplays.length;
                         i++) ...[
                       if (i > 0) const SizedBox(height: AppSpacing.sm),
                       SizedBox(
@@ -134,12 +138,12 @@ class _AccountBanScreen extends ConsumerWidget {
                             unawaited(
                               openExternalUri(
                                 context,
-                                Uri.parse(AppSupport.supportPhoneUris[i]),
+                                Uri.parse(supportConfig.supportPhoneUris[i]),
                               ),
                             );
                           },
                           icon: const Icon(Icons.phone_outlined),
-                          label: Text(AppSupport.supportPhoneDisplays[i]),
+                          label: Text(supportConfig.supportPhoneDisplays[i]),
                         ),
                       ),
                     ],
@@ -149,11 +153,11 @@ class _AccountBanScreen extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           unawaited(
-                            openExternalUri(context, AppSupport.telegramUri),
+                            openExternalUri(context, supportConfig.telegramUri),
                           );
                         },
                         icon: const Icon(Icons.telegram),
-                        label: Text('@${AppSupport.telegramUsername}'),
+                        label: Text('@${supportConfig.telegramUsername}'),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),

@@ -27,6 +27,7 @@ import '../../../games/presentation/utils/big_game_countdown.dart';
 import 'package:friends_bingo_app/src/features/games/cartelas/application/providers/cartela_sort_mode_provider.dart';
 import '../../../wallet/overview/application/providers/wallet_provider.dart';
 import '../../../wallet/overview/presentation/widgets/wallet_breakdown_card.dart';
+import '../../application/providers/app_support_config_provider.dart';
 import '../../application/providers/feature_settings_provider.dart';
 import 'terms_conditions_dialog.dart';
 import 'drawer_app_version_card.dart';
@@ -59,6 +60,9 @@ class AppSettingsDrawer extends ConsumerWidget {
     final featureSettingsNotifier = isGuest
         ? null
         : ref.read(featureSettingsControllerProvider.notifier);
+    final supportConfig =
+        ref.watch(appSupportConfigProvider).asData?.value ??
+            AppSupportConfig.fallback;
 
     void refreshDrawerData() {
       if (!isGuest) {
@@ -438,17 +442,19 @@ class AppSettingsDrawer extends ConsumerWidget {
                           iconColor: theme.colorScheme.primary,
                           title: AppSupport.contactTitle,
                         ),
-                        for (var i = 0; i < AppSupport.supportPhoneDisplays.length; i++) ...[
+                        for (var i = 0;
+                            i < supportConfig.supportPhoneDisplays.length;
+                            i++) ...[
                           if (i > 0) _DrawerDivider(theme: theme),
                           _DrawerMenuRow(
                             icon: Icons.phone_outlined,
-                            label: AppSupport.supportPhoneDisplays[i],
+                            label: supportConfig.supportPhoneDisplays[i],
                             showChevron: true,
                             onTap: () {
                               unawaited(
                                 openExternalUri(
                                   context,
-                                  Uri.parse(AppSupport.supportPhoneUris[i]),
+                                  Uri.parse(supportConfig.supportPhoneUris[i]),
                                 ),
                               );
                             },
@@ -457,13 +463,13 @@ class AppSettingsDrawer extends ConsumerWidget {
                         _DrawerDivider(theme: theme),
                         _DrawerMenuRow(
                           icon: Icons.send_outlined,
-                          label: '@${AppSupport.telegramUsername}',
+                          label: '@${supportConfig.telegramUsername}',
                           showChevron: true,
                           onTap: () {
                             unawaited(
                               openExternalUri(
                                 context,
-                                AppSupport.telegramUri,
+                                supportConfig.telegramUri,
                               ),
                             );
                           },
@@ -473,8 +479,12 @@ class AppSettingsDrawer extends ConsumerWidget {
                           icon: Icons.description_outlined,
                           label: AppSupport.termsTitle,
                           showChevron: true,
-                          onTap: () =>
-                              unawaited(showTermsConditionsDialog(context)),
+                          onTap: () => unawaited(
+                            showTermsConditionsDialog(
+                              context,
+                              termsBody: supportConfig.termsBody,
+                            ),
+                          ),
                         ),
                       ],
                     ),

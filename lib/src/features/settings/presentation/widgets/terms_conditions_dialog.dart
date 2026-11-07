@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/config/app_support.dart';
 import '../../../../core/theme/app_spacing.dart';
 
-Future<void> showTermsConditionsDialog(BuildContext context) {
+Future<void> showTermsConditionsDialog(
+  BuildContext context, {
+  String? termsBody,
+}) {
+  final body = (termsBody ?? AppSupportConfig.fallback.termsBody).trim();
+
   return showDialog<void>(
     context: context,
     builder: (dialogContext) {
@@ -45,7 +50,7 @@ Future<void> showTermsConditionsDialog(BuildContext context) {
                 child: SingleChildScrollView(
                   padding: AppSpacing.cardPaddingDense,
                   child: Text(
-                    AppSupport.termsBody.trim(),
+                    body,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       height: 1.45,
                       color: theme.colorScheme.onSurfaceVariant,

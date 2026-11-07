@@ -9,6 +9,7 @@ import '../../../../core/routing/auth_route_guard.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/l10n.dart';
 import '../../../auth/application/controllers/auth_controller.dart';
+import '../../../settings/application/providers/app_support_config_provider.dart';
 import '../../data/models/support_message_model.dart';
 import '../../application/providers/support_messages_provider.dart';
 import '../../application/providers/support_unread_provider.dart';
@@ -52,6 +53,9 @@ class _FeedbackHubSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final isGuest = ref.watch(authControllerProvider).session == null;
     final sheetHeight = MediaQuery.sizeOf(context).height * 0.82;
+    final supportConfig =
+        ref.watch(appSupportConfigProvider).asData?.value ??
+            AppSupportConfig.fallback;
 
     return SafeArea(
       child: SizedBox(
@@ -141,7 +145,7 @@ class _FeedbackHubSheet extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                AppSupport.supportPhoneDisplay,
+                supportConfig.supportPhoneDisplay,
                 style: theme.textTheme.bodyMedium,
               ),
             ],
