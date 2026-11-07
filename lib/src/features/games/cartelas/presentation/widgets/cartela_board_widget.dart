@@ -214,7 +214,7 @@ class CartelaBoardWidget extends StatelessWidget {
               const Icon(Icons.style_outlined, size: 18),
               const SizedBox(width: 6),
               Text(
-                '#${cartela.number}',
+                '${cartela.number}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -231,18 +231,11 @@ class CartelaBoardWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = LivePlayThemeTokens.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 2,
-        vertical: expanded ? 2.5 : 3.5,
-      ),
-      decoration: BoxDecoration(
-        color: isDark
-            ? theme.colorScheme.primary.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      padding: EdgeInsets.symmetric(vertical: expanded ? 2 : 4),
+      color: isDark
+          ? theme.colorScheme.primary.withValues(alpha: 0.08)
+          : tokens.cardBackground,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final letterFontSize = expanded
@@ -255,33 +248,30 @@ class CartelaBoardWidget extends StatelessWidget {
           return Row(
             children: ['B', 'I', 'N', 'G', 'O'].map((letter) {
               final colColor = AppBranding.bingoColumnColor(letter);
+              final bgAlpha = switch (letter) {
+                'O' => isDark ? 0.25 : 0.18,
+                'B' || 'N' => isDark ? 0.22 : 0.16,
+                _ => isDark ? 0.20 : 0.14,
+              };
               return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2.0),
-                  padding: EdgeInsets.symmetric(
-                    vertical: expanded ? 3.0 : 2.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? colColor.withValues(alpha: 0.24)
-                        : colColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isDark
-                          ? colColor.withValues(alpha: 0.38)
-                          : colColor.withValues(alpha: 0.22),
-                      width: 0.8,
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: colColor.withValues(alpha: bgAlpha),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    letter,
-                    style: TextStyle(
-                      fontSize: letterFontSize,
-                      fontWeight: FontWeight.w900,
-                      color: colColor,
-                      height: 1.1,
-                      letterSpacing: 0.5,
+                    alignment: Alignment.center,
+                    child: Text(
+                      letter,
+                      style: TextStyle(
+                        fontSize: letterFontSize,
+                        fontWeight: FontWeight.w900,
+                        color: colColor,
+                        height: 1.1,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
